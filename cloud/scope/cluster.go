@@ -20,6 +20,7 @@ import (
 	"context"
 
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/linodego"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,9 +28,9 @@ import (
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	LinodeClients
-	Client     client.Client
-	Cluster    *clusterv1.Cluster
+	Client        client.Client
+	Cluster       *clusterv1.Cluster
+	LinodeClient  linodego.Client
 	LinodeCluster *infrav1.LinodeCluster
 }
 
@@ -45,7 +46,7 @@ type ClusterScope struct {
 	client      client.Client
 	patchHelper *patch.Helper
 
-	LinodeClients
-	Cluster    *clusterv1.Cluster
+	LinodeClient  linodego.Client
+	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1.LinodeCluster
 }
