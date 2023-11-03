@@ -47,5 +47,5 @@ type ClusterScope struct {
 
 	LinodeClients
 	Cluster    *clusterv1.Cluster
-	GCPCluster *infrav1.LinodeCluster
+	LinodeCluster *infrav1.LinodeCluster
 }
