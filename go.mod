@@ -6,6 +6,7 @@ require (
 	github.com/linode/linodego v1.24.1
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.28.1
+	golang.org/x/oauth2 v0.10.0
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3
 	sigs.k8s.io/cluster-api v1.5.3
@@ -55,7 +56,6 @@ require (
 	go.uber.org/zap v1.25.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
