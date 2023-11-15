@@ -18,8 +18,9 @@ package main
 
 import (
 	"flag"
-	controller2 "github.com/linode/cluster-api-provider-linode/controller"
 	"os"
+
+	controller2 "github.com/linode/cluster-api-provider-linode/controller"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
