@@ -125,6 +125,11 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: tilt-cluster
+tilt-cluster: ctlptl tilt
+	ctlptl apply -f ctlptl-config.yaml
+	tilt up
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
@@ -135,12 +140,16 @@ $(LOCALBIN):
 ## Tool Binaries
 KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
+CTLPTL ?= $(LOCALBIN)/ctlptl
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+TILT ?= $(LOCALBIN)/tilt
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
+CTLPTL_VERSION ?= v0.8.22
 CONTROLLER_TOOLS_VERSION ?= v0.13.0
+TILT_VERSION ?= 0.33.6
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -151,11 +160,24 @@ $(KUSTOMIZE): $(LOCALBIN)
 	fi
 	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
 
+.PHONY: ctlptl
+ctlptl: $(CTLPTL) ## Download ctlptl locally if necessary. If wrong version is installed, it will be overwritten.
+$(CTLPTL): $(LOCALBIN)
+	test -s $(LOCALBIN)/ctlptl && $(LOCALBIN)/ctlptl version | grep -q $(CTLPTL_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/tilt-dev/ctlptl/cmd/ctlptl@$(CTLPTL_VERSION)
+
+
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
 $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: tilt
+tilt: $(TILT) ## Download tilt locally if necessary. If wrong version is installed, it will be overwritten.
+$(TILT): $(LOCALBIN)
+	test -s $(LOCALBIN)/tilt && $(LOCALBIN)/tilt version | grep -q $(TILT_VERSION) || \
+	(cd $(LOCALBIN) ; curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).linux.x86_64.tar.gz | tar -xzv tilt)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
