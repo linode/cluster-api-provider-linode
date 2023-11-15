@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util/gosdk"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/util"
@@ -37,6 +38,7 @@ type LinodeMachineReconciler struct {
 	client.Client
 	Scheme           *runtime.Scheme
 	ReconcileTimeout time.Duration
+	InstanceHandler  gosdk.InstanceHandler
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=get;list;watch;create;update;patch;delete

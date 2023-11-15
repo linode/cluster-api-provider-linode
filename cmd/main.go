@@ -17,8 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"flag"
 	"os"
+	"time"
+
+	controller2 "github.com/linode/cluster-api-provider-linode/controller"
+	"github.com/linode/cluster-api-provider-linode/util/gosdk"
 
 	controller2 "github.com/linode/cluster-api-provider-linode/controller"
 
@@ -29,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -54,8 +60,10 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var instanceCreateTimeout time.Duration
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.DurationVar(&instanceCreateTimeout, "instance-create-timeout", time.Minute, "The timeout of Linode instance creation.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -65,7 +73,16 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	zapLogger := zap.New(zap.UseFlagOptions(&opts))
+
+	ctrl.SetLogger(zapLogger)
+	klog.SetLogger(zapLogger)
+
+	linodeToken, ok := os.LookupEnv("LINODE_API_TOKEN")
+	if !ok {
+		setupLog.Error(errors.New("mandatory environment variable missing: LINODE_API_TOKEN"), "unable to start manager")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -98,8 +115,9 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller2.LinodeMachineReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		InstanceHandler: gosdk.NewInstanceHandler(gosdk.NewClient(linodeToken), mgr.GetLogger(), instanceCreateTimeout),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
