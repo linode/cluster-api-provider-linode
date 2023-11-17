@@ -63,7 +63,7 @@ func main() {
 	var instanceCreateTimeout time.Duration
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.DurationVar(&instanceCreateTimeout, "instance-create-timeout", time.Minute, "The timeout of Linode instance creation.")
+	flag.DurationVar(&instanceCreateTimeout, "instance-create-timeout", time.Minute, "The timeout for Linode instance creation.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -78,9 +78,9 @@ func main() {
 	ctrl.SetLogger(zapLogger)
 	klog.SetLogger(zapLogger)
 
-	linodeToken, ok := os.LookupEnv("LINODE_API_TOKEN")
+	linodeToken, ok := os.LookupEnv("LINODE_TOKEN")
 	if !ok {
-		setupLog.Error(errors.New("mandatory environment variable missing: LINODE_API_TOKEN"), "unable to start manager")
+		setupLog.Error(errors.New("mandatory environment variable missing: LINODE_TOKEN"), "unable to start manager")
 		os.Exit(1)
 	}
 

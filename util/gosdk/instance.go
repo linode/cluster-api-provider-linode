@@ -30,17 +30,17 @@ type instanceHandler struct {
 }
 
 // CreateInstance creates an instance and wits for booting.
-func (ih *instanceHandler) CreateInstance(ctx context.Context, insanceOptions linodego.InstanceCreateOptions) (*linodego.Instance, error) {
-	instance, err := ih.client.CreateInstance(ctx, insanceOptions)
+func (ih *instanceHandler) CreateInstance(ctx context.Context, instanceOptions linodego.InstanceCreateOptions) (*linodego.Instance, error) {
+	instance, err := ih.client.CreateInstance(ctx, instanceOptions)
 	if err != nil {
-		return nil, logging.LogAndWrapError(ih.log, "instance creation failed", err, insanceOptions)
+		return nil, logging.LogAndWrapError(ih.log, "instance creation failed", err, instanceOptions)
 	}
 
 	ih.log.V(3).Info("instance created", "ID", instance.ID)
 
 	instance, err = ih.client.WaitForInstanceStatus(ctx, instance.ID, linodego.InstanceRunning, ih.createTimeout)
 	if err != nil {
-		return nil, logging.LogAndWrapError(ih.log, "wait for instance creation failed", err, insanceOptions)
+		return nil, logging.LogAndWrapError(ih.log, "wait for instance creation failed", err, instanceOptions)
 	}
 
 	ih.log.V(3).Info("instance running", "ID", instance.ID)
