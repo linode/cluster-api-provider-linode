@@ -3,7 +3,7 @@ module github.com/linode/cluster-api-provider-linode
 go 1.20
 
 require (
-	github.com/linode/linodego v1.24.1
+	github.com/linode/linodego v1.25.0
 	github.com/onsi/ginkgo/v2 v2.13.1
 	github.com/onsi/gomega v1.29.0
 	golang.org/x/oauth2 v0.14.0
