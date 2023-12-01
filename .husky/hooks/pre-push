@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+if [[ "$SKIP_GIT_PUSH_HOOK" ]]; then exit 0; fi
+
+set -e
+
+if git status --short | grep -qv "??"; then
+    git stash
+    function unstash() {
+        git reset --hard
+        git stash pop
+    }
+    trap unstash EXIT
+fi
+
+make generate manifests
+git diff --exit-code --quiet || (git status && exit 1)
+
+make test

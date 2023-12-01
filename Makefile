@@ -144,12 +144,14 @@ CTLPTL ?= $(LOCALBIN)/ctlptl
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 TILT ?= $(LOCALBIN)/tilt
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+HUSKY ?= $(LOCALBIN)/husky
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
 CTLPTL_VERSION ?= v0.8.22
 CONTROLLER_TOOLS_VERSION ?= v0.13.0
 TILT_VERSION ?= 0.33.6
+HUSKY_VERSION ?= v0.2.16
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -183,3 +185,11 @@ $(TILT): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: husky
+husky: $(HUSKY) ## Download husky locally if necessary.
+	@echo Execute install command to enable git hooks: ./bin/husky install
+	@echo Set any value for SKIP_GIT_PUSH_HOOK env variable to skip git hook execution.
+$(HUSKY): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install github.com/automation-co/husky@$(HUSKY_VERSION)
+
