@@ -71,6 +71,12 @@ spec:
         args:
         - --leader-elect
         image: controller:latest
+        env:
+        - name: LINODE_TOKEN
+          valueFrom:
+             secretKeyRef:
+               name: token
+               key: LINODE_TOKEN
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
