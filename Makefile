@@ -179,7 +179,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 tilt: $(TILT) ## Download tilt locally if necessary. If wrong version is installed, it will be overwritten.
 $(TILT): $(LOCALBIN)
 	test -s $(LOCALBIN)/tilt && $(LOCALBIN)/tilt version | grep -q $(TILT_VERSION) || \
-	(cd $(LOCALBIN) ; curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).linux.x86_64.tar.gz | tar -xzv tilt)
+	(cd $(LOCALBIN) ; curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$(shell uname -s | tr '[:upper:]' '[:lower:]').$(shell uname -m).tar.gz | tar -xzv tilt)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
