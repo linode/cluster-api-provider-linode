@@ -126,7 +126,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: tilt-cluster
-tilt-cluster: ctlptl tilt
+tilt-cluster: ctlptl tilt clusterctl
 	ctlptl apply -f ctlptl-config.yaml
 	tilt up
 
@@ -141,6 +141,7 @@ $(LOCALBIN):
 KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CTLPTL ?= $(LOCALBIN)/ctlptl
+CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 TILT ?= $(LOCALBIN)/tilt
 ENVTEST ?= $(LOCALBIN)/setup-envtest
@@ -148,6 +149,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
 CTLPTL_VERSION ?= v0.8.22
+CLUSTERCTL_VERSION ?= v1.5.3
 CONTROLLER_TOOLS_VERSION ?= v0.13.0
 TILT_VERSION ?= 0.33.6
 
@@ -166,6 +168,12 @@ $(CTLPTL): $(LOCALBIN)
 	test -s $(LOCALBIN)/ctlptl && $(LOCALBIN)/ctlptl version | grep -q $(CTLPTL_VERSION) || \
 	GOBIN=$(LOCALBIN) go install github.com/tilt-dev/ctlptl/cmd/ctlptl@$(CTLPTL_VERSION)
 
+.PHONY: clusterctl
+clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary. If wrong version is installed, it will be overwritten.
+$(CLUSTERCTL): $(LOCALBIN)
+	test -s $(LOCALBIN)/clusterctl && $(LOCALBIN)/clusterctl version | grep -q $(CLUSTERCTL_VERSION) || \
+	(cd $(LOCALBIN) ; curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(shell uname -s | tr '[:upper:]' '[:lower:]')-amd64 -o clusterctl)
+	@chmod +x $(CLUSTERCTL)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
