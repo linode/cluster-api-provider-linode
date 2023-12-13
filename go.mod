@@ -6,6 +6,7 @@ require (
 	github.com/linode/linodego v1.25.0
 	github.com/onsi/ginkgo/v2 v2.13.1
 	github.com/onsi/gomega v1.29.0
+	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/oauth2 v0.14.0
 	k8s.io/apimachinery v0.28.3
 	k8s.io/client-go v0.28.3

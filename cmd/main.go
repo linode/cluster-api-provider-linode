@@ -20,6 +20,8 @@ import (
 	"flag"
 	"os"
 
+	_ "go.uber.org/automaxprocs"
+
 	controller2 "github.com/linode/cluster-api-provider-linode/controller"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
