@@ -37,7 +37,7 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 	logger = logger.WithName("LinodeMachineReconciler").WithName("linodeClusterToLinodeMachines")
 
 	return func(ctx context.Context, o client.Object) []ctrl.Request {
-		ctx, cancel := context.WithTimeout(context.Background(), reconciler.DefaultMappingTimeout)
+		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
 		defer cancel()
 
 		linodeCluster, ok := o.(*infrav1.LinodeCluster)
@@ -65,7 +65,7 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 			return nil
 		}
 
-		request, err := r.requestsForCluster(cluster.Namespace, cluster.Name)
+		request, err := r.requestsForCluster(ctx, cluster.Namespace, cluster.Name)
 		if err != nil {
 			logger.Info("Failed to create request for cluster", "error", err.Error())
 
@@ -80,6 +80,9 @@ func (r *LinodeMachineReconciler) requeueLinodeMachinesForUnpausedCluster(logger
 	logger = logger.WithName("LinodeMachineReconciler").WithName("requeueLinodeMachinesForUnpausedCluster")
 
 	return func(ctx context.Context, o client.Object) []ctrl.Request {
+		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
+		defer cancel()
+
 		cluster, ok := o.(*clusterv1.Cluster)
 		if !ok {
 			logger.Info("Failed to cast object to Cluster")
@@ -93,7 +96,7 @@ func (r *LinodeMachineReconciler) requeueLinodeMachinesForUnpausedCluster(logger
 			return nil
 		}
 
-		request, err := r.requestsForCluster(cluster.Namespace, cluster.Name)
+		request, err := r.requestsForCluster(ctx, cluster.Namespace, cluster.Name)
 		if err != nil {
 			logger.Info("Failed to create request for cluster", "error", err.Error())
 
@@ -104,10 +107,7 @@ func (r *LinodeMachineReconciler) requeueLinodeMachinesForUnpausedCluster(logger
 	}
 }
 
-func (r *LinodeMachineReconciler) requestsForCluster(namespace, name string) ([]ctrl.Request, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.ReconcileTimeout)
-	defer cancel()
-
+func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namespace, name string) ([]ctrl.Request, error) {
 	labels := map[string]string{clusterv1.ClusterNameLabel: name}
 
 	machineList := clusterv1.MachineList{}
