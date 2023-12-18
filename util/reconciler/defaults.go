@@ -25,6 +25,11 @@ const (
 	DefaultLoopTimeout = 90 * time.Minute
 	// DefaultMappingTimeout is the default timeout for a controller request mapping func.
 	DefaultMappingTimeout = 60 * time.Second
+
+	// DefaultMachineControllerWaitForRunningDelay is the default requeue delay if instance is not running.
+	DefaultMachineControllerWaitForRunningDelay = 5 * time.Second
+	// DefaultMachineControllerWaitForRunningTimeout is the default timeout if instance is not running.
+	DefaultMachineControllerWaitForRunningTimeout = 20 * time.Minute
 )
 
 // DefaultedLoopTimeout will default the timeout if it is zero-valued.

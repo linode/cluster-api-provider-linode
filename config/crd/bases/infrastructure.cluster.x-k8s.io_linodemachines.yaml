@@ -34,13 +34,247 @@ spec:
           spec:
             description: LinodeMachineSpec defines the desired state of LinodeMachine
             properties:
-              foo:
-                description: Foo is an example field of LinodeMachine. Edit linodemachine_types.go
-                  to remove/update
+              authorizedKeys:
+                items:
+                  type: string
+                type: array
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              authorizedUsers:
+                items:
+                  type: string
+                type: array
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              backupId:
+                type: integer
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              backupsEnabled:
+                type: boolean
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              firewallId:
+                type: integer
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              group:
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              image:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              instanceID:
+                description: InstanceID is the Linode instance ID for this machine.
+                type: integer
+              interfaces:
+                items:
+                  description: InstanceConfigInterfaceCreateOptions defines network
+                    interface config
+                  properties:
+                    ipRanges:
+                      items:
+                        type: string
+                      type: array
+                    ipamAddress:
+                      type: string
+                    ipv4:
+                      description: VPCIPv4 defines VPC IPV4 settings
+                      properties:
+                        nat1to1:
+                          type: string
+                        vpc:
+                          type: string
+                      type: object
+                    label:
+                      type: string
+                    primary:
+                      type: boolean
+                    purpose:
+                      description: ConfigInterfacePurpose options start with InterfacePurpose
+                        and include all known interface purpose types
+                      type: string
+                    subnetId:
+                      type: integer
+                  type: object
+                type: array
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              label:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              metadata:
+                description: InstanceMetadataOptions defines metadata of instance
+                properties:
+                  userData:
+                    description: UserData expects a Base64-encoded string
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              privateIp:
+                type: boolean
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              providerID:
+                description: ProviderID is the unique identifier as specified by the
+                  cloud provider.
+                type: string
+              region:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              rootPass:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              stackscriptData:
+                additionalProperties:
+                  type: string
+                type: object
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              stackscriptId:
+                type: integer
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              tags:
+                items:
+                  type: string
+                type: array
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              type:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+            required:
+            - region
+            - type
             type: object
           status:
             description: LinodeMachineStatus defines the observed state of LinodeMachine
+            properties:
+              addresses:
+                description: Addresses contains the Linode instance associated addresses.
+                items:
+                  description: MachineAddress contains information for the node's
+                    address.
+                  properties:
+                    address:
+                      description: The machine address.
+                      type: string
+                    type:
+                      description: Machine address type, one of Hostname, ExternalIP,
+                        InternalIP, ExternalDNS or InternalDNS.
+                      type: string
+                  required:
+                  - address
+                  - type
+                  type: object
+                type: array
+              conditions:
+                description: Conditions defines current service state of the LinodeMachine.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another. This should be when the underlying condition changed.
+                        If that is not known, then using the time when the API field
+                        changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition. This field may be empty.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition
+                        in CamelCase. The specific API may choose whether or not this
+                        field is considered a guaranteed API. This field may not be
+                        empty.
+                      type: string
+                    severity:
+                      description: Severity provides an explicit classification of
+                        Reason code, so the users or machines can immediately understand
+                        the current situation and act accordingly. The Severity field
+                        MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: "FailureMessage will be set in the event that there is
+                  a terminal problem reconciling the Machine and will contain a more
+                  verbose string suitable for logging and human consumption. \n This
+                  field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over time (like
+                  service outages), but instead indicate that something is fundamentally
+                  wrong with the Machine's spec or the configuration of the controller,
+                  and that manual intervention is required. Examples of terminal errors
+                  would be invalid combinations of settings in the spec, values that
+                  are unsupported by the controller, or the responsible controller
+                  itself being critically misconfigured. \n Any transient errors that
+                  occur during the reconciliation of Machines can be added as events
+                  to the Machine object and/or logged in the controller's output."
+                type: string
+              failureReason:
+                description: "FailureReason will be set in the event that there is
+                  a terminal problem reconciling the Machine and will contain a succinct
+                  value suitable for machine interpretation. \n This field should
+                  not be set for transitive errors that a controller faces that are
+                  expected to be fixed automatically over time (like service outages),
+                  but instead indicate that something is fundamentally wrong with
+                  the Machine's spec or the configuration of the controller, and that
+                  manual intervention is required. Examples of terminal errors would
+                  be invalid combinations of settings in the spec, values that are
+                  unsupported by the controller, or the responsible controller itself
+                  being critically misconfigured. \n Any transient errors that occur
+                  during the reconciliation of Machines can be added as events to
+                  the Machine object and/or logged in the controller's output."
+                type: string
+              instanceState:
+                description: InstanceState is the state of the Linode instance for
+                  this machine.
+                type: string
+              ready:
+                description: Ready is true when the provider resource is ready.
+                type: boolean
             type: object
         type: object
     served: true

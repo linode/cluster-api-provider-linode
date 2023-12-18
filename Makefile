@@ -127,8 +127,9 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt clusterctl
-	ctlptl apply -f ctlptl-config.yaml
-	tilt up
+	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
+	$(CTLPTL) apply -f ctlptl-config.yaml
+	$(TILT) up
 
 ##@ Build Dependencies
 
