@@ -6,7 +6,7 @@ A [Cluster API](https://cluster-api.sigs.k8s.io/) implementation for the [Linode
 For local development execute the following `make` target:
 
 ```bash
-make tilt-cluster
+LINODE_TOKEN=<YOUR LINODE TOKEN> make tilt-cluster
 ```
 
 This command creates a Kind cluster, and deploys resources via Tilt. You can freely change the code and wait for Tilt to update provider.

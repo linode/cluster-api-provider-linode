@@ -1,9 +1,11 @@
 package scope
 
 import (
+	"errors"
 	"fmt"
 
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/linodego"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,33 +20,39 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	client      client.Client
-	patchHelper *patch.Helper
+	client client.Client
 
+	PatchHelper   *patch.Helper
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
+	LinodeClient  *linodego.Client
 	LinodeCluster *infrav1.LinodeCluster
 	LinodeMachine *infrav1.LinodeMachine
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
 	if params.Cluster == nil {
-		return fmt.Errorf("Cluster is required when creating a MachineScope")
+		return errors.New("custer is required when creating a MachineScope")
 	}
 	if params.Machine == nil {
-		return fmt.Errorf("Machine is required when creating a MachineScope")
+		return errors.New("machine is required when creating a MachineScope")
 	}
 	if params.LinodeCluster == nil {
-		return fmt.Errorf("LinodeCluster is required when creating a MachineScope")
+		return errors.New("linodeCluster is required when creating a MachineScope")
 	}
 	if params.LinodeMachine == nil {
-		return fmt.Errorf("LinodeMachine is required when creating a MachineScope")
+		return errors.New("linodeMachine is required when creating a MachineScope")
 	}
 	return nil
 }
 
-func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(apiKey string, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
+		return nil, err
+	}
+
+	linodeClient, err := createLinodeClient(apiKey)
+	if err != nil {
 		return nil, err
 	}
 
@@ -55,9 +63,10 @@ func NewMachineScope(params MachineScopeParams) (*MachineScope, error) {
 
 	return &MachineScope{
 		client:        params.Client,
-		patchHelper:   helper,
+		PatchHelper:   helper,
 		Cluster:       params.Cluster,
 		Machine:       params.Machine,
+		LinodeClient:  linodeClient,
 		LinodeCluster: params.LinodeCluster,
 		LinodeMachine: params.LinodeMachine,
 	}, nil
