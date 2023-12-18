@@ -41,7 +41,7 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 		return errors.New("cluster is required when creating a ClusterScope")
 	}
 	if params.LinodeCluster == nil {
-		return fmt.Errorf("linodeCluster is required when creating a ClusterScope")
+		return errors.New("linodeCluster is required when creating a ClusterScope")
 	}
 	return nil
 }
