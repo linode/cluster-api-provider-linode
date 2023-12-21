@@ -3,6 +3,8 @@
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.0
+OS=$(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(shell uname -m)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -126,7 +128,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: tilt-cluster
-tilt-cluster: ctlptl tilt clusterctl
+tilt-cluster: ctlptl tilt kind clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f ctlptl-config.yaml
 	$(TILT) up
@@ -135,6 +137,7 @@ tilt-cluster: ctlptl tilt clusterctl
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
+export PATH := $(LOCALBIN):$(PATH)
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
@@ -145,15 +148,17 @@ CTLPTL ?= $(LOCALBIN)/ctlptl
 CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 TILT ?= $(LOCALBIN)/tilt
+KIND ?= $(LOCALBIN)/kind
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 HUSKY ?= $(LOCALBIN)/husky
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
-CTLPTL_VERSION ?= v0.8.22
+CTLPTL_VERSION ?= v0.8.25
 CLUSTERCTL_VERSION ?= v1.5.3
 CONTROLLER_TOOLS_VERSION ?= v0.13.0
 TILT_VERSION ?= 0.33.6
+KIND_VERSION ?= 0.20.0
 HUSKY_VERSION ?= v0.2.16
 
 .PHONY: kustomize
@@ -169,13 +174,13 @@ $(KUSTOMIZE): $(LOCALBIN)
 ctlptl: $(CTLPTL) ## Download ctlptl locally if necessary. If wrong version is installed, it will be overwritten.
 $(CTLPTL): $(LOCALBIN)
 	test -s $(LOCALBIN)/ctlptl && $(LOCALBIN)/ctlptl version | grep -q $(CTLPTL_VERSION) || \
-	GOBIN=$(LOCALBIN) go install github.com/tilt-dev/ctlptl/cmd/ctlptl@$(CTLPTL_VERSION)
+	(GOBIN=$(LOCALBIN) go install github.com/tilt-dev/ctlptl/cmd/ctlptl@$(CTLPTL_VERSION))
 
 .PHONY: clusterctl
 clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary. If wrong version is installed, it will be overwritten.
 $(CLUSTERCTL): $(LOCALBIN)
 	test -s $(LOCALBIN)/clusterctl && $(LOCALBIN)/clusterctl version | grep -q $(CLUSTERCTL_VERSION) || \
-	(cd $(LOCALBIN) ; curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(shell uname -s | tr '[:upper:]' '[:lower:]')-amd64 -o clusterctl)
+	(cd $(LOCALBIN); curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(shell uname -s | tr '[:upper:]' '[:lower:]')-amd64 -o clusterctl)
 	@chmod +x $(CLUSTERCTL)
 
 .PHONY: controller-gen
@@ -187,8 +192,18 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: tilt
 tilt: $(TILT) ## Download tilt locally if necessary. If wrong version is installed, it will be overwritten.
 $(TILT): $(LOCALBIN)
+	TILT_OS=$(OS); \
+	if [ $$TILT_OS = "darwin" ]; then \
+		TILT_OS=mac; \
+	fi; \
 	test -s $(LOCALBIN)/tilt && $(LOCALBIN)/tilt version | grep -q $(TILT_VERSION) || \
-	(cd $(LOCALBIN) ; curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$(shell uname -s | tr '[:upper:]' '[:lower:]').$(shell uname -m).tar.gz | tar -xzv tilt)
+	(cd $(LOCALBIN); curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$$TILT_OS.$(ARCH).tar.gz | tar -xzv tilt)
+
+.PHONY: kind
+kind: $(KIND) ## Download kind locally if necessary. If wrong version is installed, it will be overwritten.
+$(KIND): $(LOCALBIN)
+	test -s $(KIND) && $(KIND) version | grep -q $(KIND_VERSION) || \
+	(cd $(LOCALBIN); curl -Lso ./kind https://kind.sigs.k8s.io/dl/v$(KIND_VERSION)/kind-$(OS)-$(ARCH) && chmod +x kind)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
@@ -202,3 +217,6 @@ husky: $(HUSKY) ## Download husky locally if necessary.
 $(HUSKY): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/automation-co/husky@$(HUSKY_VERSION)
 
+.PHONY: clean
+clean:
+	rm -rf $(LOCALBIN)
