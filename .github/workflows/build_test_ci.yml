@@ -6,11 +6,31 @@ on:
   pull_request:
     branches: [ "main" ]
   
-jobs:
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
 
+concurrency:
+  group: build-test-ci-${{ github.ref }}-1
+  cancel-in-progress: true
+
+jobs:
   go-build-test:
     runs-on: ubuntu-latest
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@v2
+      with:
+        disable-sudo: true
+        egress-policy: block
+        allowed-endpoints: >
+          api.github.com:443
+          github.com:443
+          proxy.golang.org:443
+          sum.golang.org:443
+          objects.githubusercontent.com:443
+
     - uses: actions/checkout@v4
 
     - name: Set up Go
@@ -24,9 +44,76 @@ jobs:
     - name: Test
       run: make test
 
+  go-analyse:
+    needs:  go-build-test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@v2
+      with:
+        disable-sudo: true
+        egress-policy: block
+        allowed-endpoints: >
+          api.github.com:443
+          github.com:443
+          proxy.golang.org:443
+          sum.golang.org:443
+          objects.githubusercontent.com:443
+          registry-1.docker.io:443
+          auth.docker.io:443
+          production.cloudflare.docker.com:443
+          vuln.go.dev:443
+
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+
+    - name: Docker cache
+      uses: ScribeMD/docker-cache@0.3.7
+      with:
+        key: docker-${{ runner.os }}-${{ hashFiles('Makefile') }}}
+
+    - name: Lint
+      run: make lint
+
+    - name: Gosec
+      run: make gosec
+
+    - name: Vulncheck
+      run: make vulncheck
+    
+    - name: Nilcheck
+      run: make nilcheck
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@v2
+      with:
+        disable-sudo: true
+        egress-policy: block
+        allowed-endpoints: >
+          api.github.com:443
+          github.com:443
+          proxy.golang.org:443
+          sum.golang.org:443
+          objects.githubusercontent.com:443
+          registry-1.docker.io:443
+          auth.docker.io:443
+          production.cloudflare.docker.com:443
+          gcr.io:443
+          storage.googleapis.com:443
+
     - uses: actions/checkout@v4
+
+    - name: Docker cache
+      uses: ScribeMD/docker-cache@0.3.7
+      with:
+        key: docker-${{ runner.os }}-${{ hashFiles('Dockerfile') }}
+
     - name: Build the Docker image
       run: make docker-build

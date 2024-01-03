@@ -29,8 +29,10 @@ import (
 // LinodeMachineSpec defines the desired state of LinodeMachine
 type LinodeMachineSpec struct {
 	// ProviderID is the unique identifier as specified by the cloud provider.
+	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
 	// InstanceID is the Linode instance ID for this machine.
+	// +optional
 	InstanceID *int `json:"instanceID,omitempty"`
 
 	// +kubebuilder:validation:Required
@@ -66,6 +68,7 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
 	Metadata *InstanceMetadataOptions `json:"metadata,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallId,omitempty"`
@@ -83,9 +86,11 @@ type InstanceConfigInterfaceCreateOptions struct {
 	Label       string                          `json:"label,omitempty"`
 	Purpose     linodego.ConfigInterfacePurpose `json:"purpose,omitempty"`
 	Primary     bool                            `json:"primary,omitempty"`
-	SubnetID    *int                            `json:"subnetId,omitempty"`
-	IPv4        *VPCIPv4                        `json:"ipv4,omitempty"`
-	IPRanges    []string                        `json:"ipRanges,omitempty"`
+	// +optional
+	SubnetID *int `json:"subnetId,omitempty"`
+	// +optional
+	IPv4     *VPCIPv4 `json:"ipv4,omitempty"`
+	IPRanges []string `json:"ipRanges,omitempty"`
 }
 
 // VPCIPv4 defines VPC IPV4 settings

@@ -62,9 +62,25 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: gosec
+gosec: ## Run gosec against code.
+	docker run --rm -w /workdir -v $(PWD):/workdir securego/gosec:2.18.2 -exclude-dir=bin -exclude-generated ./...
+
+.PHONY: lint
+lint: ## Run lint against code.
+	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:v1.55 golangci-lint run -c .golangci.yml
+
+.PHONY: nilcheck
+nilcheck: nilaway ## Run nil check against code.
+	go list ./... | xargs -I {} -d '\n' nilaway -include-pkgs {} ./...
+
+.PHONY: vulncheck
+vulncheck: govulncheck ## Run vulnerability check against code.
+	govulncheck ./...
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
 
 ##@ Build
 
@@ -151,6 +167,8 @@ TILT ?= $(LOCALBIN)/tilt
 KIND ?= $(LOCALBIN)/kind
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 HUSKY ?= $(LOCALBIN)/husky
+NILAWAY ?= $(LOCALBIN)/nilaway
+GOVULNC ?= $(LOCALBIN)/govulncheck
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.1.1
@@ -160,6 +178,8 @@ CONTROLLER_TOOLS_VERSION ?= v0.13.0
 TILT_VERSION ?= 0.33.6
 KIND_VERSION ?= 0.20.0
 HUSKY_VERSION ?= v0.2.16
+NILAWAY_VERSION ?= latest
+GOVULNC_VERSION ?= v1.0.1
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -216,6 +236,16 @@ husky: $(HUSKY) ## Download husky locally if necessary.
 	@echo Set any value for SKIP_GIT_PUSH_HOOK env variable to skip git hook execution.
 $(HUSKY): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/automation-co/husky@$(HUSKY_VERSION)
+
+.PHONY: nilaway
+nilaway: $(NILAWAY) ## Download nilaway locally if necessary.
+$(NILAWAY): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install go.uber.org/nilaway/cmd/nilaway@$(NILAWAY_VERSION)
+
+.PHONY: govulncheck
+govulncheck: $(GOVULNC) ## Download govulncheck locally if necessary.
+$(GOVULNC): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNC_VERSION)
 
 .PHONY: clean
 clean:

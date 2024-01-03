@@ -8,6 +8,7 @@ import (
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
@@ -56,12 +57,12 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(createConfig)
-	assert.NoError(t, err, "Failed to encode InstanceCreateOptions")
+	require.NoError(t, err, "Failed to encode InstanceCreateOptions")
 
 	var actualMachineSpec infrav1.LinodeMachineSpec
 	dec := gob.NewDecoder(&buf)
 	err = dec.Decode(&actualMachineSpec)
-	assert.NoError(t, err, "Failed to decode LinodeMachineSpec")
+	require.NoError(t, err, "Failed to decode LinodeMachineSpec")
 
 	assert.Equal(t, machineSpec, actualMachineSpec)
 }

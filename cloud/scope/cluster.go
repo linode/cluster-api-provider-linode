@@ -43,10 +43,11 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 	if params.LinodeCluster == nil {
 		return errors.New("linodeCluster is required when creating a ClusterScope")
 	}
+
 	return nil
 }
 
-func createLinodeClient(apiKey string) (*linodego.Client, error) {
+func createLinodeClient(apiKey string) *linodego.Client {
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: apiKey})
 
 	oauth2Client := &http.Client{
@@ -55,7 +56,8 @@ func createLinodeClient(apiKey string) (*linodego.Client, error) {
 		},
 	}
 	linodeClient := linodego.NewClient(oauth2Client)
-	return &linodeClient, nil
+
+	return &linodeClient
 }
 
 // NewClusterScope creates a new Scope from the supplied parameters.
@@ -65,10 +67,7 @@ func NewClusterScope(apiKey string, params ClusterScopeParams) (*ClusterScope, e
 		return nil, err
 	}
 
-	linodeClient, err := createLinodeClient(apiKey)
-	if err != nil {
-		return nil, err
-	}
+	linodeClient := createLinodeClient(apiKey)
 
 	helper, err := patch.NewHelper(params.LinodeCluster, params.Client)
 	if err != nil {

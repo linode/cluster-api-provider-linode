@@ -43,6 +43,7 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	if params.LinodeMachine == nil {
 		return errors.New("linodeMachine is required when creating a MachineScope")
 	}
+
 	return nil
 }
 
@@ -51,10 +52,7 @@ func NewMachineScope(apiKey string, params MachineScopeParams) (*MachineScope, e
 		return nil, err
 	}
 
-	linodeClient, err := createLinodeClient(apiKey)
-	if err != nil {
-		return nil, err
-	}
+	linodeClient := createLinodeClient(apiKey)
 
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
