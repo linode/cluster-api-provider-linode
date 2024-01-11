@@ -203,7 +203,11 @@ $(TILT): $(LOCALBIN)
 kind: $(KIND) ## Download kind locally if necessary. If wrong version is installed, it will be overwritten.
 $(KIND): $(LOCALBIN)
 	test -s $(KIND) && $(KIND) version | grep -q $(KIND_VERSION) || \
-	(cd $(LOCALBIN); curl -Lso ./kind https://kind.sigs.k8s.io/dl/v$(KIND_VERSION)/kind-$(OS)-$(ARCH) && chmod +x kind)
+	(KIND_ARCH=$(ARCH); \
+	 if [ $$KIND_ARCH = "x86_64" ]; then \
+		 KIND_ARCH=amd64; \
+	 fi; \
+	cd $(LOCALBIN); curl -f -Lso ./kind https://kind.sigs.k8s.io/dl/v$(KIND_VERSION)/kind-$(OS)-$$KIND_ARCH && chmod +x kind)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
