@@ -248,7 +248,7 @@ func (r *LinodeMachineReconciler) reconcile(
 	return
 }
 
-func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (linodeInstance *linodego.Instance, err error) {
+func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.Instance, error) {
 	tags := []string{string(machineScope.LinodeCluster.UID), string(machineScope.LinodeMachine.UID)}
 	filter := map[string]string{
 		"tags": strings.Join(tags, ","),
@@ -264,9 +264,10 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 	if linodeInstances, err = machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, string(rawFilter))); err != nil {
 		logger.Info("Failed to list Linode machine instances", "error", err.Error())
 
-		return
+		return nil, err
 	}
 
+	var linodeInstance *linodego.Instance
 	switch len(linodeInstances) {
 	case 1:
 		logger.Info("Linode instance already exists")
@@ -277,7 +278,7 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 		if createConfig == nil {
 			logger.Error(errors.New("failed to convert machine spec to create isntance config"), "Panic! Struct of LinodeMachineSpec is different then InstanceCreateOptions")
 
-			return
+			return nil, err
 		}
 		createConfig.Tags = tags
 
@@ -287,7 +288,7 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 			// Already exists is not an error
 			apiErr := linodego.Error{}
 			if errors.As(err, &apiErr) && apiErr.Code != http.StatusFound {
-				return
+				return nil, err
 			}
 
 			err = nil
@@ -297,9 +298,11 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 			}
 		}
 	default:
-		logger.Error(errors.New("multiple instances found"), "Panic! Multiple instances found. This might be a concurrency issue in the controller!!!", "filters", string(rawFilter))
+		err = errors.New("multiple instances")
 
-		return
+		logger.Error(err, "Panic! Multiple instances found. This might be a concurrency issue in the controller!!!", "filters", string(rawFilter))
+
+		return nil, err
 	}
 
 	if linodeInstance == nil {
@@ -307,7 +310,7 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 
 		logger.Error(err, "Panic! Failed to create isntance")
 
-		return
+		return nil, err
 	}
 
 	machineScope.LinodeMachine.Status.Ready = true
@@ -322,7 +325,7 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 		})
 	}
 
-	return
+	return linodeInstance, nil
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res reconcile.Result, linodeInstance *linodego.Instance, err error) {
@@ -373,20 +376,18 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	return
 }
 
-func (*LinodeMachineReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (err error) {
+func (*LinodeMachineReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
 	logger.Info("deleting machine")
 
 	if machineScope.LinodeMachine.Spec.InstanceID != nil {
-		if err = machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
+		if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
 			logger.Info("Failed to delete Linode machine instance", "error", err.Error())
 
 			// Not found is not an error
 			apiErr := linodego.Error{}
 			if errors.As(err, &apiErr) && apiErr.Code != http.StatusNotFound {
-				return
+				return err
 			}
-
-			err = nil
 		}
 	} else {
 		logger.Info("Machine ID is missing, nothing to do")
@@ -398,7 +399,7 @@ func (*LinodeMachineReconciler) reconcileDelete(ctx context.Context, logger logr
 	machineScope.LinodeMachine.Spec.InstanceID = nil
 	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1.GroupVersion.String())
 
-	return
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
