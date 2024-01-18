@@ -18,28 +18,53 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/errors"
 )
-
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // LinodeClusterSpec defines the desired state of LinodeCluster
 type LinodeClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// The Linode Region the LinodeCluster lives in.
+	Region string `json:"region"`
 
-	// Foo is an example field of LinodeCluster. Edit linodecluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// ControlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane.
+	// If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used.
+	// +optional
+	ControlPlaneEndpoint clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
+
+	// NetworkSpec encapsulates all things related to Linode network.
+	// +optional
+	Network NetworkSpec `json:"network"`
 }
 
 // LinodeClusterStatus defines the observed state of LinodeCluster
 type LinodeClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Ready denotes that the cluster (infrastructure) is ready.
+	// +optional
+	Ready bool `json:"ready"`
+
+	// FailureReason will be set in the event that there is a terminal problem
+	// reconciling the Machine and will contain a succinct value suitable
+	// for machine interpretation.
+	// +optional
+	FailureReason *errors.MachineStatusError `json:"failureReason"`
+
+	// FailureMessage will be set in the event that there is a terminal problem
+	// reconciling the Machine and will contain a more verbose string suitable
+	// for logging and human consumption.
+	// +optional
+	FailureMessage *string `json:"failureMessage"`
+
+	// Conditions defines current service state of the LinodeCluster.
+	// +optional
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this LinodeCluster belongs"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Cluster infrastructure is ready for Linode instances"
+// +kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".spec.ControlPlaneEndpoint",description="API Endpoint",priority=1
 
 // LinodeCluster is the Schema for the linodeclusters API
 type LinodeCluster struct {
@@ -50,7 +75,22 @@ type LinodeCluster struct {
 	Status LinodeClusterStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+func (lm *LinodeCluster) GetConditions() clusterv1.Conditions {
+	return lm.Status.Conditions
+}
+
+func (lm *LinodeCluster) SetConditions(conditions clusterv1.Conditions) {
+	lm.Status.Conditions = conditions
+}
+
+// NetworkSpec encapsulates Linode networking resources.
+type NetworkSpec struct {
+	// NodebalancerID is the id of apiserver Nodebalancer.
+	// +optional
+	NodebalancerID int `json:"nodebalancerID,omitempty"`
+}
+
+// +kubebuilder:object:root=true
 
 // LinodeClusterList contains a list of LinodeCluster
 type LinodeClusterList struct {
