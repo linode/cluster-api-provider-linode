@@ -18,45 +18,220 @@ package controller
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/cloud/services"
+	"github.com/linode/cluster-api-provider-linode/util"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler"
+	"github.com/linode/linodego"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/tools/record"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	cerrs "sigs.k8s.io/cluster-api/errors"
+	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/predicates"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
 type LinodeClusterReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Recorder         record.EventRecorder
+	LinodeApiKey     string
+	WatchFilterValue string
+	Scheme           *runtime.Scheme
+	ReconcileTimeout time.Duration
 }
 
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the LinodeCluster object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.0/pkg/reconcile
+
 func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
+	defer cancel()
 
-	// TODO(user): your logic here
+	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.NamespacedName.String())
+	LinodeCluster := &infrav1.LinodeCluster{}
+	if err := r.Client.Get(ctx, req.NamespacedName, LinodeCluster); err != nil {
+		logger.Info("Failed to fetch Linode cluster", "error", err.Error())
 
-	return ctrl.Result{}, nil
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	cluster, err := kutil.GetOwnerCluster(ctx, r.Client, LinodeCluster.ObjectMeta)
+	if err != nil {
+		logger.Info("Failed to get owner cluster", "error", err.Error())
+
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	} else if cluster == nil {
+		logger.Info("Machine Controller has not yet set OwnerRef, skipping reconciliation")
+
+		return ctrl.Result{}, nil
+	}
+	if annotations.IsPaused(cluster, LinodeCluster) {
+		logger.Info("LinodeCluster of linked Cluster is marked as paused. Won't reconcile")
+
+		return ctrl.Result{}, nil
+	}
+	// Create the cluster scope.
+	clusterScope, err := scope.NewClusterScope(
+		r.LinodeApiKey,
+		scope.ClusterScopeParams{
+			Client:        r.Client,
+			Cluster:       cluster,
+			LinodeCluster: LinodeCluster,
+		})
+	if err != nil {
+		logger.Info("Failed to create cluster scope", "error", err.Error())
+
+		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
+	}
+
+	return r.reconcile(ctx, clusterScope, logger)
+}
+
+func (r *LinodeClusterReconciler) reconcile(
+	ctx context.Context,
+	clusterScope *scope.ClusterScope,
+	logger logr.Logger,
+) (res ctrl.Result, err error) {
+	res = ctrl.Result{}
+
+	clusterScope.LinodeCluster.Status.Ready = false
+	clusterScope.LinodeCluster.Status.FailureReason = nil
+	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer("")
+
+	failureReason := cerrs.ClusterStatusError("UnknownError")
+
+	defer func() {
+		if err != nil {
+			setFailureReason(clusterScope, failureReason, err, r)
+		}
+
+		if patchErr := clusterScope.PatchHelper.Patch(ctx, clusterScope.LinodeCluster); patchErr != nil && client.IgnoreNotFound(patchErr) != nil {
+			logger.Error(patchErr, "failed to patch LinodeCluster")
+
+			err = errors.Join(err, patchErr)
+		}
+	}()
+
+	// Delete
+	if !clusterScope.LinodeCluster.ObjectMeta.DeletionTimestamp.IsZero() {
+		failureReason = cerrs.DeleteClusterError
+
+		err = r.reconcileDelete(ctx, logger, clusterScope)
+
+		return
+	}
+
+	controllerutil.AddFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
+	// Create
+	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
+		failureReason = cerrs.CreateClusterError
+
+		_, err = r.reconcileCreate(ctx, clusterScope, logger)
+	}
+	if err == nil {
+		clusterScope.LinodeCluster.Status.Ready = true
+		conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
+
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Load balancer is ready")
+	}
+
+	return
+}
+
+func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.ClusterStatusError, err error, lcr *LinodeClusterReconciler) {
+	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
+	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(err.Error())
+
+	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
+
+	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
+}
+
+func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancer, error) {
+	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = linodeNB.ID
+
+	linodeNBConfig, err := services.CreateNodeBalancerConfig(ctx, clusterScope, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+		Host: *linodeNB.IPv4,
+		Port: int32(linodeNBConfig.Port),
+	}
+
+	return linodeNB, nil
+}
+
+func (*LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	logger.Info("deleting cluster")
+
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != 0 {
+		if err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, clusterScope.LinodeCluster.Spec.Network.NodeBalancerID); err != nil {
+			logger.Info("Failed to delete Linode NodeBalancer", "error", err.Error())
+
+			// Not found is not an error
+			apiErr := linodego.Error{}
+			if errors.As(err, &apiErr) && apiErr.Code != http.StatusNotFound {
+				conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
+				clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = 0
+				controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
+
+				return err
+			}
+		}
+	} else {
+		logger.Info("NodeBalancer ID is missing, nothing to do")
+	}
+
+	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
+
+	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = 0
+	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha1.LinodeCluster{}).
-		Complete(r)
+	controller, err := ctrl.NewControllerManagedBy(mgr).
+		For(&infrav1.LinodeCluster{}).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
+		Build(r)
+	if err != nil {
+		return fmt.Errorf("failed to build controller: %w", err)
+	}
+
+	return controller.Watch(
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+		handler.EnqueueRequestsFromMapFunc(kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1.LinodeCluster{})),
+		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
+	)
 }

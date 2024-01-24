@@ -153,7 +153,7 @@ func (in *LinodeClusterStatus) DeepCopyInto(out *LinodeClusterStatus) {
 	*out = *in
 	if in.FailureReason != nil {
 		in, out := &in.FailureReason, &out.FailureReason
-		*out = new(errors.MachineStatusError)
+		*out = new(errors.ClusterStatusError)
 		**out = **in
 	}
 	if in.FailureMessage != nil {
