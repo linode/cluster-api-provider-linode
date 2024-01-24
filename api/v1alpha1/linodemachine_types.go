@@ -41,7 +41,10 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Type string `json:"type"`
+	// +kubebuilder:validation:MinLength=3
+	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
 	Label string `json:"label,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Group string `json:"group,omitempty"`
@@ -77,25 +80,38 @@ type LinodeMachineSpec struct {
 // InstanceMetadataOptions defines metadata of instance
 type InstanceMetadataOptions struct {
 	// UserData expects a Base64-encoded string
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	UserData string `json:"userData,omitempty"`
 }
 
 // InstanceConfigInterfaceCreateOptions defines network interface config
 type InstanceConfigInterfaceCreateOptions struct {
-	IPAMAddress string                          `json:"ipamAddress,omitempty"`
-	Label       string                          `json:"label,omitempty"`
-	Purpose     linodego.ConfigInterfacePurpose `json:"purpose,omitempty"`
-	Primary     bool                            `json:"primary,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	IPAMAddress string `json:"ipamAddress,omitempty"`
+	// +kubebuilder:validation:MinLength=3
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	Label string `json:"label,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Purpose linodego.ConfigInterfacePurpose `json:"purpose,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Primary bool `json:"primary,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	SubnetID *int `json:"subnetId,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
-	IPv4     *VPCIPv4 `json:"ipv4,omitempty"`
+	IPv4 *VPCIPv4 `json:"ipv4,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	IPRanges []string `json:"ipRanges,omitempty"`
 }
 
 // VPCIPv4 defines VPC IPV4 settings
 type VPCIPv4 struct {
-	VPC     string `json:"vpc,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	VPC string `json:"vpc,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	NAT1To1 string `json:"nat1to1,omitempty"`
 }
 
@@ -103,6 +119,7 @@ type VPCIPv4 struct {
 type LinodeMachineStatus struct {
 	// Ready is true when the provider resource is ready.
 	// +optional
+	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
 	// Addresses contains the Linode instance associated addresses.

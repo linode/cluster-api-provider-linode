@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -35,6 +36,10 @@ type LinodeClusterSpec struct {
 	// NetworkSpec encapsulates all things related to Linode network.
 	// +optional
 	Network NetworkSpec `json:"network"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
 }
 
 // LinodeClusterStatus defines the observed state of LinodeCluster

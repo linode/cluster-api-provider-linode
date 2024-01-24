@@ -85,32 +85,63 @@ spec:
                       items:
                         type: string
                       type: array
+                      x-kubernetes-validations:
+                      - message: Value is immutable
+                        rule: self == oldSelf
                     ipamAddress:
                       type: string
+                      x-kubernetes-validations:
+                      - message: Value is immutable
+                        rule: self == oldSelf
                     ipv4:
                       description: VPCIPv4 defines VPC IPV4 settings
                       properties:
                         nat1to1:
                           type: string
+                          x-kubernetes-validations:
+                          - message: Value is immutable
+                            rule: self == oldSelf
                         vpc:
                           type: string
+                          x-kubernetes-validations:
+                          - message: Value is immutable
+                            rule: self == oldSelf
                       type: object
+                      x-kubernetes-validations:
+                      - message: Value is immutable
+                        rule: self == oldSelf
                     label:
+                      maxLength: 63
+                      minLength: 3
                       type: string
+                      x-kubernetes-validations:
+                      - message: Value is immutable
+                        rule: self == oldSelf
                     primary:
                       type: boolean
+                      x-kubernetes-validations:
+                      - message: Value is immutable
+                        rule: self == oldSelf
                     purpose:
                       description: ConfigInterfacePurpose options start with InterfacePurpose
                         and include all known interface purpose types
                       type: string
+                      x-kubernetes-validations:
+                      - message: Value is immutable
+                        rule: self == oldSelf
                     subnetId:
                       type: integer
+                      x-kubernetes-validations:
+                      - message: Value is immutable
+                        rule: self == oldSelf
                   type: object
                 type: array
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
               label:
+                maxLength: 63
+                minLength: 3
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -121,6 +152,9 @@ spec:
                   userData:
                     description: UserData expects a Base64-encoded string
                     type: string
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
                 type: object
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -273,6 +307,7 @@ spec:
                   this machine.
                 type: string
               ready:
+                default: false
                 description: Ready is true when the provider resource is ready.
                 type: boolean
             type: object
