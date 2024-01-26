@@ -8,9 +8,13 @@ metadata:
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
+    categories:
+    - cluster-api
     kind: LinodeCluster
     listKind: LinodeClusterList
     plural: linodeclusters
+    shortNames:
+    - lc
     singular: linodecluster
   scope: Namespaced
   versions:
