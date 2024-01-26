@@ -17,6 +17,7 @@ limitations under the License.
 package scope
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -91,4 +92,14 @@ type ClusterScope struct {
 	LinodeClient  *linodego.Client
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1.LinodeCluster
+}
+
+// PatchObject persists the cluster configuration and status.
+func (s *ClusterScope) PatchObject() error {
+	return s.PatchHelper.Patch(context.TODO(), s.LinodeCluster)
+}
+
+// Close closes the current scope persisting the cluster configuration and status.
+func (s *ClusterScope) Close() error {
+	return s.PatchObject()
 }
