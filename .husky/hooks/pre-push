@@ -13,7 +13,7 @@ if git status --short | grep -qv "??"; then
     trap unstash EXIT
 fi
 
-make generate manifests
+make generate manifests _setImage
 git diff --exit-code --quiet || (git status && exit 1)
 
 make lint gosec nilcheck test

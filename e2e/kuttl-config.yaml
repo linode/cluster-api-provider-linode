@@ -1,0 +1,15 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+testDirs:
+- e2e/basic
+kindConfig: e2e/kind-config.yaml
+kindContext: kuttl
+startKIND: true
+kindNodeCache: true
+kindContainers:
+- capli-controller:e2e
+artifactsDir: .kind
+timeout: 120
+commands:
+  - command: clusterctl init
+  - command: make deploy
