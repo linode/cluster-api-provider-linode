@@ -1,0 +1,11 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: kuttl
+nodes:
+- role: control-plane
+  image: kindest/node:v1.28.0
+  extraPortMappings:
+  - containerPort: 8080
+    hostPort: 28080
+  - containerPort: 8081
+    hostPort: 28081
