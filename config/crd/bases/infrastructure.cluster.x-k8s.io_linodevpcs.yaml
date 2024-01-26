@@ -54,16 +54,10 @@ spec:
                   properties:
                     ipv4:
                       type: string
-                      x-kubernetes-validations:
-                      - message: Value is immutable
-                        rule: self == oldSelf
                     label:
                       maxLength: 63
                       minLength: 3
                       type: string
-                      x-kubernetes-validations:
-                      - message: Value is immutable
-                        rule: self == oldSelf
                   type: object
                 type: array
                 x-kubernetes-validations:

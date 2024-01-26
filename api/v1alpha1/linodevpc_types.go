@@ -47,10 +47,8 @@ type LinodeVPCSpec struct {
 type VPCSubnetCreateOptions struct {
 	// +kubebuilder:validation:MinLength=3
 	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	Label string `json:"label,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	IPv4 string `json:"ipv4,omitempty"`
 }

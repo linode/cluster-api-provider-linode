@@ -32,13 +32,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
-	"github.com/linode/linodego"
 )
 
 // LinodeVPCReconciler reconciles a LinodeVPC object
@@ -129,7 +129,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	if !vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = infrav1.DeleteVPCError
 
-		err = r.reconcileDelete(ctx, logger, vpcScope)
+		res, err = r.reconcileDelete(ctx, logger, vpcScope)
 
 		return
 	}
@@ -156,6 +156,8 @@ func (r *LinodeVPCReconciler) reconcile(
 }
 
 func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Logger) error {
+	logger.Info("creating vpc")
+
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
 
@@ -171,6 +173,9 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, vpcScope *sco
 }
 
 func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
+	logger.Info("updating vpc")
+
+	// Update is not supported at the moment
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
 
@@ -185,17 +190,46 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 	return nil
 }
 
-func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
+//nolint:nestif // As simple as possible.
+func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) (reconcile.Result, error) {
 	logger.Info("deleting VPC")
 
-	if vpcScope.LinodeVPC.Spec.VPCID != nil {
-		if err := vpcScope.LinodeClient.DeleteVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID); err != nil {
-			logger.Error(err, "Failed to delete VPC")
+	res := ctrl.Result{}
 
-			// Not found is not an error
-			apiErr := linodego.Error{Code: http.StatusNotFound}
-			if !apiErr.Is(err) {
-				return err
+	if vpcScope.LinodeVPC.Spec.VPCID != nil {
+		vpc, err := vpcScope.LinodeClient.GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)
+		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+			logger.Error(err, "Failed to fetch VPC")
+
+			return res, err
+		} else if vpc == nil {
+			return res, errors.New("failed to fetch VPC")
+		}
+
+		if vpc != nil {
+			for i := range vpc.Subnets {
+				if len(vpc.Subnets[i].Linodes) == 0 {
+					continue
+				}
+
+				if vpc.Updated.Add(reconciler.DefaultVPCControllerWaitForHasNodesTimeout).After(time.Now()) {
+					logger.Info("VPC has node(s) attached, re-queuing reconciliation")
+
+					return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerWaitForHasNodesDelay}, nil
+				}
+
+				logger.Info("VPC has node(s) attached for long, skipping reconciliation")
+
+				conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletionFailedReason, clusterv1.ConditionSeverityInfo, "skipped due to node(s) attached")
+
+				return res, nil
+			}
+
+			err = vpcScope.LinodeClient.DeleteVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)
+			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+				logger.Error(err, "Failed to delete VPC")
+
+				return res, err
 			}
 		}
 	} else {
@@ -209,7 +243,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 	vpcScope.LinodeVPC.Spec.VPCID = nil
 	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1.GroupVersion.String())
 
-	return nil
+	return res, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
