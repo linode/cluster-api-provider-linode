@@ -113,49 +113,38 @@ func (r *LinodeClusterReconciler) reconcile(
 	ctx context.Context,
 	clusterScope *scope.ClusterScope,
 	logger logr.Logger,
-) (res ctrl.Result, err error) {
+) (res ctrl.Result, reterr error) {
 	res = ctrl.Result{}
 
 	clusterScope.LinodeCluster.Status.Ready = false
 	clusterScope.LinodeCluster.Status.FailureReason = nil
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer("")
 
-	failureReason := cerrs.ClusterStatusError("UnknownError")
-
+	// Always close the scope when exiting this function so we can persist any GCPMachine changes.
 	defer func() {
-		if err != nil {
-			setFailureReason(clusterScope, failureReason, err, r)
-		}
-
-		if patchErr := clusterScope.PatchHelper.Patch(ctx, clusterScope.LinodeCluster); patchErr != nil && client.IgnoreNotFound(patchErr) != nil {
-			logger.Error(patchErr, "failed to patch LinodeCluster")
-
-			err = errors.Join(err, patchErr)
+		if err := clusterScope.Close(); err != nil && reterr == nil {
+			logger.Error(err, "failed to patch LinodeCluster")
+			reterr = err
 		}
 	}()
 
-	// Delete
-	if !clusterScope.LinodeCluster.ObjectMeta.DeletionTimestamp.IsZero() {
-		failureReason = cerrs.DeleteClusterError
-
-		err = r.reconcileDelete(ctx, logger, clusterScope)
-
-		return
+	// Handle deleted clusters
+	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, r.reconcileDelete(ctx, logger, clusterScope)
 	}
 
 	controllerutil.AddFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
-		failureReason = cerrs.CreateClusterError
-
-		_, err = r.reconcileCreate(ctx, clusterScope, logger)
+		if err := r.reconcileCreate(ctx, clusterScope, logger); err != nil {
+			return res, err
+		}
 	}
-	if err == nil {
-		clusterScope.LinodeCluster.Status.Ready = true
-		conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
 
-		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Load balancer is ready")
-	}
+	clusterScope.LinodeCluster.Status.Ready = true
+	conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
+
+	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Load balancer is ready")
 
 	return
 }
@@ -169,17 +158,21 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
 }
 
-func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancer, error) {
+func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) error {
 	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
 	if err != nil {
-		return nil, err
+		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+
+		return err
 	}
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = linodeNB.ID
 
 	linodeNBConfig, err := services.CreateNodeBalancerConfig(ctx, clusterScope, logger)
 	if err != nil {
-		return nil, err
+		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+
+		return err
 	}
 
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
@@ -187,28 +180,28 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, clusterSc
 		Port: int32(linodeNBConfig.Port),
 	}
 
-	return linodeNB, nil
+	return nil
 }
 
-func (*LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
-
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != 0 {
-		if err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, clusterScope.LinodeCluster.Spec.Network.NodeBalancerID); err != nil {
-			logger.Info("Failed to delete Linode NodeBalancer", "error", err.Error())
-
-			// Not found is not an error
-			apiErr := linodego.Error{}
-			if errors.As(err, &apiErr) && apiErr.Code != http.StatusNotFound {
-				conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
-				clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = 0
-				controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
-
-				return err
-			}
-		}
-	} else {
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == 0 {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
+		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
+
+		return nil
+	}
+
+	if err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, clusterScope.LinodeCluster.Spec.Network.NodeBalancerID); err != nil {
+		logger.Info("Failed to delete Linode NodeBalancer", "error", err.Error())
+
+		// Not found is not an error
+		apiErr := linodego.Error{}
+		if errors.As(err, &apiErr) && apiErr.Code != http.StatusNotFound {
+			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+
+			return err
+		}
 	}
 
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
