@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/linode/linodego"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -37,4 +38,14 @@ func CreateLinodeAPIFilter(label string, tags []string) string {
 	}
 
 	return string(rawFilter)
+}
+
+// IgnoreLinodeAPIError returns the error except matches to status code
+func IgnoreLinodeAPIError(err error, code int) error {
+	apiErr := linodego.Error{Code: code}
+	if apiErr.Is(err) {
+		err = nil
+	}
+
+	return err
 }

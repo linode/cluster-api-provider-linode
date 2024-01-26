@@ -54,12 +54,12 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 		return nil
 	}
 
-	linodeVPC, err := vpcScope.LinodeClient.CreateVPC(ctx, *createConfig)
+	vpc, err := vpcScope.LinodeClient.CreateVPC(ctx, *createConfig)
 	if err != nil {
 		logger.Error(err, "Failed to create VPC")
 
 		return err
-	} else if linodeVPC == nil {
+	} else if vpc == nil {
 		err = errors.New("missing VPC")
 
 		logger.Error(err, "Panic! Failed to create VPC")
@@ -67,7 +67,7 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 		return err
 	}
 
-	vpcScope.LinodeVPC.Spec.VPCID = &linodeVPC.ID
+	vpcScope.LinodeVPC.Spec.VPCID = &vpc.ID
 
 	return nil
 }

@@ -30,6 +30,11 @@ const (
 	DefaultMachineControllerWaitForRunningDelay = 5 * time.Second
 	// DefaultMachineControllerWaitForRunningTimeout is the default timeout if instance is not running.
 	DefaultMachineControllerWaitForRunningTimeout = 20 * time.Minute
+
+	// DefaultVPCControllerWaitForHasNodesDelay is the default requeue delay if VPC has nodes.
+	DefaultVPCControllerWaitForHasNodesDelay = 5 * time.Second
+	// DefaultVPCControllerWaitForHasNodesTimeout is the default timeout if instance is not running.
+	DefaultVPCControllerWaitForHasNodesTimeout = 20 * time.Minute
 )
 
 // DefaultedLoopTimeout will default the timeout if it is zero-valued.

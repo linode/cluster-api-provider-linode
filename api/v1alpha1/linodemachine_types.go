@@ -80,38 +80,28 @@ type LinodeMachineSpec struct {
 // InstanceMetadataOptions defines metadata of instance
 type InstanceMetadataOptions struct {
 	// UserData expects a Base64-encoded string
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	UserData string `json:"userData,omitempty"`
 }
 
 // InstanceConfigInterfaceCreateOptions defines network interface config
 type InstanceConfigInterfaceCreateOptions struct {
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	IPAMAddress string `json:"ipamAddress,omitempty"`
 	// +kubebuilder:validation:MinLength=3
 	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
-	Label string `json:"label,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Label   string                          `json:"label,omitempty"`
 	Purpose linodego.ConfigInterfacePurpose `json:"purpose,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Primary bool `json:"primary,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Primary bool                            `json:"primary,omitempty"`
 	// +optional
 	SubnetID *int `json:"subnetId,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
-	IPv4 *VPCIPv4 `json:"ipv4,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	IPv4     *VPCIPv4 `json:"ipv4,omitempty"`
 	IPRanges []string `json:"ipRanges,omitempty"`
 }
 
 // VPCIPv4 defines VPC IPV4 settings
 type VPCIPv4 struct {
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	VPC string `json:"vpc,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	VPC     string `json:"vpc,omitempty"`
 	NAT1To1 string `json:"nat1to1,omitempty"`
 }
 
