@@ -23,6 +23,9 @@ import (
 	"net/http"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+
 	"github.com/go-logr/logr"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
@@ -122,7 +125,7 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	// Always close the scope when exiting this function so we can persist any GCPMachine changes.
 	defer func() {
-		if err := clusterScope.Close(); err != nil && reterr == nil {
+		if err := clusterScope.Close(); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
 			logger.Error(err, "failed to patch LinodeCluster")
 			reterr = err
 		}
