@@ -5,6 +5,12 @@ IMG ?= controller:latest
 ENVTEST_K8S_VERSION = 1.28.0
 OS=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(shell uname -m)
+ARCH_SHORT=$(ARCH)
+ifeq ($(ARCH_SHORT),x86_64)
+ARCH_SHORT := amd64
+else ifeq ($(ARCH_SHORT),aarch64)
+ARCH_SHORT := arm64
+endif
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -200,7 +206,7 @@ $(CTLPTL): $(LOCALBIN)
 clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary. If wrong version is installed, it will be overwritten.
 $(CLUSTERCTL): $(LOCALBIN)
 	test -s $(LOCALBIN)/clusterctl && $(LOCALBIN)/clusterctl version | grep -q $(CLUSTERCTL_VERSION) || \
-	(cd $(LOCALBIN); curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(shell uname -s | tr '[:upper:]' '[:lower:]')-amd64 -o clusterctl)
+	(cd $(LOCALBIN); curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(OS)-$(ARCH_SHORT) -o clusterctl)
 	@chmod +x $(CLUSTERCTL)
 
 .PHONY: controller-gen
@@ -223,7 +229,7 @@ $(TILT): $(LOCALBIN)
 kind: $(KIND) ## Download kind locally if necessary. If wrong version is installed, it will be overwritten.
 $(KIND): $(LOCALBIN)
 	test -s $(KIND) && $(KIND) version | grep -q $(KIND_VERSION) || \
-	(cd $(LOCALBIN); curl -Lso ./kind https://kind.sigs.k8s.io/dl/v$(KIND_VERSION)/kind-$(OS)-$(ARCH) && chmod +x kind)
+	(cd $(LOCALBIN); curl -Lso ./kind https://github.com/kubernetes-sigs/kind/releases/download/v$(KIND_VERSION)/kind-$(OS)-$(ARCH_SHORT) && chmod +x kind)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
