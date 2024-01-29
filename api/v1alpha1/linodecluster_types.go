@@ -44,13 +44,13 @@ type LinodeClusterStatus struct {
 	Ready bool `json:"ready"`
 
 	// FailureReason will be set in the event that there is a terminal problem
-	// reconciling the Machine and will contain a succinct value suitable
+	// reconciling the LinodeCluster and will contain a succinct value suitable
 	// for machine interpretation.
 	// +optional
 	FailureReason *errors.ClusterStatusError `json:"failureReason,omitempty"`
 
 	// FailureMessage will be set in the event that there is a terminal problem
-	// reconciling the Machine and will contain a more verbose string suitable
+	// reconciling the LinodeCluster and will contain a more verbose string suitable
 	// for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`

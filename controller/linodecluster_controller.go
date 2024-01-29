@@ -48,7 +48,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
@@ -73,7 +73,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	defer cancel()
 
 	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.NamespacedName.String())
-	LinodeCluster := &infrav1.LinodeCluster{}
+	LinodeCluster := &infrav1alpha1.LinodeCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, LinodeCluster); err != nil {
 		logger.Info("Failed to fetch Linode cluster", "error", err.Error())
 
@@ -136,7 +136,7 @@ func (r *LinodeClusterReconciler) reconcile(
 		return ctrl.Result{}, r.reconcileDelete(ctx, logger, clusterScope)
 	}
 
-	controllerutil.AddFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
+	controllerutil.AddFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, clusterScope, logger); err != nil {
@@ -190,7 +190,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	logger.Info("deleting cluster")
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == 0 {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
-		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
+		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 
 		return nil
 	}
@@ -210,7 +210,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = 0
-	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1.GroupVersion.String())
+	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 
 	return nil
 }
@@ -218,7 +218,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	controller, err := ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1.LinodeCluster{}).
+		For(&infrav1alpha1.LinodeCluster{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
 		Build(r)
 	if err != nil {
@@ -227,7 +227,7 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1.LinodeCluster{})),
+		handler.EnqueueRequestsFromMapFunc(kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha1.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha1.LinodeCluster{})),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
 }
