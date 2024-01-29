@@ -73,14 +73,14 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	defer cancel()
 
 	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.NamespacedName.String())
-	LinodeCluster := &infrav1alpha1.LinodeCluster{}
-	if err := r.Client.Get(ctx, req.NamespacedName, LinodeCluster); err != nil {
+	linodeCluster := &infrav1alpha1.LinodeCluster{}
+	if err := r.Client.Get(ctx, req.NamespacedName, linodeCluster); err != nil {
 		logger.Info("Failed to fetch Linode cluster", "error", err.Error())
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	cluster, err := kutil.GetOwnerCluster(ctx, r.Client, LinodeCluster.ObjectMeta)
+	cluster, err := kutil.GetOwnerCluster(ctx, r.Client, linodeCluster.ObjectMeta)
 	if err != nil {
 		logger.Info("Failed to get owner cluster", "error", err.Error())
 
@@ -90,7 +90,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		return ctrl.Result{}, nil
 	}
-	if annotations.IsPaused(cluster, LinodeCluster) {
+	if annotations.IsPaused(cluster, linodeCluster) {
 		logger.Info("LinodeCluster of linked Cluster is marked as paused. Won't reconcile")
 
 		return ctrl.Result{}, nil
@@ -101,7 +101,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		scope.ClusterScopeParams{
 			Client:        r.Client,
 			Cluster:       cluster,
-			LinodeCluster: LinodeCluster,
+			LinodeCluster: linodeCluster,
 		})
 	if err != nil {
 		logger.Info("Failed to create cluster scope", "error", err.Error())
@@ -123,8 +123,9 @@ func (r *LinodeClusterReconciler) reconcile(
 	clusterScope.LinodeCluster.Status.FailureReason = nil
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer("")
 
-	// Always close the scope when exiting this function so we can persist any GCPMachine changes.
+	// Always close the scope when exiting this function so we can persist any LinodeCluster changes.
 	defer func() {
+		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
 		if err := clusterScope.Close(); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
 			logger.Error(err, "failed to patch LinodeCluster")
 			reterr = err
@@ -139,7 +140,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	controllerutil.AddFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
-		if err := r.reconcileCreate(ctx, clusterScope, logger); err != nil {
+		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
 			return res, err
 		}
 	}
@@ -149,7 +150,7 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Load balancer is ready")
 
-	return
+	return ctrl.Result{}, nil
 }
 
 func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.ClusterStatusError, err error, lcr *LinodeClusterReconciler) {
@@ -161,7 +162,7 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
 }
 
-func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) error {
+func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
 	if err != nil {
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
@@ -225,9 +226,14 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
-	return controller.Watch(
+	err = controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
 		handler.EnqueueRequestsFromMapFunc(kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha1.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha1.LinodeCluster{})),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
+	if err != nil {
+		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
+	}
+
+	return nil
 }

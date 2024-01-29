@@ -53,10 +53,9 @@ func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 
 	logger.Info(fmt.Sprintf("Creating NodeBalancer %s-api-server", clusterScope.LinodeCluster.Name))
 	createConfig := linodego.NodeBalancerCreateOptions{
-		Label:              util.Pointer(fmt.Sprintf("%s-api-server", clusterScope.LinodeCluster.Name)),
-		Region:             clusterScope.LinodeCluster.Spec.Region,
-		ClientConnThrottle: nil,
-		Tags:               tags,
+		Label:  util.Pointer(fmt.Sprintf("%s-api-server", clusterScope.LinodeCluster.Name)),
+		Region: clusterScope.LinodeCluster.Spec.Region,
+		Tags:   tags,
 	}
 
 	if linodeNB, err = clusterScope.LinodeClient.CreateNodeBalancer(ctx, createConfig); err != nil {
@@ -67,8 +66,6 @@ func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 		if errors.As(err, &apiErr) && apiErr.Code != http.StatusFound {
 			return nil, err
 		}
-
-		err = nil
 
 		if linodeNB != nil {
 			logger.Info("Linode NodeBalancer already exists", "existing", linodeNB.Label)
