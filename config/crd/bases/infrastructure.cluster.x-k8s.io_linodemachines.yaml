@@ -169,7 +169,9 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
             required:
+            - image
             - region
+            - rootPass
             - type
             type: object
           status:

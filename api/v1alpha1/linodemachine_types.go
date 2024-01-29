@@ -31,6 +31,7 @@ type LinodeMachineSpec struct {
 	// ProviderID is the unique identifier as specified by the cloud provider.
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
+
 	// InstanceID is the Linode instance ID for this machine.
 	// +optional
 	InstanceID *int `json:"instanceID,omitempty"`
@@ -38,38 +39,56 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
+
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Type string `json:"type"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Label string `json:"label,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Group string `json:"group,omitempty"`
+
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	RootPass string `json:"rootPass,omitempty"`
+	RootPass string `json:"rootPass"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	AuthorizedKeys []string `json:"authorizedKeys,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	AuthorizedUsers []string `json:"authorizedUsers,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	StackScriptID int `json:"stackscriptId,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	StackScriptData map[string]string `json:"stackscriptData,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	BackupID int `json:"backupId,omitempty"`
+
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Image string `json:"image,omitempty"`
+	Image string `json:"image"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Interfaces []InstanceConfigInterfaceCreateOptions `json:"interfaces,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	BackupsEnabled bool `json:"backupsEnabled,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+
 	PrivateIP bool `json:"privateIp,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Tags []string `json:"tags,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	Metadata *InstanceMetadataOptions `json:"metadata,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallId,omitempty"`
 }
