@@ -106,7 +106,6 @@ func main() {
 
 	if err = (&controller2.LinodeClusterReconciler{
 		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
 		Recorder:         mgr.GetEventRecorderFor("LinodeClusterReconciler"),
 		WatchFilterValue: clusterWatchFilter,
 		LinodeApiKey:     linodeToken,

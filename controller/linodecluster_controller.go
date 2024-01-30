@@ -124,7 +124,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	// Always close the scope when exiting this function so we can persist any LinodeCluster changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
-		if err := clusterScope.Close(); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
+		if err := clusterScope.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
 			logger.Error(err, "failed to patch LinodeCluster")
 			reterr = err
 		}
@@ -132,10 +132,12 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
-		return ctrl.Result{}, r.reconcileDelete(ctx, logger, clusterScope)
+		return res, r.reconcileDelete(ctx, logger, clusterScope)
 	}
 
-	controllerutil.AddFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
+	if err := clusterScope.AddFinalizer(ctx); err != nil {
+		return res, err
+	}
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
@@ -148,7 +150,7 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Load balancer is ready")
 
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.ClusterStatusError, err error, lcr *LinodeClusterReconciler) {
