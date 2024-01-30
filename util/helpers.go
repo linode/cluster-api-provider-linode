@@ -7,6 +7,8 @@ import (
 
 	"github.com/linode/linodego"
 	"k8s.io/apimachinery/pkg/types"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Pointer returns the pointer of any type
@@ -48,4 +50,21 @@ func IgnoreLinodeAPIError(err error, code int) error {
 	}
 
 	return err
+}
+
+// IgnoreKubeNotFound returns the error even if aggregated except not found
+func IgnoreKubeNotFound(err error) error {
+	//nolint:errorlint // This is specific non wrapped error.
+	errs, ok := err.(kerrors.Aggregate)
+	if !ok {
+		return client.IgnoreNotFound(err)
+	}
+
+	for _, e := range errs.Errors() {
+		if client.IgnoreNotFound(e) != nil {
+			return err
+		}
+	}
+
+	return nil
 }

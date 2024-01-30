@@ -74,9 +74,11 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	linodeVPC := &infrav1.LinodeVPC{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeVPC); err != nil {
-		log.Error(err, "Failed to fetch LinodeVPC")
+		if err = client.IgnoreNotFound(err); err != nil {
+			log.Error(err, "Failed to fetch LinodeVPC")
+		}
 
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	}
 
 	vpcScope, err := scope.NewVPCScope(
@@ -118,7 +120,7 @@ func (r *LinodeVPCReconciler) reconcile(
 			r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
-		if patchErr := vpcScope.PatchHelper.Patch(ctx, vpcScope.LinodeVPC); patchErr != nil && client.IgnoreNotFound(patchErr) != nil {
+		if patchErr := vpcScope.PatchHelper.Patch(ctx, vpcScope.LinodeVPC); patchErr != nil && util.IgnoreKubeNotFound(patchErr) != nil {
 			logger.Error(patchErr, "failed to patch LinodeVPC")
 
 			err = errors.Join(err, patchErr)
