@@ -61,6 +61,7 @@ type LinodeClusterStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:path=linodeclusters,scope=Namespaced,categories=cluster-api,shortName=lc
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this LinodeCluster belongs"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Cluster infrastructure is ready for Linode instances"
