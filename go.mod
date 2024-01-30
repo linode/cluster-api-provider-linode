@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/linode/linodego v1.27.0
 	github.com/onsi/ginkgo/v2 v2.15.0
-	github.com/onsi/gomega v1.30.0
+	github.com/onsi/gomega v1.31.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/oauth2 v0.16.0
