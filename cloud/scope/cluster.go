@@ -17,11 +17,14 @@ limitations under the License.
 package scope
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/linodego"
 	"golang.org/x/oauth2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -33,7 +36,7 @@ import (
 type ClusterScopeParams struct {
 	Client        client.Client
 	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1.LinodeCluster
+	LinodeCluster *infrav1alpha1.LinodeCluster
 }
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
@@ -90,5 +93,22 @@ type ClusterScope struct {
 	PatchHelper   *patch.Helper
 	LinodeClient  *linodego.Client
 	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1.LinodeCluster
+	LinodeCluster *infrav1alpha1.LinodeCluster
+}
+
+// PatchObject persists the cluster configuration and status.
+func (s *ClusterScope) PatchObject(ctx context.Context) error {
+	return s.PatchHelper.Patch(ctx, s.LinodeCluster)
+}
+
+// Close closes the current scope persisting the cluster configuration and status.
+func (s *ClusterScope) Close(ctx context.Context) error {
+	return s.PatchObject(ctx)
+}
+
+// AddFinalizer adds a finalizer and immediately patches the object to avoid any race conditions
+func (s *ClusterScope) AddFinalizer(ctx context.Context) error {
+	controllerutil.AddFinalizer(s.LinodeCluster, infrav1alpha1.GroupVersion.String())
+
+	return s.Close(ctx)
 }
