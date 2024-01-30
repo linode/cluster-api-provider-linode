@@ -30,6 +30,8 @@ const (
 	DefaultMachineControllerWaitForRunningDelay = 5 * time.Second
 	// DefaultMachineControllerWaitForRunningTimeout is the default timeout if instance is not running.
 	DefaultMachineControllerWaitForRunningTimeout = 20 * time.Minute
+	// DefaultMachineControllerLinodeImage default image.
+	DefaultMachineControllerLinodeImage = "linode/ubuntu22.04"
 
 	// DefaultVPCControllerWaitForHasNodesDelay is the default requeue delay if VPC has nodes.
 	DefaultVPCControllerWaitForHasNodesDelay = 5 * time.Second

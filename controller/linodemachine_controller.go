@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -93,6 +94,8 @@ type LinodeMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.0/pkg/reconcile
+//
+//nolint:gocyclo,cyclop // As simple as possible.
 func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
@@ -101,17 +104,21 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	linodeMachine := &infrav1.LinodeMachine{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeMachine); err != nil {
-		log.Error(err, "Failed to fetch Linode machine")
+		if err = client.IgnoreNotFound(err); err != nil {
+			log.Error(err, "Failed to fetch Linode machine")
+		}
 
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	}
 
 	machine, err := kutil.GetOwnerMachine(ctx, r.Client, linodeMachine.ObjectMeta)
 	switch {
 	case err != nil:
-		log.Error(err, "Failed to fetch owner machine")
+		if err = client.IgnoreNotFound(err); err != nil {
+			log.Error(err, "Failed to fetch owner machine")
+		}
 
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	case machine == nil:
 		log.Info("Machine Controller has not yet set OwnerRef, skipping reconciliation")
 
@@ -138,14 +145,25 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	log = log.WithValues("Linode machine: ", machine.Name)
 
 	cluster, err := kutil.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
-	if err != nil {
-		log.Info("Failed to fetch cluster by label")
+	switch {
+	case err != nil:
+		if err = client.IgnoreNotFound(err); err != nil {
+			log.Error(err, "Failed to fetch cluster by label")
+		}
 
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	} else if cluster == nil {
-		log.Info("Failed to find cluster by label")
+		return ctrl.Result{}, err
+	case cluster == nil:
+		err = errors.New("missing cluster")
 
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		log.Error(err, "Missing cluster")
+
+		return ctrl.Result{}, err
+	case cluster.Spec.InfrastructureRef == nil:
+		err = errors.New("missing infrastructure reference")
+
+		log.Error(err, "Missing infrastructure reference")
+
+		return ctrl.Result{}, err
 	}
 
 	linodeCluster := &infrav1.LinodeCluster{}
@@ -155,9 +173,11 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if err = r.Client.Get(ctx, linodeClusterKey, linodeCluster); err != nil {
-		log.Error(err, "Failed to fetch Linode cluster")
+		if err = client.IgnoreNotFound(err); err != nil {
+			log.Error(err, "Failed to fetch Linode cluster")
+		}
 
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	}
 
 	machineScope, err := scope.NewMachineScope(
@@ -202,7 +222,7 @@ func (r *LinodeMachineReconciler) reconcile(
 			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
-		if patchErr := machineScope.PatchHelper.Patch(ctx, machineScope.LinodeMachine); patchErr != nil && client.IgnoreNotFound(patchErr) != nil {
+		if patchErr := machineScope.PatchHelper.Patch(ctx, machineScope.LinodeMachine); patchErr != nil && util.IgnoreKubeNotFound(patchErr) != nil {
 			logger.Error(patchErr, "failed to patch LinodeMachine")
 
 			err = errors.Join(err, patchErr)
@@ -274,10 +294,22 @@ func (r *LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineSc
 
 			return nil, err
 		}
-		createConfig.Tags = tags
+
+		if createConfig.Tags == nil {
+			createConfig.Tags = []string{}
+		}
+		createConfig.Tags = append(createConfig.Tags, tags...)
 
 		if createConfig.Label == "" {
 			createConfig.Label = util.RenderObjectLabel(machineScope.LinodeMachine.UID)
+		}
+
+		if createConfig.Image == "" {
+			createConfig.Image = reconciler.DefaultMachineControllerLinodeImage
+		}
+
+		if createConfig.RootPass == "" {
+			createConfig.RootPass = uuid.NewString()
 		}
 
 		if machineScope.LinodeCluster.Spec.VPCRef != nil {

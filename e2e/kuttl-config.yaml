@@ -9,7 +9,7 @@ kindNodeCache: true
 kindContainers:
 - capli-controller:e2e
 artifactsDir: .kind
-timeout: 120
+timeout: 300
 commands:
   - command: clusterctl init
   - command: make deploy

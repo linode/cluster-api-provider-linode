@@ -99,6 +99,7 @@ jobs:
         disable-sudo: true
         egress-policy: block
         allowed-endpoints: >
+          api.linode.com:443
           api.github.com:443
           github.com:443
           gcr.io:443
@@ -132,6 +133,8 @@ jobs:
 
     - name: E2E test
       run: make e2etest
+      env:
+        LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
 
     - uses: actions/upload-artifact@v4
       if: ${{ always() }}
