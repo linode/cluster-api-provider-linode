@@ -143,12 +143,11 @@ func (r *LinodeClusterReconciler) reconcile(
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
 			return res, err
 		}
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Load balancer is ready")
 	}
 
 	clusterScope.LinodeCluster.Status.Ready = true
 	conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
-
-	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Load balancer is ready")
 
 	return res, nil
 }
