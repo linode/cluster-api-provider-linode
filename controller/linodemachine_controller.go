@@ -49,10 +49,9 @@ import (
 )
 
 var skippedMachinePhases = map[string]bool{
-	string(clusterv1.MachinePhasePending):      true,
-	string(clusterv1.MachinePhaseProvisioning): true,
-	string(clusterv1.MachinePhaseFailed):       true,
-	string(clusterv1.MachinePhaseUnknown):      true,
+	string(clusterv1.MachinePhasePending): true,
+	string(clusterv1.MachinePhaseFailed):  true,
+	string(clusterv1.MachinePhaseUnknown): true,
 }
 
 var skippedInstanceStatuses = map[linodego.InstanceStatus]bool{
