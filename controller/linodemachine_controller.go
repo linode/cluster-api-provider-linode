@@ -81,13 +81,14 @@ type LinodeMachineReconciler struct {
 	ReconcileTimeout time.Duration
 }
 
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines/finalizers,verbs=update
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines/finalizers,verbs=update
 
-//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;watch;list
-//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list
-//+kubebuilder:rbac:groups="",resources=events,verbs=create;update;patch
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;watch;list
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list
+// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets;,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -118,7 +119,6 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		return ctrl.Result{}, nil
 	case skippedMachinePhases[machine.Status.Phase]:
-		log.Info("Machine phase is not the one we are looking for, skipping reconciliation", "phase", machine.Status.Phase)
 
 		return ctrl.Result{}, nil
 	default:
@@ -209,6 +209,9 @@ func (r *LinodeMachineReconciler) reconcile(
 		}
 	}()
 
+	// Add the finalizer if not already there
+	controllerutil.AddFinalizer(machineScope.LinodeMachine, infrav1.GroupVersion.String())
+
 	// Delete
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = cerrs.DeleteMachineError
@@ -217,8 +220,6 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		return
 	}
-
-	controllerutil.AddFinalizer(machineScope.LinodeMachine, infrav1.GroupVersion.String())
 
 	var linodeInstance *linodego.Instance
 	defer func() {
@@ -241,7 +242,12 @@ func (r *LinodeMachineReconciler) reconcile(
 
 	// Create
 	failureReason = cerrs.CreateMachineError
+	// Make sure bootstrap data is available and populated.
+	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
+		logger.Info("Bootstrap data secret is not yet available")
 
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForBootstrapDelay}, nil
+	}
 	linodeInstance, err = r.reconcileCreate(ctx, machineScope, logger)
 
 	return
@@ -280,6 +286,17 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 			return nil, err
 		}
 		createConfig.Tags = tags
+
+		// get the bootstrap data for the Linode instance and set it for create config
+		bootstrapData, err := machineScope.GetBootstrapData(ctx)
+		if err != nil {
+			logger.Info("Failed to get bootstrap data", "error", err.Error())
+
+			return nil, err
+		}
+		createConfig.Metadata = &linodego.InstanceMetadataOptions{
+			UserData: bootstrapData,
+		}
 
 		if linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createConfig); err != nil {
 			logger.Info("Failed to create Linode machine instance", "error", err.Error())
