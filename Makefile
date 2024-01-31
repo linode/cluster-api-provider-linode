@@ -89,11 +89,11 @@ test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
 
 .PHONY: e2etest
-e2etest: kind kuttl kustomize clusterctl manifests generate docker-build
+e2etest: kind ctlptl tilt kuttl kustomize clusterctl manifests generate
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
-	@$(CONTAINER_TOOL) tag ${IMG} capli-controller:e2e
-	IMG=capli-controller:e2e $(KUTTL) test --config e2e/kuttl-config.yaml
-	make _setImage
+	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
+	$(TILT) ci --timeout 180s -f Tiltfile
+	$(KUTTL) test --config e2e/kuttl-config.yaml
 
 ##@ Build
 
@@ -147,11 +147,9 @@ install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
-_setImage: kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-
 .PHONY: deploy
-deploy: manifests kustomize _setImage ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
 
 .PHONY: undeploy

@@ -1,8 +1,8 @@
-docker_build("controller", ".", only=("vendor","go.mod", "go.sum", "./api", "./cloud","./cmd", "./controller", "./util"))
+docker_build("controller", ".", only=("Dockerfile", "Makefile", "vendor","go.mod", "go.sum", "./api", "./cloud","./cmd", "./controller", "./util"))
 
 local_resource(
-	'capi-controller-manager',
-	cmd='clusterctl init',
+    'capi-controller-manager',
+    cmd='clusterctl init',
 )
 
 k8s_yaml(kustomize('config/default'))
