@@ -132,12 +132,19 @@ jobs:
 
     - name: E2E test
       run: make e2etest
+      env:
+        GITHUB_TOKEN: ${{ secrets.github_token }}
+        LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
+
+    - name: Copy logs
+      if: ${{ always() }}
+      run: docker cp tilt-control-plane:/var/log .logs
 
     - uses: actions/upload-artifact@v4
       if: ${{ always() }}
       with:
-        name: kind-logs
-        path: .kind/kind-logs-*
+        name: logs
+        path: .logs/*
 
   docker-build:
     runs-on: ubuntu-latest
