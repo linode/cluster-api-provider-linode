@@ -25,6 +25,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -118,7 +119,7 @@ func (r *LinodeVPCReconciler) reconcile(
 			r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
-		if patchErr := vpcScope.PatchHelper.Patch(ctx, vpcScope.LinodeVPC); patchErr != nil && client.IgnoreNotFound(patchErr) != nil {
+		if patchErr := vpcScope.PatchHelper.Patch(ctx, vpcScope.LinodeVPC); patchErr != nil && utilerrors.FilterOut(patchErr) != nil {
 			logger.Error(patchErr, "failed to patch LinodeVPC")
 
 			err = errors.Join(err, patchErr)
