@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -202,7 +203,8 @@ func (r *LinodeMachineReconciler) reconcile(
 			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
-		if patchErr := machineScope.PatchHelper.Patch(ctx, machineScope.LinodeMachine); patchErr != nil && client.IgnoreNotFound(patchErr) != nil {
+		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
+		if patchErr := machineScope.Close(ctx); patchErr != nil && client.IgnoreNotFound(patchErr) != nil {
 			logger.Error(patchErr, "failed to patch LinodeMachine")
 
 			err = errors.Join(err, patchErr)
@@ -210,7 +212,9 @@ func (r *LinodeMachineReconciler) reconcile(
 	}()
 
 	// Add the finalizer if not already there
-	controllerutil.AddFinalizer(machineScope.LinodeMachine, infrav1.GroupVersion.String())
+	if err := machineScope.AddFinalizer(ctx); err != nil {
+		return res, err
+	}
 
 	// Delete
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -295,7 +299,7 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 			return nil, err
 		}
 		createConfig.Metadata = &linodego.InstanceMetadataOptions{
-			UserData: bootstrapData,
+			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
 		}
 
 		if linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createConfig); err != nil {
