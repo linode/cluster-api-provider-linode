@@ -277,7 +277,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineSc
 	case 0:
 		createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
 		if createConfig == nil {
-			err = errors.New("failed to convert machine spec to create isntance config")
+			err = errors.New("failed to convert machine spec to create instance config")
 
 			logger.Error(err, "Panic! Struct of LinodeMachineSpec is different than InstanceCreateOptions")
 
