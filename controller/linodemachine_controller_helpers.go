@@ -187,7 +187,7 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 
 		return nil, err
 	default:
-		// Place node into the less busiest subnet
+		// Place node into the least busy subnet
 		sortedSubnets := make([]linodego.VPCSubnet, len(vpc.Subnets))
 		copy(sortedSubnets, vpc.Subnets)
 
