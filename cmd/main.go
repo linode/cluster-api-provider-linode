@@ -123,6 +123,15 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
 	}
+	if err = (&controller2.LinodeVPCReconciler{
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorderFor("LinodeVPCReconciler"),
+		WatchFilterValue: clusterWatchFilter,
+		LinodeApiKey:     linodeToken,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
