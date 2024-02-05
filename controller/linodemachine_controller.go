@@ -19,11 +19,9 @@ package controller
 import (
 	"context"
 	b64 "encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -56,12 +54,12 @@ var skippedMachinePhases = map[string]bool{
 }
 
 var skippedInstanceStatuses = map[linodego.InstanceStatus]bool{
-	linodego.InstanceOffline:      true,
 	linodego.InstanceShuttingDown: true,
 	linodego.InstanceDeleting:     true,
 }
 
 var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
+	linodego.InstanceOffline:      true,
 	linodego.InstanceBooting:      true,
 	linodego.InstanceRebooting:    true,
 	linodego.InstanceProvisioning: true,
@@ -104,7 +102,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	linodeMachine := &infrav1.LinodeMachine{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeMachine); err != nil {
-		log.Info("Failed to fetch Linode machine", "error", err.Error())
+		log.Error(err, "Failed to fetch Linode machine")
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -112,7 +110,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	machine, err := kutil.GetOwnerMachine(ctx, r.Client, linodeMachine.ObjectMeta)
 	switch {
 	case err != nil:
-		log.Info("Failed to fetch owner machine", "error", err.Error())
+		log.Error(err, "Failed to fetch owner machine")
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	case machine == nil:
@@ -141,7 +139,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	cluster, err := kutil.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
 	if err != nil {
-		log.Info("Failed to fetch cluster by label", "error", err.Error())
+		log.Info("Failed to fetch cluster by label")
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	} else if cluster == nil {
@@ -156,8 +154,8 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 
-	if err := r.Client.Get(ctx, linodeClusterKey, linodeCluster); err != nil {
-		log.Info("Failed to fetch Linode cluster", "error", err.Error())
+	if err = r.Client.Get(ctx, linodeClusterKey, linodeCluster); err != nil {
+		log.Error(err, "Failed to fetch Linode cluster")
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -173,7 +171,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		},
 	)
 	if err != nil {
-		log.Info("Failed to create machine scope", "error", err.Error())
+		log.Error(err, "Failed to create machine scope")
 
 		return ctrl.Result{}, fmt.Errorf("failed to create machine scope: %w", err)
 	}
@@ -198,7 +196,7 @@ func (r *LinodeMachineReconciler) reconcile(
 			machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
 			machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
 
-			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
+			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, err.Error())
 
 			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
@@ -257,21 +255,14 @@ func (r *LinodeMachineReconciler) reconcile(
 	return
 }
 
-func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.Instance, error) {
+func (r *LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.Instance, error) {
+	logger.Info("creating machine")
+
 	tags := []string{string(machineScope.LinodeCluster.UID), string(machineScope.LinodeMachine.UID)}
-	filter := map[string]string{
-		"tags": strings.Join(tags, ","),
-	}
 
-	rawFilter, err := json.Marshal(filter)
+	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, util.CreateLinodeAPIFilter("", tags)))
 	if err != nil {
-		// This should never happen
-		panic(err.Error() + " Oh, snap... Earth has over, we can't parse map[string]string to JSON! I'm going to die ...")
-	}
-
-	var linodeInstances []linodego.Instance
-	if linodeInstances, err = machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, string(rawFilter))); err != nil {
-		logger.Info("Failed to list Linode machine instances", "error", err.Error())
+		logger.Error(err, "Failed to list Linode machine instances")
 
 		return nil, err
 	}
@@ -283,9 +274,11 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 
 		linodeInstance = &linodeInstances[0]
 	case 0:
-		createConfig := linodeMachineSpecToCreateInstanceConfig(machineScope.LinodeMachine.Spec)
+		createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
 		if createConfig == nil {
-			logger.Error(errors.New("failed to convert machine spec to create isntance config"), "Panic! Struct of LinodeMachineSpec is different then InstanceCreateOptions")
+			err = errors.New("failed to convert machine spec to create instance config")
+
+			logger.Error(err, "Panic! Struct of LinodeMachineSpec is different than InstanceCreateOptions")
 
 			return nil, err
 		}
@@ -303,25 +296,31 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
 		}
 
-		if linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createConfig); err != nil {
-			logger.Info("Failed to create Linode machine instance", "error", err.Error())
+		if createConfig.Label == "" {
+			createConfig.Label = util.RenderObjectLabel(machineScope.LinodeMachine.UID)
+		}
 
-			// Already exists is not an error
-			apiErr := linodego.Error{}
-			if errors.As(err, &apiErr) && apiErr.Code != http.StatusFound {
+		if machineScope.LinodeCluster.Spec.VPCRef != nil {
+			iface, err := r.getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
+			if err != nil {
+				logger.Error(err, "Failed to get VPC interface confiog")
+
 				return nil, err
 			}
 
-			err = nil
+			createConfig.Interfaces = append(createConfig.Interfaces, *iface)
+		}
 
-			if linodeInstance != nil {
-				logger.Info("Linode instance already exists", "existing", linodeInstance.ID)
-			}
+		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createConfig)
+		if err != nil {
+			logger.Error(err, "Failed to create Linode machine instance")
+
+			return nil, err
 		}
 	default:
 		err = errors.New("multiple instances")
 
-		logger.Error(err, "Panic! Multiple instances found. This might be a concurrency issue in the controller!!!", "filters", string(rawFilter))
+		logger.Error(err, "Panic! Multiple instances found. This might be a concurrency issue in the controller!!!", "tags", tags)
 
 		return nil, err
 	}
@@ -350,63 +349,68 @@ func (*LinodeMachineReconciler) reconcileCreate(ctx context.Context, machineScop
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res reconcile.Result, linodeInstance *linodego.Instance, err error) {
-	if machineScope.LinodeMachine.Spec.InstanceID == nil {
-		err = errors.New("missing instance ID")
-
-		return
-	}
+	logger.Info("updating machine")
 
 	res = ctrl.Result{}
 
+	if machineScope.LinodeMachine.Spec.InstanceID == nil {
+		return res, nil, errors.New("missing instance ID")
+	}
+
 	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
-		logger.Info("Failed to get Linode machine instance", "error", err.Error())
+		err = util.IgnoreLinodeAPIError(err, http.StatusNotFound)
+		if err != nil {
+			logger.Error(err, "Failed to get Linode machine instance")
+		} else {
+			logger.Info("Instance not found, let's create a new one")
 
-		// Not found is not an error
-		apiErr := linodego.Error{}
-		if errors.As(err, &apiErr) && apiErr.Code == http.StatusNotFound {
+			// Create new machine
+			machineScope.LinodeMachine.Spec.ProviderID = nil
+			machineScope.LinodeMachine.Spec.InstanceID = nil
+
 			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string("missing"), clusterv1.ConditionSeverityWarning, "instance not found")
-
-			err = nil
 		}
 
-		return
+		return res, linodeInstance, err
 	}
 
 	if _, ok := requeueInstanceStatuses[linodeInstance.Status]; ok {
 		if linodeInstance.Updated.Add(reconciler.DefaultMachineControllerWaitForRunningTimeout).After(time.Now()) {
 			logger.Info("Instance has one operaton running, re-queuing reconciliation", "status", linodeInstance.Status)
 
-			res = ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}
-		} else {
-			logger.Info("Instance has one operaton long running, skipping reconciliation", "status", linodeInstance.Status)
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, linodeInstance, nil
 		}
 
-		return
+		logger.Info("Instance has one operaton long running, skipping reconciliation", "status", linodeInstance.Status)
+
+		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "skipped due to long running operation")
+
+		return res, linodeInstance, nil
 	} else if _, ok := skippedInstanceStatuses[linodeInstance.Status]; ok || linodeInstance.Status != linodego.InstanceRunning {
 		logger.Info("Instance has incompatible status, skipping reconciliation", "status", linodeInstance.Status)
 
 		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "incompatible status")
 
-		return
+		return res, linodeInstance, nil
 	}
+
+	machineScope.LinodeMachine.Status.Ready = true
 
 	conditions.MarkTrue(machineScope.LinodeMachine, clusterv1.ReadyCondition)
 
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "instance is running")
 
-	return
+	return res, linodeInstance, nil
 }
 
-func (*LinodeMachineReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
+func (r *LinodeMachineReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
 	logger.Info("deleting machine")
 
 	if machineScope.LinodeMachine.Spec.InstanceID != nil {
 		if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
-			logger.Info("Failed to delete Linode machine instance", "error", err.Error())
+			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+				logger.Error(err, "Failed to delete Linode machine instance")
 
-			// Not found is not an error
-			apiErr := linodego.Error{}
-			if errors.As(err, &apiErr) && apiErr.Code != http.StatusNotFound {
 				return err
 			}
 		}
@@ -415,6 +419,8 @@ func (*LinodeMachineReconciler) reconcileDelete(ctx context.Context, logger logr
 	}
 
 	conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "instance deleted")
+
+	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, clusterv1.DeletedReason, "instance has cleaned up")
 
 	machineScope.LinodeMachine.Spec.ProviderID = nil
 	machineScope.LinodeMachine.Spec.InstanceID = nil

@@ -14,7 +14,7 @@ import (
 func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 	t.Parallel()
 
-	sID := 1
+	subnetID := 1
 
 	machineSpec := infrav1.LinodeMachineSpec{
 		Region:          "region",
@@ -34,7 +34,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 				Label:       "label",
 				Purpose:     linodego.InterfacePurposePublic,
 				Primary:     true,
-				SubnetID:    &sID,
+				SubnetID:    &subnetID,
 				IPv4: &infrav1.VPCIPv4{
 					VPC:     "vpc",
 					NAT1To1: "nat11",
@@ -51,7 +51,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		FirewallID: 1,
 	}
 
-	createConfig := linodeMachineSpecToCreateInstanceConfig(machineSpec)
+	createConfig := linodeMachineSpecToInstanceCreateConfig(machineSpec)
 	assert.NotNil(t, createConfig, "Failed to convert LinodeMachineSpec to InstanceCreateOptions")
 
 	var buf bytes.Buffer
