@@ -108,7 +108,6 @@ func (r *LinodeVPCReconciler) reconcile(
 	vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer("")
 
 	failureReason := infrav1.VPCStatusError("UnknownError")
-	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
 			vpcScope.LinodeVPC.Status.FailureReason = util.Pointer(failureReason)
