@@ -17,19 +17,31 @@ limitations under the License.
 package scope
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/linodego"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
+
+// VPCScope defines the basic context for an actuator to operate upon.
+type VPCScope struct {
+	client client.Client
+
+	PatchHelper  *patch.Helper
+	LinodeClient *linodego.Client
+	LinodeVPC    *infrav1alpha1.LinodeVPC
+}
 
 // VPCScopeParams defines the input parameters used to create a new Scope.
 type VPCScopeParams struct {
 	Client    client.Client
-	LinodeVPC *infrav1.LinodeVPC
+	LinodeVPC *infrav1alpha1.LinodeVPC
 }
 
 func validateVPCScopeParams(params VPCScopeParams) error {
@@ -62,11 +74,19 @@ func NewVPCScope(apiKey string, params VPCScopeParams) (*VPCScope, error) {
 	}, nil
 }
 
-// VPCScope defines the basic context for an actuator to operate upon.
-type VPCScope struct {
-	client client.Client
+// PatchObject persists the machine configuration and status.
+func (s *VPCScope) PatchObject(ctx context.Context) error {
+	return s.PatchHelper.Patch(ctx, s.LinodeVPC)
+}
 
-	PatchHelper  *patch.Helper
-	LinodeClient *linodego.Client
-	LinodeVPC    *infrav1.LinodeVPC
+// Close closes the current scope persisting the machine configuration and status.
+func (s *VPCScope) Close(ctx context.Context) error {
+	return s.PatchObject(ctx)
+}
+
+// AddFinalizer adds a finalizer and immediately patches the object to avoid any race conditions
+func (s *VPCScope) AddFinalizer(ctx context.Context) error {
+	controllerutil.AddFinalizer(s.LinodeVPC, infrav1alpha1.GroupVersion.String())
+
+	return s.Close(ctx)
 }
