@@ -76,21 +76,25 @@ func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 }
 
 // CreateNodeBalancerConfig creates NodeBalancer config if it does not exist
-func CreateNodeBalancerConfig(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancerConfig, error) {
-	var linodeNBConfigs []linodego.NodeBalancerConfig
+func CreateNodeBalancerConfig(
+	ctx context.Context,
+	clusterScope *scope.ClusterScope,
+	logger logr.Logger,
+) (*linodego.NodeBalancerConfig, error) {
 	var linodeNBConfig *linodego.NodeBalancerConfig
 	var err error
 
-	if linodeNBConfigs, err = clusterScope.LinodeClient.ListNodeBalancerConfigs(ctx, clusterScope.LinodeCluster.Spec.Network.NodeBalancerID, linodego.NewListOptions(1, "")); err != nil {
+	if linodeNBConfig, err = GetNodeBalancerConfig(ctx, clusterScope, logger); err != nil {
 		logger.Info("Failed to list NodeBalancer Configs", "error", err.Error())
 
 		return nil, err
 	}
-	if len(linodeNBConfigs) == 1 {
-		logger.Info("NodeBalancer ", strconv.Itoa(linodeNBConfigs[0].ID), " already exists")
+	if linodeNBConfig != nil {
+		logger.Info("NodeBalancer ", strconv.Itoa(linodeNBConfig.ID), " already exists")
 
-		return &linodeNBConfigs[0], err
+		return linodeNBConfig, err
 	}
+
 	lbPort := defaultLBPort
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
 		lbPort = clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort
@@ -102,11 +106,40 @@ func CreateNodeBalancerConfig(ctx context.Context, clusterScope *scope.ClusterSc
 		Check:     linodego.CheckConnection,
 	}
 
-	if linodeNBConfig, err = clusterScope.LinodeClient.CreateNodeBalancerConfig(ctx, clusterScope.LinodeCluster.Spec.Network.NodeBalancerID, createConfig); err != nil {
+	if linodeNBConfig, err = clusterScope.LinodeClient.CreateNodeBalancerConfig(
+		ctx,
+		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		createConfig,
+	); err != nil {
 		logger.Info("Failed to create Linode NodeBalancer config", "error", err.Error())
 
 		return nil, err
 	}
 
 	return linodeNBConfig, nil
+}
+
+// GetNodeBalancerConfig gets the first NodeBalancer config
+func GetNodeBalancerConfig(
+	ctx context.Context,
+	clusterScope *scope.ClusterScope,
+	logger logr.Logger,
+) (*linodego.NodeBalancerConfig, error) {
+	var linodeNBConfigs []linodego.NodeBalancerConfig
+	var err error
+
+	if linodeNBConfigs, err = clusterScope.LinodeClient.ListNodeBalancerConfigs(
+		ctx,
+		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		linodego.NewListOptions(1, ""),
+	); err != nil {
+		logger.Info("Failed to list NodeBalancer Configs", "error", err.Error())
+
+		return nil, err
+	}
+	if len(linodeNBConfigs) == 0 {
+		return nil, err
+	}
+
+	return &linodeNBConfigs[0], err
 }
