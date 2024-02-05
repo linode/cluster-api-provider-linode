@@ -88,6 +88,13 @@ vulncheck: govulncheck ## Run vulnerability check against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
 
+.PHONY: e2etest
+e2etest: kind ctlptl tilt kuttl kustomize clusterctl manifests generate
+	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
+	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
+	$(TILT) ci --timeout 180s -f Tiltfile
+	$(KUTTL) test --config e2e/kuttl-config.yaml
+
 ##@ Build
 
 .PHONY: build
@@ -152,8 +159,8 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt kind clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
-	$(CTLPTL) apply -f ctlptl-config.yaml
-	$(TILT) up
+	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
+	$(TILT) up --stream
 
 ##@ Build Dependencies
 
@@ -171,6 +178,7 @@ CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 TILT ?= $(LOCALBIN)/tilt
 KIND ?= $(LOCALBIN)/kind
+KUTTL ?= $(LOCALBIN)/kuttl
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 HUSKY ?= $(LOCALBIN)/husky
 NILAWAY ?= $(LOCALBIN)/nilaway
@@ -183,6 +191,7 @@ CLUSTERCTL_VERSION ?= v1.5.3
 CONTROLLER_TOOLS_VERSION ?= v0.13.0
 TILT_VERSION ?= 0.33.6
 KIND_VERSION ?= 0.20.0
+KUTTL_VERSION ?= 0.15.0
 HUSKY_VERSION ?= v0.2.16
 NILAWAY_VERSION ?= latest
 GOVULNC_VERSION ?= v1.0.1
@@ -230,6 +239,12 @@ kind: $(KIND) ## Download kind locally if necessary. If wrong version is install
 $(KIND): $(LOCALBIN)
 	test -s $(KIND) && $(KIND) version | grep -q $(KIND_VERSION) || \
 	(cd $(LOCALBIN); curl -Lso ./kind https://github.com/kubernetes-sigs/kind/releases/download/v$(KIND_VERSION)/kind-$(OS)-$(ARCH_SHORT) && chmod +x kind)
+
+.PHONY: kuttl
+kuttl: $(KUTTL) ## Download kuttl locally if necessary. If wrong version is installed, it will be overwritten.
+$(KUTTL): $(LOCALBIN)
+	test -s $(KUTTL) && $(KUTTL) version | grep -q $(KUTTL_VERSION) || \
+	(cd $(LOCALBIN); curl -Lso ./kuttl https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$(OS)_$(ARCH) && chmod +x kuttl)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
