@@ -36,10 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
 
 // LinodeVPCReconciler reconciles a LinodeVPC object
@@ -73,7 +74,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	log := ctrl.LoggerFrom(ctx).WithName("LinodeVPCReconciler").WithValues("name", req.NamespacedName.String())
 
-	linodeVPC := &infrav1.LinodeVPC{}
+	linodeVPC := &infrav1alpha1.LinodeVPC{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeVPC); err != nil {
 		log.Error(err, "Failed to fetch LinodeVPC")
 
@@ -107,7 +108,8 @@ func (r *LinodeVPCReconciler) reconcile(
 	vpcScope.LinodeVPC.Status.FailureReason = nil
 	vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer("")
 
-	failureReason := infrav1.VPCStatusError("UnknownError")
+	failureReason := infrav1alpha1.VPCStatusError("UnknownError")
+	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
 			vpcScope.LinodeVPC.Status.FailureReason = util.Pointer(failureReason)
@@ -118,7 +120,8 @@ func (r *LinodeVPCReconciler) reconcile(
 			r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
-		if patchErr := vpcScope.PatchHelper.Patch(ctx, vpcScope.LinodeVPC); patchErr != nil && utilerrors.FilterOut(patchErr) != nil {
+		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
+		if patchErr := vpcScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(patchErr) != nil {
 			logger.Error(patchErr, "failed to patch LinodeVPC")
 
 			err = errors.Join(err, patchErr)
@@ -127,18 +130,24 @@ func (r *LinodeVPCReconciler) reconcile(
 
 	// Delete
 	if !vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.IsZero() {
-		failureReason = infrav1.DeleteVPCError
+		failureReason = infrav1alpha1.DeleteVPCError
 
 		res, err = r.reconcileDelete(ctx, logger, vpcScope)
 
 		return
 	}
 
-	controllerutil.AddFinalizer(vpcScope.LinodeVPC, infrav1.GroupVersion.String())
+	// Add the finalizer if not already there
+	err = vpcScope.AddFinalizer(ctx)
+	if err != nil {
+		logger.Error(err, "Failed to add finalizer")
+
+		return
+	}
 
 	// Update
 	if vpcScope.LinodeVPC.Spec.VPCID != nil {
-		failureReason = infrav1.UpdateVPCError
+		failureReason = infrav1alpha1.UpdateVPCError
 
 		logger = logger.WithValues("vpcID", *vpcScope.LinodeVPC.Spec.VPCID)
 
@@ -148,7 +157,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	}
 
 	// Create
-	failureReason = infrav1.CreateVPCError
+	failureReason = infrav1alpha1.CreateVPCError
 
 	err = r.reconcileCreate(ctx, vpcScope, logger)
 
@@ -161,9 +170,9 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, vpcScope *sco
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
 
-		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1.CreateVPCError), clusterv1.ConditionSeverityError, err.Error())
+		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.CreateVPCError), clusterv1.ConditionSeverityError, err.Error())
 
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1.CreateVPCError), err.Error())
+		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha1.CreateVPCError), err.Error())
 
 		return err
 	}
@@ -179,9 +188,9 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
 
-		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1.UpdateVPCError), clusterv1.ConditionSeverityError, err.Error())
+		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.UpdateVPCError), clusterv1.ConditionSeverityError, err.Error())
 
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1.UpdateVPCError), err.Error())
+		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha1.UpdateVPCError), err.Error())
 
 		return err
 	}
@@ -241,7 +250,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletedReason, "VPC has cleaned up")
 
 	vpcScope.LinodeVPC.Spec.VPCID = nil
-	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1.GroupVersion.String())
+	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha1.GroupVersion.String())
 
 	return res, nil
 }
@@ -249,7 +258,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	_, err := ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1.LinodeVPC{}).
+		For(&infrav1alpha1.LinodeVPC{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
 		Build(r)
 	if err != nil {
