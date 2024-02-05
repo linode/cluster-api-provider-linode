@@ -11,6 +11,7 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_linodemachines.yaml
 - bases/infrastructure.cluster.x-k8s.io_linodemachinetemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_linodeclustertemplates.yaml
+- bases/infrastructure.cluster.x-k8s.io_linodevpcs.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

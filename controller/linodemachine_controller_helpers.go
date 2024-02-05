@@ -20,12 +20,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"errors"
+	"sort"
 
 	"github.com/go-logr/logr"
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -60,14 +64,14 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 
 			return nil
 		case err != nil:
-			logger.Info("Failed to get owning cluster, skipping mapping", "error", err.Error())
+			logger.Error(err, "Failed to get owning cluster, skipping mapping")
 
 			return nil
 		}
 
 		request, err := r.requestsForCluster(ctx, cluster.Namespace, cluster.Name)
 		if err != nil {
-			logger.Info("Failed to create request for cluster", "error", err.Error())
+			logger.Error(err, "Failed to create request for cluster")
 
 			return nil
 		}
@@ -96,14 +100,14 @@ func (r *LinodeMachineReconciler) requeueLinodeMachinesForUnpausedCluster(logger
 			return nil
 		}
 
-		request, err := r.requestsForCluster(ctx, cluster.Namespace, cluster.Name)
+		requests, err := r.requestsForCluster(ctx, cluster.Namespace, cluster.Name)
 		if err != nil {
-			logger.Info("Failed to create request for cluster", "error", err.Error())
+			logger.Error(err, "Failed to create request for cluster")
 
 			return nil
 		}
 
-		return request
+		return requests
 	}
 }
 
@@ -132,7 +136,73 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 	return result, nil
 }
 
-func linodeMachineSpecToCreateInstanceConfig(machineSpec infrav1.LinodeMachineSpec) *linodego.InstanceCreateOptions {
+func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, existingIfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+	name := machineScope.LinodeCluster.Spec.VPCRef.Name
+	namespace := machineScope.LinodeCluster.Spec.VPCRef.Namespace
+
+	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
+
+	linodeVPC := infrav1.LinodeVPC{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
+		logger.Error(err, "Failed to fetch LinodeVPC")
+
+		return nil, err
+	} else if !linodeVPC.Status.Ready || linodeVPC.Spec.VPCID == nil {
+		logger.Info("LinodeVPC is not available")
+
+		return nil, errors.New("vpc is not available")
+	}
+
+	hasPrimary := false
+	for i := range existingIfaces {
+		if existingIfaces[i].Primary {
+			hasPrimary = true
+
+			break
+		}
+	}
+
+	var subnetID int
+	vpc, err := machineScope.LinodeClient.GetVPC(ctx, *linodeVPC.Spec.VPCID)
+	switch {
+	case err != nil:
+		logger.Error(err, "Failed to fetch LinodeVPC")
+
+		return nil, err
+	case vpc == nil:
+		err = errors.New("failed to fetch VPC")
+
+		logger.Error(err, "Failed to fetch VPC")
+
+		return nil, err
+	case len(vpc.Subnets) == 0:
+		err = errors.New("failed to find subnet")
+
+		logger.Error(err, "Failed to find subnet")
+
+		return nil, err
+	default:
+		// Place node into the least busy subnet
+		sort.Slice(vpc.Subnets, func(i, j int) bool {
+			return len(vpc.Subnets[i].Linodes) > len(vpc.Subnets[j].Linodes)
+		})
+
+		subnetID = vpc.Subnets[0].ID
+	}
+
+	return &linodego.InstanceConfigInterfaceCreateOptions{
+		Purpose:  linodego.InterfacePurposeVPC,
+		Primary:  !hasPrimary,
+		SubnetID: &subnetID,
+	}, nil
+}
+
+func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1.LinodeMachineSpec) *linodego.InstanceCreateOptions {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(machineSpec)

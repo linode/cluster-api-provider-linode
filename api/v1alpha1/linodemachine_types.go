@@ -41,7 +41,10 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Type string `json:"type"`
+	// +kubebuilder:validation:MinLength=3
+	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
 	Label string `json:"label,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Group string `json:"group,omitempty"`
@@ -82,10 +85,13 @@ type InstanceMetadataOptions struct {
 
 // InstanceConfigInterfaceCreateOptions defines network interface config
 type InstanceConfigInterfaceCreateOptions struct {
-	IPAMAddress string                          `json:"ipamAddress,omitempty"`
-	Label       string                          `json:"label,omitempty"`
-	Purpose     linodego.ConfigInterfacePurpose `json:"purpose,omitempty"`
-	Primary     bool                            `json:"primary,omitempty"`
+	IPAMAddress string `json:"ipamAddress,omitempty"`
+	// +kubebuilder:validation:MinLength=3
+	// +kubebuilder:validation:MaxLength=63
+	// +optional
+	Label   string                          `json:"label,omitempty"`
+	Purpose linodego.ConfigInterfacePurpose `json:"purpose,omitempty"`
+	Primary bool                            `json:"primary,omitempty"`
 	// +optional
 	SubnetID *int `json:"subnetId,omitempty"`
 	// +optional
@@ -103,6 +109,7 @@ type VPCIPv4 struct {
 type LinodeMachineStatus struct {
 	// Ready is true when the provider resource is ready.
 	// +optional
+	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
 	// Addresses contains the Linode instance associated addresses.

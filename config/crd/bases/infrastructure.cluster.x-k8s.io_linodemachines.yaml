@@ -121,6 +121,8 @@ spec:
                           type: string
                       type: object
                     label:
+                      maxLength: 63
+                      minLength: 3
                       type: string
                     primary:
                       type: boolean
@@ -136,6 +138,8 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               label:
+                maxLength: 63
+                minLength: 3
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -298,6 +302,7 @@ spec:
                   this machine.
                 type: string
               ready:
+                default: false
                 description: Ready is true when the provider resource is ready.
                 type: boolean
             type: object

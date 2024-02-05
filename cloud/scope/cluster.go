@@ -20,13 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/linodego"
-	"golang.org/x/oauth2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,19 +46,6 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 	}
 
 	return nil
-}
-
-func createLinodeClient(apiKey string) *linodego.Client {
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: apiKey})
-
-	oauth2Client := &http.Client{
-		Transport: &oauth2.Transport{
-			Source: tokenSource,
-		},
-	}
-	linodeClient := linodego.NewClient(oauth2Client)
-
-	return &linodeClient
 }
 
 // NewClusterScope creates a new Scope from the supplied parameters.
