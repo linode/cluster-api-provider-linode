@@ -191,6 +191,7 @@ func (r *LinodeMachineReconciler) reconcile(
 	machineScope.LinodeMachine.Status.FailureMessage = util.Pointer("")
 
 	failureReason := cerrs.MachineStatusError("UnknownError")
+	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
 			machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
@@ -210,8 +211,11 @@ func (r *LinodeMachineReconciler) reconcile(
 	}()
 
 	// Add the finalizer if not already there
-	if err := machineScope.AddFinalizer(ctx); err != nil {
-		return res, err
+	err = machineScope.AddFinalizer(ctx)
+	if err != nil {
+		logger.Error(err, "Failed to add finalizer")
+
+		return
 	}
 
 	// Delete
