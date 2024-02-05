@@ -117,6 +117,7 @@ jobs:
           quay.io:443
           *.quay.io:443
           api.snapcraft.io:443
+          cloud.tilt.dev:443
 
     - uses: actions/checkout@v4
 
