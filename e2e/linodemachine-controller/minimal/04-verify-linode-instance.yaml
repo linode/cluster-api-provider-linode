@@ -1,0 +1,5 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |-
+      URI="linode/instances" FILTER="{\"tags\":\"$(OBJ=linodemachines/linodemachine-sample make getKubeUid)\"}" make callLinodeApiGet | grep 'results": 0'

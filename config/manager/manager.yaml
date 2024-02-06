@@ -77,6 +77,8 @@ spec:
              secretKeyRef:
                name: token
                key: LINODE_TOKEN
+        - name: LINODE_API_VERSION
+          value: v4beta
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
