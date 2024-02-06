@@ -29,6 +29,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -233,7 +234,7 @@ func (r *LinodeMachineReconciler) reconcile(
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
-		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(patchErr) != nil {
+		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(patchErr, apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch LinodeMachine")
 
 			err = errors.Join(err, patchErr)
@@ -324,7 +325,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		if machineScope.LinodeCluster.Spec.VPCRef != nil {
 			iface, err := r.getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
 			if err != nil {
-				logger.Error(err, "Failed to get VPC interface confiog")
+				logger.Error(err, "Failed to get VPC interface config")
 
 				return nil, err
 			}
