@@ -13,6 +13,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/linodego"
+	kutil "sigs.k8s.io/cluster-api/util"
 )
 
 var (
@@ -76,21 +77,25 @@ func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 }
 
 // CreateNodeBalancerConfig creates NodeBalancer config if it does not exist
-func CreateNodeBalancerConfig(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancerConfig, error) {
-	var linodeNBConfigs []linodego.NodeBalancerConfig
+func CreateNodeBalancerConfig(
+	ctx context.Context,
+	clusterScope *scope.ClusterScope,
+	logger logr.Logger,
+) (*linodego.NodeBalancerConfig, error) {
 	var linodeNBConfig *linodego.NodeBalancerConfig
 	var err error
 
-	if linodeNBConfigs, err = clusterScope.LinodeClient.ListNodeBalancerConfigs(ctx, clusterScope.LinodeCluster.Spec.Network.NodeBalancerID, linodego.NewListOptions(1, "")); err != nil {
+	if linodeNBConfig, err = GetNodeBalancerConfig(ctx, clusterScope, logger); err != nil {
 		logger.Info("Failed to list NodeBalancer Configs", "error", err.Error())
 
 		return nil, err
 	}
-	if len(linodeNBConfigs) == 1 {
-		logger.Info("NodeBalancer ", strconv.Itoa(linodeNBConfigs[0].ID), " already exists")
+	if linodeNBConfig != nil {
+		logger.Info("NodeBalancer ", strconv.Itoa(linodeNBConfig.ID), " already exists")
 
-		return &linodeNBConfigs[0], err
+		return linodeNBConfig, err
 	}
+
 	lbPort := defaultLBPort
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
 		lbPort = clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort
@@ -102,11 +107,129 @@ func CreateNodeBalancerConfig(ctx context.Context, clusterScope *scope.ClusterSc
 		Check:     linodego.CheckConnection,
 	}
 
-	if linodeNBConfig, err = clusterScope.LinodeClient.CreateNodeBalancerConfig(ctx, clusterScope.LinodeCluster.Spec.Network.NodeBalancerID, createConfig); err != nil {
+	if linodeNBConfig, err = clusterScope.LinodeClient.CreateNodeBalancerConfig(
+		ctx,
+		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		createConfig,
+	); err != nil {
 		logger.Info("Failed to create Linode NodeBalancer config", "error", err.Error())
 
 		return nil, err
 	}
 
 	return linodeNBConfig, nil
+}
+
+// GetNodeBalancerConfig gets the first NodeBalancer config
+func GetNodeBalancerConfig(
+	ctx context.Context,
+	clusterScope *scope.ClusterScope,
+	logger logr.Logger,
+) (*linodego.NodeBalancerConfig, error) {
+	var linodeNBConfigs []linodego.NodeBalancerConfig
+	var err error
+
+	if linodeNBConfigs, err = clusterScope.LinodeClient.ListNodeBalancerConfigs(
+		ctx,
+		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		linodego.NewListOptions(1, ""),
+	); err != nil {
+		logger.Info("Failed to list NodeBalancer Configs", "error", err.Error())
+
+		return nil, err
+	}
+	if len(linodeNBConfigs) == 0 {
+		return nil, err
+	}
+
+	return &linodeNBConfigs[0], err
+}
+
+// AddNodeToNB adds a backend Node on the Node Balancer configuration
+func AddNodeToNB(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	clusterScope *scope.ClusterScope,
+	linodeInstance *linodego.Instance,
+) error {
+	// Update the NB backend with the new instance if it's a control plane node
+	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
+		return nil
+	}
+	// Get the private IP that was assigned
+	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
+	if err != nil {
+		logger.Error(err, "Failed get instance IP addresses")
+
+		return err
+	}
+	if len(addresses.IPv4.Private) == 0 {
+		err := errors.New("no private IP address")
+		logger.Error(err, "no private IPV4 addresses set for LinodeInstance")
+
+		return err
+	}
+
+	linodeNBConfig, err := GetNodeBalancerConfig(ctx, clusterScope, logger)
+	if err != nil {
+		logger.Error(err, "Failed to get Node Balancer config")
+
+		return err
+	}
+	_, err = machineScope.LinodeClient.CreateNodeBalancerNode(
+		ctx,
+		machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		linodeNBConfig.ID,
+		linodego.NodeBalancerNodeCreateOptions{
+			Label:   machineScope.Cluster.Name,
+			Address: fmt.Sprintf("%s:%d", addresses.IPv4.Private[0].Address, linodeNBConfig.Port),
+			Mode:    linodego.ModeAccept,
+		},
+	)
+	if err != nil {
+		logger.Error(err, "Failed to update Node Balancer")
+
+		return err
+	}
+
+	return nil
+}
+
+// DeleteNodeFromNB removes a backend Node from the Node Balancer configuration
+func DeleteNodeFromNB(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	clusterScope *scope.ClusterScope,
+) error {
+	// Update the NB to remove the node if it's a control plane node
+	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
+		return nil
+	}
+
+	if machineScope.LinodeMachine.Spec.InstanceID == nil {
+		return errors.New("no InstanceID")
+	}
+
+	linodeNBConfig, err := GetNodeBalancerConfig(ctx, clusterScope, logger)
+	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil || linodeNBConfig == nil {
+		logger.Error(err, "Failed to get Node Balancer config")
+
+		return err
+	}
+
+	err = machineScope.LinodeClient.DeleteNodeBalancerNode(
+		ctx,
+		machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		linodeNBConfig.ID,
+		*machineScope.LinodeMachine.Spec.InstanceID,
+	)
+	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+		logger.Error(err, "Failed to update Node Balancer")
+
+		return err
+	}
+
+	return nil
 }
