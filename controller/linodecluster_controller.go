@@ -178,6 +178,8 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 		return err
 	}
 
+	clusterScope.LinodeCluster.Spec.Network.NodeBalancerConfigID = util.Pointer(linodeNBConfig.ID)
+
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: *linodeNB.IPv4,
 		Port: int32(linodeNBConfig.Port),
@@ -210,6 +212,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = 0
+	clusterScope.LinodeCluster.Spec.Network.NodeBalancerConfigID = nil
 	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 
 	return nil
