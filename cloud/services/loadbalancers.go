@@ -20,8 +20,6 @@ var (
 	defaultLBPort = 6443
 )
 
-const expectedIPV4Count = 2
-
 // CreateNodeBalancer creates a new NodeBalancer if one doesn't exist
 func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancer, error) {
 	var linodeNBs []linodego.NodeBalancer
@@ -160,13 +158,19 @@ func AddNodeToNB(
 		return nil
 	}
 	// Get the private IP that was assigned
-	ips := linodeInstance.IPv4
-	if len(ips) < expectedIPV4Count {
-		err := errors.New("no private IP address")
-		logger.Error(err, "Fewer IPV4 addresses than expected")
+	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
+	if err != nil {
+		logger.Error(err, "Failed get instance IP addresses")
 
 		return err
 	}
+	if len(addresses.IPv4.Private) == 0 {
+		err := errors.New("no private IP address")
+		logger.Error(err, "no private IPV4 addresses set for LinodeInstance")
+
+		return err
+	}
+
 	linodeNBConfig, err := GetNodeBalancerConfig(ctx, clusterScope, logger)
 	if err != nil {
 		logger.Error(err, "Failed to get Node Balancer config")
@@ -179,7 +183,7 @@ func AddNodeToNB(
 		linodeNBConfig.ID,
 		linodego.NodeBalancerNodeCreateOptions{
 			Label:   machineScope.Cluster.Name,
-			Address: fmt.Sprintf("%s:%d", linodeInstance.IPv4[1].String(), linodeNBConfig.Port),
+			Address: fmt.Sprintf("%s:%d", addresses.IPv4.Private[0].Address, linodeNBConfig.Port),
 			Mode:    linodego.ModeAccept,
 		},
 	)
