@@ -208,15 +208,13 @@ func DeleteNodeFromNB(
 		return nil
 	}
 
+	if machineScope.LinodeMachine.Spec.InstanceID == nil {
+		return errors.New("no InstanceID")
+	}
+
 	linodeNBConfig, err := GetNodeBalancerConfig(ctx, clusterScope, logger)
 	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil || linodeNBConfig == nil {
 		logger.Error(err, "Failed to get Node Balancer config")
-
-		return err
-	}
-
-	if machineScope.LinodeMachine.Spec.InstanceID == nil {
-		err = errors.New("no InstanceID")
 
 		return err
 	}
