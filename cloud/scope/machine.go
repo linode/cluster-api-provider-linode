@@ -77,7 +77,13 @@ func NewMachineScope(apiKey string, params MachineScopeParams) (*MachineScope, e
 
 // PatchObject persists the machine configuration and status.
 func (s *MachineScope) PatchObject(ctx context.Context) error {
-	return s.PatchHelper.Patch(ctx, s.LinodeMachine)
+	return s.PatchHelper.Patch(
+		ctx,
+		s.LinodeMachine,
+		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+			clusterv1.ReadyCondition},
+		},
+	)
 }
 
 // Close closes the current scope persisting the machine configuration and status.

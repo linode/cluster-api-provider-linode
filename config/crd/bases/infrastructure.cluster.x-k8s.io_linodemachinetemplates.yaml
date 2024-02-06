@@ -85,10 +85,6 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
-                      instanceID:
-                        description: InstanceID is the Linode instance ID for this
-                          machine.
-                        type: integer
                       interfaces:
                         items:
                           description: InstanceConfigInterfaceCreateOptions defines
@@ -148,10 +144,6 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
-                      providerID:
-                        description: ProviderID is the unique identifier as specified
-                          by the cloud provider.
-                        type: string
                       region:
                         type: string
                         x-kubernetes-validations:

@@ -98,9 +98,6 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              instanceID:
-                description: InstanceID is the Linode instance ID for this machine.
-                type: integer
               interfaces:
                 items:
                   description: InstanceConfigInterfaceCreateOptions defines network
@@ -159,10 +156,6 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              providerID:
-                description: ProviderID is the unique identifier as specified by the
-                  cloud provider.
-                type: string
               region:
                 type: string
                 x-kubernetes-validations:
@@ -297,9 +290,16 @@ spec:
                   during the reconciliation of Machines can be added as events to
                   the Machine object and/or logged in the controller's output."
                 type: string
+              instanceID:
+                description: InstanceID is the Linode instance ID for this machine.
+                type: integer
               instanceState:
                 description: InstanceState is the state of the Linode instance for
                   this machine.
+                type: string
+              providerID:
+                description: ProviderID is the unique identifier as specified by the
+                  cloud provider.
                 type: string
               ready:
                 default: false

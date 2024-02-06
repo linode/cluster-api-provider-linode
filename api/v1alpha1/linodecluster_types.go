@@ -48,6 +48,14 @@ type LinodeClusterStatus struct {
 	// +optional
 	Ready bool `json:"ready"`
 
+	// NodeBalancerID is the ID of api server NodeBalancer.
+	// +optional
+	NodeBalancerID *int `json:"nodeBalancerID,omitempty"`
+
+	// NodeBalancerConfigID is the config ID of api server NodeBalancer.
+	// +optional
+	NodeBalancerConfigID *int `json:"nodeBalancerConfigID,omitempty"`
+
 	// FailureReason will be set in the event that there is a terminal problem
 	// reconciling the LinodeCluster and will contain a succinct value suitable
 	// for machine interpretation.
@@ -93,16 +101,15 @@ func (lm *LinodeCluster) SetConditions(conditions clusterv1.Conditions) {
 type NetworkSpec struct {
 	// LoadBalancerType is the type of load balancer to use, defaults to NodeBalancer if not otherwise set
 	// +kubebuilder:validation:Enum=NodeBalancer
+	// +kubebuilder:default=NodeBalancer
 	// +optional
 	LoadBalancerType string `json:"loadBalancerType,omitempty"`
 	// LoadBalancerPort used by the api server. It must be valid ports range (1-65535). If omitted, default value is 6443.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default=6443
 	// +optional
 	LoadBalancerPort int `json:"loadBalancerPort,omitempty"`
-	// NodeBalancerID is the id of api server NodeBalancer.
-	// +optional
-	NodeBalancerID int `json:"nodeBalancerID,omitempty"`
 }
 
 // +kubebuilder:object:root=true

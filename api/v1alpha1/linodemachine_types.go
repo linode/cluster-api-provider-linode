@@ -28,13 +28,6 @@ import (
 
 // LinodeMachineSpec defines the desired state of LinodeMachine
 type LinodeMachineSpec struct {
-	// ProviderID is the unique identifier as specified by the cloud provider.
-	// +optional
-	ProviderID *string `json:"providerID,omitempty"`
-	// InstanceID is the Linode instance ID for this machine.
-	// +optional
-	InstanceID *int `json:"instanceID,omitempty"`
-
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
@@ -111,6 +104,13 @@ type LinodeMachineStatus struct {
 	// +optional
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
+
+	// ProviderID is the unique identifier as specified by the cloud provider.
+	// +optional
+	ProviderID *string `json:"providerID,omitempty"`
+	// InstanceID is the Linode instance ID for this machine.
+	// +optional
+	InstanceID *int `json:"instanceID,omitempty"`
 
 	// Addresses contains the Linode instance associated addresses.
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`

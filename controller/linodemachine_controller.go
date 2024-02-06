@@ -172,28 +172,19 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to create machine scope: %w", err)
 	}
 
-	clusterScope, err := scope.NewClusterScope(
-		r.LinodeApiKey,
-		scope.ClusterScopeParams{
-			Client:        r.Client,
-			Cluster:       cluster,
-			LinodeCluster: linodeCluster,
-		},
-	)
 	if err != nil {
 		log.Error(err, "Failed to create cluster scope")
 
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 
-	return r.reconcile(ctx, log, machineScope, clusterScope)
+	return r.reconcile(ctx, log, machineScope)
 }
 
 func (r *LinodeMachineReconciler) reconcile(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-	clusterScope *scope.ClusterScope,
 ) (res ctrl.Result, err error) {
 	res = ctrl.Result{}
 
@@ -233,7 +224,7 @@ func (r *LinodeMachineReconciler) reconcile(
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = cerrs.DeleteMachineError
 
-		err = r.reconcileDelete(ctx, logger, machineScope, clusterScope)
+		err = r.reconcileDelete(ctx, logger, machineScope)
 
 		return
 	}
@@ -247,10 +238,10 @@ func (r *LinodeMachineReconciler) reconcile(
 	}()
 
 	// Update
-	if machineScope.LinodeMachine.Spec.InstanceID != nil {
+	if machineScope.LinodeMachine.Status.InstanceID != nil {
 		failureReason = cerrs.UpdateMachineError
 
-		logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
+		logger = logger.WithValues("ID", *machineScope.LinodeMachine.Status.InstanceID)
 
 		res, err = r.reconcileUpdate(ctx, logger, machineScope)
 
@@ -265,7 +256,7 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForBootstrapDelay}, nil
 	}
-	err = r.reconcileCreate(ctx, logger, machineScope, clusterScope)
+	err = r.reconcileCreate(ctx, logger, machineScope)
 
 	return
 }
@@ -274,7 +265,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-	clusterScope *scope.ClusterScope,
 ) error {
 	logger.Info("creating machine")
 
@@ -352,18 +342,17 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	machineScope.LinodeMachine.Status.Ready = true
-	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
-	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode:///%s/%d", linodeInstance.Region, linodeInstance.ID))
-
+	machineScope.LinodeMachine.Status.InstanceID = &linodeInstance.ID
+	machineScope.LinodeMachine.Status.ProviderID = util.Pointer(fmt.Sprintf("linode:///%s/%d", linodeInstance.Region, linodeInstance.ID))
 	machineScope.LinodeMachine.Status.Addresses = []clusterv1.MachineAddress{}
-	for _, add := range linodeInstance.IPv4 {
+	for _, addr := range linodeInstance.IPv4 {
 		machineScope.LinodeMachine.Status.Addresses = append(machineScope.LinodeMachine.Status.Addresses, clusterv1.MachineAddress{
 			Type:    clusterv1.MachineExternalIP,
-			Address: add.String(),
+			Address: addr.String(),
 		})
 	}
 
-	if err = services.AddNodeToNB(ctx, logger, machineScope, clusterScope, linodeInstance); err != nil {
+	if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 		logger.Error(err, "Failed to add instance to Node Balancer backend")
 
 		return err
@@ -381,24 +370,13 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 
 	res = ctrl.Result{}
 
-	if machineScope.LinodeMachine.Spec.InstanceID == nil {
+	if machineScope.LinodeMachine.Status.InstanceID == nil {
 		return res, errors.New("missing instance ID")
 	}
 
 	var linodeInstance *linodego.Instance
-	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
-		err = util.IgnoreLinodeAPIError(err, http.StatusNotFound)
-		if err != nil {
-			logger.Error(err, "Failed to get Linode machine instance")
-		} else {
-			logger.Info("Instance not found, let's create a new one")
-
-			// Create new machine
-			machineScope.LinodeMachine.Spec.ProviderID = nil
-			machineScope.LinodeMachine.Spec.InstanceID = nil
-
-			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string("missing"), clusterv1.ConditionSeverityWarning, "instance not found")
-		}
+	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Status.InstanceID); err != nil {
+		logger.Error(err, "Failed to get Linode machine instance")
 
 		return res, err
 	}
@@ -436,24 +414,23 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-	clusterScope *scope.ClusterScope,
 ) error {
 	logger.Info("deleting machine")
 
-	if machineScope.LinodeMachine.Spec.InstanceID == nil {
+	if machineScope.LinodeMachine.Status.InstanceID == nil {
 		logger.Info("Machine ID is missing, nothing to do")
 		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
 
 		return nil
 	}
 
-	err := services.DeleteNodeFromNB(ctx, logger, machineScope, clusterScope)
+	err := services.DeleteNodeFromNB(ctx, logger, machineScope)
 	if err != nil {
 		logger.Error(err, "Failed to remove node from Node Balancer backend")
 
 		return err
 	}
-	err = machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
+	err = machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Status.InstanceID)
 	if err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to delete Linode machine instance")
@@ -466,8 +443,8 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, clusterv1.DeletedReason, "instance has cleaned up")
 
-	machineScope.LinodeMachine.Spec.ProviderID = nil
-	machineScope.LinodeMachine.Spec.InstanceID = nil
+	machineScope.LinodeMachine.Status.ProviderID = nil
+	machineScope.LinodeMachine.Status.InstanceID = nil
 	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
 
 	return nil

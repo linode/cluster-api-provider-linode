@@ -162,6 +162,10 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 }
 
 func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort == 0 {
+		clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort = services.NodeBalancerPort
+	}
+
 	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
 	if err != nil {
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
@@ -169,18 +173,20 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 		return err
 	}
 
-	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = linodeNB.ID
+	clusterScope.LinodeCluster.Status.NodeBalancerID = util.Pointer(linodeNB.ID)
 
-	linodeNBConfig, err := services.CreateNodeBalancerConfig(ctx, clusterScope, logger)
+	linodeNBConfigID, err := services.CreateNodeBalancerConfig(ctx, linodeNB.ID, clusterScope, logger)
 	if err != nil {
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 
 		return err
 	}
 
+	clusterScope.LinodeCluster.Status.NodeBalancerConfigID = linodeNBConfigID
+
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: *linodeNB.IPv4,
-		Port: int32(linodeNBConfig.Port),
+		Port: int32(clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort),
 	}
 
 	return nil
@@ -188,14 +194,14 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == 0 {
+	if clusterScope.LinodeCluster.Status.NodeBalancerID == nil {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 
 		return nil
 	}
 
-	if err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, clusterScope.LinodeCluster.Spec.Network.NodeBalancerID); err != nil {
+	if err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Status.NodeBalancerID); err != nil {
 		logger.Info("Failed to delete Linode NodeBalancer", "error", err.Error())
 
 		// Not found is not an error
@@ -209,7 +215,9 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
 
-	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = 0
+	clusterScope.LinodeCluster.Status.NodeBalancerID = nil
+	clusterScope.LinodeCluster.Status.NodeBalancerConfigID = nil
+
 	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 
 	return nil
