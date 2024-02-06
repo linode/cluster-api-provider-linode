@@ -55,17 +55,16 @@ func init() {
 }
 
 func main() {
-	linodeToken := os.Getenv("LINODE_TOKEN")
-	if linodeToken == "" {
-		setupLog.Error(errors.New("failed to get LINODE_TOKEN environment variable"), "unable to start operator")
-		os.Exit(1)
-	}
+	var (
+		// Environment variables
+		linodeToken string = os.Getenv("LINODE_TOKEN")
 
-	var machineWatchFilter string
-	var clusterWatchFilter string
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
+		machineWatchFilter   string
+		clusterWatchFilter   string
+		metricsAddr          string
+		enableLeaderElection bool
+		probeAddr            string
+	)
 	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
 	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -80,6 +79,12 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	// Check environment variables
+	if linodeToken == "" {
+		setupLog.Error(errors.New("failed to get LINODE_TOKEN environment variable"), "unable to start operator")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
