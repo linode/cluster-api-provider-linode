@@ -233,7 +233,7 @@ func (r *LinodeMachineReconciler) reconcile(
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = cerrs.DeleteMachineError
 
-		err = r.reconcileDelete(ctx, logger, machineScope, clusterScope)
+		err = r.reconcileDelete(ctx, logger, machineScope)
 
 		return
 	}
@@ -363,7 +363,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		})
 	}
 
-	if err = services.AddNodeToNB(ctx, logger, machineScope, clusterScope, linodeInstance); err != nil {
+	if err = services.AddNodeToNB(ctx, logger, machineScope, clusterScope); err != nil {
 		logger.Error(err, "Failed to add instance to Node Balancer backend")
 
 		return err
@@ -397,7 +397,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 			machineScope.LinodeMachine.Spec.ProviderID = nil
 			machineScope.LinodeMachine.Spec.InstanceID = nil
 
-			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string("missing"), clusterv1.ConditionSeverityWarning, "instance not found")
+			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, "missing", clusterv1.ConditionSeverityWarning, "instance not found")
 		}
 
 		return res, err
@@ -436,7 +436,6 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-	clusterScope *scope.ClusterScope,
 ) error {
 	logger.Info("deleting machine")
 
@@ -447,7 +446,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		return nil
 	}
 
-	err := services.DeleteNodeFromNB(ctx, logger, machineScope, clusterScope)
+	err := services.DeleteNodeFromNB(ctx, logger, machineScope)
 	if err != nil {
 		logger.Error(err, "Failed to remove node from Node Balancer backend")
 

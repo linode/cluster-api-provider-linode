@@ -85,6 +85,10 @@ spec:
                     enum:
                     - NodeBalancer
                     type: string
+                  nodeBalancerConfigID:
+                    description: NodeBalancerConfigID is the config ID of api server
+                      NodeBalancer.
+                    type: integer
                   nodeBalancerID:
                     description: NodeBalancerID is the id of api server NodeBalancer.
                     type: integer
