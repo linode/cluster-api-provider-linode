@@ -163,18 +163,6 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	linodeCluster := &infrav1alpha1.LinodeCluster{}
-	linodeClusterKey := client.ObjectKey{
-		Namespace: linodeMachine.Namespace,
-		Name:      cluster.Spec.InfrastructureRef.Name,
-	}
-
-	if err = r.Client.Get(ctx, linodeClusterKey, linodeCluster); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			log.Error(err, "Failed to fetch Linode cluster")
-		}
-
-		return ctrl.Result{}, err
-	}
 
 	machineScope, err := scope.NewMachineScope(
 		r.LinodeApiKey,
@@ -258,6 +246,19 @@ func (r *LinodeMachineReconciler) reconcile(
 		return
 	}
 
+	linodeClusterKey := client.ObjectKey{
+		Namespace: machineScope.LinodeMachine.Namespace,
+		Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
+	}
+
+	if err = r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
+		if err = client.IgnoreNotFound(err); err != nil {
+			logger.Error(err, "Failed to fetch Linode cluster")
+		}
+
+		return
+	}
+
 	var linodeInstance *linodego.Instance
 	defer func() {
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
@@ -282,8 +283,9 @@ func (r *LinodeMachineReconciler) reconcile(
 	// Make sure bootstrap data is available and populated.
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap data secret is not yet available")
+		res = ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForBootstrapDelay}
 
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForBootstrapDelay}, nil
+		return
 	}
 	linodeInstance, err = r.reconcileCreate(ctx, logger, machineScope, clusterScope)
 
@@ -298,9 +300,9 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 ) (*linodego.Instance, error) {
 	logger.Info("creating machine")
 
-	tags := []string{string(machineScope.LinodeCluster.UID), string(machineScope.LinodeMachine.UID)}
+	tags := []string{machineScope.LinodeCluster.Name}
 
-	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, util.CreateLinodeAPIFilter("", tags)))
+	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, util.CreateLinodeAPIFilter(machineScope.LinodeMachine.Name, tags)))
 	if err != nil {
 		logger.Error(err, "Failed to list Linode machine instances")
 

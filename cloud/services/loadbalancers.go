@@ -177,6 +177,12 @@ func DeleteNodeFromNB(
 		return errors.New("no InstanceID")
 	}
 
+	if machineScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
+		logger.Info("NodeBalancer already deleted, no NodeBalancer backend Node to remove")
+
+		return nil
+	}
+
 	err := machineScope.LinodeClient.DeleteNodeBalancerNode(
 		ctx,
 		machineScope.LinodeCluster.Spec.Network.NodeBalancerID,

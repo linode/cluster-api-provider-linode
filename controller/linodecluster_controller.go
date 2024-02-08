@@ -84,7 +84,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	} else if cluster == nil {
-		logger.Info("Machine Controller has not yet set OwnerRef, skipping reconciliation")
+		logger.Info("Cluster Controller has not yet set OwnerRef, skipping reconciliation")
 
 		return ctrl.Result{}, nil
 	}
