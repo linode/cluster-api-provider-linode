@@ -271,7 +271,7 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
 
-		res, err = r.reconcileUpdate(ctx, logger, machineScope)
+		res, linodeInstance, err = r.reconcileUpdate(ctx, logger, machineScope)
 
 		return
 	}
@@ -284,7 +284,7 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForBootstrapDelay}, nil
 	}
-	err = r.reconcileCreate(ctx, logger, machineScope, clusterScope)
+	linodeInstance, err = r.reconcileCreate(ctx, logger, machineScope, clusterScope)
 
 	return
 }
@@ -294,7 +294,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 	clusterScope *scope.ClusterScope,
-) error {
+) (*linodego.Instance, error) {
 	logger.Info("creating machine")
 
 	tags := []string{string(machineScope.LinodeCluster.UID), string(machineScope.LinodeMachine.UID)}
@@ -303,7 +303,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	if err != nil {
 		logger.Error(err, "Failed to list Linode machine instances")
 
-		return err
+		return nil, err
 	}
 
 	var linodeInstance *linodego.Instance
@@ -318,7 +318,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine create config")
 
-			return err
+			return nil, err
 		}
 
 		if machineScope.LinodeCluster.Spec.VPCRef != nil {
@@ -326,7 +326,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 			if err != nil {
 				logger.Error(err, "Failed to get VPC interface confiog")
 
-				return err
+				return nil, err
 			}
 
 			createConfig.Interfaces = append(createConfig.Interfaces, *iface)
@@ -336,14 +336,14 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
-			return err
+			return nil, err
 		}
 	default:
 		err = errors.New("multiple instances")
 
 		logger.Error(err, "Panic! Multiple instances found. This might be a concurrency issue in the controller!!!", "tags", tags)
 
-		return err
+		return nil, err
 	}
 
 	if linodeInstance == nil {
@@ -351,7 +351,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 		logger.Error(err, "Panic! Failed to create isntance")
 
-		return err
+		return nil, err
 	}
 
 	machineScope.LinodeMachine.Status.Ready = true
@@ -369,26 +369,25 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	if err = services.AddNodeToNB(ctx, logger, machineScope, clusterScope); err != nil {
 		logger.Error(err, "Failed to add instance to Node Balancer backend")
 
-		return err
+		return linodeInstance, err
 	}
 
-	return nil
+	return linodeInstance, nil
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-) (res reconcile.Result, err error) {
+) (res reconcile.Result, linodeInstance *linodego.Instance, err error) {
 	logger.Info("updating machine")
 
 	res = ctrl.Result{}
 
 	if machineScope.LinodeMachine.Spec.InstanceID == nil {
-		return res, errors.New("missing instance ID")
+		return res, nil, errors.New("missing instance ID")
 	}
 
-	var linodeInstance *linodego.Instance
 	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
 		err = util.IgnoreLinodeAPIError(err, http.StatusNotFound)
 		if err != nil {
@@ -403,27 +402,27 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, "missing", clusterv1.ConditionSeverityWarning, "instance not found")
 		}
 
-		return res, err
+		return res, nil, err
 	}
 
 	if _, ok := requeueInstanceStatuses[linodeInstance.Status]; ok {
 		if linodeInstance.Updated.Add(reconciler.DefaultMachineControllerWaitForRunningTimeout).After(time.Now()) {
 			logger.Info("Instance has one operaton running, re-queuing reconciliation", "status", linodeInstance.Status)
 
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, linodeInstance, nil
 		}
 
 		logger.Info("Instance has one operaton long running, skipping reconciliation", "status", linodeInstance.Status)
 
 		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "skipped due to long running operation")
 
-		return res, nil
+		return res, linodeInstance, nil
 	} else if linodeInstance.Status != linodego.InstanceRunning {
 		logger.Info("Instance has incompatible status, skipping reconciliation", "status", linodeInstance.Status)
 
 		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "incompatible status")
 
-		return res, nil
+		return res, linodeInstance, nil
 	}
 
 	machineScope.LinodeMachine.Status.Ready = true
@@ -432,7 +431,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "instance is running")
 
-	return res, nil
+	return res, linodeInstance, nil
 }
 
 func (r *LinodeMachineReconciler) reconcileDelete(
