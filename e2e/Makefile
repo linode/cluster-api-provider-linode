@@ -31,7 +31,7 @@ renderTestCase:
 	@D="$$(mktemp -d)" ;\
 	mkdir -p "$$D/case" ;\
 	$(BIN_DIR)/envsubst -i "$$TPL" -o "$$D/case/00-case.yaml" ;\
-	echo "$$D\c"
+	printf "$$D\n"
 
 renderManifest:
 	@echo $(shell make --no-print-directory renderTestCase)/case/00-case.yaml
