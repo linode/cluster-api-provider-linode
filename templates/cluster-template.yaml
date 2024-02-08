@@ -26,29 +26,6 @@ metadata:
 spec:
   region: ${LINODE_REGION}
 ---
-apiVersion: addons.cluster.x-k8s.io/v1alpha1
-kind: HelmChartProxy
-metadata:
-  name: cilium
-spec:
-  clusterSelector:
-    matchLabels:
-      cni: cilium
-  repoURL: https://helm.cilium.io/
-  chartName: cilium
-  options:
-    waitForJobs: true
-    wait: true
-    timeout: 5m
-  valuesTemplate: |
-    operator:
-      replicas: 1
-    hubble:
-      relay:
-        enabled: true
-      ui:
-        enabled: true
----
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
