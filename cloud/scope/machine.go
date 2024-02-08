@@ -85,11 +85,14 @@ func (s *MachineScope) Close(ctx context.Context) error {
 	return s.PatchObject(ctx)
 }
 
-// AddFinalizer adds a finalizer and immediately patches the object to avoid any race conditions
+// AddFinalizer adds a finalizer if not present and immediately patches the
+// object to avoid any race conditions.
 func (s *MachineScope) AddFinalizer(ctx context.Context) error {
-	controllerutil.AddFinalizer(s.LinodeMachine, infrav1alpha1.GroupVersion.String())
+	if controllerutil.AddFinalizer(s.LinodeMachine, infrav1alpha1.GroupVersion.String()) {
+		return s.Close(ctx)
+	}
 
-	return s.Close(ctx)
+	return nil
 }
 
 // GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
