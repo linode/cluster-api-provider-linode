@@ -22,6 +22,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"sort"
 
 	"github.com/go-logr/logr"
@@ -41,6 +42,10 @@ import (
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
 
+// Size limit in bytes on the decoded metadata.user_data for cloud-init
+// The decoded user_data must not exceed 16384 bytes per the Linode API
+const maxBootstrapDataBytes = 16384
+
 func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
@@ -58,6 +63,12 @@ func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScop
 	bootstrapData, err := machineScope.GetBootstrapData(ctx)
 	if err != nil {
 		logger.Info("Failed to get bootstrap data", "error", err.Error())
+
+		return nil, err
+	}
+	if len(bootstrapData) > maxBootstrapDataBytes {
+		err = errors.New("bootstrap data too large")
+		logger.Info(fmt.Sprintf("decoded bootstrap data exceeds size limit of %d bytes", maxBootstrapDataBytes), "error", err.Error())
 
 		return nil, err
 	}
