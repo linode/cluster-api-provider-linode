@@ -5,10 +5,11 @@ import (
 	"encoding/gob"
 	"testing"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
 
 func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
@@ -16,7 +17,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 
 	subnetID := 1
 
-	machineSpec := infrav1.LinodeMachineSpec{
+	machineSpec := infrav1alpha1.LinodeMachineSpec{
 		Region:          "region",
 		Type:            "type",
 		Label:           "label",
@@ -28,14 +29,14 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		StackScriptData: map[string]string{"script": "data"},
 		BackupID:        1,
 		Image:           "image",
-		Interfaces: []infrav1.InstanceConfigInterfaceCreateOptions{
+		Interfaces: []infrav1alpha1.InstanceConfigInterfaceCreateOptions{
 			{
 				IPAMAddress: "address",
 				Label:       "label",
 				Purpose:     linodego.InterfacePurposePublic,
 				Primary:     true,
 				SubnetID:    &subnetID,
-				IPv4: &infrav1.VPCIPv4{
+				IPv4: &infrav1alpha1.VPCIPv4{
 					VPC:     "vpc",
 					NAT1To1: "nat11",
 				},
@@ -45,7 +46,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		BackupsEnabled: true,
 		PrivateIP:      true,
 		Tags:           []string{"tag"},
-		Metadata: &infrav1.InstanceMetadataOptions{
+		Metadata: &infrav1alpha1.InstanceMetadataOptions{
 			UserData: "userdata",
 		},
 		FirewallID: 1,
@@ -59,7 +60,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 	err := enc.Encode(createConfig)
 	require.NoError(t, err, "Failed to encode InstanceCreateOptions")
 
-	var actualMachineSpec infrav1.LinodeMachineSpec
+	var actualMachineSpec infrav1alpha1.LinodeMachineSpec
 	dec := gob.NewDecoder(&buf)
 	err = dec.Decode(&actualMachineSpec)
 	require.NoError(t, err, "Failed to decode LinodeMachineSpec")

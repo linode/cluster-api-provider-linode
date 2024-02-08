@@ -76,7 +76,7 @@ jobs:
     - name: Docker cache
       uses: ScribeMD/docker-cache@0.3.7
       with:
-        key: docker-${{ runner.os }}-${{ hashFiles('Makefile') }}}
+        key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}}
 
     - name: Lint
       run: make lint
@@ -100,6 +100,7 @@ jobs:
         disable-sudo: true
         egress-policy: block
         allowed-endpoints: >
+          api.linode.com:443
           api.github.com:443
           github.com:443
           gcr.io:443
@@ -130,7 +131,7 @@ jobs:
     - name: Docker cache
       uses: ScribeMD/docker-cache@0.3.7
       with:
-        key: docker-${{ runner.os }}-${{ hashFiles('Makefile') }}}
+        key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}}
 
     - name: E2E test
       run: make e2etest
@@ -173,7 +174,7 @@ jobs:
     - name: Docker cache
       uses: ScribeMD/docker-cache@0.3.7
       with:
-        key: docker-${{ runner.os }}-${{ hashFiles('Makefile') }}
+        key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
 
     - name: Build the Docker image
       run: make docker-build

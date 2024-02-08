@@ -89,11 +89,14 @@ test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
 
 .PHONY: e2etest
-e2etest: kind ctlptl tilt kuttl kustomize clusterctl manifests generate
+e2etest:
+	make --no-print-directory _e2etest # Workaround to force the flag on Github Action
+
+_e2etest: kind ctlptl tilt kuttl kustomize clusterctl envsubst manifests generate
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
-	$(TILT) ci --timeout 180s -f Tiltfile
-	$(KUTTL) test --config e2e/kuttl-config.yaml
+	$(TILT) ci --timeout 240s -f Tiltfile
+	ROOT_DIR="$(PWD)" $(KUTTL) test --config e2e/kuttl-config.yaml
 
 ##@ Build
 
@@ -180,6 +183,7 @@ TILT ?= $(LOCALBIN)/tilt
 KIND ?= $(LOCALBIN)/kind
 KUTTL ?= $(LOCALBIN)/kuttl
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+ENVSUBST ?= $(LOCALBIN)/envsubst
 HUSKY ?= $(LOCALBIN)/husky
 NILAWAY ?= $(LOCALBIN)/nilaway
 GOVULNC ?= $(LOCALBIN)/govulncheck
@@ -192,6 +196,7 @@ CONTROLLER_TOOLS_VERSION ?= v0.13.0
 TILT_VERSION ?= 0.33.6
 KIND_VERSION ?= 0.20.0
 KUTTL_VERSION ?= 0.15.0
+ENVSUBST_VERSION ?= v1.4.2
 HUSKY_VERSION ?= v0.2.16
 NILAWAY_VERSION ?= latest
 GOVULNC_VERSION ?= v1.0.1
@@ -250,6 +255,12 @@ $(KUTTL): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: envsubst
+envsubst: $(ENVSUBST) ## Download envsubst locally if necessary. If wrong version is installed, it will be overwritten.
+$(ENVSUBST): $(LOCALBIN)
+	test -s $(ENVSUBST) || \
+	(cd $(LOCALBIN); curl -Lso ./envsubst https://github.com/a8m/envsubst/releases/download/$(ENVSUBST_VERSION)/envsubst-$(shell uname -s)-$(ARCH) && chmod +x envsubst)
 
 .PHONY: husky
 husky: $(HUSKY) ## Download husky locally if necessary.
