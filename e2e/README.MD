@@ -47,7 +47,7 @@ kind: TestStep
 commands:
   - script: |-
       MACHINE_UID="$(OBJ=machines/machine-sample make getKubeUid)" \
-      TC="$(TPL="$PWD/02-create-linodemachine.tpl.yml" make renderTestCase)" make runTestCase
+      TS="$(TPL="$PWD/02-create-linodemachine.tpl.yml" make renderTestCase)" make runTestSuit
 ```
 
   - You can run testsuits (which can contain template rendering).
@@ -57,7 +57,7 @@ commands:
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
-  - script: TC="$PWD/testsuit" make runTestCase
+  - script: TS="$PWD/testsuit" make runTestSuit
 ```
 
   - Test execution order is not guaranteed. If a test depends on another resource it is strongly suggested to create `assert` files to wait for an event. Almost every test depends on CAPI providers, so there is a good chance, you have to create a `00-assert.yaml` in your test folder.
@@ -80,3 +80,10 @@ metadata:
 status:
   availableReplicas: 1
 ```
+
+## Executing individual test suit
+
+```bash
+make _e2etest-infra # Only once per cluster!
+(cd e2e/linodemachine-controller/minimal ; make runThisTest)
+``` 

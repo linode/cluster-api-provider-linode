@@ -24,6 +24,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -121,7 +122,7 @@ func (r *LinodeVPCReconciler) reconcile(
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
-		if patchErr := vpcScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(patchErr) != nil {
+		if patchErr := vpcScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(patchErr, apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch LinodeVPC")
 
 			err = errors.Join(err, patchErr)

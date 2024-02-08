@@ -1,5 +1,21 @@
-runTestCase:
-	@T="$$(KUBECONFIG="$$ROOT_DIR/kubeconfig" kuttl test --timeout 300 --skip-delete --namespace "$$NAMESPACE" "$$TC" 2>&1)" ;\
+ROOT_DIR ?= $(shell git rev-parse --show-toplevel)
+BIN_DIR ?= $(ROOT_DIR)/bin
+TARGET_API ?= api.linode.com
+TARGET_API_VERSION ?= v4beta
+
+runThisTest:
+	@echo "PLease execute make -C ($ROOT_DIR)/Makefile _e2etest-infra to spin up infrastructure"
+	make --no-print-directory _runThisTest
+
+_runThisTest:
+	@D="$$(mktemp -d)" ;\
+	cp $(ROOT_DIR)/e2e/Makefile $$D ;\
+	mkdir $$D/suit ;\
+	cp -r $(PWD) $$D/suit ;\
+	ROOT_DIR=$(ROOT_DIR) KUBECONFIG="$(ROOT_DIR)/kubeconfig" $(BIN_DIR)/kuttl test --timeout 300 --skip-delete "$$D/suit"
+
+runTestSuit:
+	@T="$$(KUBECONFIG="$$ROOT_DIR/kubeconfig" $(BIN_DIR)/kuttl test --timeout 300 --skip-delete --namespace "$$NAMESPACE" "$$TS" 2>&1)" ;\
 	echo "$$T" |\
 		grep -v harness.go |\
 		grep -v ^=== |\
@@ -9,16 +25,28 @@ runTestCase:
 		grep -v "kutt-test config testdirs is overridden" ;\
 	echo "$$T" | \
 		grep '^PASS' || \
-			(echo "$$T" | grep harness.go && cat "$$TC/step/00-step.yaml" && exit 1)
+			(echo "$$T" | grep harness.go && find $$TS -name *.yaml -exec cat {} \; && exit 1)
 
 renderTestCase:
 	@D="$$(mktemp -d)" ;\
-	mkdir -p "$$D/step" ;\
-	envsubst -i "$$TPL" -o "$$D/step/00-step.yaml" ;\
+	mkdir -p "$$D/case" ;\
+	$(BIN_DIR)/envsubst -i "$$TPL" -o "$$D/case/00-case.yaml" ;\
 	echo "$$D\c"
+
+renderManifest:
+	@echo $(shell make --no-print-directory renderTestCase)/case/00-case.yaml
 
 getKubeUid:
 	@kubectl get -o jsonpath='{.metadata.uid}' -n "$$NAMESPACE" "$$OBJ"
 
+patchKubeObj:
+	@kubectl patch --type=merge -p "$$PATCH" -n "$$NAMESPACE" "$$OBJ"
+
+patchKubeObjStatus:
+	@kubectl patch --type=merge --subresource status -p "$$PATCH" -n "$$NAMESPACE" "$$OBJ"
+
 callLinodeApiGet:
-	@curl -s -H "Authorization: Bearer $$LINODE_TOKEN" -H "X-Filter: $$FILTER" "https://api.linode.com/v4beta/$$URI"
+	@curl -s -H "Authorization: Bearer $$LINODE_TOKEN" -H "X-Filter: $$FILTER" -H "Content-Type: application/json" "https://$(TARGET_API)/$(TARGET_API_VERSION)/$$URI"
+
+callLinodeApiPost:
+	@curl -s -H "Authorization: Bearer $$LINODE_TOKEN" -H "Content-Type: application/json" -d "$$BODY" -X POST "https://$(TARGET_API)/$(TARGET_API_VERSION)/$$URI"
