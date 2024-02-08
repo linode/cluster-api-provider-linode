@@ -15,7 +15,7 @@ renderTestCase:
 	@D="$$(mktemp -d)" ;\
 	mkdir -p "$$D/step" ;\
 	envsubst -i "$$TPL" -o "$$D/step/00-step.yaml" ;\
-	echo -n "$$D"
+	echo "$$D\c"
 
 getKubeUid:
 	@kubectl get -o jsonpath='{.metadata.uid}' -n "$$NAMESPACE" "$$OBJ"
