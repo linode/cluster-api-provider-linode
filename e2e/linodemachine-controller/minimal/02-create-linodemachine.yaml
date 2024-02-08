@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |-
+      MACHINE_UID="$(OBJ=machines/machine-sample make getKubeUid)" \
+      TC="$(TPL="$PWD/02-create-linodemachine.tpl.yml" make renderTestCase)" make runTestCase

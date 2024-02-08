@@ -19,13 +19,15 @@ package controller
 import (
 	"bytes"
 	"context"
+	b64 "encoding/base64"
 	"encoding/gob"
 	"errors"
 	"sort"
 
 	"github.com/go-logr/logr"
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/google/uuid"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,7 +37,53 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
+
+func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
+	var err error
+
+	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
+	if createConfig == nil {
+		err = errors.New("failed to convert machine spec to create instance config")
+
+		logger.Error(err, "Panic! Struct of LinodeMachineSpec is different than InstanceCreateOptions")
+
+		return nil, err
+	}
+	createConfig.SwapSize = util.Pointer(0)
+	createConfig.PrivateIP = true
+
+	bootstrapData, err := machineScope.GetBootstrapData(ctx)
+	if err != nil {
+		logger.Info("Failed to get bootstrap data", "error", err.Error())
+
+		return nil, err
+	}
+	createConfig.Metadata = &linodego.InstanceMetadataOptions{
+		UserData: b64.StdEncoding.EncodeToString(bootstrapData),
+	}
+
+	if createConfig.Tags == nil {
+		createConfig.Tags = []string{}
+	}
+	createConfig.Tags = append(createConfig.Tags, tags...)
+
+	if createConfig.Label == "" {
+		createConfig.Label = util.RenderObjectLabel(machineScope.LinodeMachine.UID)
+	}
+
+	if createConfig.Image == "" {
+		createConfig.Image = reconciler.DefaultMachineControllerLinodeImage
+	}
+
+	if createConfig.RootPass == "" {
+		createConfig.RootPass = uuid.NewString()
+	}
+
+	return createConfig, nil
+}
 
 func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logger) handler.MapFunc {
 	logger = logger.WithName("LinodeMachineReconciler").WithName("linodeClusterToLinodeMachines")
@@ -44,7 +92,7 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
 		defer cancel()
 
-		linodeCluster, ok := o.(*infrav1.LinodeCluster)
+		linodeCluster, ok := o.(*infrav1alpha1.LinodeCluster)
 		if !ok {
 			logger.Info("Failed to cast object to Cluster")
 
@@ -142,7 +190,7 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 
 	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
 
-	linodeVPC := infrav1.LinodeVPC{
+	linodeVPC := infrav1alpha1.LinodeVPC{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
@@ -202,7 +250,7 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 	}, nil
 }
 
-func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1.LinodeMachineSpec) *linodego.InstanceCreateOptions {
+func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha1.LinodeMachineSpec) *linodego.InstanceCreateOptions {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(machineSpec)
