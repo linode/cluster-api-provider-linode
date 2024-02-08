@@ -1,0 +1,10 @@
+{
+    "label": "capli-e2e-byovpc-sample",
+    "region": "us-sea",
+    "subnets": [
+        {
+            "ipv4": "10.0.0.0/24",
+            "label": "capli-e2e-byovpc-sample"
+        }
+    ]
+}

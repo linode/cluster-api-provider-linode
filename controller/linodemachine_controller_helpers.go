@@ -173,9 +173,14 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 			continue
 		}
 
+		infraNs := item.Spec.InfrastructureRef.Namespace
+		if infraNs == "" {
+			infraNs = item.Namespace
+		}
+
 		result = append(result, ctrl.Request{
 			NamespacedName: client.ObjectKey{
-				Namespace: item.Namespace,
+				Namespace: infraNs,
 				Name:      item.Spec.InfrastructureRef.Name,
 			},
 		})
@@ -187,6 +192,9 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, existingIfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
 	name := machineScope.LinodeCluster.Spec.VPCRef.Name
 	namespace := machineScope.LinodeCluster.Spec.VPCRef.Namespace
+	if namespace == "" {
+		namespace = machineScope.LinodeCluster.Namespace
+	}
 
 	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
 

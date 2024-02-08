@@ -6,6 +6,11 @@ metadata:
   name: linodecluster-sample
 spec:
   region: us-sea
+  vpcRef:
+    kind: LinodeVPC
+    name: linodevpc-sample
+    namespace: ${NAMESPACE}
+    uid: ${VPC_UID}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
