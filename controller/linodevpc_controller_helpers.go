@@ -68,6 +68,7 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 		return err
 	}
 
+	vpcScope.LinodeVPC.Spec.Label = vpc.Label
 	vpcScope.LinodeVPC.Spec.VPCID = &vpc.ID
 
 	return nil
