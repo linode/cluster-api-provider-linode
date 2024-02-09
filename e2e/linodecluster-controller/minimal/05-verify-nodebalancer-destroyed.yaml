@@ -1,0 +1,5 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |-
+      URI="nodebalancers" FILTER="{\"tags\":\"$(OBJ=linodeclusters/linodecluster-sample make getKubeUid)\"}" make callLinodeApiGet | grep 'results": 0'
