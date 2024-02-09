@@ -182,7 +182,10 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, vpcScope *sco
 		return err
 	}
 	vpcScope.LinodeVPC.Status.Ready = true
-	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, "Created", fmt.Sprintf("Created VPC %d", *vpcScope.LinodeVPC.Spec.VPCID))
+
+	if vpcScope.LinodeVPC.Spec.VPCID != nil {
+		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, "Created", fmt.Sprintf("Created VPC %d", *vpcScope.LinodeVPC.Spec.VPCID))
+	}
 
 	return nil
 }
