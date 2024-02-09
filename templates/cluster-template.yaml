@@ -22,7 +22,6 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeCluster
 metadata:
   name: ${CLUSTER_NAME}
-  namespace: default
 spec:
   region: ${LINODE_REGION}
 ---
@@ -199,7 +198,7 @@ stringData:
     curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
     apt-get update -y
-    apt-get install -y kubelet kubeadm kubectl containerd
+    apt-get install -y kubelet=$2* kubeadm=$2* kubectl=$2* containerd
     apt-mark hold kubelet kubeadm kubectl containerd
     modprobe overlay
     modprobe br_netfilter
