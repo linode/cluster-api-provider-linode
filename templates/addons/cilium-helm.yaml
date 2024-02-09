@@ -8,7 +8,7 @@ spec:
       cni: cilium
   repoURL: https://helm.cilium.io/
   chartName: cilium
-  version: 0.15.0
+  version: 1.15.0
   options:
     waitForJobs: true
     wait: true

@@ -204,3 +204,5 @@ stringData:
     modprobe overlay
     modprobe br_netfilter
     sysctl --system
+    sed -i '/swap/d' /etc/fstab
+    swapoff -a
