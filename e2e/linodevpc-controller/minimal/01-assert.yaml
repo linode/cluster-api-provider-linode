@@ -1,10 +1,9 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeVPC
 metadata:
-  annotations:
-    cluster.x-k8s.io/paused: "true"
   name: linodevpc-sample
 spec:
-  label: capli-e2e-byovpc-for-all-tests
+  label: capli-e2e-byovpc-sample
   region: us-sea
-  vpcID: ${VPC_ID}
+status:
+  ready: true

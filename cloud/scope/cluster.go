@@ -91,9 +91,12 @@ func (s *ClusterScope) Close(ctx context.Context) error {
 	return s.PatchObject(ctx)
 }
 
-// AddFinalizer adds a finalizer and immediately patches the object to avoid any race conditions
+// AddFinalizer adds a finalizer if not present and immediately patches the
+// object to avoid any race conditions.
 func (s *ClusterScope) AddFinalizer(ctx context.Context) error {
-	controllerutil.AddFinalizer(s.LinodeCluster, infrav1alpha1.GroupVersion.String())
+	if controllerutil.AddFinalizer(s.LinodeCluster, infrav1alpha1.GroupVersion.String()) {
+		return s.Close(ctx)
+	}
 
-	return s.Close(ctx)
+	return nil
 }
