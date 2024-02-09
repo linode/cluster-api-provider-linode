@@ -1,0 +1,12 @@
+kind: LinodeMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  template:
+    spec:
+      image: ${LINODE_OS}
+      type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
+      region: ${LINODE_REGION}
+      authorizedKeys:
+        - ${LINODE_SSH_KEY}

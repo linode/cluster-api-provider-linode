@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-worker
+spec:
+  template:
+    spec:
+      image: ${LINODE_OS}
+      type: ${LINODE_MACHINE_TYPE}
+      region: ${LINODE_REGION}
+      authorizedKeys:
+        - ${LINODE_SSH_KEY}

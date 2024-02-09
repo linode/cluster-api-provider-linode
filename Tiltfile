@@ -9,7 +9,7 @@ docker_build(
 
 local_resource(
     'capi-controller-manager',
-    cmd='EXP_CLUSTER_RESOURCE_SET=true clusterctl init --addon helm',
+    cmd='EXP_CLUSTER_RESOURCE_SET=true CLUSTER_TOPOLOGY=true clusterctl init --addon helm',
 )
 
 manager_yaml = decode_yaml_stream(kustomize("config/default"))

@@ -1,0 +1,8 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeClusterTemplate
+metadata:
+  name: ${CLUSTER_NAME}-linode-cluster
+spec:
+  template:
+    spec:
+      region: ${LINODE_REGION}

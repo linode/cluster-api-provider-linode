@@ -1,0 +1,157 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: ClusterClass
+metadata:
+  name: ${CLUSTER_CLASS_NAME}
+spec:
+  controlPlane:
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlaneTemplate
+      name: ${CLUSTER_NAME}
+    machineInfrastructure:
+      ref:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        name: ${CLUSTER_NAME}-control-plane
+  infrastructure:
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeClusterTemplate
+      name: ${CLUSTER_NAME}
+  workers:
+    machineDeployments:
+    - class: ${CLUSTER_NAME}-worker
+      template:
+        bootstrap:
+          ref:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            name: ${CLUSTER_NAME}
+        infrastructure:
+          ref:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            name: ${CLUSTER_NAME}-worker
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeClusterTemplate
+metadata:
+  name: ${CLUSTER_NAME}-linode-cluster
+spec:
+  template:
+    spec:
+      region: ${LINODE_REGION}
+---
+kind: LinodeMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  template:
+    spec:
+      image: ${LINODE_OS}
+      type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
+      region: ${LINODE_REGION}
+      authorizedKeys:
+        - ${LINODE_SSH_KEY}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-worker
+spec:
+  template:
+    spec:
+      image: ${LINODE_OS}
+      type: ${LINODE_MACHINE_TYPE}
+      region: ${LINODE_REGION}
+      authorizedKeys:
+        - ${LINODE_SSH_KEY}
+---
+kind: KubeadmControlPlaneTemplate
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  template:
+    spec:
+      kubeadmConfigSpec:
+        files:
+          - path: /etc/containerd/config.toml
+            contentFrom:
+              secret:
+                name: common-init-files
+                key: containerd-config.toml
+          - path: /etc/modules-load.d/k8s.conf
+            contentFrom:
+              secret:
+                name: common-init-files
+                key: k8s-modules.conf
+          - path: /etc/sysctl.d/k8s.conf
+            contentFrom:
+              secret:
+                name: common-init-files
+                key: sysctl-k8s.conf
+          - path: /kubeadm-pre-init.sh
+            contentFrom:
+              secret:
+                name: common-init-files
+                key: kubeadm-pre-init.sh
+            permissions: "0500"
+        preKubeadmCommands:
+          - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "${KUBERNETES_VERSION}"
+        clusterConfiguration:
+          apiServer:
+            extraArgs:
+              cloud-provider: external
+            timeoutForControlPlane: 20m
+        initConfiguration:
+          nodeRegistration:
+            kubeletExtraArgs:
+              cloud-provider: external
+              provider-id: 'linode:///{{ ds.meta_data.region }}/{{ ds.meta_data.id }}'
+            name: '{{ ds.meta_data.label }}'
+        joinConfiguration:
+          nodeRegistration:
+            kubeletExtraArgs:
+              cloud-provider: external
+              provider-id: 'linode:///{{ ds.meta_data.region }}/{{ ds.meta_data.id }}'
+            name: '{{ ds.meta_data.label }}'
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-worker
+spec:
+  template:
+    spec:
+      files:
+        - path: /etc/containerd/config.toml
+          contentFrom:
+            secret:
+              name: common-init-files
+              key: containerd-config.toml
+        - path: /etc/modules-load.d/k8s.conf
+          contentFrom:
+            secret:
+              name: common-init-files
+              key: k8s-modules.conf
+        - path: /etc/sysctl.d/k8s.conf
+          contentFrom:
+            secret:
+              name: common-init-files
+              key: sysctl-k8s.conf
+        - path: /kubeadm-pre-init.sh
+          contentFrom:
+            secret:
+              name: common-init-files
+              key: kubeadm-pre-init.sh
+          permissions: "0500"
+      preKubeadmCommands:
+        - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "${KUBERNETES_VERSION}"
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+            provider-id: 'linode:///{{ ds.meta_data.region }}/{{ ds.meta_data.id }}'
+          name: '{{ ds.meta_data.label }}'
