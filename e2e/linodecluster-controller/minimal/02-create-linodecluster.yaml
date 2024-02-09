@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |-
+      CLUSTER_UID="$(OBJ=clusters/cluster-sample make getKubeUid)" \
+      TS="$(TPL="$PWD/02-create-linodecluster.tpl.yml" make renderTestCase)" make runTestSuit
