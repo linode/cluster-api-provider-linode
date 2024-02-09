@@ -57,7 +57,6 @@ func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScop
 
 		return nil, err
 	}
-	createConfig.SwapSize = util.Pointer(0)
 	createConfig.PrivateIP = true
 
 	bootstrapData, err := machineScope.GetBootstrapData(ctx)
