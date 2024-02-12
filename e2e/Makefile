@@ -1,8 +1,8 @@
 ROOT_DIR ?= $(shell git rev-parse --show-toplevel)
-BIN_DIR ?= $(ROOT_DIR)/bin
 TARGET_API ?= api.linode.com
 TARGET_API_VERSION ?= v4beta
 
+export PATH := $(ROOT_DIR)/bin:$(ROOT_DIR)/.devbox/nix/profile/default/bin:$(PATH)
 runThisTest:
 	@echo "PLease execute make -C ($ROOT_DIR)/Makefile _e2etest-infra to spin up infrastructure"
 	make --no-print-directory _runThisTest
@@ -12,10 +12,10 @@ _runThisTest:
 	cp $(ROOT_DIR)/e2e/Makefile $$D ;\
 	mkdir $$D/suit ;\
 	cp -r $(PWD) $$D/suit ;\
-	ROOT_DIR=$(ROOT_DIR) KUBECONFIG="$(ROOT_DIR)/kubeconfig" $(BIN_DIR)/kuttl test --timeout 300 --skip-delete "$$D/suit"
+	ROOT_DIR=$(ROOT_DIR) KUBECONFIG="$(ROOT_DIR)/kubeconfig" kubectl-kuttl test --timeout 300 --skip-delete "$$D/suit"
 
 runTestSuit:
-	@T="$$(KUBECONFIG="$$ROOT_DIR/kubeconfig" $(BIN_DIR)/kuttl test --timeout 300 --skip-delete --namespace "$$NAMESPACE" "$$TS" 2>&1)" ;\
+	@T="$$(KUBECONFIG="$$ROOT_DIR/kubeconfig" kubectl-kuttl test --timeout 300 --skip-delete --namespace "$$NAMESPACE" "$$TS" 2>&1)" ;\
 	echo "$$T" |\
 		grep -v harness.go |\
 		grep -v ^=== |\
@@ -30,7 +30,7 @@ runTestSuit:
 renderTestCase:
 	@D="$$(mktemp -d)" ;\
 	mkdir -p "$$D/case" ;\
-	$(BIN_DIR)/envsubst -i "$$TPL" -o "$$D/case/00-case.yaml" ;\
+	envsubst -i "$$TPL" -o "$$D/case/00-case.yaml" ;\
 	printf "$$D\n"
 
 renderManifest:
