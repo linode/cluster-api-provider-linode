@@ -60,7 +60,7 @@ spec:
             key: kubeadm-pre-init.sh
         permissions: "0500"
     preKubeadmCommands:
-      - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "${KUBERNETES_VERSION}"
+      - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' ${KUBERNETES_VERSION#[vV]}
     clusterConfiguration:
       apiServer:
         extraArgs:
@@ -159,7 +159,7 @@ spec:
               key: kubeadm-pre-init.sh
           permissions: "0500"
       preKubeadmCommands:
-        - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "${KUBERNETES_VERSION}"
+        - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' ${KUBERNETES_VERSION#[vV]}
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
@@ -195,7 +195,7 @@ stringData:
     export DEBIAN_FRONTEND=noninteractive
     hostnamectl set-hostname "$1" && hostname -F /etc/hostname
     mkdir -p -m 755 /etc/apt/keyrings
-    VERSION="${2%.*}"
+    VERSION=$${2%.*}
     curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
     apt-get update -y
