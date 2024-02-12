@@ -4,6 +4,7 @@ metadata:
   name: ${CLUSTER_NAME}
   labels:
     cni: cilium
+    ccm: linode
 spec:
   clusterNetwork:
     pods:
@@ -65,7 +66,9 @@ spec:
       apiServer:
         extraArgs:
           cloud-provider: external
-        timeoutForControlPlane: 20m
+      controllerManager:
+        extraArgs:
+          cloud-provider: external
     initConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
