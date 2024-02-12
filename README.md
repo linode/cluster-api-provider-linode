@@ -12,6 +12,24 @@ A [Cluster API](https://cluster-api.sigs.k8s.io/) implementation for the [Linode
 
 ## Local development
 
+### Using Devbox
+
+1. [Download Devbox](https://jetpack.io/devbox/docs/installing_devbox/) 
+2. Install dependent packages in your project 
+   ```shell
+   devbox install
+   ```
+3. Use devbox environment
+   ```shell
+   # use a devbox shell
+   devbox shell
+   # or run a single command in devbox
+   devbox run make tilt-cluster
+   # or leverage direnv integration
+   devbox generate direnv
+   ```
+
+
 ### Enable git hooks
 
 To enable automatic code validation on code push, execute the following commands:
@@ -20,7 +38,7 @@ To enable automatic code validation on code push, execute the following commands
 PATH="$PWD/bin:$PATH" make husky && husky install
 ```
 
-If you temporary would like to disable git hook, set `SKIP_GIT_PUSH_HOOK` value:
+If you would like to temporarily disable git hook, set `SKIP_GIT_PUSH_HOOK` value:
 
 ```bash
 SKIP_GIT_PUSH_HOOK=1 git push

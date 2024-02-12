@@ -92,7 +92,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 e2etest:
 	make --no-print-directory _e2etest # Workaround to force the flag on Github Action
 
-_e2etest-infra: kind ctlptl tilt kuttl kustomize clusterctl
+_e2etest-infra: kind ctlptl tilt kuttl kustomize clusterctl envsubst
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci --timeout 240s -f Tiltfile
@@ -170,8 +170,20 @@ tilt-cluster: ctlptl tilt kind clusterctl
 ##@ Build Dependencies
 
 ## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-export PATH := $(LOCALBIN):$(PATH)
+
+# Use CACHE_BIN for tools that cannot use devbox and LOCALBIN for tools that can use either method
+CACHE_BIN ?= $(CURDIR)/bin
+LOCALBIN ?= $(CACHE_BIN)
+
+DEVBOX_BIN ?= $(DEVBOX_PACKAGES_DIR)/bin
+
+# if the $DEVBOX_PACKAGES_DIR env variable exists that means we are within a devbox shell and can safely
+# use devbox's bin for our tools
+ifdef DEVBOX_PACKAGES_DIR
+	LOCALBIN = $(DEVBOX_BIN)
+endif
+
+export PATH := $(CACHE_BIN):$(PATH)
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
@@ -183,8 +195,9 @@ CLUSTERCTL ?= $(LOCALBIN)/clusterctl
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 TILT ?= $(LOCALBIN)/tilt
 KIND ?= $(LOCALBIN)/kind
-KUTTL ?= $(LOCALBIN)/kuttl
-ENVTEST ?= $(LOCALBIN)/setup-envtest
+KUTTL ?= $(LOCALBIN)/kubectl-kuttl
+# setup-envtest does not have devbox support so always use CACHE_BIN
+ENVTEST ?= $(CACHE_BIN)/setup-envtest
 ENVSUBST ?= $(LOCALBIN)/envsubst
 HUSKY ?= $(LOCALBIN)/husky
 NILAWAY ?= $(LOCALBIN)/nilaway
@@ -203,66 +216,62 @@ HUSKY_VERSION ?= v0.2.16
 NILAWAY_VERSION ?= latest
 GOVULNC_VERSION ?= v1.0.1
 
+.PHONY: tools
+tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(KUTTL) $(ENVTEST) $(ENVSUBST) $(HUSKY) $(NILAWAY) $(GOVULNC)
+
 .PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)
-	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
-		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
-		rm -rf $(LOCALBIN)/kustomize; \
-	fi
-	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
+	GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
 
 .PHONY: ctlptl
-ctlptl: $(CTLPTL) ## Download ctlptl locally if necessary. If wrong version is installed, it will be overwritten.
+ctlptl: $(CTLPTL) ## Download ctlptl locally if necessary.
 $(CTLPTL): $(LOCALBIN)
-	test -s $(LOCALBIN)/ctlptl && $(LOCALBIN)/ctlptl version | grep -q $(CTLPTL_VERSION) || \
-	(GOBIN=$(LOCALBIN) go install github.com/tilt-dev/ctlptl/cmd/ctlptl@$(CTLPTL_VERSION))
+	GOBIN=$(LOCALBIN) go install github.com/tilt-dev/ctlptl/cmd/ctlptl@$(CTLPTL_VERSION)
 
 .PHONY: clusterctl
-clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary. If wrong version is installed, it will be overwritten.
+clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary.
 $(CLUSTERCTL): $(LOCALBIN)
-	test -s $(LOCALBIN)/clusterctl && $(LOCALBIN)/clusterctl version | grep -q $(CLUSTERCTL_VERSION) || \
-	(cd $(LOCALBIN); curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(OS)-$(ARCH_SHORT) -o clusterctl)
-	@chmod +x $(CLUSTERCTL)
+	curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(OS)-$(ARCH_SHORT) -o $(CLUSTERCTL)
+	chmod +x $(CLUSTERCTL)
 
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
+
 .PHONY: tilt
-tilt: $(TILT) ## Download tilt locally if necessary. If wrong version is installed, it will be overwritten.
+tilt: $(TILT) ## Download tilt locally if necessary.
 $(TILT): $(LOCALBIN)
 	TILT_OS=$(OS); \
 	if [ $$TILT_OS = "darwin" ]; then \
 		TILT_OS=mac; \
 	fi; \
-	test -s $(LOCALBIN)/tilt && $(LOCALBIN)/tilt version | grep -q $(TILT_VERSION) || \
-	(cd $(LOCALBIN); curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$$TILT_OS.$(ARCH).tar.gz | tar -xzv tilt)
+	curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$$TILT_OS.$(ARCH).tar.gz | tar -xzvm -C $(LOCALBIN) tilt
 
 .PHONY: kind
-kind: $(KIND) ## Download kind locally if necessary. If wrong version is installed, it will be overwritten.
+kind: $(KIND) ## Download kind locally if necessary.
 $(KIND): $(LOCALBIN)
-	test -s $(KIND) && $(KIND) version | grep -q $(KIND_VERSION) || \
-	(cd $(LOCALBIN); curl -Lso ./kind https://github.com/kubernetes-sigs/kind/releases/download/v$(KIND_VERSION)/kind-$(OS)-$(ARCH_SHORT) && chmod +x kind)
+	curl -Lso $(KIND) https://github.com/kubernetes-sigs/kind/releases/download/v$(KIND_VERSION)/kind-$(OS)-$(ARCH_SHORT)
+	chmod +x $(KIND)
 
 .PHONY: kuttl
-kuttl: $(KUTTL) ## Download kuttl locally if necessary. If wrong version is installed, it will be overwritten.
+kuttl: $(KUTTL) ## Download kuttl locally if necessary.
 $(KUTTL): $(LOCALBIN)
-	test -s $(KUTTL) && $(KUTTL) version | grep -q $(KUTTL_VERSION) || \
-	(cd $(LOCALBIN); curl -Lso ./kuttl https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$(OS)_$(ARCH) && chmod +x kuttl)
+	curl -Lso $(KUTTL) https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$(OS)_$(ARCH)
+	chmod +x $(KUTTL)
 
 .PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: envsubst
-envsubst: $(ENVSUBST) ## Download envsubst locally if necessary. If wrong version is installed, it will be overwritten.
+envsubst: $(ENVSUBST) ## Download envsubst locally if necessary.
 $(ENVSUBST): $(LOCALBIN)
-	test -s $(ENVSUBST) || \
-	(cd $(LOCALBIN); curl -Lso ./envsubst https://github.com/a8m/envsubst/releases/download/$(ENVSUBST_VERSION)/envsubst-$(shell uname -s)-$(ARCH) && chmod +x envsubst)
+	curl -Lso $(ENVSUBST) https://github.com/a8m/envsubst/releases/download/$(ENVSUBST_VERSION)/envsubst-$(shell uname -s)-$(ARCH)
+	chmod +x $(ENVSUBST)
 
 .PHONY: husky
 husky: $(HUSKY) ## Download husky locally if necessary.
