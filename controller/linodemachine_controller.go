@@ -359,7 +359,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 	machineScope.LinodeMachine.Status.Ready = true
 	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
-	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode:///%s/%d", linodeInstance.Region, linodeInstance.ID))
+	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 
 	machineScope.LinodeMachine.Status.Addresses = []clusterv1.MachineAddress{}
 	for _, add := range linodeInstance.IPv4 {
