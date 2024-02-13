@@ -1,3 +1,5 @@
+load("ext://k8s_attach", "k8s_attach")
+
 docker_build("controller", ".", only=("Dockerfile", "Makefile", "vendor","go.mod", "go.sum", "./api", "./cloud","./cmd", "./controller", "./util"))
 
 local_resource(
@@ -26,4 +28,15 @@ k8s_resource(
        "cluster-api-provider-linode-proxy-rolebinding:clusterrolebinding",
        "%s:secret" % token_secret_name
    ]
+)
+
+k8s_attach("caaph-controller-manager", "deployment.apps/caaph-controller-manager", namespace="caaph-system")
+
+k8s_yaml("./templates/addons/cilium-helm.yaml")
+k8s_resource(
+    new_name="addon-cilium-helm",
+    objects=[
+        "cilium:helmchartproxy"
+    ],
+    resource_deps=["capi-controller-manager", "cluster-api-provider-linode-controller-manager", "caaph-controller-manager"]
 )
