@@ -1,5 +1,7 @@
 .DS_Store
 .idea
+.vscode
+__debug_bin*
 bin/*
 kind-logs-*
 cover.out
