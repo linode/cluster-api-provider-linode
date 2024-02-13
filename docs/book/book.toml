@@ -1,0 +1,19 @@
+[book]
+authors = ["Ashley Dumaine"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Cluster API Provider Linode Book"
+
+[build]
+build-dir = "public"
+
+[output.html]
+git-repository-url = "https://github.com/linode/cluster-api-provider-linode"
+additional-css = ["./theme/mdbook-admonish.css"]
+
+[preprocessor]
+
+[preprocessor.admonish]
+command = "mdbook-admonish"
+assets_version = "3.0.2" # do not edit: managed by `mdbook-admonish install`

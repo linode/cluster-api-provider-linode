@@ -1,3 +1,5 @@
+# Cluster API Provider Linode
+
 [![Go Report Card](https://goreportcard.com/badge/github.com/linode/cluster-api-provider-linode)](https://goreportcard.com/report/github.com/linode/cluster-api-provider-linode)
 [![Go Reference](https://pkg.go.dev/badge/github.com/linode/cluster-api-provider-linode.svg)](https://pkg.go.dev/github.com/linode/cluster-api-provider-linode)
 [![Go Build and Test CI](https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml/badge.svg)](https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml)
@@ -5,63 +7,28 @@
 [![Docker Image Build CI](https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml/badge.svg)](https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
+------
 
+## What is Cluster API Provider Linode (CAPL)
 
-# Cluster API Provider Linode
-A [Cluster API](https://cluster-api.sigs.k8s.io/) implementation for [Linode](https://www.linode.com/) to create kubernetes clusters.
+This is a [Cluster API](https://cluster-api.sigs.k8s.io/) implementation for [Linode](https://www.linode.com/)
+to create, configure, and manage Kubernetes clusters.
 
-## Local development
+------
 
-### Using Devbox
+## Compatibility
 
-1. [Download Devbox](https://jetpack.io/devbox/docs/installing_devbox/) 
-2. Install dependent packages in your project 
-   ```shell
-   devbox install
-   ```
-3. Use devbox environment
-   ```shell
-   # use a devbox shell
-   devbox shell
-   # or run a single command in devbox
-   devbox run make tilt-cluster
-   # or leverage direnv integration
-   devbox generate direnv
-   ```
+### Cluster API Versions
+CAPL is compatible only with the `v1beta1` version of CAPI (v1.0.x).
 
+### Kubernetes Versions
 
-### Enable git hooks
+CAPL is able to install and manage the [versions of Kubernetes supported by the Cluster API (CAPI) project](https://cluster-api.sigs.k8s.io/reference/versions.html#supported-kubernetes-versions).
 
-To enable automatic code validation on code push, execute the following commands:
+------
 
-```bash
-PATH="$PWD/bin:$PATH" make husky && husky install
-```
+## Documentation
 
-If you would like to temporarily disable git hook, set `SKIP_GIT_PUSH_HOOK` value:
+Please see our [Book](https://linode.github.io/cluster-api-provider-linode) for in-depth user documentation.
 
-```bash
-SKIP_GIT_PUSH_HOOK=1 git push
-```
-
-### Local development with Tilt
-
-For local development execute the following `make` target:
-
-```bash
-LINODE_TOKEN=<YOUR LINODE TOKEN> make tilt-cluster
-```
-
-This command creates a Kind cluster, and deploys resources via Tilt. You can freely change the code and wait for Tilt to update provider.
-
-### E2E testing
-
-For local development execute the following `make` target:
-
-```bash
-LINODE_TOKEN=<YOUR LINODE TOKEN> make e2etest
-```
-
-This command creates a Kind cluster, and executes all the defined tests.
-
-> Please ensure you have increased maximum open files on your host: https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+Additional docs can be found in the [/docs](/docs) directory.
