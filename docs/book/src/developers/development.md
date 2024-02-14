@@ -119,7 +119,7 @@ After your kind management cluster is up and running with Tilt, you should be re
 
 #### Customizing the cluster deployment
 
-Here is a list of required configuration parameters (the full list is available in `templates/cluster-template.yaml`):
+Here is a list of required configuration parameters:
 
 ```bash
 # Cluster settings
@@ -145,10 +145,17 @@ ssh-keygen -t rsa -b 4096 -f "${SSH_KEY_FILE}" -N '' 1>/dev/null
 export LINODE_SSH_KEY="$(cat "${SSH_KEY_FILE}.pub)"
 ```
 
+~~~admonish tip
+You can also use `clusterctl generate` to see which variables need to be set:
+
+```
+clusterctl generate cluster $CLUSTER_NAME --from ./templates/cluster-template.yaml --list-variables
+```
+
+~~~
+
 ```admonish warning
 Please note the templates require the use of `clusterctl generate` to substitute the environment variables properly.
-
-Ensure each of the above required environment variables are set before running `clusterctl generate`
 ```
 
 #### Creating the workload cluster
