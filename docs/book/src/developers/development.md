@@ -83,9 +83,13 @@ All development dependencies should be taken care of via Devbox and/or make targ
    ```shell
    devbox install
    ```
+
+   ```admonish success title=""
+   This will take a while, go and grab a drink of water.
+   ```
+
 2. Use devbox environment
    ```shell
-   # use a devbox shell
    devbox shell
    ```
 
