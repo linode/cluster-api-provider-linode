@@ -14,8 +14,10 @@ spec:
     wait: true
     timeout: 5m
   valuesTemplate: |
-    region: ${LINODE_REGION}
-    apiToken: ${LINODE_TOKEN}
+    secretRef:
+      name: "linode-token-region"
+      apiTokenRef: "apiToken"
+      regionRef: "region"
     image:
       tag: v0.3.24
       pullPolicy: IfNotPresent

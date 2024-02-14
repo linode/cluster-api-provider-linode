@@ -14,7 +14,9 @@ spec:
     wait: true
     timeout: 5m
   valuesTemplate: |
-    region: ${LINODE_REGION}
-    apiToken: ${LINODE_TOKEN}
+    secretRef:
+      name: "linode-token-region"
+      apiTokenRef: "apiToken"
+      regionRef: "region"
     csiLinodePlugin:
       tag: v0.6.3
