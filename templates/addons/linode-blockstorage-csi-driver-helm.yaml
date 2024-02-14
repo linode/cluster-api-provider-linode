@@ -16,3 +16,5 @@ spec:
   valuesTemplate: |
     region: ${LINODE_REGION}
     apiToken: ${LINODE_TOKEN}
+    csiLinodePlugin:
+      tag: v0.6.3

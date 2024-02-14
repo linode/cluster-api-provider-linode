@@ -16,6 +16,9 @@ spec:
   valuesTemplate: |
     region: ${LINODE_REGION}
     apiToken: ${LINODE_TOKEN}
+    image:
+      tag: v0.3.24
+      pullPolicy: IfNotPresent
     nodeSelector:
       node-role.kubernetes.io/control-plane: ""
     tolerations:
