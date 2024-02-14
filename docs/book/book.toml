@@ -6,7 +6,7 @@ src = "src"
 title = "Cluster API Provider Linode Book"
 
 [build]
-build-dir = "public"
+build-dir = "book"
 
 [output.html]
 git-repository-url = "https://github.com/linode/cluster-api-provider-linode"
