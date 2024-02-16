@@ -1,6 +1,11 @@
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - script: |-
-      CLUSTER_UID="$(OBJ=clusters/cluster-sample make getKubeUid)" \
-      TS="$(TPL="$PWD/02-create-linodecluster.tpl.yml" make renderTestCase)" make runTestSuit
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeCluster
+metadata:
+  name: linodecluster-sample
+  ownerReferences:
+  - apiVersion: cluster.x-k8s.io/v1beta1
+    kind: Cluster
+    name: cluster-sample
+    uid: (x_k8s_get($client, 'cluster.x-k8s.io/v1beta1', 'Cluster', $namespace, 'cluster-sample').metadata.uid)
+spec:
+  region: us-sea

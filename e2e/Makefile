@@ -12,10 +12,10 @@ _runThisTest:
 	cp $(ROOT_DIR)/e2e/Makefile $$D ;\
 	mkdir $$D/suit ;\
 	cp -r $(PWD) $$D/suit ;\
-	ROOT_DIR=$(ROOT_DIR) KUBECONFIG="$(ROOT_DIR)/kubeconfig" kubectl-kuttl test --timeout 300 --skip-delete "$$D/suit"
+	ROOT_DIR=$(ROOT_DIR) KUBECONFIG="$(ROOT_DIR)/kubeconfig" chainsaw test --skip-delete "$$D/suit"
 
 runTestSuit:
-	@T="$$(KUBECONFIG="$$ROOT_DIR/kubeconfig" kubectl-kuttl test --timeout 300 --skip-delete --namespace "$$NAMESPACE" "$$TS" 2>&1)" ;\
+	@T="$$(KUBECONFIG="$$ROOT_DIR/kubeconfig" chainsaw test --skip-delete --namespace "$$NAMESPACE" "$$TS" 2>&1)" ;\
 	echo "$$T" |\
 		grep -v harness.go |\
 		grep -v ^=== |\
