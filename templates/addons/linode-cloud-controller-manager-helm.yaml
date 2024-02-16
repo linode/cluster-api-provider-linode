@@ -7,7 +7,7 @@ spec:
     matchLabels:
       ccm: linode
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
-  chartName: linode-cloud-controller-manager
+  chartName: ccm-linode
   namespace: kube-system
   options:
     waitForJobs: true

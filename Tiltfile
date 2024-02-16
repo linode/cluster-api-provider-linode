@@ -4,7 +4,7 @@ docker_build("controller", ".", only=("Dockerfile", "Makefile", "vendor","go.mod
 
 local_resource(
     'capi-controller-manager',
-    cmd='clusterctl init --addon helm',
+    cmd='EXP_CLUSTER_RESOURCE_SET=true clusterctl init --addon helm',
 )
 
 k8s_yaml(kustomize('config/default'))
