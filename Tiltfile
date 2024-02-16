@@ -29,37 +29,3 @@ k8s_resource(
        "%s:secret" % token_secret_name
    ]
 )
-
-k8s_attach("caaph-webhook-service", "service/caaph-webhook-service", namespace="caaph-system")
-k8s_attach("caaph-controller-manager", "deployment.apps/caaph-controller-manager", namespace="caaph-system")
-
-# Linode CCM, necessary for provisioned self-managed k8s 1.29 clusters
-# to correctly set internal and external IPs
-k8s_yaml("./templates/addons/linode-cloud-controller-manager-helm.yaml")
-k8s_resource(
-    new_name="addon-linode-cloud-controller-manager-helm",
-    objects=[
-        "linode-cloud-controller-manager:helmchartproxy"
-    ],
-    resource_deps=["capi-controller-manager", "caaph-controller-manager", "caaph-webhook-service"]
-)
-
-# Linode Blockstorage CSI driver for storage on self-managed k8s clusters
-k8s_yaml("./templates/addons/linode-blockstorage-csi-driver-helm.yaml")
-k8s_resource(
-    new_name="addon-linode-blockstorage-csi-driver-helm",
-    objects=[
-        "linode-blockstorage-csi-driver:helmchartproxy"
-    ],
-    resource_deps=["capi-controller-manager", "caaph-controller-manager", "caaph-webhook-service"]
-)
-
-# Cilium CNI for self-managed k8s clusters
-k8s_yaml("./templates/addons/cilium-helm.yaml")
-k8s_resource(
-    new_name="addon-cilium-helm",
-    objects=[
-        "cilium:helmchartproxy"
-    ],
-    resource_deps=["capi-controller-manager", "caaph-controller-manager", "caaph-webhook-service"]
-)

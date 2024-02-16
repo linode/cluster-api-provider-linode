@@ -217,11 +217,11 @@ type: addons.cluster.x-k8s.io/resource-set
 metadata:
   name: linode-${CLUSTER_NAME}-crs-0
 stringData:
-  linode-region-token.yaml: |-
+  linode-token-region.yaml: |-
     kind: Secret
     apiVersion: v1
     metadata:
-      name: linode-region-token
+      name: linode-token-region
       namespace: kube-system
     stringData:
       apiToken: ${LINODE_TOKEN}
@@ -239,3 +239,47 @@ spec:
   - kind: Secret
     name: linode-${CLUSTER_NAME}-crs-0
   strategy: ApplyOnce
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: cilium
+spec:
+  clusterSelector:
+    matchLabels:
+      cni: cilium
+  repoURL: https://helm.cilium.io/
+  chartName: cilium
+  version: 1.15.0
+  options:
+    waitForJobs: true
+    wait: true
+    timeout: 5m
+  valuesTemplate: |
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: linode-cloud-controller-manager
+spec:
+  clusterSelector:
+    matchLabels:
+      ccm: linode
+  repoURL: https://linode.github.io/linode-cloud-controller-manager/
+  chartName: ccm-linode
+  namespace: kube-system
+  version: v0.3.24
+  options:
+    waitForJobs: true
+    wait: true
+    timeout: 5m
+  valuesTemplate: |
+    secretRef:
+      name: "linode-token-region"
+    image:
+      pullPolicy: IfNotPresent
