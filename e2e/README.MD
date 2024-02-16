@@ -75,8 +75,8 @@ status:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cluster-api-provider-linode-controller-manager
-  namespace: cluster-api-provider-linode-system
+  name: capl-controller-manager
+  namespace: capl-system
 status:
   availableReplicas: 1
 ```

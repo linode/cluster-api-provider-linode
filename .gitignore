@@ -6,3 +6,4 @@ cover.out
 kubeconfig*
 .devbox/*
 docs/book
+release/*
