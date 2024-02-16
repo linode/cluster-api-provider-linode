@@ -1,11 +1,30 @@
 # Cluster API Provider Linode
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/linode/cluster-api-provider-linode)](https://goreportcard.com/report/github.com/linode/cluster-api-provider-linode)
-[![Go Reference](https://pkg.go.dev/badge/github.com/linode/cluster-api-provider-linode.svg)](https://pkg.go.dev/github.com/linode/cluster-api-provider-linode)
-[![Go Build and Test CI](https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml/badge.svg)](https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml)
-[![CodeQL](https://github.com/linode/cluster-api-provider-linode/actions/workflows/codeql.yml/badge.svg)](https://github.com/linode/cluster-api-provider-linode/actions/workflows/codeql.yml)
-[![Docker Image Build CI](https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml/badge.svg)](https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+<p align="center">
+<!-- go doc / reference card -->
+<a href="https://pkg.go.dev/github.com/linode/cluster-api-provider-linode">
+<img src="https://pkg.go.dev/badge/github.com/linode/cluster-api-provider-linode.svg"></a>
+<!-- goreportcard badge -->
+<a href="https://goreportcard.com/report/github.com/linode/cluster-api-provider-linode">
+<img src="https://goreportcard.com/badge/github.com/linode/cluster-api-provider-linode"></a>
+<!-- join kubernetes slack channel for linode -->
+<a href="https://kubernetes.slack.com/messages/CD4B15LUR">
+<img src="https://img.shields.io/badge/join%20slack-%23linode-brightgreen"></a>
+<!-- PRs welcome -->
+<a href="http://makeapullrequest.com">
+<img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg"></a>
+</p>
+<p align="center">
+<!-- go build / test CI -->
+<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml">
+<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml/badge.svg"></a>
+<!-- docker build CI -->
+<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml">
+<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml/badge.svg"></a>
+<!-- CodeQL -->
+<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/codeql.yml">
+<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/codeql.yml/badge.svg"></a>
+</p>
 
 ------
 
