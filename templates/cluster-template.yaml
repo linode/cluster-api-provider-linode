@@ -91,11 +91,11 @@ metadata:
 spec:
   template:
     spec:
-      image: ${LINODE_OS}
+      image: ${LINODE_OS:=""}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       authorizedKeys:
-        - ${LINODE_SSH_KEY}
+        - ${LINODE_SSH_KEY:=""}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -127,11 +127,11 @@ metadata:
 spec:
   template:
     spec:
-      image: ${LINODE_OS}
+      image: ${LINODE_OS:=""}
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       authorizedKeys:
-        - ${LINODE_SSH_KEY}
+        - ${LINODE_SSH_KEY:=""}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
