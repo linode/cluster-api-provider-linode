@@ -3,4 +3,5 @@
 bin/*
 kind-logs-*
 cover.out
-kubeconfig
+kubeconfig*
+.devbox/*
