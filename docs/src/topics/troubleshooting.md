@@ -53,7 +53,7 @@ kubectl get cluster-api
 To check the CAPL controller logs on the management cluster, run:
 
 ```bash
-kubectl logs deploy/cluster-api-provider-linode-controller-manager -n cluster-api-provider-linode-system manager
+kubectl logs deploy/capl-controller-manager -n capl-system manager
 ```
 
 ### Checking cloud-init logs (Debian / Ubuntu)
