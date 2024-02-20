@@ -1,5 +1,7 @@
-namespace: default
 resources:
   - ../base
   - machine-deployment.yaml
   - ../../common-init-files
+  - ../../addons/cilium
+  - ../../addons/provider-linode
+  - ../../addons/cluster-resource-set

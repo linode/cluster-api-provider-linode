@@ -73,6 +73,10 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+.PHONY: generate-flavors ## Generate template flavors.
+generate-flavors: $(KUSTOMIZE)
+	./hack/generate-flavors.sh
+
 ## --------------------------------------
 ## Development
 ## --------------------------------------

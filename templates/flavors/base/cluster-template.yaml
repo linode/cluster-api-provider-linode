@@ -4,11 +4,13 @@ metadata:
   name: ${CLUSTER_NAME}
   labels:
     cni: cilium
+    ccm: linode
+    crs: ${CLUSTER_NAME}-crs
 spec:
   clusterNetwork:
     pods:
       cidrBlocks:
-      - 192.168.128.0/17
+        - 192.168.128.0/17
   controlPlaneRef:
     apiVersion: controlplane.cluster.x-k8s.io/v1beta1
     kind: KubeadmControlPlane
@@ -65,18 +67,20 @@ spec:
       apiServer:
         extraArgs:
           cloud-provider: external
-        timeoutForControlPlane: 20m
+      controllerManager:
+        extraArgs:
+          cloud-provider: external
     initConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
           cloud-provider: external
-          provider-id: 'linode:///{{ ds.meta_data.region }}/{{ ds.meta_data.id }}'
+          provider-id: 'linode://{{ ds.meta_data.id }}'
         name: '{{ ds.meta_data.label }}'
     joinConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
           cloud-provider: external
-          provider-id: 'linode:///{{ ds.meta_data.region }}/{{ ds.meta_data.id }}'
+          provider-id: 'linode://{{ ds.meta_data.id }}'
         name: '{{ ds.meta_data.label }}'
   version: "${KUBERNETES_VERSION}"
 ---
@@ -87,8 +91,9 @@ metadata:
 spec:
   template:
     spec:
-      image: ${LINODE_OS}
+      image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       authorizedKeys:
-        - ${LINODE_SSH_KEY}
+      # uncomment to include your ssh key in linode provisioning
+      # - ${LINODE_SSH_PUBKEY:=""}

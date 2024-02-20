@@ -1,7 +1,7 @@
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: ${CLUSTER_NAME}-worker
+  name: ${CLUSTER_CLASS_NAME}-worker
 spec:
   template:
     spec:
@@ -28,10 +28,10 @@ spec:
               key: kubeadm-pre-init.sh
           permissions: "0500"
       preKubeadmCommands:
-        - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "${KUBERNETES_VERSION}"
+        - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' ${KUBERNETES_VERSION}
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
             cloud-provider: external
-            provider-id: 'linode:///{{ ds.meta_data.region }}/{{ ds.meta_data.id }}'
+            provider-id: 'linode://{{ ds.meta_data.id }}'
           name: '{{ ds.meta_data.label }}'
