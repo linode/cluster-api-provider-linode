@@ -124,25 +124,13 @@ Here is a list of required configuration parameters:
 ```bash
 # Cluster settings
 export CLUSTER_NAME=capl-cluster
-export KUBERNETES_VERSION=1.29.1
-export LINODE_REGION=us-ord
+export KUBERNETES_VERSION=v1.29.1
 
 # Linode settings
+export LINODE_REGION=us-ord
 export LINODE_TOKEN=<your linode PAT>
-
-# Machine settings
-export LINODE_OS=linode/ubuntu22.04
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
-export CONTROL_PLANE_MACHINE_COUNT=3
-export WORKER_MACHINE_COUNT=3
-
-# Generate SSH key.
-# If you want to provide your own key, skip this step and set LINODE_SSH_KEY to your existing public key.
-SSH_KEY_FILE=.linodeSSHkey
-rm -f "${SSH_KEY_FILE}"
-ssh-keygen -t rsa -b 4096 -f "${SSH_KEY_FILE}" -N '' 1>/dev/null
-export LINODE_SSH_KEY="$(cat "${SSH_KEY_FILE}.pub)"
 ```
 
 ~~~admonish tip

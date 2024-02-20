@@ -62,7 +62,7 @@ spec:
             key: kubeadm-pre-init.sh
         permissions: "0500"
     preKubeadmCommands:
-      - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' ${KUBERNETES_VERSION#[vV]}
+      - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' ${KUBERNETES_VERSION}
     clusterConfiguration:
       apiServer:
         extraArgs:
@@ -91,11 +91,12 @@ metadata:
 spec:
   template:
     spec:
-      image: ${LINODE_OS:=""}
+      image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       authorizedKeys:
-        - ${LINODE_SSH_KEY:=""}
+        # uncomment to include your ssh key in linode provisioning
+        # - ${LINODE_SSH_PUBKEY:=""}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -127,11 +128,12 @@ metadata:
 spec:
   template:
     spec:
-      image: ${LINODE_OS:=""}
+      image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       authorizedKeys:
-        - ${LINODE_SSH_KEY:=""}
+        # uncomment to include your ssh key in linode provisioning
+        # - ${LINODE_SSH_PUBKEY:=""}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
@@ -163,7 +165,7 @@ spec:
               key: kubeadm-pre-init.sh
           permissions: "0500"
       preKubeadmCommands:
-        - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' ${KUBERNETES_VERSION#[vV]}
+        - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' ${KUBERNETES_VERSION}
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
@@ -199,11 +201,12 @@ stringData:
     export DEBIAN_FRONTEND=noninteractive
     hostnamectl set-hostname "$1" && hostname -F /etc/hostname
     mkdir -p -m 755 /etc/apt/keyrings
-    VERSION=$${2%.*}
+    PATCH_VERSION=$${2#[v]}
+    VERSION=$${PATCH_VERSION%.*}
     curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
     apt-get update -y
-    apt-get install -y kubelet=$2* kubeadm=$2* kubectl=$2* containerd
+    apt-get install -y kubelet=$PATCH_VERSION* kubeadm=$PATCH_VERSION* kubectl=$PATCH_VERSION* containerd
     apt-mark hold kubelet kubeadm kubectl containerd
     modprobe overlay
     modprobe br_netfilter
