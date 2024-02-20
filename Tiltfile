@@ -1,6 +1,6 @@
 load("ext://k8s_attach", "k8s_attach")
 
-docker_build("controller", ".", only=("Dockerfile", "Makefile", "vendor","go.mod", "go.sum", "./api", "./cloud","./cmd", "./controller", "./util"))
+docker_build("controller", ".", only=("Dockerfile", "Makefile", "vendor","go.mod", "go.sum", "./api", "./cloud","./cmd", "./controller", "./util", "./version"), build_args={'VERSION': os.getenv("VERSION","")})
 
 local_resource(
     'capi-controller-manager',
@@ -18,6 +18,9 @@ k8s_resource(
        "cluster-api-provider-linode-system:namespace",
        "linodeclusters.infrastructure.cluster.x-k8s.io:customresourcedefinition",
        "linodemachines.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+       "linodeclustertemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+       "linodemachinetemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+       "linodevpcs.infrastructure.cluster.x-k8s.io:customresourcedefinition",
        "cluster-api-provider-linode-controller-manager:serviceaccount",
        "cluster-api-provider-linode-leader-election-role:role",
        "cluster-api-provider-linode-manager-role:clusterrole",
