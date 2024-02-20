@@ -1,8 +1,10 @@
 package scope
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/linode/cluster-api-provider-linode/version"
 	"github.com/linode/linodego"
 	"golang.org/x/oauth2"
 )
@@ -16,6 +18,8 @@ func createLinodeClient(apiKey string) *linodego.Client {
 		},
 	}
 	linodeClient := linodego.NewClient(oauth2Client)
+
+	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
 	return &linodeClient
 }

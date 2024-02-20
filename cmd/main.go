@@ -19,7 +19,10 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"os"
+
+	"github.com/linode/cluster-api-provider-linode/version"
 
 	_ "go.uber.org/automaxprocs"
 
@@ -79,7 +82,7 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
+	setupLog.Info(fmt.Sprintf("CAPL version: %s", version.GetVersion()))
 	// Check environment variables
 	if linodeToken == "" {
 		setupLog.Error(errors.New("failed to get LINODE_TOKEN environment variable"), "unable to start operator")
