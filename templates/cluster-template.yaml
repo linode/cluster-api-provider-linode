@@ -5,6 +5,7 @@ metadata:
   labels:
     cni: cilium
     ccm: linode
+    crs: ${CLUSTER_NAME}-crs
 spec:
   clusterNetwork:
     pods:
@@ -90,11 +91,11 @@ metadata:
 spec:
   template:
     spec:
-      image: ${LINODE_OS}
+      image: ${LINODE_OS:=""}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       authorizedKeys:
-        - ${LINODE_SSH_KEY}
+        - ${LINODE_SSH_KEY:=""}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
@@ -126,11 +127,11 @@ metadata:
 spec:
   template:
     spec:
-      image: ${LINODE_OS}
+      image: ${LINODE_OS:=""}
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       authorizedKeys:
-        - ${LINODE_SSH_KEY}
+        - ${LINODE_SSH_KEY:=""}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
@@ -209,3 +210,76 @@ stringData:
     sysctl --system
     sed -i '/swap/d' /etc/fstab
     swapoff -a
+---
+apiVersion: v1
+kind: Secret
+type: addons.cluster.x-k8s.io/resource-set
+metadata:
+  name: linode-${CLUSTER_NAME}-crs-0
+stringData:
+  linode-token-region.yaml: |-
+    kind: Secret
+    apiVersion: v1
+    metadata:
+      name: linode-token-region
+      namespace: kube-system
+    stringData:
+      apiToken: ${LINODE_TOKEN}
+      region: ${LINODE_REGION}
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-crs-0
+spec:
+  clusterSelector:
+    matchLabels:
+      crs: ${CLUSTER_NAME}-crs
+  resources:
+  - kind: Secret
+    name: linode-${CLUSTER_NAME}-crs-0
+  strategy: ApplyOnce
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: cilium
+spec:
+  clusterSelector:
+    matchLabels:
+      cni: cilium
+  repoURL: https://helm.cilium.io/
+  chartName: cilium
+  version: 1.15.0
+  options:
+    waitForJobs: true
+    wait: true
+    timeout: 5m
+  valuesTemplate: |
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: linode-cloud-controller-manager
+spec:
+  clusterSelector:
+    matchLabels:
+      ccm: linode
+  repoURL: https://linode.github.io/linode-cloud-controller-manager/
+  chartName: ccm-linode
+  namespace: kube-system
+  version: v0.3.24
+  options:
+    waitForJobs: true
+    wait: true
+    timeout: 5m
+  valuesTemplate: |
+    secretRef:
+      name: "linode-token-region"
+    image:
+      pullPolicy: IfNotPresent
