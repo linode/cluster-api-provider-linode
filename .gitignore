@@ -5,3 +5,4 @@ kind-logs-*
 cover.out
 kubeconfig*
 .devbox/*
+docs/book
