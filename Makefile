@@ -206,7 +206,8 @@ release: $(KUSTOMIZE)
 	mkdir -p $(RELEASE_DIR)/
 	$(MAKE) set-manifest-image MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(RELEASE_TAG)
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
-	cp templates/cluster-template* $(RELEASE_DIR)/
+	$(MAKE) generate-flavors
+	mv templates/cluster-template* $(RELEASE_DIR)/
 	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
 
 ## --------------------------------------
