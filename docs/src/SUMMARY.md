@@ -6,4 +6,5 @@
     - [Troubleshooting](./topics/troubleshooting.md)
     - [Addons](./topics/addons.md)
 - [Development](./developers/development.md)
+    - [Releasing](./developers/releasing.md)
 - [Reference](./reference/reference.md)
