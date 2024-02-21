@@ -13,8 +13,7 @@
     "kustomize@latest",
     "kuttl@latest",
     "nilaway@latest",
-    "tilt@latest",
-    "envsubst@latest"
+    "tilt@latest"
   ],
   "shell": {
     "init_hook": [],

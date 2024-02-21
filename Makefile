@@ -117,12 +117,12 @@ test: manifests generate fmt vet envtest ## Run tests.
 e2etest:
 	make --no-print-directory _e2etest # Workaround to force the flag on Github Action
 
-_e2etest-infra: kind ctlptl tilt kuttl kustomize clusterctl envsubst
+_e2etest-infra: kind ctlptl tilt kuttl kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci --timeout 240s -f Tiltfile
 
-_e2etest: manifests generate envsubst _e2etest-infra
+_e2etest: manifests generate _e2etest-infra
 	ROOT_DIR="$(PWD)" $(KUTTL) test --config e2e/kuttl-config.yaml
 
 ## --------------------------------------
@@ -255,7 +255,6 @@ KIND ?= $(LOCALBIN)/kind
 KUTTL ?= $(LOCALBIN)/kubectl-kuttl
 # setup-envtest does not have devbox support so always use CACHE_BIN
 ENVTEST ?= $(CACHE_BIN)/setup-envtest
-ENVSUBST ?= $(LOCALBIN)/envsubst
 HUSKY ?= $(LOCALBIN)/husky
 NILAWAY ?= $(LOCALBIN)/nilaway
 GOVULNC ?= $(LOCALBIN)/govulncheck
@@ -268,13 +267,12 @@ CONTROLLER_TOOLS_VERSION ?= v0.14.0
 TILT_VERSION ?= 0.33.6
 KIND_VERSION ?= 0.20.0
 KUTTL_VERSION ?= 0.15.0
-ENVSUBST_VERSION ?= v1.4.2
 HUSKY_VERSION ?= v0.2.16
 NILAWAY_VERSION ?= latest
 GOVULNC_VERSION ?= v1.0.1
 
 .PHONY: tools
-tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(KUTTL) $(ENVTEST) $(ENVSUBST) $(HUSKY) $(NILAWAY) $(GOVULNC)
+tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(KUTTL) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC)
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -323,12 +321,6 @@ $(KUTTL): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-
-.PHONY: envsubst
-envsubst: $(ENVSUBST) ## Download envsubst locally if necessary.
-$(ENVSUBST): $(LOCALBIN)
-	curl -Lso $(ENVSUBST) https://github.com/a8m/envsubst/releases/download/$(ENVSUBST_VERSION)/envsubst-$(shell uname -s)-$(ARCH)
-	chmod +x $(ENVSUBST)
 
 .PHONY: husky
 husky: $(HUSKY) ## Download husky locally if necessary.
