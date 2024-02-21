@@ -1,7 +1,6 @@
 REGISTRY ?= docker.io/linode
 IMAGE_NAME ?= cluster-api-provider-linode
 CONTROLLER_IMAGE ?= $(REGISTRY)/$(IMAGE_NAME)
-TAG ?= dev
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.0
 OS=$(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -12,7 +11,7 @@ ARCH_SHORT := amd64
 else ifeq ($(ARCH_SHORT),aarch64)
 ARCH_SHORT := arm64
 endif
-VERSION ?= $(shell git describe --tags --dirty=-dev)
+VERSION ?= $(shell git describe --always --dirty=-dev)
 BUILD_ARGS := --build-arg VERSION=$(VERSION)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -139,20 +138,16 @@ _e2etest: manifests generate _e2etest-infra
 build: manifests generate fmt vet ## Build manager binary.
 	go build -ldflags="-X github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)" -o bin/manager cmd/main.go
 
-.PHONY: run
-run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/main.go
-
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build $(BUILD_ARGS) . -t $(CONTROLLER_IMAGE):$(TAG)
+	$(CONTAINER_TOOL) build $(BUILD_ARGS) . -t $(CONTROLLER_IMAGE):$(VERSION)
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	$(CONTAINER_TOOL) push $(CONTROLLER_IMAGE):$(TAG)
+	$(CONTAINER_TOOL) push $(CONTROLLER_IMAGE):$(VERSION)
 
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
@@ -167,7 +162,7 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
 	$(CONTAINER_TOOL) buildx use project-v3-builder
-	- $(CONTAINER_TOOL) buildx build $(BUILD_ARGS) --push --platform=$(PLATFORMS) --tag $(CONTROLLER_IMAGE):$(TAG) -f Dockerfile.cross .
+	- $(CONTAINER_TOOL) buildx build $(BUILD_ARGS) --push --platform=$(PLATFORMS) --tag $(CONTROLLER_IMAGE):$(VERSION) -f Dockerfile.cross .
 	- $(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm Dockerfile.cross
 
@@ -194,21 +189,24 @@ tilt-cluster: ctlptl tilt kind clusterctl
 ##@ Release:
 
 RELEASE_DIR ?= release
-RELEASE_TAG ?= $(shell git describe --abbrev=0 2>/dev/null)
 
 .PHONY: set-manifest-image
 set-manifest-image: ## Update kustomize image patch file for default resource.
 	sed -i'' -e 's@image: .*@image: '"${MANIFEST_IMG}:${MANIFEST_TAG}"'@' ./config/default/manager_image_patch.yaml
 
 .PHONY: release
-release: $(KUSTOMIZE)
-	rm -rf $(RELEASE_DIR)
+release: $(KUSTOMIZE) clean-release
 	mkdir -p $(RELEASE_DIR)/
-	$(MAKE) set-manifest-image MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(RELEASE_TAG)
+	$(MAKE) set-manifest-image MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(VERSION)
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
 	$(MAKE) generate-flavors
 	mv templates/cluster-template* $(RELEASE_DIR)/
 	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+	$(MAKE) clean-release-git
+
+.PHONY: local-release
+local-release:
+	RELEASE_DIR=infrastructure-linode/0.0.0 $(MAKE) release
 
 ## --------------------------------------
 ## Cleanup
@@ -219,6 +217,14 @@ release: $(KUSTOMIZE)
 .PHONY: clean
 clean:
 	rm -rf $(LOCALBIN)
+
+.PHONY: clean-release-git
+clean-release-git: ## Restores the git files usually modified during a release
+	git restore config/default/*manager_image_patch.yaml
+
+.PHONY: clean-release
+clean-release: clean-release-git
+	rm -rf $(RELEASE_DIR)
 
 ## --------------------------------------
 ## Build Dependencies
