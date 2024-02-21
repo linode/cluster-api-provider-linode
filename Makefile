@@ -1,6 +1,7 @@
-
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+REGISTRY ?= docker.io/linode
+IMAGE_NAME ?= cluster-api-provider-linode
+CONTROLLER_IMAGE ?= $(REGISTRY)/$(IMAGE_NAME)
+TAG ?= dev
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.0
 OS=$(shell uname -s | tr '[:upper:]' '[:lower:]')
@@ -47,11 +48,22 @@ all: build
 # More info on the awk command:
 # http://linuxcommand.org/lc3_adv_awk.php
 
+
+## --------------------------------------
+## Help
+## --------------------------------------
+
+##@ Help:
+
 .PHONY: help
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-##@ Development
+## --------------------------------------
+## Generate
+## --------------------------------------
+
+##@ Generate:
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -60,6 +72,12 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+## --------------------------------------
+## Development
+## --------------------------------------
+
+##@ Development:
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -85,6 +103,12 @@ nilcheck: nilaway ## Run nil check against code.
 vulncheck: govulncheck ## Run vulnerability check against code.
 	govulncheck ./...
 
+## --------------------------------------
+## Testing
+## --------------------------------------
+
+##@ Testing:
+
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
@@ -101,7 +125,11 @@ _e2etest-infra: kind ctlptl tilt kuttl kustomize clusterctl
 _e2etest: manifests generate _e2etest-infra
 	ROOT_DIR="$(PWD)" $(KUTTL) test --config e2e/kuttl-config.yaml
 
-##@ Build
+## --------------------------------------
+## Build
+## --------------------------------------
+
+##@ Build:
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
@@ -116,11 +144,11 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build $(BUILD_ARGS) -t ${IMG} .
+	$(CONTAINER_TOOL) build $(BUILD_ARGS) . -t $(CONTROLLER_IMAGE):$(TAG)
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	$(CONTAINER_TOOL) push ${IMG}
+	$(CONTAINER_TOOL) push $(CONTROLLER_IMAGE):$(TAG)
 
 # PLATFORMS defines the target platforms for the manager image be built to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
@@ -135,32 +163,19 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- $(CONTAINER_TOOL) buildx create --name project-v3-builder
 	$(CONTAINER_TOOL) buildx use project-v3-builder
-	- $(CONTAINER_TOOL) buildx build $(BUILD_ARGS) --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
+	- $(CONTAINER_TOOL) buildx build $(BUILD_ARGS) --push --platform=$(PLATFORMS) --tag $(CONTROLLER_IMAGE):$(TAG) -f Dockerfile.cross .
 	- $(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm Dockerfile.cross
 
-##@ Deployment
+## --------------------------------------
+## Deployment
+## --------------------------------------
+
+##@ Deployment:
 
 ifndef ignore-not-found
   ignore-not-found = false
 endif
-
-.PHONY: install
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
-
-.PHONY: uninstall
-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
-
-.PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
-
-.PHONY: undeploy
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt kind clusterctl
@@ -168,7 +183,43 @@ tilt-cluster: ctlptl tilt kind clusterctl
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) up --stream
 
-##@ Build Dependencies
+## --------------------------------------
+## Release
+## --------------------------------------
+
+##@ Release:
+
+RELEASE_DIR ?= release
+RELEASE_TAG ?= $(shell git describe --abbrev=0 2>/dev/null)
+
+.PHONY: set-manifest-image
+set-manifest-image: ## Update kustomize image patch file for default resource.
+	sed -i'' -e 's@image: .*@image: '"${MANIFEST_IMG}:${MANIFEST_TAG}"'@' ./config/default/manager_image_patch.yaml
+
+.PHONY: release
+release: $(KUSTOMIZE)
+	rm -rf $(RELEASE_DIR)
+	mkdir -p $(RELEASE_DIR)/
+	$(MAKE) set-manifest-image MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(RELEASE_TAG)
+	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
+	cp templates/cluster-template* $(RELEASE_DIR)/
+	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+
+## --------------------------------------
+## Cleanup
+## --------------------------------------
+
+##@ Cleanup:
+
+.PHONY: clean
+clean:
+	rm -rf $(LOCALBIN)
+
+## --------------------------------------
+## Build Dependencies
+## --------------------------------------
+
+##@ Build Dependencies:
 
 ## Location to install dependencies to
 
@@ -188,7 +239,12 @@ export PATH := $(CACHE_BIN):$(PATH)
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
-## Tool Binaries
+## --------------------------------------
+## Tooling Binaries
+## --------------------------------------
+
+##@ Tooling Binaries:
+
 KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CTLPTL ?= $(LOCALBIN)/ctlptl
@@ -282,7 +338,3 @@ $(NILAWAY): $(LOCALBIN)
 govulncheck: $(GOVULNC) ## Download govulncheck locally if necessary.
 $(GOVULNC): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNC_VERSION)
-
-.PHONY: clean
-clean:
-	rm -rf $(LOCALBIN)
