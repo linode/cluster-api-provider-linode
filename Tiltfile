@@ -12,13 +12,11 @@ local_resource(
     cmd='EXP_CLUSTER_RESOURCE_SET=true clusterctl init --addon helm',
 )
 
-templated_yaml = local(
-    'kustomize build config/default | envsubst',
-    env={'LINODE_TOKEN': os.getenv('LINODE_TOKEN')},
-    quiet=True,
-    echo_off=True
-)
-k8s_yaml(templated_yaml)
+manager_yaml = decode_yaml_stream(kustomize("config/default"))
+for resource in manager_yaml:
+    if resource["metadata"]["name"] == "capl-manager-credentials":
+        resource["stringData"]["apiToken"] = os.getenv('LINODE_TOKEN')
+k8s_yaml(encode_yaml_stream(manager_yaml))
 
 k8s_resource(
     workload="capl-controller-manager",
