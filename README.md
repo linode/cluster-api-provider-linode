@@ -38,7 +38,7 @@ to create, configure, and manage Kubernetes clusters.
 ## Compatibility
 
 ### Cluster API Versions
-CAPL is compatible only with the `v1beta1` version of CAPI (v1.0.x).
+CAPL is compatible only with the `v1beta1` version of CAPI (v1.x).
 
 ### Kubernetes Versions
 
@@ -48,6 +48,4 @@ CAPL is able to install and manage the [versions of Kubernetes supported by the 
 
 ## Documentation
 
-Please see our [Book](https://linode.github.io/cluster-api-provider-linode) for in-depth user documentation.
-
-Additional docs can be found in the [/docs](/docs) directory.
+Please see our [Book](https://linode.github.io/cluster-api-provider-linode) for in-depth user and developer documentation.

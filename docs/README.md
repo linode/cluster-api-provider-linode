@@ -11,4 +11,4 @@
 
 ## Troubleshooting
 
-- [Troubleshooting guide](ihttps://linode.github.io/cluster-api-provider-linode/topics/troubleshooting.html)
+- [Troubleshooting guide](https://linode.github.io/cluster-api-provider-linode/topics/troubleshooting.html)

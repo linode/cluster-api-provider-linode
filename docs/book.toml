@@ -5,12 +5,9 @@ multilingual = false
 src = "src"
 title = "Cluster API Provider Linode Book"
 
-[build]
-build-dir = "book"
-
 [output.html]
 git-repository-url = "https://github.com/linode/cluster-api-provider-linode"
-additional-css = ["./theme/mdbook-admonish.css"]
+additional-css = ["mdbook-admonish.css"]
 
 [preprocessor]
 

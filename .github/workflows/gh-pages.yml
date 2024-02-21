@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'README.md'
-      - 'docs/book/**'
+      - 'docs/**'
 
 permissions:
   contents: read
@@ -26,11 +26,11 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Build with mdBook
-        run: cd docs/book && mdbook build
+        run: cd docs && mdbook build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs/book/book'
+          path: 'docs/book'
 
   deploy-page:
     needs: generate-docs
