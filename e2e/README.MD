@@ -1,68 +1,38 @@
 # E2E Framework
 
-The E2E framework uses Kuttl under the hood. Kuttl is a simple and most importantly static tool.
-That means there is no way to dynamically generate manifests.
-The solution is KIK (Kuttl-In-Kuttl)! 
+The E2E framework uses Kuttl under the hood. Kuttl is a simple and most importantly static tool that handles applying manifests for running assertions in a namespace it generates for each test.
 
-## Kuttl-In-Kuttl
+In order to dynamically generate manifests, Kuttl supports declaring a `TestStep` manifest which includes an option for running scripts. This allows us apply manifests with dynamic values from stdin.
 
-## How does it work
+Additionally, helper functions can be invoked in the scripts by creating a Makefile in each test folder that references `../../Makefile` (i.e. `e2e/Makefile`).
 
- - Instead of creating a static Kuttl manifest, you can create template. Template extension must be `.yml` otherwise Kuttl starts executing it.
- - Template is rendered via `envsubst`, so you can use Bash variables for dynamic data injection.
-  - Variables always present
-    - `${KUBECONFIG}`
-    - `${NAMESPACE}`
-    - `${ROOT_DIR}`
+## Example TestStep
 
-    Example template
-```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-kind: LinodeMachine
-metadata:
-  ownerReferences:
-  - apiVersion: cluster.x-k8s.io/v1beta1
-    kind: Machine
-    name: machine-sample
-    uid: ${MACHINE_UID}
-  name: linodemachine-sample
-spec:
-  region: us-sea
-  type: g5-nanode-1
-```
-
- - Helper tools are available, please create a Makefile in your test folder. In this way you can use built in helpers without including any script in the test, plus this file is a good place for test specific helpers.
-
-    Example Makefile
-```makefile
-include ../../Makefile
-```
-
- - Template is nothing without a runner, please use helpers provided in Makefile to render and run template.
-
-    Example template runner
 ```yaml
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |-
-      MACHINE_UID="$(OBJ=machines/machine-sample make getKubeUid)" \
-      TS="$(TPL="$PWD/02-create-linodemachine.tpl.yml" make renderTestCase)" make runTestSuit
+      cat <<EOF | kubectl apply -n $NAMESPACE -f -
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeMachine
+      metadata:
+        ownerReferences:
+        - apiVersion: cluster.x-k8s.io/v1beta1
+          kind: Machine
+          name: machine-sample
+          uid: $(OBJ=machines/machine-sample make getKubeUid)
+        name: linodemachine-sample
+      spec:
+        region: us-sea
+        type: g5-nanode-1
+      EOF
 ```
 
-  - You can run testsuits (which can contain template rendering).
+## Test Execution
 
-    Example testsuit runner:
-```yaml
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - script: TS="$PWD/testsuit" make runTestSuit
-```
+Note that test execution order is not guaranteed. If a test depends on another resource it is strongly suggested to create `assert` files to wait for an event. Almost every test depends on CAPI providers, so there is a good chance you have to create a `00-assert.yaml` in your test folder that asserts the following:
 
-  - Test execution order is not guaranteed. If a test depends on another resource it is strongly suggested to create `assert` files to wait for an event. Almost every test depends on CAPI providers, so there is a good chance, you have to create a `00-assert.yaml` in your test folder.
-
-    Example `00-assert.yaml`:
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -81,7 +51,7 @@ status:
   availableReplicas: 1
 ```
 
-## Executing individual test suit
+## Executing individual tests
 
 ```bash
 make _e2etest-infra # Only once per cluster!

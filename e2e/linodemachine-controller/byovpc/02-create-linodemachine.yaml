@@ -2,5 +2,17 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |-
-      MACHINE_UID="$(OBJ=machines/machine-sample make getKubeUid)" \
-      TS="$(TPL="$PWD/02-create-linodemachine.tpl.yml" make renderTestCase)" make runTestSuit
+      cat <<EOF | kubectl apply -n $NAMESPACE -f -
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeMachine
+      metadata:
+        ownerReferences:
+        - apiVersion: cluster.x-k8s.io/v1beta1
+          kind: Machine
+          name: machine-sample
+          uid: $(OBJ=machines/machine-sample make getKubeUid)
+        name: linodemachine-sample
+      spec:
+        region: us-sea
+        type: g5-nanode-1
+      EOF

@@ -14,28 +14,6 @@ _runThisTest:
 	cp -r $(PWD) $$D/suit ;\
 	ROOT_DIR=$(ROOT_DIR) KUBECONFIG="$(ROOT_DIR)/kubeconfig" kubectl-kuttl test --timeout 300 --skip-delete "$$D/suit"
 
-runTestSuit:
-	@T="$$(KUBECONFIG="$$ROOT_DIR/kubeconfig" kubectl-kuttl test --timeout 300 --skip-delete --namespace "$$NAMESPACE" "$$TS" 2>&1)" ;\
-	echo "$$T" |\
-		grep -v harness.go |\
-		grep -v ^=== |\
-		grep -v "running without a 'kuttl-test.yaml" |\
-		grep -v "creation of user-supplied namespace" |\
-		grep -v "not match file name regexp" |\
-		grep -v "kutt-test config testdirs is overridden" ;\
-	echo "$$T" | \
-		grep '^PASS' || \
-			(echo "$$T" | grep harness.go && find $$TS -name *.yaml -exec cat {} \; && exit 1)
-
-renderTestCase:
-	@D="$$(mktemp -d)" ;\
-	mkdir -p "$$D/case" ;\
-	envsubst -i "$$TPL" -o "$$D/case/00-case.yaml" ;\
-	printf "$$D\n"
-
-renderManifest:
-	@echo $(shell make --no-print-directory renderTestCase)/case/00-case.yaml
-
 getKubeUid:
 	@kubectl get -o jsonpath='{.metadata.uid}' -n "$$NAMESPACE" "$$OBJ"
 
