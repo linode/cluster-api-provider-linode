@@ -32,16 +32,113 @@ spec:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
             kind: LinodeMachineTemplate
             name: ${CLUSTER_CLASS_NAME}-worker
+  variables:
+    - name: region
+      required: true
+      schema:
+        openAPIV3Schema:
+          type: string
+          default: us-ord
+    - name: controlPlaneMachineType
+      required: true
+      schema:
+        openAPIV3Schema:
+          type: string
+          default: g6-standard-2
+    - name: workerMachineType
+      required: true
+      schema:
+        openAPIV3Schema:
+          type: string
+          default: g6-standard-2
+    - name: osImage
+      required: true
+      schema:
+        openAPIV3Schema:
+          type: string
+          default: linode/ubuntu22.04
   patches:
-    - definitions:
-      - jsonPatches:
-        - op: add
-          path: /spec/template/spec/kubeadmConfigSpec/clusterConfiguration/controllerManager/extraArgs/cluster-name
-          valueFrom:
-            variable: builtin.cluster.name
-        selector:
-          apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-          kind: KubeadmControlPlaneTemplate
-          matchResources:
-            controlPlane: true
-      name: controlPlane
+    - name: region
+      definitions:
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeClusterTemplate
+            matchResources:
+              infrastructureCluster: true
+          jsonPatches:
+            - op: add
+              path: /spec/template/spec/region
+              valueFrom:
+                variable: region
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            matchResources:
+              controlPlane: true
+          jsonPatches:
+            - op: replace
+              path: /spec/template/spec/region
+              valueFrom:
+                variable: region
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - default-worker
+          jsonPatches:
+            - op: replace
+              path: /spec/template/spec/region
+              valueFrom:
+                variable: region
+    - name: controlPlaneMachineType
+      definitions:
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            matchResources:
+              controlPlane: true
+          jsonPatches:
+            - op: replace
+              path: /spec/template/spec/type
+              valueFrom:
+                variable: controlPlaneMachineType
+    - name: workerMachineType
+      definitions:
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - default-worker
+          jsonPatches:
+            - op: replace
+              path: /spec/template/spec/type
+              valueFrom:
+                variable: workerMachineType
+    - name: osImage
+      definitions:
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            matchResources:
+              machineDeploymentClass:
+                names:
+                  - default-worker
+          jsonPatches:
+            - op: replace
+              path: /spec/template/spec/image
+              valueFrom:
+                variable: osImage
+        - selector:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            matchResources:
+              controlPlane: true
+          jsonPatches:
+            - op: replace
+              path: /spec/template/spec/image
+              valueFrom:
+                variable: osImage

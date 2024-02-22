@@ -5,4 +5,5 @@ metadata:
 spec:
   template:
     spec:
-      region: ${LINODE_REGION}
+      # region is a required field (OpenAPI schema).
+      region: REPLACEME
