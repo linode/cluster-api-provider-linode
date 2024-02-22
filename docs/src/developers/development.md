@@ -15,6 +15,8 @@
   - [Deploying a workload cluster](#deploying-a-workload-cluster)
     - [Customizing the cluster deployment](#customizing-the-cluster-deployment)
     - [Creating the workload cluster](#creating-the-workload-cluster)
+      - [Using the default flavor](#using-the-default-flavor)
+      - [Using ClusterClass (alpha)](#using-clusterclass)
     - [Cleaning up the workload cluster](#cleaning-up-the-workload-cluster)
   - [Automated Testing](#automated-testing)
     - [E2E Testing](#e2e-testing)
@@ -36,7 +38,7 @@ needed via the make targets, but a recommendation is to
 
 ### Clone the source code
 
-```shell
+```sh
 git clone https://github.com/linode/cluster-api-provider-linode
 cd cluster-api-provider-linode
 ```
@@ -45,20 +47,20 @@ cd cluster-api-provider-linode
 
 To enable automatic code validation on code push, execute the following commands:
 
-```bash
+```sh
 PATH="$PWD/bin:$PATH" make husky && husky install
 ```
 
 If you would like to temporarily disable git hook, set `SKIP_GIT_PUSH_HOOK` value:
 
-```bash
+```sh
 SKIP_GIT_PUSH_HOOK=1 git push
 ```
 
 ### [Recommended] Set up devbox
 
 1. Install dependent packages in your project
-   ```shell
+   ```sh
    devbox install
    ```
 
@@ -67,7 +69,7 @@ SKIP_GIT_PUSH_HOOK=1 git push
    ```
 
 2. Use devbox environment
-   ```shell
+   ```sh
    devbox shell
    ```
 
@@ -88,14 +90,14 @@ This repository uses [Go Modules](https://github.com/golang/go/wiki/Modules)
 to track and vendor dependencies.
 
 To pin a new dependency, run:
-```bash
+```sh
 go get <repository>@<version>
 ```
 
 
 ### Using tilt
 To build a kind cluster and start Tilt, simply run:
-```shell
+```sh
 make tilt-cluster
 ```
 
@@ -104,7 +106,7 @@ Once your kind management cluster is up and running, you can
 
 To tear down the tilt-cluster, run
 
-```shell
+```sh
 kind delete cluster --name tilt
 ```
 
@@ -116,13 +118,13 @@ After your kind management cluster is up and running with Tilt, you should be re
 
 For local development, templates should be generated via:
 
-```
+```sh
 make local-release
 ```
 
 This creates `infrastructure-linode/0.0.0/` with all the cluster templates:
 
-```bash
+```sh
 infrastructure-linode/0.0.0
 ├── cluster-template-clusterclass.yaml
 ├── cluster-template.yaml
@@ -144,7 +146,7 @@ providers:
 
 Here is a list of required configuration parameters:
 
-```bash
+```sh
 # Cluster settings
 export CLUSTER_NAME=capl-cluster
 export KUBERNETES_VERSION=v1.29.1
@@ -167,10 +169,12 @@ clusterctl generate cluster $CLUSTER_NAME --infrastructure linode:0.0.0 [--flavo
 
 #### Creating the workload cluster
 
+##### Using the default flavor
+
 Once you have all the necessary environment variables set,
 you can deploy a workload cluster with the default flavor:
 
-```shell
+```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
   --infrastructure linode:0.0.0 \
@@ -180,6 +184,32 @@ clusterctl generate cluster $CLUSTER_NAME \
 This will provision the cluster with the CNI defaulted to [cilium](../topics/addons.md#cilium)
 and the [linode-ccm](../topics/addons.md#ccm) installed.
 
+##### Using ClusterClass (alpha)
+
+~~~admonish success title=""
+ClusterClass experimental feature is enabled by default in the KIND management cluster
+created via `make tilt-cluster`
+~~~
+
+You can use the `clusterclass` flavor to create a workload cluster as well, assuming the
+management cluster has the [ClusterTopology feature gate set](https://cluster-api.sigs.k8s.io/tasks/experimental-features/cluster-class/):
+
+```sh
+# Create the ClusterClass and templates
+clusterctl generate cluster $CLUSTER_NAME \
+  --kubernetes-version v1.29.1 \
+  --infrastructure linode:0.0.0 \
+  --flavor clusterclass \
+  | kubectl apply -f -
+
+# Create the actual Cluster that uses the ClusterClass
+clusterctl generate cluster $CLUSTER_NAME \
+  --kubernetes-version v1.29.1 \
+  --infrastructure linode:0.0.0 \
+  --from ./templates/flavors/clusterclass/cluster.yaml \
+  | kubectl apply -f -
+```
+
 ```admonish question title=""
 For any issues, please refer to the [troubleshooting guide](../topics/troubleshooting.md).
 ```
@@ -188,7 +218,7 @@ For any issues, please refer to the [troubleshooting guide](../topics/troublesho
 
 To delete the cluster, simply run:
 
-```bash
+```sh
 kubectl delete cluster $CLUSTER_NAME
 ```
 
@@ -201,7 +231,7 @@ For any issues, please refer to the [troubleshooting guide](../topics/troublesho
 #### E2E Testing
 
 To run E2E locally run:
-```bash
+```sh
 make e2etest
 ```
 
