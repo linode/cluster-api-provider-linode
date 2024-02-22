@@ -1,10 +1,32 @@
 version: 2
 updates:
+
+# Go - root directory
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: ":seedling:"
+    labels:
+      - "kind/cleanup"
+
+# Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: ":seedling:"
+    labels:
+      - "kind/cleanup"
+
+# github-actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message:
+      prefix: ":seedling:"
+    labels:
+      - "kind/cleanup"
