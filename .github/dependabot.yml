@@ -9,7 +9,7 @@ updates:
     commit-message:
       prefix: ":seedling:"
     labels:
-      - "kind/cleanup"
+      - "dependencies"
 
 # Docker
   - package-ecosystem: "docker"
@@ -19,7 +19,7 @@ updates:
     commit-message:
       prefix: ":seedling:"
     labels:
-      - "kind/cleanup"
+      - "dependencies"
 
 # github-actions
   - package-ecosystem: "github-actions"
@@ -29,4 +29,4 @@ updates:
     commit-message:
       prefix: ":seedling:"
     labels:
-      - "kind/cleanup"
+      - "dependencies"
