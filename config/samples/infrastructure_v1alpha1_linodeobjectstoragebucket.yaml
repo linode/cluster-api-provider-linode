@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/created-by: cluster-api-provider-linode
   name: linodeobjectstoragebucket-sample
 spec:
-  linodeApiKeySecretRef:
+  apiKeySecretRef:
     name: api-key-secret
     key: field-name-in-secret
+  keyGeneration: 0

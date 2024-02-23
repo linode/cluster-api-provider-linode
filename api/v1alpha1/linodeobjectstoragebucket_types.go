@@ -29,14 +29,22 @@ type LinodeObjectStorageBucketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// LinodeApiKeySecretRef points to a Secret containing the Linode API key to use for provisioning buckets.
-	LinodeApiKeySecretRef *corev1.SecretKeySelector `json:"linodeApiKeySecretRef"`
+	// ApiKeySecretRef points to a Secret containing the Linode API key to use for provisioning a bucket.
+	ApiKeySecretRef *corev1.SecretKeySelector `json:"apiKeySecretRef"`
+
+	// KeyGeneration enables triggering rotations of access keys created for the bucket by incrementing the field.
+	// +optional
+	KeyGeneration *int `json:"keyGeneration,omitempty"`
 }
 
 // LinodeObjectStorageBucketStatus defines the observed state of LinodeObjectStorageBucket
 type LinodeObjectStorageBucketStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Ready denotes that the bucket has been provisioned along with access keys.
+	// +optional
+	Ready bool `json:"ready"`
 }
 
 //+kubebuilder:object:root=true

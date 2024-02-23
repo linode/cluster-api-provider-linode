@@ -41,9 +41,9 @@ spec:
             description: LinodeObjectStorageBucketSpec defines the desired state of
               LinodeObjectStorageBucket
             properties:
-              linodeApiKeySecretRef:
-                description: LinodeApiKeySecretRef points to a Secret containing the
-                  Linode API key to use for provisioning buckets.
+              apiKeySecretRef:
+                description: ApiKeySecretRef points to a Secret containing the Linode
+                  API key to use for provisioning a bucket.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -62,12 +62,21 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
+              keyGeneration:
+                description: KeyGeneration enables triggering rotations of access
+                  keys created for the bucket by incrementing the field.
+                type: integer
             required:
-            - linodeApiKeySecretRef
+            - apiKeySecretRef
             type: object
           status:
             description: LinodeObjectStorageBucketStatus defines the observed state
               of LinodeObjectStorageBucket
+            properties:
+              ready:
+                description: Ready denotes that the bucket has been provisioned along
+                  with access keys.
+                type: boolean
             type: object
         type: object
     served: true
