@@ -7,16 +7,16 @@
 - [Setting up](#setting-up)
   - [Base requirements](#base-requirements)
   - [Clone the source code](#clone-the-source-code)
+  - [Enable git hooks](#enable-git-hooks)
+  - [Set up devbox](#recommended-set-up-devbox)
   - [Get familiar with basic concepts](#get-familiar-with-basic-concepts)
 - [Developing](#developing)
-  - [Enable git hooks](#enable-git-hooks)
-  - [Setting up the environment](#setting-up-the-environment)
-    - [Using devbox](#using-devbox)
-  - [Tilt Requirements](#tilt-requirements)
   - [Using Tilt](#using-tilt)
   - [Deploying a workload cluster](#deploying-a-workload-cluster)
     - [Customizing the cluster deployment](#customizing-the-cluster-deployment)
     - [Creating the workload cluster](#creating-the-workload-cluster)
+      - [Using the default flavor](#using-the-default-flavor)
+      - [Using ClusterClass (alpha)](#using-clusterclass)
     - [Cleaning up the workload cluster](#cleaning-up-the-workload-cluster)
   - [Automated Testing](#automated-testing)
     - [E2E Testing](#e2e-testing)
@@ -27,16 +27,56 @@
 
 ### Base requirements
 
+```admonish warning
+Ensure you have your `LINODE_TOKEN` set as outlined in the 
+[getting started prerequisites](../topics/getting-started.md#Prerequisites) section.
+```
+
 There are no requirements since development dependencies are fetched as
 needed via the make targets, but a recommendation is to
 [install Devbox](https://jetpack.io/devbox/docs/installing_devbox/)
 
 ### Clone the source code
 
-```shell
+```sh
 git clone https://github.com/linode/cluster-api-provider-linode
 cd cluster-api-provider-linode
 ```
+
+### Enable git hooks
+
+To enable automatic code validation on code push, execute the following commands:
+
+```sh
+PATH="$PWD/bin:$PATH" make husky && husky install
+```
+
+If you would like to temporarily disable git hook, set `SKIP_GIT_PUSH_HOOK` value:
+
+```sh
+SKIP_GIT_PUSH_HOOK=1 git push
+```
+
+### [Recommended] Set up devbox
+
+1. Install dependent packages in your project
+   ```sh
+   devbox install
+   ```
+
+   ```admonish success title=""
+   This will take a while, go and grab a drink of water.
+   ```
+
+2. Use devbox environment
+   ```sh
+   devbox shell
+   ```
+
+From this point you can use the devbox shell like a regular shell.
+The rest of the guide assumes a devbox shell is used, but the make target
+dependencies will install any missing dependencies if needed when running
+outside a devbox shell.
 
 ### Get familiar with basic concepts
 
@@ -50,57 +90,14 @@ This repository uses [Go Modules](https://github.com/golang/go/wiki/Modules)
 to track and vendor dependencies.
 
 To pin a new dependency, run:
-```bash
+```sh
 go get <repository>@<version>
 ```
 
-### Enable git hooks
-
-To enable automatic code validation on code push, execute the following commands:
-
-```bash
-PATH="$PWD/bin:$PATH" make husky && husky install
-```
-
-If you would like to temporarily disable git hook, set `SKIP_GIT_PUSH_HOOK` value:
-
-```bash
-SKIP_GIT_PUSH_HOOK=1 git push
-```
-
-### Setting up the environment
-
-```admonish warning
-Ensure you have your `LINODE_TOKEN` set as outlined in the 
-[getting started prerequisites](../topics/getting-started.md#Prerequisites) section.
-```
-
-All development dependencies should be taken care of via Devbox and/or make target dependencies.
-
-#### Using devbox
-
-1. Install dependent packages in your project 
-   ```shell
-   devbox install
-   ```
-
-   ```admonish success title=""
-   This will take a while, go and grab a drink of water.
-   ```
-
-2. Use devbox environment
-   ```shell
-   devbox shell
-   ```
-
-From this point you can use the devbox shell like a regular shell. 
-The rest of the guide assumes a devbox shell is used, but the make target
-dependencies will install any missing dependencies if needed when running
-outside of a devbox shell.
 
 ### Using tilt
 To build a kind cluster and start Tilt, simply run:
-```shell
+```sh
 make tilt-cluster
 ```
 
@@ -109,7 +106,7 @@ Once your kind management cluster is up and running, you can
 
 To tear down the tilt-cluster, run
 
-```shell
+```sh
 kind delete cluster --name tilt
 ```
 
@@ -117,11 +114,39 @@ kind delete cluster --name tilt
 
 After your kind management cluster is up and running with Tilt, you should be ready to deploy your first cluster.
 
+#### Generating the cluster templates
+
+For local development, templates should be generated via:
+
+```sh
+make local-release
+```
+
+This creates `infrastructure-linode/0.0.0/` with all the cluster templates:
+
+```sh
+infrastructure-linode/0.0.0
+├── cluster-template-kubeadm-clusterclass.yaml
+├── cluster-template.yaml
+├── infrastructure-components.yaml
+└── metadata.yaml
+```
+
+This can then be used with `clusterctl` by adding the following to `~/.clusterctl/cluster-api.yaml`
+(assuming the repo exists in the `$HOME` directory):
+
+```
+providers:
+  - name: linode
+    url: ${HOME}/cluster-api-provider-linode/infrastructure-linode/0.0.0/infrastructure-components.yaml
+    type: InfrastructureProvider
+```
+
 #### Customizing the cluster deployment
 
 Here is a list of required configuration parameters:
 
-```bash
+```sh
 # Cluster settings
 export CLUSTER_NAME=capl-cluster
 export KUBERNETES_VERSION=v1.29.1
@@ -137,29 +162,45 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 You can also use `clusterctl generate` to see which variables need to be set:
 
 ```
-clusterctl generate cluster $CLUSTER_NAME --from ./templates/cluster-template.yaml --list-variables
+clusterctl generate cluster $CLUSTER_NAME --infrastructure linode:0.0.0 [--flavor <flavor>] --list-variables
 ```
 
 ~~~
 
-```admonish warning
-Please note the templates require the use of `clusterctl generate` to substitute the environment variables properly.
-```
-
 #### Creating the workload cluster
 
-Once you have all the necessary environment variables set,
-you can deploy a workload cluster with the following command:
+##### Using the default flavor
 
-```shell
+Once you have all the necessary environment variables set,
+you can deploy a workload cluster with the default flavor:
+
+```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --from templates/cluster-template.yaml \
+  --infrastructure linode:0.0.0 \
   | kubectl apply -f -
 ```
 
 This will provision the cluster with the CNI defaulted to [cilium](../topics/addons.md#cilium)
 and the [linode-ccm](../topics/addons.md#ccm) installed.
+
+##### Using ClusterClass (alpha)
+
+~~~admonish success title=""
+ClusterClass experimental feature is enabled by default in the KIND management cluster
+created via `make tilt-cluster`
+~~~
+
+You can use the `clusterclass` flavor to create a workload cluster as well, assuming the
+management cluster has the [ClusterTopology feature gate set](https://cluster-api.sigs.k8s.io/tasks/experimental-features/cluster-class/):
+
+```sh
+clusterctl generate cluster $CLUSTER_NAME \
+  --kubernetes-version v1.29.1 \
+  --infrastructure linode:0.0.0 \
+  --flavor kubeadm-clusterclass \
+  | kubectl apply -f -
+```
 
 ```admonish question title=""
 For any issues, please refer to the [troubleshooting guide](../topics/troubleshooting.md).
@@ -169,7 +210,7 @@ For any issues, please refer to the [troubleshooting guide](../topics/troublesho
 
 To delete the cluster, simply run:
 
-```bash
+```sh
 kubectl delete cluster $CLUSTER_NAME
 ```
 
@@ -182,7 +223,7 @@ For any issues, please refer to the [troubleshooting guide](../topics/troublesho
 #### E2E Testing
 
 To run E2E locally run:
-```bash
+```sh
 make e2etest
 ```
 
