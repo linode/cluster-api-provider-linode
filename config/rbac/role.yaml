@@ -20,8 +20,11 @@ rules:
   resources:
   - secrets
   verbs:
+  - create
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - cluster.x-k8s.io
@@ -87,6 +90,32 @@ rules:
   - infrastructure.cluster.x-k8s.io
   resources:
   - linodemachines/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - linodeobjectstoragebuckets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - linodeobjectstoragebuckets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - linodeobjectstoragebuckets/status
   verbs:
   - get
   - patch

@@ -1,0 +1,76 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: linodeobjectstoragebuckets.infrastructure.cluster.x-k8s.io
+spec:
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    kind: LinodeObjectStorageBucket
+    listKind: LinodeObjectStorageBucketList
+    plural: linodeobjectstoragebuckets
+    singular: linodeobjectstoragebucket
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: LinodeObjectStorageBucket is the Schema for the linodeobjectstoragebuckets
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LinodeObjectStorageBucketSpec defines the desired state of
+              LinodeObjectStorageBucket
+            properties:
+              linodeApiKeySecretRef:
+                description: LinodeApiKeySecretRef points to a Secret containing the
+                  Linode API key to use for provisioning buckets.
+                properties:
+                  key:
+                    description: The key of the secret to select from.  Must be a
+                      valid secret key.
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                      TODO: Add other useful fields. apiVersion, kind, uid?
+                    type: string
+                  optional:
+                    description: Specify whether the Secret or its key must be defined
+                    type: boolean
+                required:
+                - key
+                type: object
+                x-kubernetes-map-type: atomic
+            required:
+            - linodeApiKeySecretRef
+            type: object
+          status:
+            description: LinodeObjectStorageBucketStatus defines the observed state
+              of LinodeObjectStorageBucket
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

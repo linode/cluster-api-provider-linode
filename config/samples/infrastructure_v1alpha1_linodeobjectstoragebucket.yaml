@@ -1,0 +1,14 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeObjectStorageBucket
+metadata:
+  labels:
+    app.kubernetes.io/name: linodeobjectstoragebucket
+    app.kubernetes.io/instance: linodeobjectstoragebucket-sample
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+  name: linodeobjectstoragebucket-sample
+spec:
+  linodeApiKeySecretRef:
+    name: api-key-secret
+    key: field-name-in-secret
