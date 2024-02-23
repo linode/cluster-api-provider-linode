@@ -1,0 +1,13 @@
+kind: LinodeMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+metadata:
+  name: kubeadm-control-plane
+spec:
+  template:
+    spec:
+      # image is a required field (OpenAPI schema).
+      image: REPLACEME
+      # type is a required field (OpenAPI schema).
+      type: REPLACEME
+      # region is a required field (OpenAPI schema).
+      region: REPLACEME
