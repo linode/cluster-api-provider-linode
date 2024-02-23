@@ -11,7 +11,7 @@ ARCH_SHORT := amd64
 else ifeq ($(ARCH_SHORT),aarch64)
 ARCH_SHORT := arm64
 endif
-VERSION ?= $(shell git describe --always --dirty=-dev)
+VERSION ?= $(shell git describe --always --tag --dirty=-dev)
 BUILD_ARGS := --build-arg VERSION=$(VERSION)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -190,23 +190,33 @@ tilt-cluster: ctlptl tilt kind clusterctl
 
 RELEASE_DIR ?= release
 
+.PHONY: release
+release: $(KUSTOMIZE) clean-release set-manifest-image release-manifests generate-flavors release-templates release-metadata clean-release-git
+
+$(RELEASE_DIR):
+	mkdir -p $(RELEASE_DIR)/
+
+.PHONY: release-metadata
+release-metadata: $(RELEASE_DIR)
+	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
+
+.PHONY: release-templates
+release-templates: $(RELEASE_DIR)
+	mv templates/cluster-template* $(RELEASE_DIR)/
+	mv templates/clusterclass* $(RELEASE_DIR)/
+
 .PHONY: set-manifest-image
 set-manifest-image: ## Update kustomize image patch file for default resource.
-	sed -i'' -e 's@image: .*@image: '"${MANIFEST_IMG}:${MANIFEST_TAG}"'@' ./config/default/manager_image_patch.yaml
+	sed -i'' -e 's@image: .*@image: '"$(REGISTRY)/$(IMAGE_NAME):$(VERSION)"'@' ./config/default/manager_image_patch.yaml
 
-.PHONY: release
-release: $(KUSTOMIZE) clean-release
-	mkdir -p $(RELEASE_DIR)/
-	$(MAKE) set-manifest-image MANIFEST_IMG=$(REGISTRY)/$(IMAGE_NAME) MANIFEST_TAG=$(VERSION)
+.PHONY: release-manifests
+release-manifests: $(KUSTOMIZE) $(RELEASE_DIR)
 	$(KUSTOMIZE) build config/default > $(RELEASE_DIR)/infrastructure-components.yaml
-	$(MAKE) generate-flavors
-	mv templates/cluster-template* $(RELEASE_DIR)/
-	cp metadata.yaml $(RELEASE_DIR)/metadata.yaml
-	$(MAKE) clean-release-git
 
 .PHONY: local-release
 local-release:
 	RELEASE_DIR=infrastructure-linode/0.0.0 $(MAKE) release
+	$(MAKE) clean-release-git
 
 ## --------------------------------------
 ## Cleanup

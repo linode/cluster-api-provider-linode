@@ -126,7 +126,7 @@ This creates `infrastructure-linode/0.0.0/` with all the cluster templates:
 
 ```sh
 infrastructure-linode/0.0.0
-├── cluster-template-clusterclass.yaml
+├── cluster-template-kubeadm-clusterclass.yaml
 ├── cluster-template.yaml
 ├── infrastructure-components.yaml
 └── metadata.yaml
@@ -195,18 +195,10 @@ You can use the `clusterclass` flavor to create a workload cluster as well, assu
 management cluster has the [ClusterTopology feature gate set](https://cluster-api.sigs.k8s.io/tasks/experimental-features/cluster-class/):
 
 ```sh
-# Create the ClusterClass and templates
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
   --infrastructure linode:0.0.0 \
-  --flavor clusterclass \
-  | kubectl apply -f -
-
-# Create the actual Cluster that uses the ClusterClass
-clusterctl generate cluster $CLUSTER_NAME \
-  --kubernetes-version v1.29.1 \
-  --infrastructure linode:0.0.0 \
-  --from ./templates/flavors/clusterclass/cluster.yaml \
+  --flavor kubeadm-clusterclass \
   | kubectl apply -f -
 ```
 

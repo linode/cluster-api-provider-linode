@@ -12,7 +12,7 @@ spec:
       cidrBlocks:
         - 192.168.128.0/17
   topology:
-    class: ${CLUSTER_CLASS_NAME}
+    class: kubeadm
     version: ${KUBERNETES_VERSION}
     variables:
     - name: region
