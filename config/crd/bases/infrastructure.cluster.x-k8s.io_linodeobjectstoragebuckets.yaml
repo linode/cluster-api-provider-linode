@@ -73,6 +73,10 @@ spec:
             description: LinodeObjectStorageBucketStatus defines the observed state
               of LinodeObjectStorageBucket
             properties:
+              accessKeySecretName:
+                description: AccessKeySecretName points to the Secret containing access
+                  keys created for the bucket.
+                type: string
               ready:
                 description: Ready denotes that the bucket has been provisioned along
                   with access keys.

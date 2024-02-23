@@ -18,15 +18,22 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/go-logr/logr"
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
 // LinodeObjectStorageBucketReconciler reconciles a LinodeObjectStorageBucket object
@@ -56,16 +63,94 @@ type LinodeObjectStorageBucketReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
 func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
+	defer cancel()
 
-	// TODO(user): your logic here
+	log := ctrl.LoggerFrom(ctx).WithName("LinodeObjectStorageBucketReconciler").WithValues("name", req.NamespacedName.String())
 
-	return ctrl.Result{}, nil
+	objectStorageBucket := &infrav1alpha1.LinodeObjectStorageBucket{}
+	if err := r.Client.Get(ctx, req.NamespacedName, objectStorageBucket); err != nil {
+		if err = client.IgnoreNotFound(err); err != nil {
+			log.Error(err, "Failed to fetch Linode machine")
+		}
+
+		return ctrl.Result{}, err
+	}
+
+	objectStorageBucketScope, err := scope.NewObjectStorageBucketScope(
+		ctx,
+		scope.ObjectStorageBucketScopeParams{
+			Client:              r.Client,
+			ObjectStorageBucket: objectStorageBucket,
+		},
+	)
+	if err != nil {
+		log.Error(err, "Failed to create object storage bucket scope")
+
+		return ctrl.Result{}, fmt.Errorf("failed to create object storage bucket scope: %w", err)
+	}
+
+	return r.reconcile(ctx, log, objectStorageBucketScope)
+}
+
+func (r *LinodeObjectStorageBucketReconciler) reconcile(
+	ctx context.Context,
+	logger logr.Logger,
+	scope *scope.ObjectStorageBucketScope,
+) (res ctrl.Result, reterr error) {
+	scope.ObjectStorageBucket.Status.Ready = false
+
+	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageBucket changes.
+	defer func() {
+		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
+		if err := scope.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
+			logger.Error(err, "failed to patch LinodeObjectStorageBucket")
+			reterr = err
+		}
+	}()
+
+	// Deleted
+	if !scope.ObjectStorageBucket.DeletionTimestamp.IsZero() {
+		return res, r.reconcileDelete(ctx, logger, scope)
+	}
+
+	if err := scope.AddFinalizer(ctx); err != nil {
+		return res, err
+	}
+	// Created
+	if scope.ObjectStorageBucket.Status.AccessKeySecretName == nil {
+		if err := r.reconcileCreate(ctx, logger, scope); err != nil {
+			return res, err
+		}
+		//r.Recorder.Event(scope.ObjectStorageBucket, corev1.EventTypeNormal, "Ready", "Object storage bucket has been created")
+	} else {
+		// Updated
+		if err := r.reconcileUpdate(ctx, logger, scope); err != nil {
+			return res, err
+		}
+		//r.Recorder.Event(scope.ObjectStorageBucket, corev1.EventTypeNormal, "Updated", "Object storage bucket has been created")
+	}
+
+	scope.ObjectStorageBucket.Status.Ready = true
+	return res, nil
+}
+
+func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, scope *scope.ObjectStorageBucketScope) error {
+	panic("unimplemented")
+}
+
+func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, scope *scope.ObjectStorageBucketScope) error {
+	panic("unimplemented")
+}
+
+func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, scope *scope.ObjectStorageBucketScope) error {
+	panic("unimplemented")
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha1.LinodeObjectStorageBucket{}).
+		For(&infrav1alpha1.LinodeObjectStorageBucket{}).
+		WithEventFilter(predicates.ResourceHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
 		Complete(r)
 }

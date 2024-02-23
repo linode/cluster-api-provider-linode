@@ -45,6 +45,10 @@ type LinodeObjectStorageBucketStatus struct {
 	// Ready denotes that the bucket has been provisioned along with access keys.
 	// +optional
 	Ready bool `json:"ready"`
+
+	// AccessKeySecretName points to the Secret containing access keys created for the bucket.
+	// +optional
+	AccessKeySecretName *string `json:"accessKeySecretName,omitempty"`
 }
 
 //+kubebuilder:object:root=true
