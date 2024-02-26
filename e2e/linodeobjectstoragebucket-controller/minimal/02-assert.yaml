@@ -1,0 +1,11 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeObjectStorageBucket
+metadata:
+  name: linodeobjectstoragebucket-sample
+spec:
+  region: us-sea-1
+  apiKeySecretRef:
+    name: linodeobjectstoragebucket-sample
+    key: apiToken
+status:
+  ready: true

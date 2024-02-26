@@ -2,7 +2,7 @@ package scope
 
 import (
 	"context"
-	b64 "encoding/base64"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -106,7 +106,7 @@ func (s *ObjectStorageBucketScope) GetApiKey(ctx context.Context) (string, error
 		)
 	}
 
-	value, ok := secret.Data[s.Object.Spec.ApiKeySecretRef.Key]
+	apiTokenBytes, ok := secret.Data[s.Object.Spec.ApiKeySecretRef.Key]
 	if !ok {
 		return "", fmt.Errorf(
 			"api key secret ref key is invalid for LinodeObjectStorageBucket %s/%s",
@@ -115,25 +115,29 @@ func (s *ObjectStorageBucketScope) GetApiKey(ctx context.Context) (string, error
 		)
 	}
 
-	var decoded []byte
-	_, err := b64.StdEncoding.Decode(decoded, value)
+	decoded := make([]byte, base64.StdEncoding.DecodedLen(len(apiTokenBytes)))
+	n, err := base64.StdEncoding.Decode(decoded, apiTokenBytes)
 	if err != nil {
 		return "", fmt.Errorf(
-			"error while decoding api key from secret for LinodeObjectStorageBucket %s/%s: %w",
+			"error while decoding api key from referenced secret for LinodeObjectStorageBucket %s/%s: %w",
 			s.Object.Namespace,
 			s.Object.Name,
 			err,
 		)
 	}
 
-	return string(decoded), nil
+	// TODO: seems malformed
+	// error shows "invalid header field value for "Authorization"
+	fmt.Printf("HERE %s HERE\n", string(decoded[:n]))
+
+	return string(decoded[:n]), nil
 }
 
 // CreateAccessKeySecret creates a Secret containing keys created for accessing the bucket.
 func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, keys [2]*linodego.ObjectStorageKey, secretName string) error {
 	var err error
 
-	var accessKeys [2]json.RawMessage
+	accessKeys := make([]json.RawMessage, 2)
 	for i, key := range keys {
 		accessKeys[i], err = json.Marshal(key)
 		if err != nil {

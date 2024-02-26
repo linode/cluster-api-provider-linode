@@ -23,7 +23,12 @@ func CreateObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 	if err != nil {
 		return nil, err
 	}
-	if buckets, err = bucketScope.LinodeClient.ListObjectStorageBuckets(ctx, linodego.NewListOptions(1, string(rawFilter))); err != nil {
+
+	if buckets, err = bucketScope.LinodeClient.ListObjectStorageBucketsInCluster(
+		ctx,
+		linodego.NewListOptions(1, string(rawFilter)),
+		bucketScope.Object.Spec.Region,
+	); err != nil {
 		logger.Info("Failed to list object storage buckets", "error", err.Error())
 
 		return nil, err
