@@ -57,8 +57,8 @@ spec:
               LinodeObjectStorageBucket
             properties:
               apiKeySecretRef:
-                description: ApiKeySecretRef points to a Secret containing the Linode
-                  API key to use for provisioning the bucket.
+                description: A reference to the Secret containing the Linode API key
+                  to use for provisioning the bucket.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -78,19 +78,18 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               cluster:
-                description: Cluster specifies the ID of the Object Storage cluster
-                  for the bucket.
+                description: The ID of the Object Storage cluster for the bucket.
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
               keyGeneration:
-                description: KeyGeneration enables triggering rotations of keys created
+                description: May be used to trigger rotations of access keys created
                   for the bucket by incrementing the field.
                 type: integer
               label:
                 description: |-
-                  Label is the name of the bucket. It must be unique in the Object Storage cluster.
+                  The name of the bucket. It must be unique in the Object Storage cluster.
                   If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
                 maxLength: 63
                 minLength: 3
@@ -107,7 +106,7 @@ spec:
               of LinodeObjectStorageBucket
             properties:
               conditions:
-                description: Conditions defines current service state of the LinodeObjectStorageBucket.
+                description: Current service state of the LinodeObjectStorageBucket.
                 items:
                   description: Condition defines an observation of a Cluster API resource
                     operational state.
@@ -152,27 +151,29 @@ spec:
                   type: object
                 type: array
               creationTime:
-                description: CreationTime specifies when the underlying bucket was
-                  created.
+                description: The creation timestamp for the underlying bucket.
                 format: date-time
                 type: string
               failureMessage:
                 description: |-
-                  FailureReason will be set in the event that there is a terminal problem
+                  Will be set in the event that there is a terminal problem
                   reconciling the Object Storage Bucket and will contain a verbose string
                   suitable for logging and human consumption.
                 type: string
+              hostname:
+                description: The hostname assigned to the bucket.
+                type: string
               keySecretName:
-                description: KeySecretName points to the Secret containing keys created
-                  for the accessing the bucket.
+                description: The name of the Secret containing access keys for the
+                  bucket.
                 type: string
               lastKeyGeneration:
-                description: LastKeyGeneration tracks the last known value of KeyGeneration.
+                description: Tracks the last known value of .spec.keyGeneration.
                 type: integer
               ready:
                 default: false
-                description: Ready denotes that the bucket has been provisioned along
-                  with keys.
+                description: Denotes that the bucket has been provisioned along with
+                  access keys.
                 type: boolean
             type: object
         type: object

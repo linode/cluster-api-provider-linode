@@ -621,6 +621,11 @@ func (in *LinodeObjectStorageBucketStatus) DeepCopyInto(out *LinodeObjectStorage
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Hostname != nil {
+		in, out := &in.Hostname, &out.Hostname
+		*out = new(string)
+		**out = **in
+	}
 	in.CreationTime.DeepCopyInto(&out.CreationTime)
 	if in.LastKeyGeneration != nil {
 		in, out := &in.LastKeyGeneration, &out.LastKeyGeneration

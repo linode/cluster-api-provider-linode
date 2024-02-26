@@ -30,7 +30,7 @@ type LinodeObjectStorageBucketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Label is the name of the bucket. It must be unique in the Object Storage cluster.
+	// The name of the bucket. It must be unique in the Object Storage cluster.
 	// If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
 	// +kubebuilder:validation:MinLength=3
 	// +kubebuilder:validation:MaxLength=63
@@ -38,14 +38,14 @@ type LinodeObjectStorageBucketSpec struct {
 	// +optional
 	Label string `json:"label,omitempty"`
 
-	// Cluster specifies the ID of the Object Storage cluster for the bucket.
+	// The ID of the Object Storage cluster for the bucket.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Cluster string `json:"cluster"`
 
-	// ApiKeySecretRef points to a Secret containing the Linode API key to use for provisioning the bucket.
+	// A reference to the Secret containing the Linode API key to use for provisioning the bucket.
 	ApiKeySecretRef corev1.SecretKeySelector `json:"apiKeySecretRef"`
 
-	// KeyGeneration enables triggering rotations of keys created for the bucket by incrementing the field.
+	// May be used to trigger rotations of access keys created for the bucket by incrementing the field.
 	// +optional
 	KeyGeneration *int `json:"keyGeneration,omitempty"`
 }
@@ -55,30 +55,34 @@ type LinodeObjectStorageBucketStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Ready denotes that the bucket has been provisioned along with keys.
+	// Denotes that the bucket has been provisioned along with access keys.
 	// +optional
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
-	// FailureReason will be set in the event that there is a terminal problem
+	// Will be set in the event that there is a terminal problem
 	// reconciling the Object Storage Bucket and will contain a verbose string
 	// suitable for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
-	// Conditions defines current service state of the LinodeObjectStorageBucket.
+	// Current service state of the LinodeObjectStorageBucket.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 
-	// CreationTime specifies when the underlying bucket was created.
+	// The hostname assigned to the bucket.
+	// +optional
+	Hostname *string `json:"hostname,omitempty"`
+
+	// The creation timestamp for the underlying bucket.
 	// +optional
 	CreationTime metav1.Time `json:"creationTime,omitempty"`
 
-	// LastKeyGeneration tracks the last known value of KeyGeneration.
+	// Tracks the last known value of .spec.keyGeneration.
 	// +optional
 	LastKeyGeneration *int `json:"lastKeyGeneration,omitempty"`
 
-	// KeySecretName points to the Secret containing keys created for the accessing the bucket.
+	// The name of the Secret containing access keys for the bucket.
 	// +optional
 	KeySecretName *string `json:"keySecretName,omitempty"`
 }

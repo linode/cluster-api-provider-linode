@@ -162,6 +162,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 		return err
 	}
 
+	bucketScope.Object.Status.Hostname = util.Pointer(bucket.Hostname)
 	bucketScope.Object.Status.CreationTime = metav1.Time{Time: *bucket.Created}
 
 	keys, err := services.CreateObjectStorageKeys(ctx, bucketScope, logger)
