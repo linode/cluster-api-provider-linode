@@ -1,3 +1,4 @@
+---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
@@ -15,7 +16,7 @@ spec:
         configRef:
           name: ${CLUSTER_NAME}-md-0
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-          kind: KubeadmConfigTemplate
+          kind: REPLACEME
       infrastructureRef:
         name: ${CLUSTER_NAME}-md-0
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
