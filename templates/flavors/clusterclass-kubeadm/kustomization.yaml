@@ -1,0 +1,11 @@
+resources:
+  - clusterclass.yaml
+  - linode-cluster-template.yaml
+  - linode-machine-controlplane-template.yaml
+  - linode-machine-worker-template.yaml
+  - kubeadm-controlplane-template.yaml
+  - kubeadm-config-template.yaml
+  - ../../common-init-files
+  - ../../addons/cilium
+  - ../../addons/provider-linode
+  - ../../addons/cluster-resource-set

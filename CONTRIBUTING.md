@@ -56,10 +56,6 @@ All changes must be code reviewed. Coding conventions and standards are explaine
 
 In case you want to run our E2E tests locally, please refer to the [E2E Testing](https://linode.github.io/cluster-api-provider-linode/developers/development.html#e2e-testing) guide.
 
-## Code of Conduct
-
-This project follows the [Linode Community Code of Conduct](https://www.linode.com/community/questions/conduct). 
-
 ## Vulnerability Reporting
 
 If you discover a potential security issue in this project we ask that you notify Linode Security via our [vulnerability reporting process](https://hackerone.com/linode). Please do **not** create a public github issue.
