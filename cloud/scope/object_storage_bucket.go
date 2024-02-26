@@ -3,10 +3,12 @@ package scope
 import (
 	"context"
 	b64 "encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,9 +26,9 @@ type ObjectStorageBucketScopeParams struct {
 type ObjectStorageBucketScope struct {
 	client client.Client
 
-	PatchHelper         *patch.Helper
-	ObjectStorageBucket *infrav1alpha1.LinodeObjectStorageBucket
-	LinodeClient        *linodego.Client
+	Object       *infrav1alpha1.LinodeObjectStorageBucket
+	PatchHelper  *patch.Helper
+	LinodeClient *linodego.Client
 }
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
@@ -47,25 +49,25 @@ func NewObjectStorageBucketScope(ctx context.Context, params ObjectStorageBucket
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
-	scope := &ObjectStorageBucketScope{
-		client:              params.Client,
-		PatchHelper:         helper,
-		ObjectStorageBucket: params.ObjectStorageBucket,
+	bucketScope := &ObjectStorageBucketScope{
+		client:      params.Client,
+		Object:      params.ObjectStorageBucket,
+		PatchHelper: helper,
 	}
 
-	apiKey, err := scope.GetApiKey(ctx)
+	apiKey, err := bucketScope.GetApiKey(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get api key: %w", err)
 	}
 
-	scope.LinodeClient = createLinodeClient(apiKey)
+	bucketScope.LinodeClient = createLinodeClient(apiKey)
 
-	return scope, nil
+	return bucketScope, nil
 }
 
 // PatchObject persists the object storage bucket configuration and status.
 func (s *ObjectStorageBucketScope) PatchObject(ctx context.Context) error {
-	return s.PatchHelper.Patch(ctx, s.ObjectStorageBucket)
+	return s.PatchHelper.Patch(ctx, s.Object)
 }
 
 // Close closes the current scope persisting the object storage bucket configuration and status.
@@ -76,7 +78,7 @@ func (s *ObjectStorageBucketScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.ObjectStorageBucket, infrav1alpha1.GroupVersion.String()) {
+	if controllerutil.AddFinalizer(s.Object, infrav1alpha1.GroupVersion.String()) {
 		return s.Close(ctx)
 	}
 
@@ -85,33 +87,31 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 
 // GetApiKey returns the Linode API key from the Secret referenced by the ObjectStorageBucket's apiKeySecretRef.
 func (s *ObjectStorageBucketScope) GetApiKey(ctx context.Context) (string, error) {
-	if s.ObjectStorageBucket.Spec.ApiKeySecretRef == nil ||
-		s.ObjectStorageBucket.Spec.ApiKeySecretRef.Name == "" ||
-		s.ObjectStorageBucket.Spec.ApiKeySecretRef.Key == "" {
+	if s.Object.Spec.ApiKeySecretRef.Name == "" || s.Object.Spec.ApiKeySecretRef.Key == "" {
 		return "", fmt.Errorf(
-			"api key secret ref is nil or malformed for LinodeObjectStorageBucket %s/%s",
-			s.ObjectStorageBucket.Namespace,
-			s.ObjectStorageBucket.Name,
+			"api key secret ref must specify a name and key for LinodeObjectStorageBucket %s/%s",
+			s.Object.Namespace,
+			s.Object.Name,
 		)
 	}
 
 	secret := &corev1.Secret{}
-	key := types.NamespacedName{Namespace: s.ObjectStorageBucket.Namespace, Name: s.ObjectStorageBucket.Spec.ApiKeySecretRef.Name}
+	key := types.NamespacedName{Namespace: s.Object.Namespace, Name: s.Object.Spec.ApiKeySecretRef.Name}
 	if err := s.client.Get(ctx, key, secret); err != nil {
 		return "", fmt.Errorf(
 			"failed to retrieve api key secret for LinodeObjectStorageBucket %s/%s: %w",
-			s.ObjectStorageBucket.Namespace,
-			s.ObjectStorageBucket.Name,
+			s.Object.Namespace,
+			s.Object.Name,
 			err,
 		)
 	}
 
-	value, ok := secret.Data[s.ObjectStorageBucket.Spec.ApiKeySecretRef.Key]
+	value, ok := secret.Data[s.Object.Spec.ApiKeySecretRef.Key]
 	if !ok {
 		return "", fmt.Errorf(
 			"api key secret ref key is invalid for LinodeObjectStorageBucket %s/%s",
-			s.ObjectStorageBucket.Namespace,
-			s.ObjectStorageBucket.Name,
+			s.Object.Namespace,
+			s.Object.Name,
 		)
 	}
 
@@ -120,11 +120,51 @@ func (s *ObjectStorageBucketScope) GetApiKey(ctx context.Context) (string, error
 	if err != nil {
 		return "", fmt.Errorf(
 			"error while decoding api key from secret for LinodeObjectStorageBucket %s/%s: %w",
-			s.ObjectStorageBucket.Namespace,
-			s.ObjectStorageBucket.Name,
+			s.Object.Namespace,
+			s.Object.Name,
 			err,
 		)
 	}
 
 	return string(decoded), nil
+}
+
+// CreateAccessKeySecret creates a Secret containing keys created for accessing the bucket.
+func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, keys [2]*linodego.ObjectStorageKey, secretName string) error {
+	var err error
+
+	var accessKeys [2]json.RawMessage
+	for i, key := range keys {
+		accessKeys[i], err = json.Marshal(key)
+		if err != nil {
+			return fmt.Errorf(
+				"error while unmarshaling access key %s for LinodeObjectStorageBucket %s/%s: %w",
+				key.Label,
+				s.Object.Namespace,
+				s.Object.Name,
+				err,
+			)
+		}
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: s.Object.Namespace,
+		},
+		StringData: map[string]string{
+			"read_write": string(accessKeys[0]),
+			"read_only":  string(accessKeys[1]),
+		},
+	}
+	if err := s.client.Create(ctx, secret); err != nil {
+		return fmt.Errorf(
+			"failed to create api key secret for LinodeObjectStorageBucket %s/%s: %w",
+			s.Object.Namespace,
+			s.Object.Name,
+			err,
+		)
+	}
+
+	return nil
 }

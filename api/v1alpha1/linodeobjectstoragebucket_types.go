@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -29,10 +30,13 @@ type LinodeObjectStorageBucketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// ApiKeySecretRef points to a Secret containing the Linode API key to use for provisioning a bucket.
-	ApiKeySecretRef *corev1.SecretKeySelector `json:"apiKeySecretRef"`
+	// Region specifies the ID of the Object Storage cluster where the bucket should be created.
+	Region string `json:"region"`
 
-	// KeyGeneration enables triggering rotations of access keys created for the bucket by incrementing the field.
+	// ApiKeySecretRef points to a Secret containing the Linode API key to use for provisioning a bucket.
+	ApiKeySecretRef corev1.SecretKeySelector `json:"apiKeySecretRef"`
+
+	// KeyGeneration enables triggering rotations of keys created for the bucket by incrementing the field.
 	// +optional
 	KeyGeneration *int `json:"keyGeneration,omitempty"`
 }
@@ -42,13 +46,32 @@ type LinodeObjectStorageBucketStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Ready denotes that the bucket has been provisioned along with access keys.
+	// Ready denotes that the bucket has been provisioned along with keys.
 	// +optional
+	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
-	// AccessKeySecretName points to the Secret containing access keys created for the bucket.
+	// FailureReason will be set in the event that there is a terminal problem
+	// reconciling the Object Storage Bucket and will contain a verbose string
+	// suitable for logging and human consumption.
 	// +optional
-	AccessKeySecretName *string `json:"accessKeySecretName,omitempty"`
+	FailureMessage *string `json:"failureMessage,omitempty"`
+
+	// Conditions defines current service state of the LinodeObjectStorageBucket.
+	// +optional
+	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+
+	// CreationTime specifies when the underlying bucket was created.
+	// +optional
+	CreationTime metav1.Time `json:"creationTime,omitempty"`
+
+	// LastKeyGeneration tracks the last known value of KeyGeneration.
+	// +optional
+	LastKeyGeneration *int `json:"lastKeyGeneration,omitempty"`
+
+	// KeySecretName points to the Secret containing keys created for the accessing the bucket.
+	// +optional
+	KeySecretName *string `json:"keySecretName,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,6 +84,14 @@ type LinodeObjectStorageBucket struct {
 
 	Spec   LinodeObjectStorageBucketSpec   `json:"spec,omitempty"`
 	Status LinodeObjectStorageBucketStatus `json:"status,omitempty"`
+}
+
+func (b *LinodeObjectStorageBucket) GetConditions() clusterv1.Conditions {
+	return b.Status.Conditions
+}
+
+func (b *LinodeObjectStorageBucket) SetConditions(conditions clusterv1.Conditions) {
+	b.Status.Conditions = conditions
 }
 
 //+kubebuilder:object:root=true

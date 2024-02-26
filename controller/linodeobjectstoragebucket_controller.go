@@ -21,11 +21,15 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,6 +37,8 @@ import (
 	"github.com/go-logr/logr"
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/cloud/services"
+	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
@@ -71,13 +77,13 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 	objectStorageBucket := &infrav1alpha1.LinodeObjectStorageBucket{}
 	if err := r.Client.Get(ctx, req.NamespacedName, objectStorageBucket); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
-			log.Error(err, "Failed to fetch Linode machine")
+			log.Error(err, "Failed to fetch LinodeObjectStorageBucket")
 		}
 
 		return ctrl.Result{}, err
 	}
 
-	objectStorageBucketScope, err := scope.NewObjectStorageBucketScope(
+	bucketScope, err := scope.NewObjectStorageBucketScope(
 		ctx,
 		scope.ObjectStorageBucketScopeParams{
 			Client:              r.Client,
@@ -90,60 +96,99 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{}, fmt.Errorf("failed to create object storage bucket scope: %w", err)
 	}
 
-	return r.reconcile(ctx, log, objectStorageBucketScope)
+	return r.reconcile(ctx, log, bucketScope)
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcile(
 	ctx context.Context,
 	logger logr.Logger,
-	scope *scope.ObjectStorageBucketScope,
+	bucketScope *scope.ObjectStorageBucketScope,
 ) (res ctrl.Result, reterr error) {
-	scope.ObjectStorageBucket.Status.Ready = false
+	bucketScope.Object.Status.Ready = false
 
 	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageBucket changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
-		if err := scope.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
+		if err := bucketScope.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
 			logger.Error(err, "failed to patch LinodeObjectStorageBucket")
 			reterr = err
 		}
 	}()
 
 	// Deleted
-	if !scope.ObjectStorageBucket.DeletionTimestamp.IsZero() {
-		return res, r.reconcileDelete(ctx, logger, scope)
+	if !bucketScope.Object.DeletionTimestamp.IsZero() {
+		return res, r.reconcileDelete(ctx, logger, bucketScope)
 	}
 
-	if err := scope.AddFinalizer(ctx); err != nil {
+	if err := bucketScope.AddFinalizer(ctx); err != nil {
 		return res, err
 	}
 	// Created
-	if scope.ObjectStorageBucket.Status.AccessKeySecretName == nil {
-		if err := r.reconcileCreate(ctx, logger, scope); err != nil {
+	if bucketScope.Object.Status.LastKeyGeneration == nil {
+		if err := r.reconcileCreate(ctx, logger, bucketScope); err != nil {
 			return res, err
 		}
-		//r.Recorder.Event(scope.ObjectStorageBucket, corev1.EventTypeNormal, "Ready", "Object storage bucket has been created")
+		r.Recorder.Event(bucketScope.Object, corev1.EventTypeNormal, "Ready", "Object storage bucket has been created")
 	} else {
 		// Updated
-		if err := r.reconcileUpdate(ctx, logger, scope); err != nil {
+		if err := r.reconcileUpdate(ctx, logger, bucketScope); err != nil {
 			return res, err
 		}
-		//r.Recorder.Event(scope.ObjectStorageBucket, corev1.EventTypeNormal, "Updated", "Object storage bucket has been created")
+		r.Recorder.Event(bucketScope.Object, corev1.EventTypeNormal, "Updated", "Object storage bucket has been updated")
 	}
 
-	scope.ObjectStorageBucket.Status.Ready = true
+	bucketScope.Object.Status.Ready = true
+	conditions.MarkTrue(bucketScope.Object, clusterv1.ReadyCondition)
+
 	return res, nil
 }
 
-func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, scope *scope.ObjectStorageBucketScope) error {
+func (r *LinodeObjectStorageBucketReconciler) setFailure(bucketScope *scope.ObjectStorageBucketScope, err error) {
+	bucketScope.Object.Status.FailureMessage = util.Pointer(err.Error())
+	r.Recorder.Event(bucketScope.Object, corev1.EventTypeWarning, "Failed", err.Error())
+	conditions.MarkFalse(bucketScope.Object, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
+}
+
+func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
+	bucketLabel := fmt.Sprintf("%s-%s", bucketScope.Object.Name, string(bucketScope.Object.UID))
+	bucket, err := services.CreateObjectStorageBucket(ctx, bucketScope, bucketLabel, logger)
+	if err != nil {
+		r.setFailure(bucketScope, err)
+
+		return err
+	}
+
+	bucketScope.Object.Status.CreationTime = metav1.Time{Time: *bucket.Created}
+
+	keys, err := services.CreateObjectStorageKeys(ctx, bucketScope, bucketLabel, logger)
+	if err != nil {
+		r.setFailure(bucketScope, err)
+
+		return err
+	}
+
+	secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
+	if err := bucketScope.CreateAccessKeySecret(ctx, keys, secretName); err != nil {
+		r.setFailure(bucketScope, err)
+
+		return err
+	}
+
+	bucketScope.Object.Status.KeySecretName = util.Pointer(secretName)
+
+	if bucketScope.Object.Spec.KeyGeneration == nil {
+		bucketScope.Object.Spec.KeyGeneration = util.Pointer(0)
+	}
+	bucketScope.Object.Status.LastKeyGeneration = bucketScope.Object.Spec.KeyGeneration
+
+	return nil
+}
+
+func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
 	panic("unimplemented")
 }
 
-func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, scope *scope.ObjectStorageBucketScope) error {
-	panic("unimplemented")
-}
-
-func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, scope *scope.ObjectStorageBucketScope) error {
+func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
 	panic("unimplemented")
 }
 
