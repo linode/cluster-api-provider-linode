@@ -3,9 +3,13 @@ kind: LinodeObjectStorageBucket
 metadata:
   name: linodeobjectstoragebucket-sample
 spec:
-  region: us-sea-1
+  label: sample
+  cluster: us-sea-1
+  keyGeneration: 0
   apiKeySecretRef:
     name: linodeobjectstoragebucket-sample
     key: apiToken
 status:
   ready: true
+  keySecretName: linodeobjectstoragebucket-sample-access-keys
+  lastKeyGeneration: 0

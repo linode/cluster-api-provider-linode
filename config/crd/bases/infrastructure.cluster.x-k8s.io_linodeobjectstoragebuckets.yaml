@@ -43,7 +43,7 @@ spec:
             properties:
               apiKeySecretRef:
                 description: ApiKeySecretRef points to a Secret containing the Linode
-                  API key to use for provisioning a bucket.
+                  API key to use for provisioning the bucket.
                 properties:
                   key:
                     description: The key of the secret to select from.  Must be a
@@ -62,17 +62,27 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
+              cluster:
+                description: Cluster specifies the ID of the Object Storage cluster
+                  where the bucket should be created.
+                type: string
               keyGeneration:
                 description: KeyGeneration enables triggering rotations of keys created
                   for the bucket by incrementing the field.
                 type: integer
-              region:
-                description: Region specifies the ID of the Object Storage cluster
-                  where the bucket should be created.
+              label:
+                description: |-
+                  Label is the name of the desired bucket. It must be unique in the Object Storage cluster.
+                  If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
+                maxLength: 63
+                minLength: 3
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
             required:
             - apiKeySecretRef
-            - region
+            - cluster
             type: object
           status:
             description: LinodeObjectStorageBucketStatus defines the observed state

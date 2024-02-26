@@ -30,10 +30,18 @@ type LinodeObjectStorageBucketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Region specifies the ID of the Object Storage cluster where the bucket should be created.
-	Region string `json:"region"`
+	// Label is the name of the desired bucket. It must be unique in the Object Storage cluster.
+	// If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
+	// +kubebuilder:validation:MinLength=3
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	Label string `json:"label,omitempty"`
 
-	// ApiKeySecretRef points to a Secret containing the Linode API key to use for provisioning a bucket.
+	// Cluster specifies the ID of the Object Storage cluster where the bucket should be created.
+	Cluster string `json:"cluster"`
+
+	// ApiKeySecretRef points to a Secret containing the Linode API key to use for provisioning the bucket.
 	ApiKeySecretRef corev1.SecretKeySelector `json:"apiKeySecretRef"`
 
 	// KeyGeneration enables triggering rotations of keys created for the bucket by incrementing the field.

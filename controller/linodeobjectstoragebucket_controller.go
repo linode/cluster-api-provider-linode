@@ -147,8 +147,11 @@ func (r *LinodeObjectStorageBucketReconciler) setFailure(bucketScope *scope.Obje
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	bucketLabel := fmt.Sprintf("%s-%s", bucketScope.Object.Name, string(bucketScope.Object.UID))
-	bucket, err := services.CreateObjectStorageBucket(ctx, bucketScope, bucketLabel, logger)
+	if bucketScope.Object.Spec.Label == "" {
+		bucketScope.Object.Spec.Label = util.RenderObjectLabel(bucketScope.Object.UID)
+	}
+
+	bucket, err := services.CreateObjectStorageBucket(ctx, bucketScope, logger)
 	if err != nil {
 		r.setFailure(bucketScope, err)
 
@@ -157,7 +160,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 
 	bucketScope.Object.Status.CreationTime = metav1.Time{Time: *bucket.Created}
 
-	keys, err := services.CreateObjectStorageKeys(ctx, bucketScope, bucketLabel, logger)
+	keys, err := services.CreateObjectStorageKeys(ctx, bucketScope, logger)
 	if err != nil {
 		r.setFailure(bucketScope, err)
 
