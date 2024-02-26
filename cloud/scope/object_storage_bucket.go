@@ -145,9 +145,21 @@ func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, ke
 			"read_only":  string(accessKeys[1]),
 		},
 	}
+
+	if controllerutil.SetOwnerReference(s.Object, secret, s.client.Scheme()); err != nil {
+		return fmt.Errorf(
+			"error while creating secret %s for LinodeObjectStorageBucket %s/%s: failed to set owner ref: %w",
+			secretName,
+			s.Object.Namespace,
+			s.Object.Name,
+			err,
+		)
+	}
+
 	if err := s.client.Create(ctx, secret); err != nil {
 		return fmt.Errorf(
-			"failed to create api key secret for LinodeObjectStorageBucket %s/%s: %w",
+			"failed to create secret %s for LinodeObjectStorageBucket %s/%s: %w",
+			secretName,
 			s.Object.Namespace,
 			s.Object.Name,
 			err,

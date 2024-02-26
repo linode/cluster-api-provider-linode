@@ -30,7 +30,7 @@ type LinodeObjectStorageBucketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Label is the name of the desired bucket. It must be unique in the Object Storage cluster.
+	// Label is the name of the bucket. It must be unique in the Object Storage cluster.
 	// If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
 	// +kubebuilder:validation:MinLength=3
 	// +kubebuilder:validation:MaxLength=63
@@ -38,7 +38,8 @@ type LinodeObjectStorageBucketSpec struct {
 	// +optional
 	Label string `json:"label,omitempty"`
 
-	// Cluster specifies the ID of the Object Storage cluster where the bucket should be created.
+	// Cluster specifies the ID of the Object Storage cluster for the bucket.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Cluster string `json:"cluster"`
 
 	// ApiKeySecretRef points to a Secret containing the Linode API key to use for provisioning the bucket.
@@ -82,8 +83,12 @@ type LinodeObjectStorageBucketStatus struct {
 	KeySecretName *string `json:"keySecretName,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=linodeobjectstoragebuckets,scope=Namespaced,shortName=lobj
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Label",type="string",JSONPath=".spec.label",description="The name of the bucket"
+// +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".spec.cluster",description="The ID of the Object Storage cluster for the bucket"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Bucket and keys have been provisioned"
 
 // LinodeObjectStorageBucket is the Schema for the linodeobjectstoragebuckets API
 type LinodeObjectStorageBucket struct {

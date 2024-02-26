@@ -58,8 +58,14 @@ func CreateObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 func CreateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger) ([2]*linodego.ObjectStorageKey, error) {
 	var keys [2]*linodego.ObjectStorageKey
 
-	for i, permission := range []string{"read_write", "read_only"} {
-		keyLabel := fmt.Sprintf("%s-%s", bucketScope.Object.Spec.Label, permission)
+	for i, e := range []struct {
+		permission string
+		suffix     string
+	}{
+		{"read_write", "rw"},
+		{"read_only", "ro"},
+	} {
+		keyLabel := fmt.Sprintf("%s-%s-%s", bucketScope.Object.Spec.Cluster, bucketScope.Object.Spec.Label, e.suffix)
 
 		logger.Info(fmt.Sprintf("Creating Object Storage Key %s", keyLabel))
 		opts := linodego.ObjectStorageKeyCreateOptions{
@@ -68,7 +74,7 @@ func CreateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStora
 				{
 					BucketName:  bucketScope.Object.Spec.Label,
 					Cluster:     bucketScope.Object.Spec.Cluster,
-					Permissions: permission,
+					Permissions: e.permission,
 				},
 			},
 		}

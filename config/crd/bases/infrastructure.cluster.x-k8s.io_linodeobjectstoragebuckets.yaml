@@ -11,10 +11,25 @@ spec:
     kind: LinodeObjectStorageBucket
     listKind: LinodeObjectStorageBucketList
     plural: linodeobjectstoragebuckets
+    shortNames:
+    - lobj
     singular: linodeobjectstoragebucket
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The name of the bucket
+      jsonPath: .spec.label
+      name: Label
+      type: string
+    - description: The ID of the Object Storage cluster for the bucket
+      jsonPath: .spec.cluster
+      name: Cluster
+      type: string
+    - description: Bucket and keys have been provisioned
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: LinodeObjectStorageBucket is the Schema for the linodeobjectstoragebuckets
@@ -64,15 +79,18 @@ spec:
                 x-kubernetes-map-type: atomic
               cluster:
                 description: Cluster specifies the ID of the Object Storage cluster
-                  where the bucket should be created.
+                  for the bucket.
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               keyGeneration:
                 description: KeyGeneration enables triggering rotations of keys created
                   for the bucket by incrementing the field.
                 type: integer
               label:
                 description: |-
-                  Label is the name of the desired bucket. It must be unique in the Object Storage cluster.
+                  Label is the name of the bucket. It must be unique in the Object Storage cluster.
                   If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
                 maxLength: 63
                 minLength: 3
