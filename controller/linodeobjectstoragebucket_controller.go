@@ -120,6 +120,10 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(
 		return res, r.reconcileDelete(ctx, logger, bucketScope)
 	}
 
+	if err := bucketScope.AddFinalizer(ctx); err != nil {
+		return res, err
+	}
+
 	// Created
 	if bucketScope.Object.Status.LastKeyGeneration == nil {
 		if err := r.reconcileCreate(ctx, logger, bucketScope); err != nil {
