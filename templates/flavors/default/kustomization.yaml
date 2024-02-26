@@ -1,9 +1,39 @@
 resources:
   - ../base
   - kubeadm-config-template.yaml
-  - linode-machine-template.yaml
-  - machine-deployment.yaml
+  - kubeadm-control-plane.yaml
   - ../../common-init-files
   - ../../addons/cilium
   - ../../addons/provider-linode
   - ../../addons/cluster-resource-set
+patches:
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      - op: replace
+        path: /spec/controlPlaneRef/kind
+        value: KubeadmControlPlane
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+            cni: cilium
+            ccm: linode
+            crs: ${CLUSTER_NAME}-crs
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: MachineDeployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/bootstrap/configRef/kind
+        value: KubeadmConfigTemplate
+
