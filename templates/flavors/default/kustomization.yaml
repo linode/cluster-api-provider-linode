@@ -1,5 +1,7 @@
 resources:
   - ../base
+  - kubeadm-config-template.yaml
+  - linode-machine-template.yaml
   - machine-deployment.yaml
   - ../../common-init-files
   - ../../addons/cilium
