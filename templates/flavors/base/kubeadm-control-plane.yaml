@@ -1,31 +1,3 @@
-apiVersion: cluster.x-k8s.io/v1beta1
-kind: Cluster
-metadata:
-  name: ${CLUSTER_NAME}
-  labels:
-    cni: cilium
-    ccm: linode
-    crs: ${CLUSTER_NAME}-crs
-spec:
-  clusterNetwork:
-    pods:
-      cidrBlocks:
-        - 192.168.128.0/17
-  controlPlaneRef:
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-    kind: KubeadmControlPlane
-    name: ${CLUSTER_NAME}-control-plane
-  infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-    kind: LinodeCluster
-    name: ${CLUSTER_NAME}
----
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-kind: LinodeCluster
-metadata:
-  name: ${CLUSTER_NAME}
-spec:
-  region: ${LINODE_REGION}
 ---
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
@@ -83,17 +55,3 @@ spec:
           provider-id: 'linode://{{ ds.meta_data.id }}'
         name: '{{ ds.meta_data.label }}'
   version: "${KUBERNETES_VERSION}"
----
-kind: LinodeMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-metadata:
-  name: ${CLUSTER_NAME}-control-plane
-spec:
-  template:
-    spec:
-      image: ${LINODE_OS:="linode/ubuntu22.04"}
-      type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
-      region: ${LINODE_REGION}
-      authorizedKeys:
-      # uncomment to include your ssh key in linode provisioning
-      # - ${LINODE_SSH_PUBKEY:=""}
