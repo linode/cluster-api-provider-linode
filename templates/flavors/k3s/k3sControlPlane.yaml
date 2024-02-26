@@ -1,0 +1,50 @@
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KThreesControlPlane
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  infrastructureTemplate:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: LinodeMachineTemplate
+    name: ${CLUSTER_NAME}-control-plane
+  kthreesConfigSpec:
+    files:
+      - content: |
+          flannel-backend: none
+          disable-network-policy: true
+        owner: root:root
+        path: /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+      - contentFrom:
+          secret:
+            key: cilium.yaml
+            name: linode-${CLUSTER_NAME}-crs-0
+        owner: root:root
+        path: /var/lib/rancher/k3s/server/manifests/cilium.yaml
+      - contentFrom:
+          secret:
+            key: linode-ccm.yaml
+            name: linode-${CLUSTER_NAME}-crs-0
+        owner: root:root
+        path: /var/lib/rancher/k3s/server/manifests/linode-ccm.yaml
+      - contentFrom:
+          secret:
+            key:  linode-token-region.yaml
+            name: linode-${CLUSTER_NAME}-crs-0
+        owner: root:root
+        path: /var/lib/rancher/k3s/server/manifests/linode-token-region.yaml
+    serverConfig:
+      disableComponents:
+        - servicelb
+        - traefik
+    agentConfig:
+      nodeName: '{{ ds.meta_data.label }}'
+      kubeletArgs:
+        - "provider-id=linode://{{ ds.meta_data.id }}"
+    preK3sCommands:
+      - |
+        echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+      - sed -i '/swap/d' /etc/fstab
+      - swapoff -a
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+  version: ${KUBERNETES_VERSION}
