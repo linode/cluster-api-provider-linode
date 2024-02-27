@@ -16,7 +16,7 @@ func Pointer[T any](t T) *T {
 
 // RenderObjectLabel renders a 63 charater long unique label
 func RenderObjectLabel(i types.UID) string {
-	return fmt.Sprintf("CLi-%s", strings.ReplaceAll(string(i), "-", ""))
+	return fmt.Sprintf("cli-%s", strings.ReplaceAll(string(i), "-", ""))
 }
 
 // CreateLinodeAPIFilter converts variables to API filter string
