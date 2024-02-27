@@ -2,4 +2,4 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |-
-      URI="vpcs" FILTER="{\"label\":\"cli-$(OBJ=linodevpcs/linodevpc-sample make getKubeUid | sed 's/-//g')\"}" make callLinodeApiGet | grep 'results": 0'
+      URI="vpcs" FILTER="{\"label\":\"$(OBJ=linodevpcs/linodevpc-sample make getKubeLabel)\"}" make callLinodeApiGet | grep 'results": 0'
