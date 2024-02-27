@@ -85,9 +85,10 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 
 	bucketScope, err := scope.NewObjectStorageBucketScope(
 		ctx,
+		r.LinodeApiKey,
 		scope.ObjectStorageBucketScopeParams{
-			Client:              r.Client,
-			ObjectStorageBucket: objectStorageBucket,
+			Client: r.Client,
+			Object: objectStorageBucket,
 		},
 	)
 	if err != nil {
@@ -163,7 +164,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 	}
 
 	bucketScope.Object.Status.Hostname = util.Pointer(bucket.Hostname)
-	bucketScope.Object.Status.CreationTime = metav1.Time{Time: *bucket.Created}
+	bucketScope.Object.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
 	keys, err := services.CreateObjectStorageKeys(ctx, bucketScope, logger)
 	if err != nil {

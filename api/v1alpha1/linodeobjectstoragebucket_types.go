@@ -42,8 +42,10 @@ type LinodeObjectStorageBucketSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Cluster string `json:"cluster"`
 
-	// A reference to the Secret containing the Linode API key to use for provisioning the bucket.
-	ApiKeySecretRef corev1.SecretKeySelector `json:"apiKeySecretRef"`
+	// A reference to a Secret that contains the credentials to use for provisioning the bucket.
+	// If not supplied then the credentials of the controller will be used.
+	// +optional
+	CredentialsRef *corev1.SecretReference `json:"credentialsRef"`
 
 	// May be used to trigger rotations of access keys created for the bucket by incrementing the field.
 	// +optional
@@ -76,7 +78,7 @@ type LinodeObjectStorageBucketStatus struct {
 
 	// The creation timestamp for the underlying bucket.
 	// +optional
-	CreationTime metav1.Time `json:"creationTime,omitempty"`
+	CreationTime *metav1.Time `json:"creationTime,omitempty"`
 
 	// Tracks the last known value of .spec.keyGeneration.
 	// +optional

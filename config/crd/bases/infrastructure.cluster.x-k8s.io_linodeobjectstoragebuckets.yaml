@@ -56,33 +56,27 @@ spec:
             description: LinodeObjectStorageBucketSpec defines the desired state of
               LinodeObjectStorageBucket
             properties:
-              apiKeySecretRef:
-                description: A reference to the Secret containing the Linode API key
-                  to use for provisioning the bucket.
-                properties:
-                  key:
-                    description: The key of the secret to select from.  Must be a
-                      valid secret key.
-                    type: string
-                  name:
-                    description: |-
-                      Name of the referent.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                      TODO: Add other useful fields. apiVersion, kind, uid?
-                    type: string
-                  optional:
-                    description: Specify whether the Secret or its key must be defined
-                    type: boolean
-                required:
-                - key
-                type: object
-                x-kubernetes-map-type: atomic
               cluster:
                 description: The ID of the Object Storage cluster for the bucket.
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              credentialsRef:
+                description: |-
+                  A reference to a Secret that contains the credentials to use for provisioning the bucket.
+                  If not supplied then the credentials of the controller will be used.
+                properties:
+                  name:
+                    description: name is unique within a namespace to reference a
+                      secret resource.
+                    type: string
+                  namespace:
+                    description: namespace defines the space within which the secret
+                      name must be unique.
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
               keyGeneration:
                 description: May be used to trigger rotations of access keys created
                   for the bucket by incrementing the field.
@@ -98,7 +92,6 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
             required:
-            - apiKeySecretRef
             - cluster
             type: object
           status:

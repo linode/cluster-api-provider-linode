@@ -8,7 +8,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -18,48 +17,55 @@ import (
 )
 
 type ObjectStorageBucketScopeParams struct {
-	Client              client.Client
-	ObjectStorageBucket *infrav1alpha1.LinodeObjectStorageBucket
+	Client client.Client
+	Object *infrav1alpha1.LinodeObjectStorageBucket
 }
 
 type ObjectStorageBucketScope struct {
-	client client.Client
-
+	client       client.Client
 	Object       *infrav1alpha1.LinodeObjectStorageBucket
-	PatchHelper  *patch.Helper
 	LinodeClient *linodego.Client
+	PatchHelper  *patch.Helper
 }
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
-	if params.ObjectStorageBucket == nil {
+	if params.Object == nil {
 		return errors.New("object storage bucket is required when creating an ObjectStorageBucketScope")
 	}
 
 	return nil
 }
 
-func NewObjectStorageBucketScope(ctx context.Context, params ObjectStorageBucketScopeParams) (*ObjectStorageBucketScope, error) {
+func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params ObjectStorageBucketScopeParams) (*ObjectStorageBucketScope, error) {
 	if err := validateObjectStorageBucketScopeParams(params); err != nil {
 		return nil, err
 	}
 
-	helper, err := patch.NewHelper(params.ObjectStorageBucket, params.Client)
+	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
+	if params.Object.Spec.CredentialsRef != nil {
+		credRef := *params.Object.Spec.CredentialsRef
+		if credRef.Namespace == "" {
+			credRef.Namespace = params.Object.Namespace
+		}
+		data, err := getCredentialDataFromRef(ctx, params.Client, &credRef)
+		if err != nil {
+			return nil, fmt.Errorf("credentials from cluster secret ref: %w", err)
+		}
+		apiKey = string(data)
+	}
+	linodeClient := createLinodeClient(apiKey)
+
+	helper, err := patch.NewHelper(params.Object, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	bucketScope := &ObjectStorageBucketScope{
-		client:      params.Client,
-		Object:      params.ObjectStorageBucket,
-		PatchHelper: helper,
+		client:       params.Client,
+		Object:       params.Object,
+		LinodeClient: linodeClient,
+		PatchHelper:  helper,
 	}
-
-	apiKey, err := bucketScope.GetApiKey(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get api key: %w", err)
-	}
-
-	bucketScope.LinodeClient = createLinodeClient(apiKey)
 
 	return bucketScope, nil
 }
@@ -82,39 +88,6 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// GetApiKey returns the Linode API key from the Secret referenced by the ObjectStorageBucket's apiKeySecretRef.
-func (s *ObjectStorageBucketScope) GetApiKey(ctx context.Context) (string, error) {
-	if s.Object.Spec.ApiKeySecretRef.Name == "" || s.Object.Spec.ApiKeySecretRef.Key == "" {
-		return "", fmt.Errorf(
-			"api key secret ref must specify a name and key for LinodeObjectStorageBucket %s/%s",
-			s.Object.Namespace,
-			s.Object.Name,
-		)
-	}
-
-	secret := &corev1.Secret{}
-	key := types.NamespacedName{Namespace: s.Object.Namespace, Name: s.Object.Spec.ApiKeySecretRef.Name}
-	if err := s.client.Get(ctx, key, secret); err != nil {
-		return "", fmt.Errorf(
-			"failed to retrieve api key secret for LinodeObjectStorageBucket %s/%s: %w",
-			s.Object.Namespace,
-			s.Object.Name,
-			err,
-		)
-	}
-
-	apiTokenBytes, ok := secret.Data[s.Object.Spec.ApiKeySecretRef.Key]
-	if !ok {
-		return "", fmt.Errorf(
-			"api key secret ref key is invalid for LinodeObjectStorageBucket %s/%s",
-			s.Object.Namespace,
-			s.Object.Name,
-		)
-	}
-
-	return string(apiTokenBytes), nil
 }
 
 // CreateAccessKeySecret creates a Secret containing keys created for accessing the bucket.
