@@ -5,6 +5,3 @@ metadata:
 spec:
   label: sample
   cluster: us-sea-1
-  apiKeySecretRef:
-    name: linodeobjectstoragebucket-sample
-    key: apiToken
