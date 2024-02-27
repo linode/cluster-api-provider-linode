@@ -1,0 +1,9 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeClusterTemplate
+metadata:
+  name: kubeadm
+spec:
+  template:
+    spec:
+      # region is a required field (OpenAPI schema).
+      region: REPLACEME

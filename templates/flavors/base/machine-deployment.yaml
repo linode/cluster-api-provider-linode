@@ -1,0 +1,23 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${WORKER_MACHINE_COUNT}
+  selector:
+    matchLabels:
+  template:
+    spec:
+      clusterName: ${CLUSTER_NAME}
+      version: "${KUBERNETES_VERSION}"
+      bootstrap:
+        configRef:
+          name: ${CLUSTER_NAME}-md-0
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: REPLACEME
+      infrastructureRef:
+        name: ${CLUSTER_NAME}-md-0
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate

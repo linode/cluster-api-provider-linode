@@ -1,0 +1,57 @@
+---
+kind: KubeadmControlPlane
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+  machineTemplate:
+    infrastructureRef:
+      kind: LinodeMachineTemplate
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      name: ${CLUSTER_NAME}-control-plane
+  kubeadmConfigSpec:
+    files:
+      - path: /etc/containerd/config.toml
+        contentFrom:
+          secret:
+            name: common-init-files
+            key: containerd-config.toml
+      - path: /etc/modules-load.d/k8s.conf
+        contentFrom:
+          secret:
+            name: common-init-files
+            key: k8s-modules.conf
+      - path: /etc/sysctl.d/k8s.conf
+        contentFrom:
+          secret:
+            name: common-init-files
+            key: sysctl-k8s.conf
+      - path: /kubeadm-pre-init.sh
+        contentFrom:
+          secret:
+            name: common-init-files
+            key: kubeadm-pre-init.sh
+        permissions: "0500"
+    preKubeadmCommands:
+      - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "${KUBERNETES_VERSION}"
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          cloud-provider: external
+      controllerManager:
+        extraArgs:
+          cloud-provider: external
+    initConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+          provider-id: 'linode://{{ ds.meta_data.id }}'
+        name: '{{ ds.meta_data.label }}'
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+          provider-id: 'linode://{{ ds.meta_data.id }}'
+        name: '{{ ds.meta_data.label }}'
+  version: "${KUBERNETES_VERSION}"
