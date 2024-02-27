@@ -55,8 +55,8 @@ func CreateObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 	return bucket, nil
 }
 
-func CreateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger) ([2]*linodego.ObjectStorageKey, error) {
-	var keys [2]*linodego.ObjectStorageKey
+func CreateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger) ([2]linodego.ObjectStorageKey, error) {
+	var newKeys [2]linodego.ObjectStorageKey
 
 	for i, e := range []struct {
 		permission string
@@ -66,6 +66,30 @@ func CreateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStora
 		{"read_only", "ro"},
 	} {
 		keyLabel := fmt.Sprintf("%s-%s-%s", bucketScope.Object.Spec.Cluster, bucketScope.Object.Spec.Label, e.suffix)
+		filter := map[string]string{
+			"label": keyLabel,
+		}
+
+		rawFilter, err := json.Marshal(filter)
+		if err != nil {
+			return newKeys, err
+		}
+
+		var existingKeys []linodego.ObjectStorageKey
+		if existingKeys, err = bucketScope.LinodeClient.ListObjectStorageKeys(
+			ctx,
+			linodego.NewListOptions(1, string(rawFilter)),
+		); err != nil {
+			logger.Info("Failed to list object storage keys", "error", err.Error())
+
+			return newKeys, err
+		}
+		if len(existingKeys) == 1 {
+			logger.Info(fmt.Sprintf("ObjectStorageBucket %s already exists", existingKeys[0].Label))
+
+			newKeys[i] = existingKeys[0]
+			continue
+		}
 
 		logger.Info(fmt.Sprintf("Creating Object Storage Key %s", keyLabel))
 		opts := linodego.ObjectStorageKeyCreateOptions{
@@ -83,11 +107,11 @@ func CreateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStora
 		if err != nil {
 			logger.Info("Failed to create Object Storage Bucket", "label", keyLabel, "error", err.Error())
 
-			return keys, err
+			return newKeys, err
 		}
 
-		keys[i] = key
+		newKeys[i] = *key
 	}
 
-	return keys, nil
+	return newKeys, nil
 }

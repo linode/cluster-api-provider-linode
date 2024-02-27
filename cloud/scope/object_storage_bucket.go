@@ -91,7 +91,7 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 }
 
 // CreateAccessKeySecret creates a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, keys [2]*linodego.ObjectStorageKey, secretName string) error {
+func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, keys [2]linodego.ObjectStorageKey, secretName string) error {
 	var err error
 
 	accessKeys := make([]json.RawMessage, 2)
