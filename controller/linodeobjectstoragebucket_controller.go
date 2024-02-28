@@ -18,12 +18,14 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,6 +42,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
+	"github.com/linode/linodego"
 )
 
 // LinodeObjectStorageBucketReconciler reconciles a LinodeObjectStorageBucket object
@@ -156,7 +159,17 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 		bucketScope.Object.Spec.Label = util.RenderObjectLabel(bucketScope.Object.UID)
 	}
 
-	bucket, err := services.CreateObjectStorageBucket(ctx, bucketScope, logger)
+	bucket := &linodego.ObjectStorageBucket{}
+
+	exists, err := r.bucketExists(ctx, logger, bucketScope)
+	if !exists {
+		bucket, err = services.CreateObjectStorageBucket(ctx, bucketScope, logger)
+		if err != nil {
+			r.setFailure(bucketScope, err)
+
+			return err
+		}
+	}
 	if err != nil {
 		r.setFailure(bucketScope, err)
 
@@ -191,11 +204,47 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	panic("unimplemented")
+	return nil
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	panic("unimplemented")
+	name := types.NamespacedName{Namespace: bucketScope.Object.Namespace, Name: bucketScope.Object.Name}
+	bucket := &infrav1alpha1.LinodeObjectStorageBucket{}
+	if err := r.Client.Get(ctx, name, bucket); err != nil {
+		if apierrors.IsNotFound(err); err != nil {
+			logger.Error(err, "Failed to fetch bucket")
+			return err
+		}
+		return nil
+	}
+
+	// Delete the OBJ bucket.
+	if err := services.DeleteObjectStorageBucket(ctx, bucketScope, logger); err != nil {
+		return fmt.Errorf("delete object storage bucket: %w", err)
+	}
+
+	// Remove the finalizer.
+	// This will allow the ObjectStorageBucket object to be deleted.
+	if err := bucketScope.RemoveFinalizer(ctx); err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+// bucketExists indicates whether or not an Object Storage Bucket exists.
+// It uses the Linode API.
+func (r *LinodeObjectStorageBucketReconciler) bucketExists(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) (bool, error) {
+	if bucketScope.Object == nil {
+		return false, errors.New("nil bucket")
+	}
+
+	_, err := bucketScope.LinodeClient.GetObjectStorageBucket(ctx, bucketScope.Object.Spec.Cluster, bucketScope.Object.ObjectMeta.Name)
+	if err != nil {
+		return false, fmt.Errorf("get object storage bucket: %w", err)
+	}
+
+	return true, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
