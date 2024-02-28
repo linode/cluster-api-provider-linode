@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+- apiVersion: cluster.x-k8s.io/v1beta1
+  kind: Cluster
+  name: vpc-cluster-test
+- apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: LinodeVPC
+  name: machine-test-vpc

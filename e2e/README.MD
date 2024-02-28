@@ -2,9 +2,8 @@
 
 The E2E framework uses Kuttl under the hood. Kuttl is a simple and most importantly static tool that handles applying manifests for running assertions in a namespace it generates for each test.
 
-In order to dynamically generate manifests, Kuttl supports declaring a `TestStep` manifest which includes an option for running scripts. This allows us apply manifests with dynamic values from stdin.
 
-Additionally, helper functions can be invoked in the scripts by creating a Makefile in each test folder that references `../../Makefile` (i.e. `e2e/Makefile`).
+Helper functions can be invoked in the scripts by creating a Makefile in each test folder that references `../../Makefile` (i.e. `e2e/Makefile`) in order to do custom validation.
 
 ## Example TestStep
 
@@ -13,20 +12,7 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |-
-      cat <<EOF | kubectl apply -n $NAMESPACE -f -
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-      kind: LinodeMachine
-      metadata:
-        ownerReferences:
-        - apiVersion: cluster.x-k8s.io/v1beta1
-          kind: Machine
-          name: machine-sample
-          uid: $(OBJ=machines/machine-sample make getKubeUid)
-        name: linodemachine-sample
-      spec:
-        region: us-sea
-        type: g5-nanode-1
-      EOF
+      URI="nodebalancers" FILTER="{\"label\":\"cluster-test-api-server\"}" make callLinodeApiGet | grep 'results": 1'
 ```
 
 ## Test Execution
@@ -54,6 +40,6 @@ status:
 ## Executing individual tests
 
 ```bash
-make _e2etest-infra # Only once per cluster!
-(cd e2e/linodemachine-controller/minimal ; make runThisTest)
+make local-deploy # Only once per cluster!
+(cd e2e/linodemachine-controller/minimal-linodemachine ; make runThisTest)
 ``` 

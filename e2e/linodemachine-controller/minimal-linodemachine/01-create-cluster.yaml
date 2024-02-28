@@ -1,0 +1,21 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: linodemachine-cluster-test
+spec:
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: linodecluster-test-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: LinodeCluster
+    name: linodemachine-test
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeCluster
+metadata:
+  name: linodemachine-test
+spec:
+  region: us-sea
