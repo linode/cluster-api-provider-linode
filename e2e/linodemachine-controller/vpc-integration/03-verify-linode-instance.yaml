@@ -1,0 +1,7 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |-
+      URI="linode/instances" FILTER="{\"tags\":\"vpc-machine-test\"}" make callLinodeApiGet | grep 'results": 1'
+  - script: |-
+      URI="vpcs" FILTER="{\"label\":\"machine-test-vpc\"}" make callLinodeApiGet | grep 'active": true'
