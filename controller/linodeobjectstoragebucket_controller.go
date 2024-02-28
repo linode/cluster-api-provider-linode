@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -162,7 +163,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 
 	bucket := &linodego.ObjectStorageBucket{}
 
-	exists, err := r.bucketExists(ctx, logger, bucketScope)
+	exists, err := services.bucketExists(ctx, logger, bucketScope)
 	if !exists {
 		bucket, err = services.CreateObjectStorageBucket(ctx, bucketScope, logger)
 		if err != nil {
@@ -272,26 +273,9 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 	// Remove the finalizer.
 	// This will allow the ObjectStorageBucket object to be deleted.
-	if err := bucketScope.RemoveFinalizer(ctx); err != nil {
-		return nil
-	}
+	controllerutil.RemoveFinalizer(clusterScope.Object, infrav1alpha1.GroupVersion.String())
 
 	return nil
-}
-
-// bucketExists indicates whether or not an Object Storage Bucket exists.
-// It uses the Linode API.
-func (r *LinodeObjectStorageBucketReconciler) bucketExists(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) (bool, error) {
-	if bucketScope.Object == nil {
-		return false, errors.New("nil bucket")
-	}
-
-	_, err := bucketScope.LinodeClient.GetObjectStorageBucket(ctx, bucketScope.Object.Spec.Cluster, bucketScope.Object.ObjectMeta.Name)
-	if err != nil {
-		return false, fmt.Errorf("get object storage bucket: %w", err)
-	}
-
-	return true, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

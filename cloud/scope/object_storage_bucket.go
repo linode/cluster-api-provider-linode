@@ -90,15 +90,6 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
-// RemoveFinalizer removes a finalizer immediately patches the
-// object to avoid any race conditions.
-func (s *ObjectStorageBucketScope) RemoveFinalizer(ctx context.Context) error {
-	if controllerutil.RemoveFinalizer(s.Object, infrav1alpha1.GroupVersion.String()) {
-		return s.Close(ctx)
-	}
-	return nil
-}
-
 // CreateAccessKeySecret creates a Secret containing keys created for accessing the bucket.
 func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, keys [2]linodego.ObjectStorageKey, secretName string) error {
 	var err error
