@@ -1,11 +1,11 @@
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
-  name: linode-blockstorage-csi-driver
+  name: csi-driver-linode
 spec:
   clusterSelector:
     matchLabels:
-      csi-driver: linode
+      csi: linode
   repoURL: https://linode.github.io/linode-blockstorage-csi-driver/
   chartName: linode-blockstorage-csi-driver
   namespace: kube-system
