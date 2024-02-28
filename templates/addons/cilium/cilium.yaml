@@ -15,6 +15,10 @@ spec:
     wait: true
     timeout: 5m
   valuesTemplate: |
+    ipam:
+      mode: kubernetes
+    k8s:
+      requireIPv4PodCIDR: true
     hubble:
       relay:
         enabled: true
