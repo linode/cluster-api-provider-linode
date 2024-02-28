@@ -17,3 +17,4 @@ spec:
   valuesTemplate: |
     secretRef:
       name: "linode-token-region"
+      apiTokenRef: "apiToken"
