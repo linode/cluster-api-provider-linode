@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -208,6 +209,8 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Contex
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
+
+	var newKeys [2]float64
 	name := types.NamespacedName{Namespace: bucketScope.Object.Namespace, Name: bucketScope.Object.Name}
 	bucket := &infrav1alpha1.LinodeObjectStorageBucket{}
 	if err := r.Client.Get(ctx, name, bucket); err != nil {
@@ -220,6 +223,50 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 	// Delete the OBJ bucket.
 	if err := services.DeleteObjectStorageBucket(ctx, bucketScope, logger); err != nil {
+		return fmt.Errorf("delete object storage bucket: %w", err)
+	}
+
+	// Delete the access keys.
+	secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
+	objkey := client.ObjectKey{
+		Namespace: bucketScope.Object.Namespace,
+		Name:      secretName,
+	}
+	var secret corev1.Secret
+	if err := r.Client.Get(ctx, objkey, &secret); err != nil {
+		if apierrors.IsNotFound(err); err != nil {
+			logger.Error(err, "Failed to get secret")
+			return err
+		}
+	}
+	for i, e := range []struct {
+		permission string
+		suffix     string
+	}{
+		{"read_write", "rw"},
+		{"read_only", "ro"},
+	} {
+		secretDataForKey, isset := secret.Data[e.permission]
+		if !isset {
+			logger.Info("missing field in object storage key secret", "field", e.permission, "secret", secretName)
+			return fmt.Errorf("secret %s missing data field: %s", secretName, e.permission)
+		}
+		decodedSecretDataForKey := string(secretDataForKey)
+
+		var jsonMap map[string]interface{}
+		json.Unmarshal([]byte(string(decodedSecretDataForKey)), &jsonMap)
+
+		accessKeyID, ok := jsonMap["id"]
+		if !ok {
+			err := errors.New("key not found")
+			return err
+		}
+		key := accessKeyID.(float64)
+
+		newKeys[i] = key
+	}
+
+	if err := services.DeleteObjectStorageKeys(ctx, bucketScope, logger, newKeys); err != nil {
 		return fmt.Errorf("delete object storage bucket: %w", err)
 	}
 
