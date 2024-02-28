@@ -34,7 +34,7 @@
         clusterNetwork:
           pods:
             cidrBlocks:
-            - 192.168.128.0/17
+            - 10.192.0.0/10
         topology:
           class: kubeadm
           controlPlane:
