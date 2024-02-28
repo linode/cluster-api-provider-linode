@@ -120,12 +120,12 @@ test: manifests generate fmt vet envtest ## Run tests.
 e2etest:
 	make --no-print-directory _e2etest # Workaround to force the flag on Github Action
 
-_e2etest-infra: kind ctlptl tilt kuttl kustomize clusterctl
+local-deploy: kind ctlptl tilt kuttl kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci --timeout 240s -f Tiltfile
 
-_e2etest: manifests generate _e2etest-infra
+_e2etest: manifests generate local-deploy
 	ROOT_DIR="$(PWD)" $(KUTTL) test --config e2e/kuttl-config.yaml
 
 ## --------------------------------------

@@ -1,0 +1,32 @@
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+    name: linodecluster-test-control-plane
+spec:
+    kubeadmConfigSpec:
+        clusterConfiguration:
+            apiServer:
+                extraArgs:
+                    cloud-provider: external
+            controllerManager:
+                extraArgs:
+                    cloud-provider: external
+    machineTemplate:
+        infrastructureRef:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            name: linodemachine-test
+    replicas: 1
+    version: 1.29.1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachineTemplate
+metadata:
+    name: linodemachine-test
+spec:
+    template:
+        spec:
+            region: us-sea
+            type: g5-nanode-1
+
