@@ -90,8 +90,8 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
-// CreateAccessKeySecret creates a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, keys [2]linodego.ObjectStorageKey, secretName string) error {
+// ApplyAccessKeySecret applies a Secret containing keys created for accessing the bucket.
+func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [2]linodego.ObjectStorageKey, secretName string) error {
 	var err error
 
 	accessKeys := make([]json.RawMessage, 2)
@@ -130,13 +130,25 @@ func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, ke
 	}
 
 	if err := s.client.Create(ctx, secret); err != nil {
-		return fmt.Errorf(
-			"failed to create secret %s for LinodeObjectStorageBucket %s/%s: %w",
-			secretName,
-			s.Object.Namespace,
-			s.Object.Name,
-			err,
-		)
+		if client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf(
+				"failed to create secret %s for LinodeObjectStorageBucket %s/%s: %w",
+				secretName,
+				s.Object.Namespace,
+				s.Object.Name,
+				err,
+			)
+		}
+
+		if err := s.PatchHelper.Patch(ctx, secret); err != nil {
+			return fmt.Errorf(
+				"failed to patch secret %s for LinodeObjectStorageBucket %s/%s: %w",
+				secretName,
+				s.Object.Namespace,
+				s.Object.Name,
+				err,
+			)
+		}
 	}
 
 	return nil

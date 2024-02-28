@@ -174,7 +174,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 	}
 
 	secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
-	if err := bucketScope.CreateAccessKeySecret(ctx, keys, secretName); err != nil {
+	if err := bucketScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
 		r.setFailure(bucketScope, err)
 
 		return err
