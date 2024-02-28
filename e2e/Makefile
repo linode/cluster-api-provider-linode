@@ -17,6 +17,9 @@ _runThisTest:
 getKubeUid:
 	@kubectl get -o jsonpath='{.metadata.uid}' -n "$$NAMESPACE" "$$OBJ"
 
+getKubeLabel:
+	@kubectl get -o jsonpath='{.spec.label}' -n "$$NAMESPACE" "$$OBJ"
+
 patchKubeObj:
 	@kubectl patch --type=merge -p "$$PATCH" -n "$$NAMESPACE" "$$OBJ"
 

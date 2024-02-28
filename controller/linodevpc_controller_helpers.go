@@ -41,7 +41,7 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 	}
 
 	if createConfig.Label == "" {
-		createConfig.Label = util.RenderObjectLabel(vpcScope.LinodeVPC.UID)
+		createConfig.Label = vpcScope.LinodeVPC.Name
 	}
 
 	if vpcs, err := vpcScope.LinodeClient.ListVPCs(ctx, linodego.NewListOptions(1, util.CreateLinodeAPIFilter(createConfig.Label, nil))); err != nil {
