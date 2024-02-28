@@ -4,6 +4,7 @@ resources:
   - kubeadm-control-plane.yaml
   - ../../common-init-files
   - ../../addons/cilium
+  - ../../addons/csi-driver-linode
   - ../../addons/provider-linode
   - ../../addons/cluster-resource-set
 patches:
@@ -27,6 +28,7 @@ patches:
         labels:
             cni: cilium
             ccm: linode
+            csi: linode
             crs: ${CLUSTER_NAME}-crs
   - target:
       group: cluster.x-k8s.io
@@ -36,4 +38,3 @@ patches:
       - op: replace
         path: /spec/template/spec/bootstrap/configRef/kind
         value: KubeadmConfigTemplate
-
