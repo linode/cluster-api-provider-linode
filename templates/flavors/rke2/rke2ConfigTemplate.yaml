@@ -7,7 +7,7 @@ spec:
   template:
     spec:
       agentConfig:
-        version: ${KUBERNETES_VERSION}
+        version: ${RKE2_KUBERNETES_VERSION}
         nodeName: '{{ ds.meta_data.label }}'
         kubelet:
           extraArgs:
