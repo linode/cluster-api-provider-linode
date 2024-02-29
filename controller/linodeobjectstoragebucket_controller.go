@@ -44,7 +44,6 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
-	"github.com/linode/linodego"
 )
 
 // LinodeObjectStorageBucketReconciler reconciles a LinodeObjectStorageBucket object
@@ -161,17 +160,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 		bucketScope.Object.Spec.Label = util.RenderObjectLabel(bucketScope.Object.UID)
 	}
 
-	bucket := &linodego.ObjectStorageBucket{}
-
-	exists, err := services.bucketExists(ctx, logger, bucketScope)
-	if !exists {
-		bucket, err = services.CreateObjectStorageBucket(ctx, bucketScope, logger)
-		if err != nil {
-			r.setFailure(bucketScope, err)
-
-			return err
-		}
-	}
+	bucket, err := services.CreateObjectStorageBucket(ctx, bucketScope, logger)
 	if err != nil {
 		r.setFailure(bucketScope, err)
 
@@ -206,7 +195,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	return nil
+	anic("unimplemented")
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {

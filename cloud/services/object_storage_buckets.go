@@ -129,14 +129,3 @@ func DeleteObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStora
 
 	return nil
 }
-
-// bucketExists indicates whether or not an Object Storage Bucket exists.
-// It uses the Linode API.
-func (r *LinodeObjectStorageBucketReconciler) bucketExists(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) (bool, error) {
-	_, err := bucketScope.LinodeClient.GetObjectStorageBucket(ctx, bucketScope.Object.Spec.Cluster, bucketScope.Object.ObjectMeta.Name)
-	if err != nil {
-		return false, fmt.Errorf("get object storage bucket: %w", err)
-	}
-
-	return true, nil
-}
