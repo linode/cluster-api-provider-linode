@@ -55,12 +55,10 @@ func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 	return bucket, nil
 }
 
-func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger) ([2]linodego.ObjectStorageKey, error) {
+func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, shouldRotate bool, logger logr.Logger) ([2]linodego.ObjectStorageKey, error) {
 	var newKeys [2]linodego.ObjectStorageKey
 	var existingKeys []linodego.ObjectStorageKey
 	var err error
-
-	shouldRotate := *bucketScope.Object.Spec.KeyGeneration != *bucketScope.Object.Status.LastKeyGeneration
 
 	if existingKeys, err = bucketScope.LinodeClient.ListObjectStorageKeys(
 		ctx,
@@ -96,7 +94,8 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.Obj
 			}
 
 			// Keys are being rotated, so we should revoke this key before making a new one
-			// TODO: Revoke existing key
+			// TODO: Revoke existing key; for now just continue so more keys are not created
+			continue
 		}
 
 		key, err := createObjectStorageKey(ctx, bucketScope, keyLabel, e.permission, logger)

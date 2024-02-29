@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -134,6 +135,8 @@ func (r *LinodeObjectStorageBucketReconciler) setFailure(bucketScope *scope.Obje
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
+	logger.Info("Applying LinodeObjectStorageBucket")
+
 	bucketScope.Object.Status.Ready = false
 
 	if err := bucketScope.AddFinalizer(ctx); err != nil {
@@ -154,8 +157,8 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	bucketScope.Object.Status.Hostname = util.Pointer(bucket.Hostname)
 	bucketScope.Object.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
-	if bucketScope.Object.Status.KeySecretName == nil || *bucketScope.Object.Spec.KeyGeneration != *bucketScope.Object.Status.LastKeyGeneration {
-		keys, err := services.CreateOrRotateObjectStorageKeys(ctx, bucketScope, logger)
+	if bucketScope.Object.Status.KeySecretName == nil || bucketScope.ShouldGenerateAccessKeys() {
+		keys, err := services.CreateOrRotateObjectStorageKeys(ctx, bucketScope, true, logger)
 		if err != nil {
 			r.setFailure(bucketScope, err)
 
@@ -181,7 +184,11 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	panic("unimplemented")
+	logger.Info("Deleting LinodeObjectStorageBucket")
+
+	controllerutil.RemoveFinalizer(bucketScope.Object, infrav1alpha1.GroupVersion.String())
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

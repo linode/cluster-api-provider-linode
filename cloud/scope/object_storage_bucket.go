@@ -22,10 +22,11 @@ type ObjectStorageBucketScopeParams struct {
 }
 
 type ObjectStorageBucketScope struct {
-	client       client.Client
-	Object       *infrav1alpha1.LinodeObjectStorageBucket
-	LinodeClient *linodego.Client
-	PatchHelper  *patch.Helper
+	client            client.Client
+	Object            *infrav1alpha1.LinodeObjectStorageBucket
+	LinodeClient      *linodego.Client
+	BucketPatchHelper *patch.Helper
+	SecretPatchHelper *patch.Helper
 }
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
@@ -55,16 +56,22 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 	}
 	linodeClient := createLinodeClient(apiKey)
 
-	helper, err := patch.NewHelper(params.Object, params.Client)
+	bucketPatchHelper, err := patch.NewHelper(params.Object, params.Client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init patch helper: %w", err)
+	}
+
+	secretPatchHelper, err := patch.NewHelper(&corev1.Secret{}, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	bucketScope := &ObjectStorageBucketScope{
-		client:       params.Client,
-		Object:       params.Object,
-		LinodeClient: linodeClient,
-		PatchHelper:  helper,
+		client:            params.Client,
+		Object:            params.Object,
+		LinodeClient:      linodeClient,
+		BucketPatchHelper: bucketPatchHelper,
+		SecretPatchHelper: secretPatchHelper,
 	}
 
 	return bucketScope, nil
@@ -72,7 +79,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 
 // PatchObject persists the object storage bucket configuration and status.
 func (s *ObjectStorageBucketScope) PatchObject(ctx context.Context) error {
-	return s.PatchHelper.Patch(ctx, s.Object)
+	return s.BucketPatchHelper.Patch(ctx, s.Object)
 }
 
 // Close closes the current scope persisting the object storage bucket configuration and status.
@@ -140,7 +147,7 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 			)
 		}
 
-		if err := s.PatchHelper.Patch(ctx, secret); err != nil {
+		if err := s.SecretPatchHelper.Patch(ctx, secret); err != nil {
 			return fmt.Errorf(
 				"failed to patch secret %s for LinodeObjectStorageBucket %s/%s: %w",
 				secretName,
@@ -152,4 +159,12 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	}
 
 	return nil
+}
+
+func (s *ObjectStorageBucketScope) ShouldGenerateAccessKeys() bool {
+	if s.Object.Status.LastKeyGeneration == nil {
+		return true
+	}
+
+	return *s.Object.Spec.KeyGeneration != *s.Object.Status.LastKeyGeneration
 }
