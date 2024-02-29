@@ -192,7 +192,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	return nil
+	panic("unimplemented")
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
