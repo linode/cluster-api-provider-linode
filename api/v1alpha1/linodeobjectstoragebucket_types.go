@@ -36,7 +36,7 @@ type LinodeObjectStorageBucketSpec struct {
 	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
-	Label string `json:"label,omitempty"`
+	Label *string `json:"label,omitempty"`
 
 	// The ID of the Object Storage cluster for the bucket.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
@@ -47,8 +47,9 @@ type LinodeObjectStorageBucketSpec struct {
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef"`
 
-	// May be used to trigger rotations of access keys created for the bucket by incrementing the field.
+	// May be modified to trigger rotations of access keys created for the bucket.
 	// +optional
+	// +kubebuilder:default=0
 	KeyGeneration *int `json:"keyGeneration,omitempty"`
 }
 
