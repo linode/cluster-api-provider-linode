@@ -21,6 +21,7 @@ spec:
           name: linode-${CLUSTER_NAME}-crs-0
       owner: root:root
       path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
+  registrationMethod: internal-only-ips
   serverConfig:
     cni: cilium
     cloudProviderName: external
@@ -36,6 +37,9 @@ spec:
       extraArgs:
         - "provider-id=linode://{{ ds.meta_data.id }}"
   preRKE2Commands:
+    - |
+      mkdir -p /etc/rancher/rke2/config.yaml.d/
+      echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
     - sed -i '/swap/d' /etc/fstab
     - swapoff -a
     - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
