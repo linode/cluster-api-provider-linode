@@ -222,11 +222,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 		return nil
 	}
 
-	// Delete the OBJ bucket.
-	if err := services.DeleteObjectStorageBucket(ctx, bucketScope, logger); err != nil {
-		return fmt.Errorf("delete object storage bucket: %w", err)
-	}
-
 	// Delete the access keys.
 	secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
 	objkey := client.ObjectKey{

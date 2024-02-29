@@ -55,15 +55,6 @@ func CreateObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 	return bucket, nil
 }
 
-func DeleteObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger) error {
-	// Delete the OBJ bucket.
-	if err := bucketScope.LinodeClient.DeleteObjectStorageBucket(ctx, bucketScope.Object.Spec.Cluster, bucketScope.Object.Spec.Label); err != nil {
-		return fmt.Errorf("delete object storage bucket: %w", err)
-	}
-
-	return nil
-}
-
 func CreateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger) ([2]linodego.ObjectStorageKey, error) {
 	var newKeys [2]linodego.ObjectStorageKey
 	var existingKeys []linodego.ObjectStorageKey
