@@ -30,7 +30,7 @@ type LinodeObjectStorageBucketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// The name of the bucket. It must be unique in the Object Storage cluster.
+	// Label specifies the name of the bucket. It must be unique in the Object Storage cluster.
 	// If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
 	// +kubebuilder:validation:MinLength=3
 	// +kubebuilder:validation:MaxLength=63
@@ -38,16 +38,16 @@ type LinodeObjectStorageBucketSpec struct {
 	// +optional
 	Label *string `json:"label,omitempty"`
 
-	// The ID of the Object Storage cluster for the bucket.
+	// Cluster is the ID of the Object Storage cluster for the bucket.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Cluster string `json:"cluster"`
 
-	// A reference to a Secret that contains the credentials to use for provisioning the bucket.
+	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
 	// If not supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef"`
 
-	// May be modified to trigger rotations of access keys created for the bucket.
+	// KeyGeneration may be modified to trigger rotations of access keys created for the bucket.
 	// +optional
 	// +kubebuilder:default=0
 	KeyGeneration *int `json:"keyGeneration,omitempty"`
@@ -58,34 +58,34 @@ type LinodeObjectStorageBucketStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Denotes that the bucket has been provisioned along with access keys.
+	// Ready denotes that the bucket has been provisioned along with access keys.
 	// +optional
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
-	// Will be set in the event that there is a terminal problem
+	// FailureMessage will be set in the event that there is a terminal problem
 	// reconciling the Object Storage Bucket and will contain a verbose string
 	// suitable for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
-	// Current service state of the LinodeObjectStorageBucket.
+	// Conditions specify the service state of the LinodeObjectStorageBucket.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 
-	// The hostname assigned to the bucket.
+	// Hostname is the address assigned to the bucket.
 	// +optional
 	Hostname *string `json:"hostname,omitempty"`
 
-	// The creation timestamp for the underlying bucket.
+	// CreationTime specifies the creation timestamp for the bucket.
 	// +optional
 	CreationTime *metav1.Time `json:"creationTime,omitempty"`
 
-	// Tracks the last known value of .spec.keyGeneration.
+	// LastKeyGeneration tracks the last known value of .spec.keyGeneration.
 	// +optional
 	LastKeyGeneration *int `json:"lastKeyGeneration,omitempty"`
 
-	// The name of the Secret containing access keys for the bucket.
+	// KeySecretName specifies the name of the Secret containing access keys for the bucket.
 	// +optional
 	KeySecretName *string `json:"keySecretName,omitempty"`
 }
