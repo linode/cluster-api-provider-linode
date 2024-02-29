@@ -5,7 +5,7 @@ set -euo pipefail
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 FLAVORS_DIR="${REPO_ROOT}/templates/flavors"
 
-for name in $(find "${FLAVORS_DIR}/"* -maxdepth 0 -type d -print0 | xargs -0 -I {} basename {} | grep -v base); do
+for name in $(find "${FLAVORS_DIR}/"* -maxdepth 0 -type d -print0 | xargs -0 -I {} basename {} | grep -v base | grep -v clusterclass-base ); do
     # clusterctl expects clusterclass not have the "cluster-template" prefix
     # except for the actual cluster template using the clusterclass
     if [[ "$name" == clusterclass* ]]; then
