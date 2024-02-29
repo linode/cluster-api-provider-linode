@@ -10,6 +10,7 @@
       - [ClusterClass kubeadm](./topics/flavors/clusterclass-kubeadm.md)
       - [k3s](./topics/flavors/k3s.md)
       - [rke2](./topics/flavors/rke2.md)
+    - [Etcd](./topics/etcd.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
 - [Reference](./reference/reference.md)

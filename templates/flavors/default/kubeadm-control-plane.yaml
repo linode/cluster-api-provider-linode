@@ -36,12 +36,25 @@ spec:
     preKubeadmCommands:
       - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "${KUBERNETES_VERSION}"
     clusterConfiguration:
+      etcd:
+        local:
+          dataDir: /var/lib/etcd_data/etcd
+          extraArgs:
+            quota-backend-bytes: "8589934592"
       apiServer:
         extraArgs:
           cloud-provider: external
       controllerManager:
         extraArgs:
           cloud-provider: external
+    diskSetup:
+      filesystems:
+        - label: etcd_data
+          filesystem: ext4
+          device: /dev/sdc
+    mounts:
+      - - LABEL=etcd_data
+        - /var/lib/etcd_data
     initConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
