@@ -131,3 +131,16 @@ func createObjectStorageKey(ctx context.Context, bucketScope *scope.ObjectStorag
 
 	return key, nil
 }
+
+func DeleteObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger, keys [2]float64) error {
+
+	for _, keyID := range keys {
+		logger.Info(fmt.Sprintf("revoking object storage access key %s", keyID))
+		if err := bucketScope.LinodeClient.DeleteObjectStorageKey(ctx, int(keyID)); err != nil {
+			return fmt.Errorf("revoke object storage key: %w", err)
+		}
+		logger.Info("revoked object storage key", "key-id", keyID)
+	}
+
+	return nil
+}

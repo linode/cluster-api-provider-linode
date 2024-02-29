@@ -184,8 +184,23 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	logger.Info("Deleting LinodeObjectStorageBucket")
 
+	// Get access key IDs from secret
+	secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
+	secretNamespace := bucketScope.Object.Namespace
+
+	keyList, err := bucketScope.GetAccessKeysFromSecret(ctx, secretName, secretNamespace)
+	if err != nil {
+		return fmt.Errorf("get list of access keys from secret: %w", err)
+	}
+
+	// Delete the access keys
+	if err := services.DeleteObjectStorageKeys(ctx, bucketScope, logger, keyList); err != nil {
+		return fmt.Errorf("delete object storage bucket: %w", err)
+	}
+
+	// Remove the finalizer.
+	// This will allow the ObjectStorageBucket object to be deleted.
 	controllerutil.RemoveFinalizer(bucketScope.Object, infrav1alpha1.GroupVersion.String())
 
 	return nil

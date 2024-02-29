@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -159,6 +160,47 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	}
 
 	return nil
+}
+
+// getAccessKeysFromSecret gets the access keys id for the OBJ buckets from a secret
+func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secretName string, secretNamespace string) ([2]float64, error) {
+
+	var newKeys [2]float64
+	// Delete the access keys.
+	objkey := client.ObjectKey{
+		Namespace: secretNamespace,
+		Name:      secretName,
+	}
+	var secret corev1.Secret
+	if err := s.client.Get(ctx, objkey, &secret); err != nil {
+		if apierrors.IsNotFound(err); err != nil {
+			return newKeys, err
+		}
+	}
+	permissions := [2]string{"read_write", "read_only"}
+	for _, permission := range permissions {
+		secretDataForKey, isset := secret.Data[permission]
+		if !isset {
+			return newKeys, fmt.Errorf("secret %s missing data field: %s", secretName, permission)
+		}
+		decodedSecretDataForKey := string(secretDataForKey)
+
+		var jsonMap map[string]interface{}
+		if err := json.Unmarshal([]byte(string(decodedSecretDataForKey)), &jsonMap); err != nil {
+			return newKeys, fmt.Errorf("error unmarshalling key: %w", err)
+		}
+
+		accessKeyID, ok := jsonMap["id"]
+		if !ok {
+			err := fmt.Errorf("obj bucket key not found")
+			return newKeys, err
+		}
+		key := accessKeyID.(float64)
+
+		newKeys[i] = key
+	}
+
+	return newKeys, nil
 }
 
 func (s *ObjectStorageBucketScope) ShouldGenerateAccessKeys() bool {
