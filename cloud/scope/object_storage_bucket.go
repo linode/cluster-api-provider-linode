@@ -23,10 +23,11 @@ type ObjectStorageBucketScopeParams struct {
 }
 
 type ObjectStorageBucketScope struct {
-	client       client.Client
-	Object       *infrav1alpha1.LinodeObjectStorageBucket
-	LinodeClient *linodego.Client
-	PatchHelper  *patch.Helper
+	client            client.Client
+	Object            *infrav1alpha1.LinodeObjectStorageBucket
+	LinodeClient      *linodego.Client
+	BucketPatchHelper *patch.Helper
+	SecretPatchHelper *patch.Helper
 }
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
@@ -56,16 +57,22 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 	}
 	linodeClient := createLinodeClient(apiKey)
 
-	helper, err := patch.NewHelper(params.Object, params.Client)
+	bucketPatchHelper, err := patch.NewHelper(params.Object, params.Client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init patch helper: %w", err)
+	}
+
+	secretPatchHelper, err := patch.NewHelper(&corev1.Secret{}, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	bucketScope := &ObjectStorageBucketScope{
-		client:       params.Client,
-		Object:       params.Object,
-		LinodeClient: linodeClient,
-		PatchHelper:  helper,
+		client:            params.Client,
+		Object:            params.Object,
+		LinodeClient:      linodeClient,
+		BucketPatchHelper: bucketPatchHelper,
+		SecretPatchHelper: secretPatchHelper,
 	}
 
 	return bucketScope, nil
@@ -73,7 +80,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 
 // PatchObject persists the object storage bucket configuration and status.
 func (s *ObjectStorageBucketScope) PatchObject(ctx context.Context) error {
-	return s.PatchHelper.Patch(ctx, s.Object)
+	return s.BucketPatchHelper.Patch(ctx, s.Object)
 }
 
 // Close closes the current scope persisting the object storage bucket configuration and status.
@@ -91,8 +98,8 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
-// CreateAccessKeySecret creates a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, keys [2]linodego.ObjectStorageKey, secretName string) error {
+// ApplyAccessKeySecret applies a Secret containing keys created for accessing the bucket.
+func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [2]linodego.ObjectStorageKey, secretName string) error {
 	var err error
 
 	accessKeys := make([]json.RawMessage, 2)
@@ -131,13 +138,25 @@ func (s *ObjectStorageBucketScope) CreateAccessKeySecret(ctx context.Context, ke
 	}
 
 	if err := s.client.Create(ctx, secret); err != nil {
-		return fmt.Errorf(
-			"failed to create secret %s for LinodeObjectStorageBucket %s/%s: %w",
-			secretName,
-			s.Object.Namespace,
-			s.Object.Name,
-			err,
-		)
+		if client.IgnoreAlreadyExists(err) != nil {
+			return fmt.Errorf(
+				"failed to create secret %s for LinodeObjectStorageBucket %s/%s: %w",
+				secretName,
+				s.Object.Namespace,
+				s.Object.Name,
+				err,
+			)
+		}
+
+		if err := s.SecretPatchHelper.Patch(ctx, secret); err != nil {
+			return fmt.Errorf(
+				"failed to patch secret %s for LinodeObjectStorageBucket %s/%s: %w",
+				secretName,
+				s.Object.Namespace,
+				s.Object.Name,
+				err,
+			)
+		}
 	}
 
 	return nil
@@ -185,5 +204,12 @@ func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, 
 	}
 
 	return newKeys, nil
+}
 
+func (s *ObjectStorageBucketScope) ShouldGenerateAccessKeys() bool {
+	if s.Object.Status.LastKeyGeneration == nil {
+		return true
+	}
+
+	return *s.Object.Spec.KeyGeneration != *s.Object.Status.LastKeyGeneration
 }

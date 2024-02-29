@@ -57,14 +57,15 @@ spec:
               LinodeObjectStorageBucket
             properties:
               cluster:
-                description: The ID of the Object Storage cluster for the bucket.
+                description: Cluster is the ID of the Object Storage cluster for the
+                  bucket.
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
               credentialsRef:
                 description: |-
-                  A reference to a Secret that contains the credentials to use for provisioning the bucket.
+                  CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
                   If not supplied then the credentials of the controller will be used.
                 properties:
                   name:
@@ -78,12 +79,13 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               keyGeneration:
-                description: May be used to trigger rotations of access keys created
-                  for the bucket by incrementing the field.
+                default: 0
+                description: KeyGeneration may be modified to trigger rotations of
+                  access keys created for the bucket.
                 type: integer
               label:
                 description: |-
-                  The name of the bucket. It must be unique in the Object Storage cluster.
+                  Label specifies the name of the bucket. It must be unique in the Object Storage cluster.
                   If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
                 maxLength: 63
                 minLength: 3
@@ -99,7 +101,7 @@ spec:
               of LinodeObjectStorageBucket
             properties:
               conditions:
-                description: Current service state of the LinodeObjectStorageBucket.
+                description: Conditions specify the service state of the LinodeObjectStorageBucket.
                 items:
                   description: Condition defines an observation of a Cluster API resource
                     operational state.
@@ -144,29 +146,30 @@ spec:
                   type: object
                 type: array
               creationTime:
-                description: The creation timestamp for the underlying bucket.
+                description: CreationTime specifies the creation timestamp for the
+                  bucket.
                 format: date-time
                 type: string
               failureMessage:
                 description: |-
-                  Will be set in the event that there is a terminal problem
+                  FailureMessage will be set in the event that there is a terminal problem
                   reconciling the Object Storage Bucket and will contain a verbose string
                   suitable for logging and human consumption.
                 type: string
               hostname:
-                description: The hostname assigned to the bucket.
+                description: Hostname is the address assigned to the bucket.
                 type: string
               keySecretName:
-                description: The name of the Secret containing access keys for the
-                  bucket.
+                description: KeySecretName specifies the name of the Secret containing
+                  access keys for the bucket.
                 type: string
               lastKeyGeneration:
-                description: Tracks the last known value of .spec.keyGeneration.
+                description: LastKeyGeneration tracks the last known value of .spec.keyGeneration.
                 type: integer
               ready:
                 default: false
-                description: Denotes that the bucket has been provisioned along with
-                  access keys.
+                description: Ready denotes that the bucket has been provisioned along
+                  with access keys.
                 type: boolean
             type: object
         type: object

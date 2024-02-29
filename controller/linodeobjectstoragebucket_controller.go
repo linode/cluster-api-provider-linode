@@ -106,8 +106,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(
 	logger logr.Logger,
 	bucketScope *scope.ObjectStorageBucketScope,
 ) (res ctrl.Result, reterr error) {
-	bucketScope.Object.Status.Ready = false
-
 	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageBucket changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
@@ -117,31 +115,15 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(
 		}
 	}()
 
-	// Deleted
+	// Delete
 	if !bucketScope.Object.DeletionTimestamp.IsZero() {
 		return res, r.reconcileDelete(ctx, logger, bucketScope)
 	}
 
-	if err := bucketScope.AddFinalizer(ctx); err != nil {
+	// Apply
+	if err := r.reconcileApply(ctx, logger, bucketScope); err != nil {
 		return res, err
 	}
-
-	// Created
-	if bucketScope.Object.Status.KeySecretName == nil {
-		if err := r.reconcileCreate(ctx, logger, bucketScope); err != nil {
-			return res, err
-		}
-		r.Recorder.Event(bucketScope.Object, corev1.EventTypeNormal, "Ready", "Object storage bucket has been created")
-	} else {
-		// Updated
-		if err := r.reconcileUpdate(ctx, logger, bucketScope); err != nil {
-			return res, err
-		}
-		r.Recorder.Event(bucketScope.Object, corev1.EventTypeNormal, "Updated", "Object storage bucket has been updated")
-	}
-
-	bucketScope.Object.Status.Ready = true
-	conditions.MarkTrue(bucketScope.Object, clusterv1.ReadyCondition)
 
 	return res, nil
 }
@@ -152,47 +134,53 @@ func (r *LinodeObjectStorageBucketReconciler) setFailure(bucketScope *scope.Obje
 	conditions.MarkFalse(bucketScope.Object, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
 }
 
-func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	if bucketScope.Object.Spec.Label == "" {
-		bucketScope.Object.Spec.Label = util.RenderObjectLabel(bucketScope.Object.UID)
+func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
+	logger.Info("Applying LinodeObjectStorageBucket")
+
+	bucketScope.Object.Status.Ready = false
+
+	if err := bucketScope.AddFinalizer(ctx); err != nil {
+		return err
 	}
 
-	bucket, err := services.CreateObjectStorageBucket(ctx, bucketScope, logger)
+	// Label should only ever be nil on creation since the value is immutable.
+	if bucketScope.Object.Spec.Label == nil {
+		bucketScope.Object.Spec.Label = util.Pointer(util.RenderObjectLabel(bucketScope.Object.UID))
+	}
+
+	bucket, err := services.EnsureObjectStorageBucket(ctx, bucketScope, logger)
 	if err != nil {
 		r.setFailure(bucketScope, err)
 
 		return err
 	}
-
 	bucketScope.Object.Status.Hostname = util.Pointer(bucket.Hostname)
 	bucketScope.Object.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
-	keys, err := services.CreateObjectStorageKeys(ctx, bucketScope, logger)
-	if err != nil {
-		r.setFailure(bucketScope, err)
+	if bucketScope.Object.Status.KeySecretName == nil || bucketScope.ShouldGenerateAccessKeys() {
+		keys, err := services.CreateOrRotateObjectStorageKeys(ctx, bucketScope, true, logger)
+		if err != nil {
+			r.setFailure(bucketScope, err)
 
-		return err
+			return err
+		}
+
+		secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
+		if err := bucketScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
+			r.setFailure(bucketScope, err)
+
+			return err
+		}
+		bucketScope.Object.Status.KeySecretName = util.Pointer(secretName)
+		bucketScope.Object.Status.LastKeyGeneration = bucketScope.Object.Spec.KeyGeneration
 	}
 
-	secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
-	if err := bucketScope.CreateAccessKeySecret(ctx, keys, secretName); err != nil {
-		r.setFailure(bucketScope, err)
+	r.Recorder.Event(bucketScope.Object, corev1.EventTypeNormal, "Ready", "Object storage bucket configuration applied")
 
-		return err
-	}
-
-	bucketScope.Object.Status.KeySecretName = util.Pointer(secretName)
-
-	if bucketScope.Object.Spec.KeyGeneration == nil {
-		bucketScope.Object.Spec.KeyGeneration = util.Pointer(0)
-	}
-	bucketScope.Object.Status.LastKeyGeneration = bucketScope.Object.Spec.KeyGeneration
+	bucketScope.Object.Status.Ready = true
+	conditions.MarkTrue(bucketScope.Object, clusterv1.ReadyCondition)
 
 	return nil
-}
-
-func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	panic("unimplemented")
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
