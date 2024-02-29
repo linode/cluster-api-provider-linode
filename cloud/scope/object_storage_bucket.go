@@ -177,21 +177,18 @@ func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, 
 			return newKeys, err
 		}
 	}
-	for i, e := range []struct {
-		permission string
-		suffix     string
-	}{
-		{"read_write", "rw"},
-		{"read_only", "ro"},
-	} {
-		secretDataForKey, isset := secret.Data[e.permission]
+	permissions := [2]string{"read_write", "read_only"}
+	for _, permission := range permissions {
+		secretDataForKey, isset := secret.Data[permission]
 		if !isset {
-			return newKeys, fmt.Errorf("secret %s missing data field: %s", secretName, e.permission)
+			return newKeys, fmt.Errorf("secret %s missing data field: %s", secretName, permission)
 		}
 		decodedSecretDataForKey := string(secretDataForKey)
 
 		var jsonMap map[string]interface{}
-		json.Unmarshal([]byte(string(decodedSecretDataForKey)), &jsonMap)
+		if err := json.Unmarshal([]byte(string(decodedSecretDataForKey)), &jsonMap); err != nil {
+			return newKeys, fmt.Errorf("error unmarshalling key: %w", err)
+		}
 
 		accessKeyID, ok := jsonMap["id"]
 		if !ok {
