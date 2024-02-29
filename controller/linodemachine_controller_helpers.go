@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 // Size limit in bytes on the decoded metadata.user_data for cloud-init
@@ -56,6 +57,9 @@ func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScop
 
 		return nil, err
 	}
+
+	createConfig.Booted = util.Pointer(false)
+
 	createConfig.PrivateIP = true
 
 	bootstrapData, err := machineScope.GetBootstrapData(ctx)
@@ -86,7 +90,6 @@ func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScop
 	if createConfig.Image == "" {
 		createConfig.Image = reconciler.DefaultMachineControllerLinodeImage
 	}
-
 	if createConfig.RootPass == "" {
 		createConfig.RootPass = uuid.NewString()
 	}

@@ -49,6 +49,9 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 )
 
+// default etcd Disk size in MB
+const defaultEtcdDiskSize = 10240
+
 var skippedMachinePhases = map[string]bool{
 	string(clusterv1.MachinePhasePending): true,
 	string(clusterv1.MachinePhaseFailed):  true,
@@ -317,7 +320,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		linodeInstance = &linodeInstances[0]
 	case 0:
 		// get the bootstrap data for the Linode instance and set it for create config
-		createConfig, err := r.newCreateConfig(ctx, machineScope, tags, logger)
+		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine create config")
 
@@ -325,22 +328,35 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		}
 
 		if machineScope.LinodeCluster.Spec.VPCRef != nil {
-			iface, err := r.getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
+			iface, err := r.getVPCInterfaceConfig(ctx, machineScope, createOpts.Interfaces, logger)
 			if err != nil {
 				logger.Error(err, "Failed to get VPC interface config")
 
 				return nil, err
 			}
 
-			createConfig.Interfaces = append(createConfig.Interfaces, *iface)
+			createOpts.Interfaces = append(createOpts.Interfaces, *iface)
 		}
 
-		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createConfig)
+		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
 			return nil, err
 		}
+
+		if err = r.configureDisksControlPlane(ctx, logger, machineScope, linodeInstance.ID); err != nil {
+			logger.Error(err, "Failed to configure instance disks")
+
+			return nil, err
+		}
+
+		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+			logger.Error(err, "Failed to boot instance")
+
+			return nil, err
+		}
+
 	default:
 		err = errors.New("multiple instances")
 
@@ -376,6 +392,58 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	return linodeInstance, nil
+}
+
+func (r *LinodeMachineReconciler) configureDisksControlPlane(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	linodeInstanceID int,
+) error {
+	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
+		return nil
+	}
+	// get the default instance config
+	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
+	if err != nil || len(configs) == 0 {
+		logger.Error(err, "Failed to list instance configs")
+
+		return err
+	}
+	instanceConfig := &configs[0]
+
+	// carve out space for the etcd disk
+	rootDiskID := instanceConfig.Devices.SDA.DiskID
+	rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
+	if err != nil {
+		logger.Error(err, "Failed to get root disk for instance")
+
+		return err
+	}
+	diskSize := rootDisk.Size - defaultEtcdDiskSize
+	if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
+		logger.Error(err, "Failed to resize root disk")
+
+		return err
+	}
+
+	// create the etcd disk
+	_, err = machineScope.LinodeClient.CreateInstanceDisk(
+		ctx,
+		linodeInstanceID,
+		linodego.InstanceDiskCreateOptions{
+			Label:      "etcd-data",
+			Size:       defaultEtcdDiskSize,
+			Filesystem: string(linodego.FilesystemExt4),
+		},
+	)
+	if err != nil {
+		logger.Error(err, "Failed to create etcd disk")
+
+		return err
+	}
+
+	return nil
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(
@@ -451,14 +519,13 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		return nil
 	}
 
-	err := services.DeleteNodeFromNB(ctx, logger, machineScope)
-	if err != nil {
+	if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
 		logger.Error(err, "Failed to remove node from Node Balancer backend")
 
 		return err
 	}
-	err = machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
-	if err != nil {
+
+	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to delete Linode machine instance")
 
