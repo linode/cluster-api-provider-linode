@@ -1,0 +1,42 @@
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha1
+kind: RKE2ControlPlane
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: LinodeMachineTemplate
+    name: ${CLUSTER_NAME}-control-plane
+  files:
+    - contentFrom:
+        secret:
+          key: linode-ccm.yaml
+          name: linode-${CLUSTER_NAME}-crs-0
+      owner: root:root
+      path: /var/lib/rancher/rke2/server/manifests/linode-ccm.yaml
+    - contentFrom:
+        secret:
+          key:  linode-token-region.yaml
+          name: linode-${CLUSTER_NAME}-crs-0
+      owner: root:root
+      path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
+  serverConfig:
+    cni: cilium
+    cloudProviderName: external
+    disableComponents:
+      pluginComponents:
+        - "rke2-ingress-nginx"
+      kubernetesComponents:
+        - "cloudController"
+  agentConfig:
+    version: ${KUBERNETES_VERSION}
+    nodeName: '{{ ds.meta_data.label }}'
+    kubelet:
+      extraArgs:
+        - "provider-id=linode://{{ ds.meta_data.id }}"
+  preRKE2Commands:
+    - sed -i '/swap/d' /etc/fstab
+    - swapoff -a
+    - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT}

@@ -1,0 +1,22 @@
+resources:
+  - ../base
+  - rke2ControlPlane.yaml
+  - rke2ConfigTemplate.yaml
+  - secret.yaml
+patches:
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      - op: replace
+        path: /spec/controlPlaneRef/kind
+        value: RKE2ControlPlane
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: MachineDeployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/bootstrap/configRef/kind
+        value: RKE2ConfigTemplate
