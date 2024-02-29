@@ -18,15 +18,12 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -195,69 +192,28 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileCreate(ctx context.Contex
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	panic("unimplemented")
+	return nil
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
 
-	var newKeys [2]float64
-	name := types.NamespacedName{Namespace: bucketScope.Object.Namespace, Name: bucketScope.Object.Name}
-	bucket := &infrav1alpha1.LinodeObjectStorageBucket{}
-	if err := r.Client.Get(ctx, name, bucket); err != nil {
-		if apierrors.IsNotFound(err); err != nil {
-			logger.Error(err, "Failed to fetch bucket")
-			return err
-		}
-		return nil
-	}
-
-	// Delete the access keys.
+	// Get access key IDs from secret
 	secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
-	objkey := client.ObjectKey{
-		Namespace: bucketScope.Object.Namespace,
-		Name:      secretName,
-	}
-	var secret corev1.Secret
-	if err := r.Client.Get(ctx, objkey, &secret); err != nil {
-		if apierrors.IsNotFound(err); err != nil {
-			logger.Error(err, "Failed to get secret")
-			return err
-		}
-	}
-	for i, e := range []struct {
-		permission string
-		suffix     string
-	}{
-		{"read_write", "rw"},
-		{"read_only", "ro"},
-	} {
-		secretDataForKey, isset := secret.Data[e.permission]
-		if !isset {
-			logger.Info("missing field in object storage key secret", "field", e.permission, "secret", secretName)
-			return fmt.Errorf("secret %s missing data field: %s", secretName, e.permission)
-		}
-		decodedSecretDataForKey := string(secretDataForKey)
+	secretNamespace := bucketScope.Object.Namespace
 
-		var jsonMap map[string]interface{}
-		json.Unmarshal([]byte(string(decodedSecretDataForKey)), &jsonMap)
-
-		accessKeyID, ok := jsonMap["id"]
-		if !ok {
-			err := errors.New("key not found")
-			return err
-		}
-		key := accessKeyID.(float64)
-
-		newKeys[i] = key
+	keyList, err := bucketScope.GetAccessKeysFromSecret(ctx, secretName, secretNamespace)
+	if err != nil {
+		return fmt.Errorf("get list of access keys from secret: %w", err)
 	}
 
-	if err := services.DeleteObjectStorageKeys(ctx, bucketScope, logger, newKeys); err != nil {
+	// Delete the access keys
+	if err := services.DeleteObjectStorageKeys(ctx, bucketScope, logger, keyList); err != nil {
 		return fmt.Errorf("delete object storage bucket: %w", err)
 	}
 
 	// Remove the finalizer.
 	// This will allow the ObjectStorageBucket object to be deleted.
-	controllerutil.RemoveFinalizer(clusterScope.Object, infrav1alpha1.GroupVersion.String())
+	controllerutil.RemoveFinalizer(bucketScope.Object, infrav1alpha1.GroupVersion.String())
 
 	return nil
 }
