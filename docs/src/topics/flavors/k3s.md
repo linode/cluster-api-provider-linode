@@ -7,7 +7,7 @@
 * [Quickstart](../topics/getting-started.md) completed
 * Select a [k3s kubernetes version](https://github.com/k3s-io/k3s/releases) to set for the kubernetes version
   ```bash
-  export KUBERNETES_VERSION=v1.29.1+k3s2
+  export K3S_KUBERNETES_VERSION=v1.29.1+k3s2
   ```
 * Installed [k3s bootstrap provider](https://github.com/k3s-io/cluster-api-k3s) into your management cluster
   * Add the following to `~/.cluster-api/clusterctl.yaml` for the k3s bootstrap/control plane providers
