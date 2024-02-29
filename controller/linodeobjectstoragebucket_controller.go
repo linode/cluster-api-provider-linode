@@ -135,7 +135,7 @@ func (r *LinodeObjectStorageBucketReconciler) setFailure(bucketScope *scope.Obje
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
-	logger.Info("Applying LinodeObjectStorageBucket")
+	logger.Info("Reconciling apply")
 
 	bucketScope.Object.Status.Ready = false
 
@@ -165,7 +165,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 			return err
 		}
 
-		secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
+		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bucketScope.Object.Name)
 		if err := bucketScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
 			r.setFailure(bucketScope, err)
 
@@ -184,23 +184,22 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, bucketScope *scope.ObjectStorageBucketScope) error {
+	logger.Info("Reconciling delete")
 
 	// Get access key IDs from secret
-	secretName := fmt.Sprintf("%s-access-keys", bucketScope.Object.Name)
-	secretNamespace := bucketScope.Object.Namespace
-
-	keyList, err := bucketScope.GetAccessKeysFromSecret(ctx, secretName, secretNamespace)
+	secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bucketScope.Object.Name)
+	keyIDs, err := bucketScope.GetAccessKeysFromSecret(ctx, secretName)
 	if err != nil {
 		return fmt.Errorf("get list of access keys from secret: %w", err)
 	}
 
 	// Delete the access keys
-	if err := services.DeleteObjectStorageKeys(ctx, bucketScope, logger, keyList); err != nil {
-		return fmt.Errorf("delete object storage bucket: %w", err)
+	if err := services.RevokeObjectStorageKeys(ctx, bucketScope, keyIDs, logger); err != nil {
+		return fmt.Errorf("delete object storage keys: %w", err)
 	}
 
 	// Remove the finalizer.
-	// This will allow the ObjectStorageBucket object to be deleted.
+	// This will allow the ObjectStorageBucket object to be deleted, as well as the secret.
 	controllerutil.RemoveFinalizer(bucketScope.Object, infrav1alpha1.GroupVersion.String())
 
 	return nil

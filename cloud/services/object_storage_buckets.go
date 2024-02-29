@@ -34,8 +34,6 @@ func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 		return nil, err
 	}
 	if len(buckets) == 1 {
-		logger.Info(fmt.Sprintf("Confirmed object storage bucket %s already exists", buckets[0].Label))
-
 		return &buckets[0], nil
 	}
 
@@ -94,8 +92,10 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.Obj
 			}
 
 			// Keys are being rotated, so we should revoke this key before making a new one
-			// TODO: Revoke existing key; for now just continue so more keys are not created
-			continue
+			oldKeyID := existingKeys[0].ID
+			if err := revokeObjectStorageKey(ctx, bucketScope, oldKeyID, logger); err != nil {
+				logger.Info("Failed to revoke object storage key for rotation", "id", oldKeyID, "error", err.Error())
+			}
 		}
 
 		key, err := createObjectStorageKey(ctx, bucketScope, keyLabel, e.permission, logger)
@@ -132,14 +132,21 @@ func createObjectStorageKey(ctx context.Context, bucketScope *scope.ObjectStorag
 	return key, nil
 }
 
-func DeleteObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger, keys [2]float64) error {
-
-	for _, keyID := range keys {
-		logger.Info(fmt.Sprintf("revoking object storage access key %s", keyID))
-		if err := bucketScope.LinodeClient.DeleteObjectStorageKey(ctx, int(keyID)); err != nil {
-			return fmt.Errorf("revoke object storage key: %w", err)
+func RevokeObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, keyIDs [2]int, logger logr.Logger) error {
+	for _, keyID := range keyIDs {
+		if err := revokeObjectStorageKey(ctx, bucketScope, keyID, logger); err != nil {
+			logger.Info("Failed to revoke object storage key", "id", keyID, "error", err.Error())
 		}
-		logger.Info("revoked object storage key", "key-id", keyID)
+	}
+
+	return nil
+}
+
+func revokeObjectStorageKey(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, keyID int, logger logr.Logger) error {
+	logger.Info(fmt.Sprintf("Revoking object storage  key %d", keyID))
+
+	if err := bucketScope.LinodeClient.DeleteObjectStorageKey(ctx, keyID); err != nil {
+		return err
 	}
 
 	return nil
