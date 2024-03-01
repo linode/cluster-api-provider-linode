@@ -14,7 +14,7 @@ For more information, please refer to the
 
 ```admonish note
 The [Linode Cloud Controller Manager](#linode-cloud-controller-manager) and
-[Linode Blockstorage CSI Driver](#linode-blockstorage-csi-driver) addons require the `ClusterResourceSet` feature flag
+[Linode CSI Driver](#linode-csi-driver) addons require the `ClusterResourceSet` feature flag
 to be set on the management cluster.
 
 This feature flag is enabled by default in the KIND cluster created by `make tilt-cluster`.
@@ -32,7 +32,7 @@ For more information, please refer to [the ClusterResourceSet page in The Cluste
 - [CCM](#ccm)
   - [Linode Cloud Controller Manager](#linode-cloud-controller-manager)
 - [Container Storage](#container-storage)
-  - [Linode Blockstorage CSI Driver](#linode-blockstorage-csi-driver)
+  - [Linode CSI Driver](#linode-csi-driver)
 
 <!-- /TOC -->
 
@@ -80,14 +80,18 @@ The linode-ccm will then be automatically installed via CAAPH into the labeled c
 
 In order for stateful workloads to create PersistentVolumes (PVs), a storage driver must be installed.
 
-### Linode Blockstorage CSI Driver
+### Linode CSI Driver
 
-To install the [linode-blockstorage-csi-driver](https://github.com/linode/linode-blockstorage-csi-driver)
-on a self-managed cluster, simply apply the `csi-driver: linode`
+```admonish success title=""
+Installed by default
+```
+
+To install the [csi-driver-linode](https://github.com/linode/linode-blockstorage-csi-driver)
+on a self-managed cluster, simply apply the `csi: linode`
 label on the `Cluster` resource if not already present.
 
 ```bash
-kubectl label cluster $CLUSTER_NAME csi-driver=linode --overwrite
+kubectl label cluster $CLUSTER_NAME csi=linode --overwrite
 ```
 
-The linode-blockstorage-csi-driver will then be automatically installed via CAAPH into the labeled cluster.
+The csi-driver-linode will then be automatically installed via CAAPH into the labeled cluster.
