@@ -2,21 +2,14 @@ package util
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/linode/linodego"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // Pointer returns the pointer of any type
 func Pointer[T any](t T) *T {
 	return &t
-}
-
-// RenderObjectLabel renders a 63 charater long unique label
-func RenderObjectLabel(i types.UID) string {
-	return fmt.Sprintf("cli-%s", strings.ReplaceAll(string(i), "-", ""))
 }
 
 // CreateLinodeAPIFilter converts variables to API filter string

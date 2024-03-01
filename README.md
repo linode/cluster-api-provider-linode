@@ -27,6 +27,9 @@
 </p>
 
 ------
+*PLEASE NOTE*: This project is considered ALPHA quality and should NOT be used for production, as it is currently in active development. Use at your own risk. APIs, configuration file formats, and functionality are all subject to change frequently. That said, please try it out in your development and test environments and let us know if it works. Contributions welcome! Thanks!
+
+------
 
 ## What is Cluster API Provider Linode (CAPL)
 

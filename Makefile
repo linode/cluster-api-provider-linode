@@ -1,8 +1,30 @@
-REGISTRY ?= docker.io/linode
-IMAGE_NAME ?= cluster-api-provider-linode
-CONTROLLER_IMAGE ?= $(REGISTRY)/$(IMAGE_NAME)
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.28.0
+#####################################################################
+# top-level Makefile for cluster-api-provider-linode
+#####################################################################
+REGISTRY            ?= docker.io/linode
+IMAGE_NAME          ?= cluster-api-provider-linode
+CONTROLLER_IMAGE    ?= $(REGISTRY)/$(IMAGE_NAME)
+TAG                 ?= dev
+ENVTEST_K8S_VERSION := 1.28.0
+BUILD_ARGS          := --build-arg VERSION=$(VERSION)
+SHELL                = /usr/bin/env bash -o pipefail
+.SHELLFLAGS          = -ec
+CONTAINER_TOOL      ?= docker
+MDBOOK_DEV_HOST      = 0.0.0.0
+MDBOOK_DEV_PORT      = 3000
+VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
+
+# ENVTEST_K8S_VERSION
+# - refers to the version of kubebuilder assets to be downloaded by envtest binary.
+# CONTAINER_TOOL
+# - defines the container tool to be used for building images.
+#   Be aware that the target commands are only tested with Docker which is
+#   scaffolded by default. However, you might want to replace it to use other
+#   tools. (i.e. podman)
+
+#####################################################################
+# OS / ARCH
+#####################################################################
 OS=$(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(shell uname -m)
 ARCH_SHORT=$(ARCH)
@@ -11,8 +33,6 @@ ARCH_SHORT := amd64
 else ifeq ($(ARCH_SHORT),aarch64)
 ARCH_SHORT := arm64
 endif
-VERSION ?= $(shell git describe --always --tag --dirty=-dev)
-BUILD_ARGS := --build-arg VERSION=$(VERSION)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -20,17 +40,9 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-# CONTAINER_TOOL defines the container tool to be used for building images.
-# Be aware that the target commands are only tested with Docker which is
-# scaffolded by default. However, you might want to replace it to use other
-# tools. (i.e. podman)
-CONTAINER_TOOL ?= docker
-
-# Setting SHELL to bash allows bash commands to be executed by recipes.
-# Options are set to exit when a recipe line exits non-zero or a piped command fails.
-SHELL = /usr/bin/env bash -o pipefail
-.SHELLFLAGS = -ec
-
+#####################################################################
+##@ Build All
+#####################################################################
 .PHONY: all
 all: build
 
@@ -106,6 +118,10 @@ nilcheck: nilaway ## Run nil check against code.
 vulncheck: govulncheck ## Run vulnerability check against code.
 	govulncheck ./...
 
+.PHONY: docs
+docs:
+	@cd docs && mdbook serve -n $(MDBOOK_DEV_HOST) -p $(MDBOOK_DEV_PORT)
+
 ## --------------------------------------
 ## Testing
 ## --------------------------------------
@@ -120,12 +136,12 @@ test: manifests generate fmt vet envtest ## Run tests.
 e2etest:
 	make --no-print-directory _e2etest # Workaround to force the flag on Github Action
 
-_e2etest-infra: kind ctlptl tilt kuttl kustomize clusterctl
+local-deploy: kind ctlptl tilt kuttl kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci --timeout 240s -f Tiltfile
 
-_e2etest: manifests generate _e2etest-infra
+_e2etest: manifests generate local-deploy
 	ROOT_DIR="$(PWD)" $(KUTTL) test --config e2e/kuttl-config.yaml
 
 ## --------------------------------------
@@ -265,32 +281,32 @@ $(LOCALBIN):
 ## --------------------------------------
 
 ##@ Tooling Binaries:
-
-KUBECTL ?= kubectl
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
-CTLPTL ?= $(LOCALBIN)/ctlptl
-CLUSTERCTL ?= $(LOCALBIN)/clusterctl
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-TILT ?= $(LOCALBIN)/tilt
-KIND ?= $(LOCALBIN)/kind
-KUTTL ?= $(LOCALBIN)/kubectl-kuttl
 # setup-envtest does not have devbox support so always use CACHE_BIN
-ENVTEST ?= $(CACHE_BIN)/setup-envtest
-HUSKY ?= $(LOCALBIN)/husky
-NILAWAY ?= $(LOCALBIN)/nilaway
-GOVULNC ?= $(LOCALBIN)/govulncheck
+
+KUBECTL        ?= kubectl
+KUSTOMIZE      ?= $(LOCALBIN)/kustomize
+CTLPTL         ?= $(LOCALBIN)/ctlptl
+CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
+CONTROLLER_GEN ?= $(CACHE_BIN)/controller-gen
+TILT           ?= $(LOCALBIN)/tilt
+KIND           ?= $(LOCALBIN)/kind
+KUTTL          ?= $(LOCALBIN)/kubectl-kuttl
+ENVTEST        ?= $(CACHE_BIN)/setup-envtest
+HUSKY          ?= $(LOCALBIN)/husky
+NILAWAY        ?= $(LOCALBIN)/nilaway
+GOVULNC        ?= $(LOCALBIN)/govulncheck
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v5.1.1
-CTLPTL_VERSION ?= v0.8.25
-CLUSTERCTL_VERSION ?= v1.5.3
+KUSTOMIZE_VERSION        ?= v5.1.1
+CTLPTL_VERSION           ?= v0.8.25
+CLUSTERCTL_VERSION       ?= v1.5.3
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
-TILT_VERSION ?= 0.33.6
-KIND_VERSION ?= 0.20.0
-KUTTL_VERSION ?= 0.15.0
-HUSKY_VERSION ?= v0.2.16
-NILAWAY_VERSION ?= latest
-GOVULNC_VERSION ?= v1.0.1
+TILT_VERSION             ?= 0.33.6
+KIND_VERSION             ?= 0.20.0
+KUTTL_VERSION            ?= 0.15.0
+HUSKY_VERSION            ?= v0.2.16
+NILAWAY_VERSION          ?= latest
+GOVULNC_VERSION          ?= v1.0.1
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(KUTTL) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC)
@@ -314,7 +330,7 @@ $(CLUSTERCTL): $(LOCALBIN)
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 
 .PHONY: tilt

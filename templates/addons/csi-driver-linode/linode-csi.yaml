@@ -1,0 +1,20 @@
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: csi-driver-linode
+spec:
+  clusterSelector:
+    matchLabels:
+      csi: linode
+  repoURL: https://linode.github.io/linode-blockstorage-csi-driver/
+  chartName: linode-blockstorage-csi-driver
+  namespace: kube-system
+  version: v0.6.3
+  options:
+    waitForJobs: true
+    wait: true
+    timeout: 5m
+  valuesTemplate: |
+    secretRef:
+      name: "linode-token-region"
+      apiTokenRef: "apiToken"

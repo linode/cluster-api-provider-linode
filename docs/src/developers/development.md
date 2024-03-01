@@ -98,7 +98,7 @@ go get <repository>@<version>
 ### Using tilt
 To build a kind cluster and start Tilt, simply run:
 ```sh
-make tilt-cluster
+make local-deploy
 ```
 
 Once your kind management cluster is up and running, you can
