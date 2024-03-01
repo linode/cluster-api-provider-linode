@@ -30,14 +30,6 @@ type LinodeObjectStorageBucketSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Label specifies the name of the bucket. It must be unique in the Object Storage cluster.
-	// If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
-	// +kubebuilder:validation:MinLength=3
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	Label *string `json:"label,omitempty"`
-
 	// Cluster is the ID of the Object Storage cluster for the bucket.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Cluster string `json:"cluster"`

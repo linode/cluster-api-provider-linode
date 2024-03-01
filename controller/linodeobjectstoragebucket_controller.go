@@ -143,11 +143,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		return err
 	}
 
-	// Label should only ever be nil on creation since the value is immutable.
-	if bucketScope.Object.Spec.Label == nil {
-		bucketScope.Object.Spec.Label = util.Pointer(util.RenderObjectLabel(bucketScope.Object.UID))
-	}
-
 	bucket, err := services.EnsureObjectStorageBucket(ctx, bucketScope, logger)
 	if err != nil {
 		r.setFailure(bucketScope, err)

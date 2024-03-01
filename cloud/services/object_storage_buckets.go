@@ -16,7 +16,7 @@ func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 	var bucket *linodego.ObjectStorageBucket
 
 	filter := map[string]string{
-		"label": *bucketScope.Object.Spec.Label,
+		"label": bucketScope.Object.Name,
 	}
 
 	rawFilter, err := json.Marshal(filter)
@@ -37,10 +37,10 @@ func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 		return &buckets[0], nil
 	}
 
-	logger.Info(fmt.Sprintf("Creating object storage bucket %s", *bucketScope.Object.Spec.Label))
+	logger.Info(fmt.Sprintf("Creating object storage bucket %s", bucketScope.Object.Name))
 	opts := linodego.ObjectStorageBucketCreateOptions{
 		Cluster: bucketScope.Object.Spec.Cluster,
-		Label:   *bucketScope.Object.Spec.Label,
+		Label:   bucketScope.Object.Name,
 		ACL:     linodego.ACLPrivate,
 	}
 
@@ -80,7 +80,7 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.Obj
 		{"read_write", "rw"},
 		{"read_only", "ro"},
 	} {
-		keyLabel := fmt.Sprintf("%s-%s-%s", bucketScope.Object.Spec.Cluster, *bucketScope.Object.Spec.Label, e.suffix)
+		keyLabel := fmt.Sprintf("%s-%s", bucketScope.Object.Name, e.suffix)
 
 		if _, ok := keysSet[keyLabel]; ok {
 			logger.Info(fmt.Sprintf("Found existing object storage key %s", keyLabel))
@@ -115,7 +115,7 @@ func createObjectStorageKey(ctx context.Context, bucketScope *scope.ObjectStorag
 		Label: label,
 		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 			{
-				BucketName:  *bucketScope.Object.Spec.Label,
+				BucketName:  bucketScope.Object.Name,
 				Cluster:     bucketScope.Object.Spec.Cluster,
 				Permissions: permission,
 			},

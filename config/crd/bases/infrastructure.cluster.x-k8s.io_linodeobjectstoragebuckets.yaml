@@ -83,16 +83,6 @@ spec:
                 description: KeyGeneration may be modified to trigger rotations of
                   access keys created for the bucket.
                 type: integer
-              label:
-                description: |-
-                  Label specifies the name of the bucket. It must be unique in the Object Storage cluster.
-                  If not specified, one will be generated using the UID assigned by Kubernetes to the resource.
-                maxLength: 63
-                minLength: 3
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
             required:
             - cluster
             type: object
