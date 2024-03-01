@@ -13,7 +13,9 @@
     "kustomize@latest",
     "kuttl@latest",
     "nilaway@latest",
-    "tilt@latest"
+    "tilt@latest",
+    "mdbook@latest",
+    "mdbook-admonish@latest"
   ],
   "shell": {
     "init_hook": [],

@@ -7,4 +7,4 @@ kindV1Alpha4Cluster:
   name: tilt
   nodes:
     - role: control-plane
-      image: kindest/node:v1.28.0
+      image: kindest/node:v1.29.2
