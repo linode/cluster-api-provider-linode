@@ -26,7 +26,7 @@ import (
 
 	_ "go.uber.org/automaxprocs"
 
-	controller2 "github.com/linode/cluster-api-provider-linode/controller"
+	caplController "github.com/linode/cluster-api-provider-linode/controller"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -65,6 +65,7 @@ func main() {
 		machineWatchFilter             string
 		clusterWatchFilter             string
 		objectStorageBucketWatchFilter string
+		firewallWatchFilter            string
 		metricsAddr                    string
 		enableLeaderElection           bool
 		probeAddr                      string
@@ -72,6 +73,7 @@ func main() {
 	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
 	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
 	flag.StringVar(&objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
+	flag.StringVar(&firewallWatchFilter, "firewall-watch-filter", "", "The firewalls to watch by label.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -114,7 +116,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller2.LinodeClusterReconciler{
+	if err = (&caplController.LinodeClusterReconciler{
 		Client:           mgr.GetClient(),
 		Recorder:         mgr.GetEventRecorderFor("LinodeClusterReconciler"),
 		WatchFilterValue: clusterWatchFilter,
@@ -123,7 +125,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
 		os.Exit(1)
 	}
-	if err = (&controller2.LinodeMachineReconciler{
+	if err = (&caplController.LinodeMachineReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
@@ -133,7 +135,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
 	}
-	if err = (&controller2.LinodeVPCReconciler{
+	if err = (&caplController.LinodeVPCReconciler{
 		Client:           mgr.GetClient(),
 		Recorder:         mgr.GetEventRecorderFor("LinodeVPCReconciler"),
 		WatchFilterValue: clusterWatchFilter,
@@ -142,7 +144,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)
 	}
-	if err = (&controller2.LinodeObjectStorageBucketReconciler{
+	if err = (&caplController.LinodeObjectStorageBucketReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
@@ -151,6 +153,15 @@ func main() {
 		LinodeApiKey:     linodeToken,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
+		os.Exit(1)
+	}
+	if err = (&caplController.LinodeFirewallReconciler{
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorderFor("LinodeFirewallReconciler"),
+		WatchFilterValue: firewallWatchFilter,
+		LinodeApiKey:     linodeToken,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeFirewall")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeFirewall
+metadata:
+  labels:
+    app.kubernetes.io/name: linodefirewall
+    app.kubernetes.io/instance: linodefirewall-sample
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+  name: linodefirewall-sample
+spec:
+  # TODO(user): Add fields here

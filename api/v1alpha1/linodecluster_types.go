@@ -45,6 +45,16 @@ type LinodeClusterSpec struct {
 	// supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
+
+	// +optional
+	// ControlPlaneFirewallRefs contains a list of LinodeFirewall references to restrict traffic
+	// to/from the control plane nodes
+	ControlPlaneFirewallRefs []*corev1.ObjectReference `json:"controlPlaneFirewallRefs,omitempty"`
+
+	// +optional
+	// WorkerFirewallRefs contains a list of LinodeFirewall references to restrict traffic
+	// to/from the worker nodes
+	WorkerFirewallRefs []*corev1.ObjectReference `json:"workerFirewallRefs,omitempty"`
 }
 
 // LinodeClusterStatus defines the observed state of LinodeCluster

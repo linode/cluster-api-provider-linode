@@ -12,6 +12,7 @@
       - [rke2](./topics/flavors/rke2.md)
     - [Etcd](./topics/etcd.md)
     - [Multi-Tenancy](./topics/multi-tenancy.md)
+    - [Firewalls](./topics/firewalls.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
 - [Reference](./reference/reference.md)
