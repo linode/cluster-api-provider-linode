@@ -88,6 +88,14 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 		createConfig.RootPass = uuid.NewString()
 	}
 
+	// add public interface to linode (eth0)
+	iface := &linodego.InstanceConfigInterfaceCreateOptions{
+		Purpose: linodego.InterfacePurposePublic,
+		Primary: true,
+	}
+	createConfig.Interfaces = append(createConfig.Interfaces, *iface)
+
+	// if vpc, attach additional interface to linode (eth1)
 	if machineScope.LinodeCluster.Spec.VPCRef != nil {
 		iface, err := r.getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
 		if err != nil {

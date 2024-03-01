@@ -1,0 +1,10 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeVPC
+metadata:
+  name: vpc-${CLUSTER_NAME}
+spec:
+  region: ${LINODE_REGION}
+  subnets:
+    - ipv4: 10.0.0.0/8
+      label: default

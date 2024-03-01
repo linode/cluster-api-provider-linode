@@ -21,6 +21,30 @@ spec:
           name: linode-${CLUSTER_NAME}-crs-0
       owner: root:root
       path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
+    - path: /var/lib/rancher/rke2/server/manifests/rke2-cilium-config.yaml
+      owner: root:root
+      permissions: "0640"
+      content: |
+        apiVersion: helm.cattle.io/v1
+        kind: HelmChartConfig
+        metadata:
+          name: rke2-cilium
+          namespace: kube-system
+        spec:
+          valuesContent: |-
+            routingMode: native
+            kubeProxyReplacement: true
+            ipv4NativeRoutingCIDR: 10.0.0.0/8
+            tunnelProtocol: ""
+            enableIPv4Masquerade: true
+            ipam:
+              mode: kubernetes
+            ipv4:
+              enabled: true
+            ipv6:
+              enabled: false
+            k8s:
+              requireIPv4PodCIDR: true
   registrationMethod: internal-only-ips
   serverConfig:
     cni: cilium
