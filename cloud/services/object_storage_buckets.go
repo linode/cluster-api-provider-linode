@@ -53,8 +53,8 @@ func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 	return bucket, nil
 }
 
-func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, shouldRotate bool, logger logr.Logger) ([2]linodego.ObjectStorageKey, error) {
-	var newKeys [2]linodego.ObjectStorageKey
+func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, shouldRotate bool, logger logr.Logger) ([scope.AccessKeySecretLength]linodego.ObjectStorageKey, error) {
+	var newKeys [scope.AccessKeySecretLength]linodego.ObjectStorageKey
 	var existingKeys []linodego.ObjectStorageKey
 	var err error
 
@@ -73,14 +73,14 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.Obj
 		keysSet[key.Label] = struct{}{}
 	}
 
-	for i, e := range []struct {
-		permission string
-		suffix     string
+	for i, permission := range []struct {
+		name   string
+		suffix string
 	}{
 		{"read_write", "rw"},
 		{"read_only", "ro"},
 	} {
-		keyLabel := fmt.Sprintf("%s-%s", bucketScope.Object.Name, e.suffix)
+		keyLabel := fmt.Sprintf("%s-%s", bucketScope.Object.Name, permission.suffix)
 
 		if _, ok := keysSet[keyLabel]; ok {
 			logger.Info(fmt.Sprintf("Found existing object storage key %s", keyLabel))
@@ -88,6 +88,7 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.Obj
 			// If keys are not being rotated, store the existing key
 			if !shouldRotate {
 				newKeys[i] = existingKeys[0]
+
 				continue
 			}
 
@@ -98,7 +99,7 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.Obj
 			}
 		}
 
-		key, err := createObjectStorageKey(ctx, bucketScope, keyLabel, e.permission, logger)
+		key, err := createObjectStorageKey(ctx, bucketScope, keyLabel, permission.name, logger)
 		if err != nil {
 			return newKeys, err
 		}
@@ -132,7 +133,7 @@ func createObjectStorageKey(ctx context.Context, bucketScope *scope.ObjectStorag
 	return key, nil
 }
 
-func RevokeObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, keyIDs [2]int, logger logr.Logger) error {
+func RevokeObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, keyIDs [scope.AccessKeySecretLength]int, logger logr.Logger) error {
 	for _, keyID := range keyIDs {
 		if err := revokeObjectStorageKey(ctx, bucketScope, keyID, logger); err != nil {
 			logger.Info("Failed to revoke object storage key", "id", keyID, "error", err.Error())

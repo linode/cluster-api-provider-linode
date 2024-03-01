@@ -30,6 +30,7 @@ type ObjectStorageBucketScope struct {
 }
 
 const AccessKeyNameTemplate = "%s-access-keys"
+const AccessKeySecretLength = 2
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
 	if params.Object == nil {
@@ -100,10 +101,10 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 }
 
 // ApplyAccessKeySecret applies a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [2]linodego.ObjectStorageKey, secretName string) error {
+func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [AccessKeySecretLength]linodego.ObjectStorageKey, secretName string) error {
 	var err error
 
-	accessKeys := make([]json.RawMessage, 2)
+	accessKeys := make([]json.RawMessage, AccessKeySecretLength)
 	for i, key := range keys {
 		accessKeys[i], err = json.Marshal(key)
 		if err != nil {
@@ -128,7 +129,7 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 		},
 	}
 
-	if controllerutil.SetOwnerReference(s.Object, secret, s.client.Scheme()); err != nil {
+	if err := controllerutil.SetOwnerReference(s.Object, secret, s.client.Scheme()); err != nil {
 		return fmt.Errorf(
 			"error while creating access key secret %s for LinodeObjectStorageBucket %s/%s: failed to set owner ref: %w",
 			secretName,
@@ -167,8 +168,8 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 }
 
 // GetAccessKeysFromSecret gets the access key IDs for the OBJ buckets from a Secret.
-func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secretName string) ([2]int, error) {
-	var keyIDs [2]int
+func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secretName string) ([AccessKeySecretLength]int, error) {
+	var keyIDs [AccessKeySecretLength]int
 
 	// Delete the access keys.
 	objkey := client.ObjectKey{
@@ -183,8 +184,8 @@ func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, 
 	// Delete the secret since we have the access key IDs to revoke
 	controllerutil.RemoveFinalizer(secret, infrav1alpha1.GroupVersion.String())
 
-	permissions := [2]string{"read_write", "read_only"}
-	for i, permission := range permissions {
+	permissions := [AccessKeySecretLength]string{"read_write", "read_only"}
+	for idx, permission := range permissions {
 		secretDataForKey, ok := secret.Data[permission]
 		if !ok {
 			return keyIDs, fmt.Errorf("secret %s missing data field: %s", secretName, permission)
@@ -195,7 +196,7 @@ func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, 
 			return keyIDs, fmt.Errorf("error unmarshalling key: %w", err)
 		}
 
-		keyIDs[i] = key.ID
+		keyIDs[idx] = key.ID
 	}
 
 	return keyIDs, nil
