@@ -29,15 +29,17 @@ func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 		linodego.NewListOptions(1, string(rawFilter)),
 		bucketScope.Object.Spec.Cluster,
 	); err != nil {
-		logger.Info("Failed to list object storage buckets", "error", err.Error())
+		logger.Error(err, "Failed to list object storage buckets; unable to provision/confirm")
 
 		return nil, err
 	}
 	if len(buckets) == 1 {
+		logger.Info("Object storage bucket exists")
+
 		return &buckets[0], nil
 	}
 
-	logger.Info(fmt.Sprintf("Creating object storage bucket %s", bucketScope.Object.Name))
+	logger.Info("Creating object storage bucket")
 	opts := linodego.ObjectStorageBucketCreateOptions{
 		Cluster: bucketScope.Object.Spec.Cluster,
 		Label:   bucketScope.Object.Name,
@@ -45,7 +47,7 @@ func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 	}
 
 	if bucket, err = bucketScope.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {
-		logger.Info("Failed to create object storage bucket", "error", err.Error())
+		logger.Error(err, "Failed to create object storage bucket")
 
 		return nil, err
 	}
@@ -55,23 +57,6 @@ func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectSto
 
 func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, shouldRotate bool, logger logr.Logger) ([scope.AccessKeySecretLength]linodego.ObjectStorageKey, error) {
 	var newKeys [scope.AccessKeySecretLength]linodego.ObjectStorageKey
-	var existingKeys []linodego.ObjectStorageKey
-	var err error
-
-	if existingKeys, err = bucketScope.LinodeClient.ListObjectStorageKeys(
-		ctx,
-		// TODO: What if there are keys exceeding page 1?
-		linodego.NewListOptions(1, "{}"),
-	); err != nil {
-		logger.Info("Failed to list object storage keys", "error", err.Error())
-
-		return newKeys, err
-	}
-
-	keysSet := make(map[string]struct{})
-	for _, key := range existingKeys {
-		keysSet[key.Label] = struct{}{}
-	}
 
 	for i, permission := range []struct {
 		name   string
@@ -81,30 +66,24 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.Obj
 		{"read_only", "ro"},
 	} {
 		keyLabel := fmt.Sprintf("%s-%s", bucketScope.Object.Name, permission.suffix)
-
-		if _, ok := keysSet[keyLabel]; ok {
-			logger.Info(fmt.Sprintf("Found existing object storage key %s", keyLabel))
-
-			// If keys are not being rotated, store the existing key
-			if !shouldRotate {
-				newKeys[i] = existingKeys[0]
-
-				continue
-			}
-
-			// Keys are being rotated, so we should revoke this key before making a new one
-			oldKeyID := existingKeys[0].ID
-			if err := revokeObjectStorageKey(ctx, bucketScope, oldKeyID, logger); err != nil {
-				logger.Info("Failed to revoke object storage key for rotation", "id", oldKeyID, "error", err.Error())
-			}
-		}
-
 		key, err := createObjectStorageKey(ctx, bucketScope, keyLabel, permission.name, logger)
 		if err != nil {
 			return newKeys, err
 		}
 
 		newKeys[i] = *key
+	}
+
+	if shouldRotate {
+		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bucketScope.Object.Name)
+		keyIDs, err := bucketScope.GetAccessKeysFromSecret(ctx, secretName, logger)
+		if err != nil {
+			return newKeys, err
+		}
+
+		if err := RevokeObjectStorageKeys(ctx, bucketScope, keyIDs, logger); err != nil {
+			logger.Info("previous access keys must be manually revoked by the account owner")
+		}
 	}
 
 	return newKeys, nil
@@ -125,7 +104,7 @@ func createObjectStorageKey(ctx context.Context, bucketScope *scope.ObjectStorag
 
 	key, err := bucketScope.LinodeClient.CreateObjectStorageKey(ctx, opts)
 	if err != nil {
-		logger.Info("Failed to create object storage key", "label", label, "error", err.Error())
+		logger.Error(err, "Failed to create object storage key", "label", label)
 
 		return nil, err
 	}

@@ -152,8 +152,9 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	bucketScope.Object.Status.Hostname = util.Pointer(bucket.Hostname)
 	bucketScope.Object.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
-	if bucketScope.Object.Status.KeySecretName == nil || bucketScope.ShouldGenerateAccessKeys() {
-		keys, err := services.CreateOrRotateObjectStorageKeys(ctx, bucketScope, true, logger)
+	shouldRotate := bucketScope.ShouldGenerateAccessKeys()
+	if bucketScope.Object.Status.KeySecretName == nil || shouldRotate {
+		keys, err := services.CreateOrRotateObjectStorageKeys(ctx, bucketScope, shouldRotate, logger)
 		if err != nil {
 			r.setFailure(bucketScope, err)
 
@@ -161,7 +162,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		}
 
 		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bucketScope.Object.Name)
-		if err := bucketScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
+		if err := bucketScope.ApplyAccessKeySecret(ctx, keys, secretName, logger); err != nil {
 			r.setFailure(bucketScope, err)
 
 			return err
@@ -183,14 +184,14 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 	// Get access key IDs from secret
 	secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bucketScope.Object.Name)
-	keyIDs, err := bucketScope.GetAccessKeysFromSecret(ctx, secretName)
+	keyIDs, err := bucketScope.GetAccessKeysFromSecret(ctx, secretName, logger)
 	if err != nil {
-		return fmt.Errorf("get list of access keys from secret: %w", err)
+		return fmt.Errorf("failed to get list of access keys from secret: %w", err)
 	}
 
 	// Delete the access keys
 	if err := services.RevokeObjectStorageKeys(ctx, bucketScope, keyIDs, logger); err != nil {
-		return fmt.Errorf("delete object storage keys: %w", err)
+		return fmt.Errorf("failed to delete object storage keys: %w", err)
 	}
 
 	// Remove the finalizer.

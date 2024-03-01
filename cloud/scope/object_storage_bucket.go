@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -101,7 +102,7 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 }
 
 // ApplyAccessKeySecret applies a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [AccessKeySecretLength]linodego.ObjectStorageKey, secretName string) error {
+func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [AccessKeySecretLength]linodego.ObjectStorageKey, secretName string, logger logr.Logger) error {
 	var err error
 
 	accessKeys := make([]json.RawMessage, AccessKeySecretLength)
@@ -142,8 +143,8 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	// Add finalizer to secret so it isn't deleted when bucket deletion is triggered
 	controllerutil.AddFinalizer(secret, infrav1alpha1.GroupVersion.String())
 
-	if err := s.client.Create(ctx, secret); err != nil {
-		if client.IgnoreAlreadyExists(err) != nil {
+	if s.Object.Status.KeySecretName == nil {
+		if err := s.client.Create(ctx, secret); err != nil {
 			return fmt.Errorf(
 				"failed to create access key secret %s for LinodeObjectStorageBucket %s/%s: %w",
 				secretName,
@@ -153,22 +154,24 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 			)
 		}
 
-		if err := s.SecretPatchHelper.Patch(ctx, secret); err != nil {
-			return fmt.Errorf(
-				"failed to patch access key secret %s for LinodeObjectStorageBucket %s/%s: %w",
-				secretName,
-				s.Object.Namespace,
-				s.Object.Name,
-				err,
-			)
-		}
+		return nil
+	}
+
+	if err := s.SecretPatchHelper.Patch(ctx, secret); err != nil {
+		return fmt.Errorf(
+			"failed to patch access key secret %s for LinodeObjectStorageBucket %s/%s: %w",
+			secretName,
+			s.Object.Namespace,
+			s.Object.Name,
+			err,
+		)
 	}
 
 	return nil
 }
 
 // GetAccessKeysFromSecret gets the access key IDs for the OBJ buckets from a Secret.
-func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secretName string) ([AccessKeySecretLength]int, error) {
+func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secretName string, logger logr.Logger) ([AccessKeySecretLength]int, error) {
 	var keyIDs [AccessKeySecretLength]int
 
 	// Delete the access keys.
@@ -178,11 +181,18 @@ func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, 
 	}
 	secret := &corev1.Secret{}
 	if err := s.client.Get(ctx, objkey, secret); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return keyIDs, nil
+		}
+
 		return keyIDs, fmt.Errorf("failed to get access key secret %s; unable to revoke keys: %w", secretName, err)
 	}
 
-	// Delete the secret since we have the access key IDs to revoke
+	// Allow deletion of the secret since we have the access key IDs to revoke
 	controllerutil.RemoveFinalizer(secret, infrav1alpha1.GroupVersion.String())
+	if err := s.SecretPatchHelper.Patch(ctx, secret); err != nil {
+		logger.Info("Failed to patch secret; will not be deleted", "secret", secret.Name)
+	}
 
 	permissions := [AccessKeySecretLength]string{"read_write", "read_only"}
 	for idx, permission := range permissions {
