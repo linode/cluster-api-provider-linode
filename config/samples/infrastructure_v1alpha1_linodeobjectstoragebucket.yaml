@@ -1,0 +1,24 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeObjectStorageBucket
+metadata:
+  labels:
+    app.kubernetes.io/name: linodeobjectstoragebucket
+    app.kubernetes.io/instance: linodeobjectstoragebucket-sample
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+  name: linodeobjectstoragebucket-sample
+spec:
+  credentialsRef:
+    name: api-key-secret
+    namespace: default
+  keyGeneration: 0
+  cluster: us-ord-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-key-secret
+stringData:
+  apiToken: "changeme"
