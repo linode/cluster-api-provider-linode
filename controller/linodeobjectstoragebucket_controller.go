@@ -86,7 +86,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{}, err
 	}
 
-	bs, err := scope.NewObjectStorageBucketScope(
+	bScope, err := scope.NewObjectStorageBucketScope(
 		ctx,
 		r.LinodeApiKey,
 		scope.ObjectStorageBucketScopeParams{
@@ -101,7 +101,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{}, fmt.Errorf("failed to create object storage bucket scope: %w", err)
 	}
 
-	return r.reconcile(ctx, bs)
+	return r.reconcile(ctx, bScope)
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (res ctrl.Result, reterr error) {

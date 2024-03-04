@@ -19,3 +19,6 @@ callLinodeApiGet:
 
 callLinodeApiPost:
 	@curl -s -H "Authorization: Bearer $$LINODE_TOKEN" -H "Content-Type: application/json" -d "$$BODY" -X POST "https://$(TARGET_API)/$(TARGET_API_VERSION)/$$URI"
+
+callLinodeApiDelete:
+	@curl -s -H "Authorization: Bearer $$LINODE_TOKEN" -X DELETE "https://$(TARGET_API)/$(TARGET_API_VERSION)/$$URI"
