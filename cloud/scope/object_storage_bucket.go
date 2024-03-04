@@ -106,13 +106,7 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	for i, key := range keys {
 		accessKeys[i], err = json.Marshal(key)
 		if err != nil {
-			return fmt.Errorf(
-				"error while unmarshaling access key %s for LinodeObjectStorageBucket %s/%s: %w",
-				key.Label,
-				s.Object.Namespace,
-				s.Object.Name,
-				err,
-			)
+			return fmt.Errorf("error while unmarshaling access key %s: %w", key.Label, err)
 		}
 	}
 
@@ -128,13 +122,7 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	}
 
 	if err := controllerutil.SetOwnerReference(s.Object, secret, s.client.Scheme()); err != nil {
-		return fmt.Errorf(
-			"error while creating access key secret %s for LinodeObjectStorageBucket %s/%s: failed to set owner ref: %w",
-			secretName,
-			s.Object.Namespace,
-			s.Object.Name,
-			err,
-		)
+		return fmt.Errorf("error while creating access key secret %s: failed to set owner ref: %w", secretName, err)
 	}
 
 	// Add finalizer to secret so it isn't deleted when bucket deletion is triggered
@@ -142,32 +130,20 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 
 	if s.Object.Status.KeySecretName == nil {
 		if err := s.client.Create(ctx, secret); err != nil {
-			return fmt.Errorf(
-				"failed to create access key secret %s for LinodeObjectStorageBucket %s/%s: %w",
-				secretName,
-				s.Object.Namespace,
-				s.Object.Name,
-				err,
-			)
+			return fmt.Errorf("failed to create access key secret %s: %w", secretName, err)
 		}
 
 		return nil
 	}
 
 	if err := s.client.Update(ctx, secret); err != nil {
-		return fmt.Errorf(
-			"failed to patch access key secret %s for LinodeObjectStorageBucket %s/%s: %w",
-			secretName,
-			s.Object.Namespace,
-			s.Object.Name,
-			err,
-		)
+		return fmt.Errorf("failed to patch access key secret %s: %w", secretName, err)
 	}
 
 	return nil
 }
 
-func (s *ObjectStorageBucketScope) GetSecret(ctx context.Context) (*corev1.Secret, error) {
+func (s *ObjectStorageBucketScope) GetAccessKeySecret(ctx context.Context) (*corev1.Secret, error) {
 	secretName := fmt.Sprintf(AccessKeyNameTemplate, s.Object.Name)
 
 	objKey := client.ObjectKey{

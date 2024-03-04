@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -145,6 +144,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 	bucket, err := services.EnsureObjectStorageBucket(ctx, bs)
 	if err != nil {
+		bs.Logger.Error(err, "Failed to ensure bucket exists")
 		r.setFailure(bs, err)
 
 		return err
@@ -153,8 +153,9 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	bs.Object.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
 	if bs.Object.Status.LastKeyGeneration == nil || bs.ShouldRotateKeys() {
-		keys, err := services.CreateOrRotateObjectStorageKeys(ctx, bs)
+		keys, err := services.RotateObjectStorageKeys(ctx, bs)
 		if err != nil {
+			bs.Logger.Error(err, "Failed to provision new access keys")
 			r.setFailure(bs, err)
 
 			return err
@@ -162,6 +163,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bs.Object.Name)
 		if err := bs.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
+			bs.Logger.Error(err, "Failed to apply access key secret")
 			r.setFailure(bs, err)
 
 			return err
@@ -181,36 +183,41 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, bs *scope.ObjectStorageBucketScope) error {
 	bs.Logger.Info("Reconciling delete")
 
-	secret, err := bs.GetSecret(ctx)
+	secret, err := bs.GetAccessKeySecret(ctx)
 	if err != nil {
 		bs.Logger.Error(err, "Failed to read secret with access keys to revoke")
+		r.setFailure(bs, err)
 
-		return fmt.Errorf("failed to get secret for key revocation: %w", err)
+		return err
 	}
 
 	if err := services.RevokeObjectStorageKeys(ctx, bs, secret); err != nil {
 		bs.Logger.Error(err, "failed to revoke access keys; keys must be manually revoked")
+		r.setFailure(bs, err)
 
-		return fmt.Errorf("failed to revoke access keys: %w", err)
+		return err
 	}
 
 	// Only permit Secret and LinodeObjectStorageBucket deletion if keys were revoked
 	if !controllerutil.RemoveFinalizer(secret, infrav1alpha1.GroupVersion.String()) {
-		bs.Logger.Info("Failed to remove finalizer from secret; will not be deleted")
+		bs.Logger.Error(err, "Failed to remove finalizer from secret; will not be deleted")
+		r.setFailure(bs, err)
 
-		return errors.New("failed to remove finalizer from secret")
+		return err
 	}
 
 	if err := r.Client.Update(ctx, secret); err != nil {
-		bs.Logger.Info("Failed to remove finalizer from secret; will not be deleted")
+		bs.Logger.Error(err, "Failed to remove finalizer from secret; will not be deleted")
+		r.setFailure(bs, err)
 
-		return fmt.Errorf("failed to remove finalizer from secret: %w", err)
+		return err
 	}
 
 	if !controllerutil.RemoveFinalizer(bs.Object, infrav1alpha1.GroupVersion.String()) {
-		bs.Logger.Info("Failed to remove finalizer from bucket; will not be deleted")
+		bs.Logger.Error(err, "Failed to remove finalizer from bucket; will not be deleted")
+		r.setFailure(bs, err)
 
-		return errors.New("failed to remove finalizer from bucket")
+		return err
 	}
 
 	return nil

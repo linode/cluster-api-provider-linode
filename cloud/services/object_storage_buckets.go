@@ -22,7 +22,7 @@ func EnsureObjectStorageBucket(ctx context.Context, bs *scope.ObjectStorageBucke
 
 	rawFilter, err := json.Marshal(filter)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal list buckets filter: %w", err)
+		return nil, fmt.Errorf("failed to list buckets in cluster %s: %w", bs.Object.Spec.Cluster, err)
 	}
 
 	var buckets []linodego.ObjectStorageBucket
@@ -31,8 +31,6 @@ func EnsureObjectStorageBucket(ctx context.Context, bs *scope.ObjectStorageBucke
 		linodego.NewListOptions(1, string(rawFilter)),
 		bs.Object.Spec.Cluster,
 	); err != nil {
-		bs.Logger.Error(err, "Failed to list buckets; unable to provision/confirm")
-
 		return nil, fmt.Errorf("failed to list buckets in cluster %s: %w", bs.Object.Spec.Cluster, err)
 	}
 	if len(buckets) == 1 {
@@ -49,8 +47,6 @@ func EnsureObjectStorageBucket(ctx context.Context, bs *scope.ObjectStorageBucke
 
 	var bucket *linodego.ObjectStorageBucket
 	if bucket, err = bs.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {
-		bs.Logger.Error(err, "Failed to create bucket")
-
 		return nil, fmt.Errorf("failed to create bucket: %w", err)
 	}
 
@@ -59,7 +55,7 @@ func EnsureObjectStorageBucket(ctx context.Context, bs *scope.ObjectStorageBucke
 	return bucket, nil
 }
 
-func CreateOrRotateObjectStorageKeys(ctx context.Context, bs *scope.ObjectStorageBucketScope) ([scope.AccessKeySecretLength]linodego.ObjectStorageKey, error) {
+func RotateObjectStorageKeys(ctx context.Context, bs *scope.ObjectStorageBucketScope) ([scope.AccessKeySecretLength]linodego.ObjectStorageKey, error) {
 	var newKeys [scope.AccessKeySecretLength]linodego.ObjectStorageKey
 
 	for i, permission := range []struct {
@@ -80,7 +76,7 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bs *scope.ObjectStorag
 
 	// If key revocation fails here, just log the errors since new keys have been created
 	if bs.Object.Status.LastKeyGeneration != nil && bs.ShouldRotateKeys() {
-		secret, err := bs.GetSecret(ctx)
+		secret, err := bs.GetAccessKeySecret(ctx)
 		if err != nil {
 			bs.Logger.Error(err, "Failed to read secret with access keys to revoke; keys must be manually revoked")
 		}
