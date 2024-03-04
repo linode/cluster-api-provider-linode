@@ -147,12 +147,13 @@ providers:
 Here is a list of required configuration parameters:
 
 ```sh
-# Cluster settings
+## Cluster settings
 export CLUSTER_NAME=capl-cluster
 export KUBERNETES_VERSION=v1.29.1
 
-# Linode settings
+## Linode settings
 export LINODE_REGION=us-ord
+# Multi-tenancy: This may be changed for each cluster to deploy to different Linode accounts.
 export LINODE_TOKEN=<your linode PAT>
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
