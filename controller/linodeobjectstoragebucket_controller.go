@@ -104,118 +104,118 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 	return r.reconcile(ctx, bs)
 }
 
-func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bs *scope.ObjectStorageBucketScope) (res ctrl.Result, reterr error) {
+func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (res ctrl.Result, reterr error) {
 	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageBucket changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
-		if err := bs.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
-			bs.Logger.Error(err, "failed to patch LinodeObjectStorageBucket")
+		if err := bScope.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
+			bScope.Logger.Error(err, "failed to patch LinodeObjectStorageBucket")
 			reterr = err
 		}
 	}()
 
 	// Delete
-	if !bs.Object.DeletionTimestamp.IsZero() {
-		return res, r.reconcileDelete(ctx, bs)
+	if !bScope.Object.DeletionTimestamp.IsZero() {
+		return res, r.reconcileDelete(ctx, bScope)
 	}
 
 	// Apply
-	if err := r.reconcileApply(ctx, bs); err != nil {
+	if err := r.reconcileApply(ctx, bScope); err != nil {
 		return res, err
 	}
 
 	return res, nil
 }
 
-func (r *LinodeObjectStorageBucketReconciler) setFailure(bs *scope.ObjectStorageBucketScope, err error) {
-	bs.Object.Status.FailureMessage = util.Pointer(err.Error())
-	r.Recorder.Event(bs.Object, corev1.EventTypeWarning, "Failed", err.Error())
-	conditions.MarkFalse(bs.Object, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
+func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectStorageBucketScope, err error) {
+	bScope.Object.Status.FailureMessage = util.Pointer(err.Error())
+	r.Recorder.Event(bScope.Object, corev1.EventTypeWarning, "Failed", err.Error())
+	conditions.MarkFalse(bScope.Object, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
 }
 
-func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, bs *scope.ObjectStorageBucketScope) error {
-	bs.Logger.Info("Reconciling apply")
+func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
+	bScope.Logger.Info("Reconciling apply")
 
-	bs.Object.Status.Ready = false
+	bScope.Object.Status.Ready = false
 
-	if err := bs.AddFinalizer(ctx); err != nil {
+	if err := bScope.AddFinalizer(ctx); err != nil {
 		return err
 	}
 
-	bucket, err := services.EnsureObjectStorageBucket(ctx, bs)
+	bucket, err := services.EnsureObjectStorageBucket(ctx, bScope)
 	if err != nil {
-		bs.Logger.Error(err, "Failed to ensure bucket exists")
-		r.setFailure(bs, err)
+		bScope.Logger.Error(err, "Failed to ensure bucket exists")
+		r.setFailure(bScope, err)
 
 		return err
 	}
-	bs.Object.Status.Hostname = util.Pointer(bucket.Hostname)
-	bs.Object.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
+	bScope.Object.Status.Hostname = util.Pointer(bucket.Hostname)
+	bScope.Object.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
-	if bs.Object.Status.LastKeyGeneration == nil || bs.ShouldRotateKeys() {
-		keys, err := services.RotateObjectStorageKeys(ctx, bs)
+	if bScope.Object.Status.LastKeyGeneration == nil || bScope.ShouldRotateKeys() {
+		keys, err := services.RotateObjectStorageKeys(ctx, bScope)
 		if err != nil {
-			bs.Logger.Error(err, "Failed to provision new access keys")
-			r.setFailure(bs, err)
+			bScope.Logger.Error(err, "Failed to provision new access keys")
+			r.setFailure(bScope, err)
 
 			return err
 		}
 
-		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bs.Object.Name)
-		if err := bs.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
-			bs.Logger.Error(err, "Failed to apply access key secret")
-			r.setFailure(bs, err)
+		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bScope.Object.Name)
+		if err := bScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
+			bScope.Logger.Error(err, "Failed to apply access key secret")
+			r.setFailure(bScope, err)
 
 			return err
 		}
-		bs.Object.Status.KeySecretName = util.Pointer(secretName)
-		bs.Object.Status.LastKeyGeneration = bs.Object.Spec.KeyGeneration
+		bScope.Object.Status.KeySecretName = util.Pointer(secretName)
+		bScope.Object.Status.LastKeyGeneration = bScope.Object.Spec.KeyGeneration
 	}
 
-	r.Recorder.Event(bs.Object, corev1.EventTypeNormal, "Ready", "Object storage bucket configuration applied")
+	r.Recorder.Event(bScope.Object, corev1.EventTypeNormal, "Ready", "Object storage bucket configuration applied")
 
-	bs.Object.Status.Ready = true
-	conditions.MarkTrue(bs.Object, clusterv1.ReadyCondition)
+	bScope.Object.Status.Ready = true
+	conditions.MarkTrue(bScope.Object, clusterv1.ReadyCondition)
 
 	return nil
 }
 
-func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, bs *scope.ObjectStorageBucketScope) error {
-	bs.Logger.Info("Reconciling delete")
+func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
+	bScope.Logger.Info("Reconciling delete")
 
-	secret, err := bs.GetAccessKeySecret(ctx)
+	secret, err := bScope.GetAccessKeySecret(ctx)
 	if err != nil {
-		bs.Logger.Error(err, "Failed to read secret with access keys to revoke")
-		r.setFailure(bs, err)
+		bScope.Logger.Error(err, "Failed to read secret with access keys to revoke")
+		r.setFailure(bScope, err)
 
 		return err
 	}
 
-	if err := services.RevokeObjectStorageKeys(ctx, bs, secret); err != nil {
-		bs.Logger.Error(err, "failed to revoke access keys; keys must be manually revoked")
-		r.setFailure(bs, err)
+	if err := services.RevokeObjectStorageKeys(ctx, bScope, secret); err != nil {
+		bScope.Logger.Error(err, "failed to revoke access keys; keys must be manually revoked")
+		r.setFailure(bScope, err)
 
 		return err
 	}
 
 	// Only permit Secret and LinodeObjectStorageBucket deletion if keys were revoked
 	if !controllerutil.RemoveFinalizer(secret, infrav1alpha1.GroupVersion.String()) {
-		bs.Logger.Error(err, "Failed to remove finalizer from secret; will not be deleted")
-		r.setFailure(bs, err)
+		bScope.Logger.Error(err, "Failed to remove finalizer from secret; will not be deleted")
+		r.setFailure(bScope, err)
 
 		return err
 	}
 
 	if err := r.Client.Update(ctx, secret); err != nil {
-		bs.Logger.Error(err, "Failed to remove finalizer from secret; will not be deleted")
-		r.setFailure(bs, err)
+		bScope.Logger.Error(err, "Failed to remove finalizer from secret; will not be deleted")
+		r.setFailure(bScope, err)
 
 		return err
 	}
 
-	if !controllerutil.RemoveFinalizer(bs.Object, infrav1alpha1.GroupVersion.String()) {
-		bs.Logger.Error(err, "Failed to remove finalizer from bucket; will not be deleted")
-		r.setFailure(bs, err)
+	if !controllerutil.RemoveFinalizer(bScope.Object, infrav1alpha1.GroupVersion.String()) {
+		bScope.Logger.Error(err, "Failed to remove finalizer from bucket; will not be deleted")
+		r.setFailure(bScope, err)
 
 		return err
 	}
