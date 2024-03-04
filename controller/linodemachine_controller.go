@@ -378,10 +378,14 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 
 	machineScope.LinodeMachine.Status.Addresses = []clusterv1.MachineAddress{}
-	for _, add := range linodeInstance.IPv4 {
+	for _, addr := range linodeInstance.IPv4 {
+		addrType := clusterv1.MachineExternalIP
+		if addr.IsPrivate() {
+			addrType = clusterv1.MachineInternalIP
+		}
 		machineScope.LinodeMachine.Status.Addresses = append(machineScope.LinodeMachine.Status.Addresses, clusterv1.MachineAddress{
-			Type:    clusterv1.MachineExternalIP,
-			Address: add.String(),
+			Type:    addrType,
+			Address: addr.String(),
 		})
 	}
 
