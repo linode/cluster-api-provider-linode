@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/version"
 
 	_ "go.uber.org/automaxprocs"
@@ -149,6 +150,9 @@ func main() {
 		Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
 		WatchFilterValue: objectStorageBucketWatchFilter,
 		LinodeApiKey:     linodeToken,
+		LinodeClientFactory: func(apiKey string) scope.LinodeObjectStorageClient {
+			return scope.CreateLinodeClient(apiKey)
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)

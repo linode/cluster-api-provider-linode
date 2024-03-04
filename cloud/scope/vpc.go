@@ -59,7 +59,7 @@ func NewVPCScope(apiKey string, params VPCScopeParams) (*VPCScope, error) {
 		return nil, err
 	}
 
-	linodeClient := createLinodeClient(apiKey)
+	linodeClient := CreateLinodeClient(apiKey)
 
 	helper, err := patch.NewHelper(params.LinodeVPC, params.Client)
 	if err != nil {

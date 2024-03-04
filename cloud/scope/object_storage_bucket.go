@@ -18,16 +18,17 @@ import (
 )
 
 type ObjectStorageBucketScopeParams struct {
-	Client client.Client
-	Object *infrav1alpha1.LinodeObjectStorageBucket
-	Logger *logr.Logger
+	Client              client.Client
+	LinodeClientFactory LinodeObjectStorageClientFactory
+	Object              *infrav1alpha1.LinodeObjectStorageBucket
+	Logger              *logr.Logger
 }
 
 type ObjectStorageBucketScope struct {
 	client            client.Client
 	Object            *infrav1alpha1.LinodeObjectStorageBucket
 	Logger            logr.Logger
-	LinodeClient      *linodego.Client
+	LinodeClient      LinodeObjectStorageClient
 	BucketPatchHelper *patch.Helper
 }
 
@@ -40,6 +41,9 @@ func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParam
 	}
 	if params.Logger == nil {
 		return errors.New("logger is required when creating an ObjectStorageBucketScope")
+	}
+	if params.LinodeClientFactory == nil {
+		return errors.New("LinodeClientFactory is required when creating an ObjectStorageBucketScope")
 	}
 
 	return nil
@@ -62,7 +66,6 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		}
 		apiKey = string(data)
 	}
-	linodeClient := createLinodeClient(apiKey)
 
 	bucketPatchHelper, err := patch.NewHelper(params.Object, params.Client)
 	if err != nil {
@@ -73,7 +76,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		client:            params.Client,
 		Object:            params.Object,
 		Logger:            *params.Logger,
-		LinodeClient:      linodeClient,
+		LinodeClient:      params.LinodeClientFactory(apiKey),
 		BucketPatchHelper: bucketPatchHelper,
 	}, nil
 }
@@ -129,9 +132,11 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	controllerutil.AddFinalizer(secret, infrav1alpha1.GroupVersion.String())
 
 	if s.Object.Status.KeySecretName == nil {
+		s.Logger.Info("SHOULD CREATE ACCESS KEY SECRET")
 		if err := s.client.Create(ctx, secret); err != nil {
 			return fmt.Errorf("could not create access key secret %s: %w", secretName, err)
 		}
+		s.Logger.Info("CREATED ACCESS KEY SECRET")
 
 		return nil
 	}

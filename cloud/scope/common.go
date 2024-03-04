@@ -13,7 +13,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/version"
 )
 
-func createLinodeClient(apiKey string) *linodego.Client {
+func CreateLinodeClient(apiKey string) *linodego.Client {
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: apiKey})
 
 	oauth2Client := &http.Client{

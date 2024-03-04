@@ -57,7 +57,7 @@ func NewMachineScope(apiKey string, params MachineScopeParams) (*MachineScope, e
 		return nil, err
 	}
 
-	linodeClient := createLinodeClient(apiKey)
+	linodeClient := CreateLinodeClient(apiKey)
 
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {

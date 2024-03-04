@@ -55,7 +55,7 @@ func NewClusterScope(apiKey string, params ClusterScopeParams) (*ClusterScope, e
 		return nil, err
 	}
 
-	linodeClient := createLinodeClient(apiKey)
+	linodeClient := CreateLinodeClient(apiKey)
 
 	helper, err := patch.NewHelper(params.LinodeCluster, params.Client)
 	if err != nil {

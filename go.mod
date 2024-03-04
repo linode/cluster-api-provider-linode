@@ -10,6 +10,7 @@ require (
 	github.com/onsi/gomega v1.31.1
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/automaxprocs v1.5.3
+	go.uber.org/mock v0.4.0
 	golang.org/x/oauth2 v0.17.0
 	k8s.io/api v0.29.2
 	k8s.io/apimachinery v0.29.2
