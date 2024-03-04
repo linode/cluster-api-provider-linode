@@ -63,7 +63,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 		mockCtrl.Finish()
 	})
 
-	It("should should reconcile an object", func() {
+	It("should reconcile an object", func() {
 		mockClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)
 
 		mockClient.EXPECT().
@@ -84,8 +84,12 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 				CreateObjectStorageKey(
 					gomock.Any(),
 					gomock.Cond(func(opt any) bool {
-						label := opt.(linodego.ObjectStorageKeyCreateOptions).Label
-						return label == fmt.Sprintf("%s-%s", obj.Name, permission)
+						createOpt, ok := opt.(linodego.ObjectStorageKeyCreateOptions)
+						if !ok {
+							return false
+						}
+
+						return createOpt.Label == fmt.Sprintf("%s-%s", obj.Name, permission)
 					}),
 				).
 				Return(&linodego.ObjectStorageKey{ID: idx}, nil)
