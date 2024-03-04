@@ -26,13 +26,13 @@ type ObjectStorageBucketScopeParams struct {
 type ObjectStorageBucketScope struct {
 	client            client.Client
 	Object            *infrav1alpha1.LinodeObjectStorageBucket
-	Logger            *logr.Logger
+	Logger            logr.Logger
 	LinodeClient      *linodego.Client
 	BucketPatchHelper *patch.Helper
 }
 
 const AccessKeyNameTemplate = "%s-access-keys"
-const AccessKeySecretLength = 2
+const NumAccessKeys = 2
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
 	if params.Object == nil {
@@ -72,7 +72,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 	return &ObjectStorageBucketScope{
 		client:            params.Client,
 		Object:            params.Object,
-		Logger:            params.Logger,
+		Logger:            *params.Logger,
 		LinodeClient:      linodeClient,
 		BucketPatchHelper: bucketPatchHelper,
 	}, nil
@@ -99,14 +99,14 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 }
 
 // ApplyAccessKeySecret applies a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [AccessKeySecretLength]linodego.ObjectStorageKey, secretName string) error {
+func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [NumAccessKeys]linodego.ObjectStorageKey, secretName string) error {
 	var err error
 
-	accessKeys := make([]json.RawMessage, AccessKeySecretLength)
+	accessKeys := make([]json.RawMessage, NumAccessKeys)
 	for i, key := range keys {
 		accessKeys[i], err = json.Marshal(key)
 		if err != nil {
-			return fmt.Errorf("error while unmarshaling access key %s: %w", key.Label, err)
+			return fmt.Errorf("could not unmarshal access key %s: %w", key.Label, err)
 		}
 	}
 
@@ -122,7 +122,7 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	}
 
 	if err := controllerutil.SetOwnerReference(s.Object, secret, s.client.Scheme()); err != nil {
-		return fmt.Errorf("error while creating access key secret %s: failed to set owner ref: %w", secretName, err)
+		return fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
 	}
 
 	// Add finalizer to secret so it isn't deleted when bucket deletion is triggered
@@ -130,14 +130,14 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 
 	if s.Object.Status.KeySecretName == nil {
 		if err := s.client.Create(ctx, secret); err != nil {
-			return fmt.Errorf("failed to create access key secret %s: %w", secretName, err)
+			return fmt.Errorf("could not create access key secret %s: %w", secretName, err)
 		}
 
 		return nil
 	}
 
 	if err := s.client.Update(ctx, secret); err != nil {
-		return fmt.Errorf("failed to patch access key secret %s: %w", secretName, err)
+		return fmt.Errorf("could not update access key secret %s: %w", secretName, err)
 	}
 
 	return nil
@@ -159,10 +159,10 @@ func (s *ObjectStorageBucketScope) GetAccessKeySecret(ctx context.Context) (*cor
 }
 
 // GetAccessKeysFromSecret gets the access key IDs for the OBJ buckets from a Secret.
-func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secret *corev1.Secret) ([AccessKeySecretLength]int, error) {
-	var keyIDs [AccessKeySecretLength]int
+func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secret *corev1.Secret) ([NumAccessKeys]int, error) {
+	var keyIDs [NumAccessKeys]int
 
-	permissions := [AccessKeySecretLength]string{"read_write", "read_only"}
+	permissions := [NumAccessKeys]string{"read_write", "read_only"}
 	for idx, permission := range permissions {
 		secretDataForKey, ok := secret.Data[permission]
 		if !ok {

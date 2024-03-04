@@ -55,8 +55,8 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 	return bucket, nil
 }
 
-func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([scope.AccessKeySecretLength]linodego.ObjectStorageKey, error) {
-	var newKeys [scope.AccessKeySecretLength]linodego.ObjectStorageKey
+func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([scope.NumAccessKeys]linodego.ObjectStorageKey, error) {
+	var newKeys [scope.NumAccessKeys]linodego.ObjectStorageKey
 
 	for idx, permission := range []struct {
 		name   string
