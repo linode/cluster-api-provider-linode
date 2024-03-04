@@ -12,7 +12,11 @@ spec:
         kubelet:
           extraArgs:
             - "provider-id=linode://{{ ds.meta_data.id }}"
+      # TODO: use MDS to get public and private IP instead because hostname ordering can't always be assumed
       preRKE2Commands:
+        - |
+          mkdir -p /etc/rancher/rke2/config.yaml.d/
+          echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
         - sed -i '/swap/d' /etc/fstab
         - swapoff -a
         - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
