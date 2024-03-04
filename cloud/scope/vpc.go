@@ -54,11 +54,19 @@ func validateVPCScopeParams(params VPCScopeParams) error {
 
 // NewVPCScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewVPCScope(apiKey string, params VPCScopeParams) (*VPCScope, error) {
+func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VPCScope, error) {
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
 	}
 
+	// Override the controller credentials with ones from the VPC's Secret reference (if supplied).
+	if params.LinodeVPC.Spec.CredentialsRef != nil {
+		data, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeVPC.Spec.CredentialsRef, params.LinodeVPC.GetNamespace())
+		if err != nil {
+			return nil, fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		apiKey = string(data)
+	}
 	linodeClient := createLinodeClient(apiKey)
 
 	helper, err := patch.NewHelper(params.LinodeVPC, params.Client)

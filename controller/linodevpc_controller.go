@@ -85,6 +85,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	vpcScope, err := scope.NewVPCScope(
+		ctx,
 		r.LinodeApiKey,
 		scope.VPCScopeParams{
 			Client:    r.Client,

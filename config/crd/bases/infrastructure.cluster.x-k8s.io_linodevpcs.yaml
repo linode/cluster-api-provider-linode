@@ -39,6 +39,21 @@ spec:
           spec:
             description: LinodeVPCSpec defines the desired state of LinodeVPC
             properties:
+              credentialsRef:
+                description: |-
+                  CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not
+                  supplied then the credentials of the controller will be used.
+                properties:
+                  name:
+                    description: name is unique within a namespace to reference a
+                      secret resource.
+                    type: string
+                  namespace:
+                    description: namespace defines the space within which the secret
+                      name must be unique.
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
               description:
                 type: string
               label:
