@@ -132,11 +132,9 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	controllerutil.AddFinalizer(secret, infrav1alpha1.GroupVersion.String())
 
 	if s.Object.Status.KeySecretName == nil {
-		s.Logger.Info("SHOULD CREATE ACCESS KEY SECRET")
 		if err := s.client.Create(ctx, secret); err != nil {
 			return fmt.Errorf("could not create access key secret %s: %w", secretName, err)
 		}
-		s.Logger.Info("CREATED ACCESS KEY SECRET")
 
 		return nil
 	}
