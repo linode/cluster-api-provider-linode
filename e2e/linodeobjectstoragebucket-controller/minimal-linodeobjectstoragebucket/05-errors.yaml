@@ -1,0 +1,9 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeObjectStorageBucket
+metadata:
+  name: linodeobjectstoragebucket-sample
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linodeobjectstoragebucket-sample-access-keys

@@ -62,14 +62,16 @@ func main() {
 		// Environment variables
 		linodeToken string = os.Getenv("LINODE_TOKEN")
 
-		machineWatchFilter   string
-		clusterWatchFilter   string
-		metricsAddr          string
-		enableLeaderElection bool
-		probeAddr            string
+		machineWatchFilter             string
+		clusterWatchFilter             string
+		objectStorageBucketWatchFilter string
+		metricsAddr                    string
+		enableLeaderElection           bool
+		probeAddr                      string
 	)
 	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
 	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
+	flag.StringVar(&objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -138,6 +140,17 @@ func main() {
 		LinodeApiKey:     linodeToken,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
+		os.Exit(1)
+	}
+	if err = (&controller2.LinodeObjectStorageBucketReconciler{
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
+		Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
+		WatchFilterValue: objectStorageBucketWatchFilter,
+		LinodeApiKey:     linodeToken,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

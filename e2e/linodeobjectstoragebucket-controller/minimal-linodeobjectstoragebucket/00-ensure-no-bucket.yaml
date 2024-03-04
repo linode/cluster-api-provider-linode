@@ -1,0 +1,5 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |-
+      URI="object-storage/buckets/us-sea-1/linodeobjectstoragebucket-sample" make callLinodeApiDelete || exit 0
