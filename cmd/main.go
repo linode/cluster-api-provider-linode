@@ -145,6 +145,7 @@ func main() {
 	if err = (&controller2.LinodeObjectStorageBucketReconciler{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
+		Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
 		Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
 		WatchFilterValue: objectStorageBucketWatchFilter,
 		LinodeApiKey:     linodeToken,

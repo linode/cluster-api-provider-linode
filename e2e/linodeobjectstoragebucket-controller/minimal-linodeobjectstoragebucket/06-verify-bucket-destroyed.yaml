@@ -1,5 +1,0 @@
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - script: |-
-      URI="object-storage/buckets/us-sea-1" FILTER="" make callLinodeApiGet | grep -v sample.us-sea-1.linodeobjects.com

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -19,21 +20,26 @@ import (
 type ObjectStorageBucketScopeParams struct {
 	Client client.Client
 	Object *infrav1alpha1.LinodeObjectStorageBucket
+	Logger *logr.Logger
 }
 
 type ObjectStorageBucketScope struct {
 	client            client.Client
 	Object            *infrav1alpha1.LinodeObjectStorageBucket
+	Logger            *logr.Logger
 	LinodeClient      *linodego.Client
 	BucketPatchHelper *patch.Helper
-	SecretPatchHelper *patch.Helper
 }
 
 const AccessKeyNameTemplate = "%s-access-keys"
+const AccessKeySecretLength = 2
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
 	if params.Object == nil {
 		return errors.New("object storage bucket is required when creating an ObjectStorageBucketScope")
+	}
+	if params.Logger == nil {
+		return errors.New("logger is required when creating an ObjectStorageBucketScope")
 	}
 
 	return nil
@@ -63,20 +69,13 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
-	secretPatchHelper, err := patch.NewHelper(&corev1.Secret{}, params.Client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init patch helper: %w", err)
-	}
-
-	bucketScope := &ObjectStorageBucketScope{
+	return &ObjectStorageBucketScope{
 		client:            params.Client,
 		Object:            params.Object,
+		Logger:            params.Logger,
 		LinodeClient:      linodeClient,
 		BucketPatchHelper: bucketPatchHelper,
-		SecretPatchHelper: secretPatchHelper,
-	}
-
-	return bucketScope, nil
+	}, nil
 }
 
 // PatchObject persists the object storage bucket configuration and status.
@@ -100,10 +99,10 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 }
 
 // ApplyAccessKeySecret applies a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [2]linodego.ObjectStorageKey, secretName string) error {
+func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [AccessKeySecretLength]linodego.ObjectStorageKey, secretName string) error {
 	var err error
 
-	accessKeys := make([]json.RawMessage, 2)
+	accessKeys := make([]json.RawMessage, AccessKeySecretLength)
 	for i, key := range keys {
 		accessKeys[i], err = json.Marshal(key)
 		if err != nil {
@@ -128,7 +127,7 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 		},
 	}
 
-	if controllerutil.SetOwnerReference(s.Object, secret, s.client.Scheme()); err != nil {
+	if err := controllerutil.SetOwnerReference(s.Object, secret, s.client.Scheme()); err != nil {
 		return fmt.Errorf(
 			"error while creating access key secret %s for LinodeObjectStorageBucket %s/%s: failed to set owner ref: %w",
 			secretName,
@@ -141,8 +140,8 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	// Add finalizer to secret so it isn't deleted when bucket deletion is triggered
 	controllerutil.AddFinalizer(secret, infrav1alpha1.GroupVersion.String())
 
-	if err := s.client.Create(ctx, secret); err != nil {
-		if client.IgnoreAlreadyExists(err) != nil {
+	if s.Object.Status.KeySecretName == nil {
+		if err := s.client.Create(ctx, secret); err != nil {
 			return fmt.Errorf(
 				"failed to create access key secret %s for LinodeObjectStorageBucket %s/%s: %w",
 				secretName,
@@ -152,59 +151,59 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 			)
 		}
 
-		if err := s.SecretPatchHelper.Patch(ctx, secret); err != nil {
-			return fmt.Errorf(
-				"failed to patch access key secret %s for LinodeObjectStorageBucket %s/%s: %w",
-				secretName,
-				s.Object.Namespace,
-				s.Object.Name,
-				err,
-			)
-		}
+		return nil
+	}
+
+	if err := s.client.Update(ctx, secret); err != nil {
+		return fmt.Errorf(
+			"failed to patch access key secret %s for LinodeObjectStorageBucket %s/%s: %w",
+			secretName,
+			s.Object.Namespace,
+			s.Object.Name,
+			err,
+		)
 	}
 
 	return nil
 }
 
-// GetAccessKeysFromSecret gets the access key IDs for the OBJ buckets from a Secret.
-func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secretName string) ([2]int, error) {
-	var keyIDs [2]int
+func (s *ObjectStorageBucketScope) GetSecret(ctx context.Context) (*corev1.Secret, error) {
+	secretName := fmt.Sprintf(AccessKeyNameTemplate, s.Object.Name)
 
-	// Delete the access keys.
-	objkey := client.ObjectKey{
+	objKey := client.ObjectKey{
 		Namespace: s.Object.Namespace,
 		Name:      secretName,
 	}
-	secret := &corev1.Secret{}
-	if err := s.client.Get(ctx, objkey, secret); err != nil {
-		return keyIDs, fmt.Errorf("failed to get access key secret %s; unable to revoke keys: %w", secretName, err)
+	var secret corev1.Secret
+	if err := s.client.Get(ctx, objKey, &secret); err != nil {
+		return nil, err
 	}
 
-	// Delete the secret since we have the access key IDs to revoke
-	controllerutil.RemoveFinalizer(secret, infrav1alpha1.GroupVersion.String())
+	return &secret, nil
+}
 
-	permissions := [2]string{"read_write", "read_only"}
-	for i, permission := range permissions {
+// GetAccessKeysFromSecret gets the access key IDs for the OBJ buckets from a Secret.
+func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secret *corev1.Secret) ([AccessKeySecretLength]int, error) {
+	var keyIDs [AccessKeySecretLength]int
+
+	permissions := [AccessKeySecretLength]string{"read_write", "read_only"}
+	for idx, permission := range permissions {
 		secretDataForKey, ok := secret.Data[permission]
 		if !ok {
-			return keyIDs, fmt.Errorf("secret %s missing data field: %s", secretName, permission)
+			return keyIDs, fmt.Errorf("secret %s missing data field %s", secret.Name, permission)
 		}
 
-		key := &linodego.ObjectStorageKey{}
-		if err := json.Unmarshal(secretDataForKey, key); err != nil {
-			return keyIDs, fmt.Errorf("error unmarshalling key: %w", err)
+		var key linodego.ObjectStorageKey
+		if err := json.Unmarshal(secretDataForKey, &key); err != nil {
+			return keyIDs, fmt.Errorf("error unmarshaling key: %w", err)
 		}
 
-		keyIDs[i] = key.ID
+		keyIDs[idx] = key.ID
 	}
 
 	return keyIDs, nil
 }
 
-func (s *ObjectStorageBucketScope) ShouldGenerateAccessKeys() bool {
-	if s.Object.Status.LastKeyGeneration == nil {
-		return true
-	}
-
+func (s *ObjectStorageBucketScope) ShouldRotateKeys() bool {
 	return *s.Object.Spec.KeyGeneration != *s.Object.Status.LastKeyGeneration
 }

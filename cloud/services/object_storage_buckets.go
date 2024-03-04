@@ -3,102 +3,74 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 
-	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+
 	"github.com/linode/linodego"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 )
 
-func EnsureObjectStorageBucket(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, logger logr.Logger) (*linodego.ObjectStorageBucket, error) {
-	var buckets []linodego.ObjectStorageBucket
-	var bucket *linodego.ObjectStorageBucket
-
+func EnsureObjectStorageBucket(ctx context.Context, bs *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
 	filter := map[string]string{
-		"label": bucketScope.Object.Name,
+		"label": bs.Object.Name,
 	}
 
 	rawFilter, err := json.Marshal(filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal list buckets filter: %w", err)
 	}
 
-	if buckets, err = bucketScope.LinodeClient.ListObjectStorageBucketsInCluster(
+	var buckets []linodego.ObjectStorageBucket
+	if buckets, err = bs.LinodeClient.ListObjectStorageBucketsInCluster(
 		ctx,
 		linodego.NewListOptions(1, string(rawFilter)),
-		bucketScope.Object.Spec.Cluster,
+		bs.Object.Spec.Cluster,
 	); err != nil {
-		logger.Info("Failed to list object storage buckets", "error", err.Error())
+		bs.Logger.Error(err, "Failed to list buckets; unable to provision/confirm")
 
-		return nil, err
+		return nil, fmt.Errorf("failed to list buckets in cluster %s: %w", bs.Object.Spec.Cluster, err)
 	}
 	if len(buckets) == 1 {
+		bs.Logger.Info("Bucket exists")
+
 		return &buckets[0], nil
 	}
 
-	logger.Info(fmt.Sprintf("Creating object storage bucket %s", bucketScope.Object.Name))
 	opts := linodego.ObjectStorageBucketCreateOptions{
-		Cluster: bucketScope.Object.Spec.Cluster,
-		Label:   bucketScope.Object.Name,
+		Cluster: bs.Object.Spec.Cluster,
+		Label:   bs.Object.Name,
 		ACL:     linodego.ACLPrivate,
 	}
 
-	if bucket, err = bucketScope.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {
-		logger.Info("Failed to create object storage bucket", "error", err.Error())
+	var bucket *linodego.ObjectStorageBucket
+	if bucket, err = bs.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {
+		bs.Logger.Error(err, "Failed to create bucket")
 
-		return nil, err
+		return nil, fmt.Errorf("failed to create bucket: %w", err)
 	}
+
+	bs.Logger.Info("Created bucket")
 
 	return bucket, nil
 }
 
-func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, shouldRotate bool, logger logr.Logger) ([2]linodego.ObjectStorageKey, error) {
-	var newKeys [2]linodego.ObjectStorageKey
-	var existingKeys []linodego.ObjectStorageKey
-	var err error
+func CreateOrRotateObjectStorageKeys(ctx context.Context, bs *scope.ObjectStorageBucketScope) ([scope.AccessKeySecretLength]linodego.ObjectStorageKey, error) {
+	var newKeys [scope.AccessKeySecretLength]linodego.ObjectStorageKey
 
-	if existingKeys, err = bucketScope.LinodeClient.ListObjectStorageKeys(
-		ctx,
-		// TODO: What if there are keys exceeding page 1?
-		linodego.NewListOptions(1, "{}"),
-	); err != nil {
-		logger.Info("Failed to list object storage keys", "error", err.Error())
-
-		return newKeys, err
-	}
-
-	keysSet := make(map[string]struct{})
-	for _, key := range existingKeys {
-		keysSet[key.Label] = struct{}{}
-	}
-
-	for i, e := range []struct {
-		permission string
-		suffix     string
+	for i, permission := range []struct {
+		name   string
+		suffix string
 	}{
 		{"read_write", "rw"},
 		{"read_only", "ro"},
 	} {
-		keyLabel := fmt.Sprintf("%s-%s", bucketScope.Object.Name, e.suffix)
-
-		if _, ok := keysSet[keyLabel]; ok {
-			logger.Info(fmt.Sprintf("Found existing object storage key %s", keyLabel))
-
-			// If keys are not being rotated, store the existing key
-			if !shouldRotate {
-				newKeys[i] = existingKeys[0]
-				continue
-			}
-
-			// Keys are being rotated, so we should revoke this key before making a new one
-			oldKeyID := existingKeys[0].ID
-			if err := revokeObjectStorageKey(ctx, bucketScope, oldKeyID, logger); err != nil {
-				logger.Info("Failed to revoke object storage key for rotation", "id", oldKeyID, "error", err.Error())
-			}
-		}
-
-		key, err := createObjectStorageKey(ctx, bucketScope, keyLabel, e.permission, logger)
+		keyLabel := fmt.Sprintf("%s-%s", bs.Object.Name, permission.suffix)
+		key, err := createObjectStorageKey(ctx, bs, keyLabel, permission.name)
 		if err != nil {
 			return newKeys, err
 		}
@@ -106,48 +78,78 @@ func CreateOrRotateObjectStorageKeys(ctx context.Context, bucketScope *scope.Obj
 		newKeys[i] = *key
 	}
 
+	// If key revocation fails here, just log the errors since new keys have been created
+	if bs.Object.Status.LastKeyGeneration != nil && bs.ShouldRotateKeys() {
+		secret, err := bs.GetSecret(ctx)
+		if err != nil {
+			bs.Logger.Error(err, "Failed to read secret with access keys to revoke; keys must be manually revoked")
+		}
+
+		if err := RevokeObjectStorageKeys(ctx, bs, secret); err != nil {
+			bs.Logger.Error(err, "Failed to revoke access keys; keys must be manually revoked")
+		}
+	}
+
 	return newKeys, nil
 }
 
-func createObjectStorageKey(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, label, permission string, logger logr.Logger) (*linodego.ObjectStorageKey, error) {
-	logger.Info(fmt.Sprintf("Creating object storage key %s", label))
+func createObjectStorageKey(ctx context.Context, bs *scope.ObjectStorageBucketScope, label, permission string) (*linodego.ObjectStorageKey, error) {
 	opts := linodego.ObjectStorageKeyCreateOptions{
 		Label: label,
 		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 			{
-				BucketName:  bucketScope.Object.Name,
-				Cluster:     bucketScope.Object.Spec.Cluster,
+				BucketName:  bs.Object.Name,
+				Cluster:     bs.Object.Spec.Cluster,
 				Permissions: permission,
 			},
 		},
 	}
 
-	key, err := bucketScope.LinodeClient.CreateObjectStorageKey(ctx, opts)
+	key, err := bs.LinodeClient.CreateObjectStorageKey(ctx, opts)
 	if err != nil {
-		logger.Info("Failed to create object storage key", "label", label, "error", err.Error())
+		bs.Logger.Error(err, "Failed to create access key", "label", label)
 
-		return nil, err
+		return nil, fmt.Errorf("failed to create access key: %w", err)
 	}
+
+	bs.Logger.Info("Created access key", "id", key.ID)
 
 	return key, nil
 }
 
-func RevokeObjectStorageKeys(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, keyIDs [2]int, logger logr.Logger) error {
+func RevokeObjectStorageKeys(ctx context.Context, bs *scope.ObjectStorageBucketScope, secret *corev1.Secret) error {
+	if secret == nil {
+		return errors.New("unable to read access keys from nil secret")
+	}
+
+	keyIDs, err := bs.GetAccessKeysFromSecret(ctx, secret)
+	if err != nil {
+		bs.Logger.Error(err, "Failed to read secret with access keys to revoke; must be manually revoked")
+
+		return fmt.Errorf("failed to read secret %s with access keys: %w", secret.Name, err)
+	}
+
+	var errs []error
 	for _, keyID := range keyIDs {
-		if err := revokeObjectStorageKey(ctx, bucketScope, keyID, logger); err != nil {
-			logger.Info("Failed to revoke object storage key", "id", keyID, "error", err.Error())
+		if err := revokeObjectStorageKey(ctx, bs, keyID); err != nil {
+			errs = append(errs, err)
 		}
 	}
 
-	return nil
+	return utilerrors.NewAggregate(errs)
 }
 
-func revokeObjectStorageKey(ctx context.Context, bucketScope *scope.ObjectStorageBucketScope, keyID int, logger logr.Logger) error {
-	if err := bucketScope.LinodeClient.DeleteObjectStorageKey(ctx, keyID); err != nil {
-		return err
+func revokeObjectStorageKey(ctx context.Context, bs *scope.ObjectStorageBucketScope, keyID int) error {
+	if err := bs.LinodeClient.DeleteObjectStorageKey(ctx, keyID); err != nil {
+		linodeErr := &linodego.Error{}
+		if errors.As(err, linodeErr) && linodeErr.StatusCode() != http.StatusNotFound {
+			bs.Logger.Error(err, "Failed to revoke access key", "id", keyID)
+
+			return fmt.Errorf("failed to revoke access key: %w", err)
+		}
 	}
 
-	logger.Info("Revoked object storage key", "id", keyID)
+	bs.Logger.Info("Revoked access key", "id", keyID)
 
 	return nil
 }

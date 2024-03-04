@@ -2,7 +2,6 @@ package scope
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -35,14 +34,14 @@ func getCredentialDataFromRef(ctx context.Context, crClient client.Client, crede
 		Namespace: credentialsRef.Namespace,
 	}
 
-	credSecret := &corev1.Secret{}
-	if err := crClient.Get(ctx, secretRefName, credSecret); err != nil {
-		return nil, fmt.Errorf("getting credentials secret %s\\%s: %w", secretRefName.Namespace, secretRefName.Name, err)
+	var credSecret corev1.Secret
+	if err := crClient.Get(ctx, secretRefName, &credSecret); err != nil {
+		return nil, fmt.Errorf("failed to retrieve configured credentials secret %s: %w", secretRefName.String(), err)
 	}
 
 	rawData, ok := credSecret.Data["apiToken"]
 	if !ok {
-		return nil, errors.New("no apiToken key in secret")
+		return nil, fmt.Errorf("credentials secret %s is missing an apiToken key", secretRefName.String())
 	}
 
 	return rawData, nil

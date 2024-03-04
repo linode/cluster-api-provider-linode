@@ -3,6 +3,5 @@ kind: LinodeObjectStorageBucket
 metadata:
   name: linodeobjectstoragebucket-sample
 spec:
-  label: sample
   cluster: us-sea-1
   keyGeneration: 1
