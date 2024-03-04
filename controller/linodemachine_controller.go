@@ -184,6 +184,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	clusterScope, err := scope.NewClusterScope(
+		ctx,
 		r.LinodeApiKey,
 		scope.ClusterScopeParams{
 			Client:        r.Client,

@@ -28,20 +28,24 @@ func createLinodeClient(apiKey string) *linodego.Client {
 	return &linodeClient
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient client.Client, credentialsRef *corev1.SecretReference) ([]byte, error) {
-	secretRefName := client.ObjectKey{
+func getCredentialDataFromRef(ctx context.Context, crClient client.Client, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
+	secretRef := client.ObjectKey{
 		Name:      credentialsRef.Name,
 		Namespace: credentialsRef.Namespace,
 	}
-
-	var credSecret corev1.Secret
-	if err := crClient.Get(ctx, secretRefName, &credSecret); err != nil {
-		return nil, fmt.Errorf("failed to retrieve configured credentials secret %s: %w", secretRefName.String(), err)
+	if secretRef.Namespace == "" {
+		secretRef.Namespace = defaultNamespace
 	}
 
+	var credSecret corev1.Secret
+	if err := crClient.Get(ctx, secretRef, &credSecret); err != nil {
+		return nil, fmt.Errorf("get credentials secret %s/%s: %w", secretRef.Namespace, secretRef.Name, err)
+	}
+
+	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
 	rawData, ok := credSecret.Data["apiToken"]
 	if !ok {
-		return nil, fmt.Errorf("credentials secret %s is missing an apiToken key", secretRefName.String())
+		return nil, fmt.Errorf("no apiToken key in credentials secret %s/%s", secretRef.Namespace, secretRef.Name)
 	}
 
 	return rawData, nil
