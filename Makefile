@@ -146,7 +146,7 @@ _e2etest: manifests generate local-deploy
 
 .PHONY: chainsaw-test
 chainsaw-test: manifests generate local-deploy
-	$(CHAINSAW) test ./e2e/linodecluster-controller
+	$(CHAINSAW) test ./e2e/linodecluster-controller ./e2e/linodemachine-controller
 
 ## --------------------------------------
 ## Build
