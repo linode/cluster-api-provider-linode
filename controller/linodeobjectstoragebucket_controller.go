@@ -91,7 +91,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		r.LinodeApiKey,
 		scope.ObjectStorageBucketScopeParams{
 			Client: r.Client,
-			Object: objectStorageBucket,
+			Bucket: objectStorageBucket,
 			Logger: &logger,
 		},
 	)
@@ -115,7 +115,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 	}()
 
 	// Delete
-	if !bScope.Object.DeletionTimestamp.IsZero() {
+	if !bScope.Bucket.DeletionTimestamp.IsZero() {
 		return res, r.reconcileDelete(ctx, bScope)
 	}
 
@@ -128,18 +128,22 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 }
 
 func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectStorageBucketScope, err error) {
-	bScope.Object.Status.FailureMessage = util.Pointer(err.Error())
-	r.Recorder.Event(bScope.Object, corev1.EventTypeWarning, "Failed", err.Error())
-	conditions.MarkFalse(bScope.Object, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
+	bScope.Bucket.Status.FailureMessage = util.Pointer(err.Error())
+	r.Recorder.Event(bScope.Bucket, corev1.EventTypeWarning, "Failed", err.Error())
+	conditions.MarkFalse(bScope.Bucket, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
 	bScope.Logger.Info("Reconciling apply")
 
-	bScope.Object.Status.Ready = false
+	bScope.Bucket.Status.Ready = false
 
 	if err := bScope.AddFinalizer(ctx); err != nil {
 		return err
+	}
+
+	if bScope.Bucket.Spec.Label == nil {
+		bScope.Bucket.Spec.Label = util.Pointer(bScope.Bucket.Name)
 	}
 
 	bucket, err := services.EnsureObjectStorageBucket(ctx, bScope)
@@ -149,10 +153,10 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 		return err
 	}
-	bScope.Object.Status.Hostname = util.Pointer(bucket.Hostname)
-	bScope.Object.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
+	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
+	bScope.Bucket.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
-	if bScope.Object.Status.LastKeyGeneration == nil || bScope.ShouldRotateKeys() {
+	if bScope.Bucket.Status.LastKeyGeneration == nil || bScope.ShouldRotateKeys() {
 		keys, err := services.RotateObjectStorageKeys(ctx, bScope)
 		if err != nil {
 			bScope.Logger.Error(err, "Failed to provision new access keys")
@@ -161,21 +165,21 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 			return err
 		}
 
-		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bScope.Object.Name)
+		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, *bScope.Bucket.Spec.Label)
 		if err := bScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
 			bScope.Logger.Error(err, "Failed to apply access key secret")
 			r.setFailure(bScope, err)
 
 			return err
 		}
-		bScope.Object.Status.KeySecretName = util.Pointer(secretName)
-		bScope.Object.Status.LastKeyGeneration = bScope.Object.Spec.KeyGeneration
+		bScope.Bucket.Status.KeySecretName = util.Pointer(secretName)
+		bScope.Bucket.Status.LastKeyGeneration = bScope.Bucket.Spec.KeyGeneration
 	}
 
-	r.Recorder.Event(bScope.Object, corev1.EventTypeNormal, "Ready", "Object storage bucket configuration applied")
+	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Ready", "Object storage bucket configuration applied")
 
-	bScope.Object.Status.Ready = true
-	conditions.MarkTrue(bScope.Object, clusterv1.ReadyCondition)
+	bScope.Bucket.Status.Ready = true
+	conditions.MarkTrue(bScope.Bucket, clusterv1.ReadyCondition)
 
 	return nil
 }
@@ -213,7 +217,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 		return err
 	}
 
-	if !controllerutil.RemoveFinalizer(bScope.Object, infrav1alpha1.GroupVersion.String()) {
+	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha1.GroupVersion.String()) {
 		bScope.Logger.Error(err, "Failed to remove finalizer from bucket; will not be deleted")
 		r.setFailure(bScope, err)
 
