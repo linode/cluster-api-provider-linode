@@ -35,24 +35,18 @@ type FirewallScope struct {
 
 	PatchHelper    *patch.Helper
 	LinodeClient   *linodego.Client
-	LinodeCluster  *infrav1alpha1.LinodeCluster
 	LinodeFirewall *infrav1alpha1.LinodeFirewall
 }
 
 // FirewallScopeParams defines the input parameters used to create a new Scope.
 type FirewallScopeParams struct {
 	Client         client.Client
-	LinodeCluster  *infrav1alpha1.LinodeCluster
 	LinodeFirewall *infrav1alpha1.LinodeFirewall
 }
 
 func validateFirewallScopeParams(params FirewallScopeParams) error {
 	if params.LinodeFirewall == nil {
 		return errors.New("linodeFirewall is required when creating a FirewallScope")
-	}
-
-	if params.LinodeCluster == nil {
-		return errors.New("linodeCluster is required when creating a FirewallScope")
 	}
 
 	return nil
@@ -76,7 +70,6 @@ func NewFirewallScope(apiKey string, params FirewallScopeParams) (*FirewallScope
 		client:         params.Client,
 		LinodeClient:   linodeClient,
 		LinodeFirewall: params.LinodeFirewall,
-		LinodeCluster:  params.LinodeCluster,
 		PatchHelper:    helper,
 	}, nil
 }

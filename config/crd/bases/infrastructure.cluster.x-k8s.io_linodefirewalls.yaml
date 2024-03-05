@@ -39,6 +39,10 @@ spec:
           spec:
             description: LinodeFirewallSpec defines the desired state of LinodeFirewall
             properties:
+              clusterUID:
+                description: ClusterUID is used by the LinodeCluster controller to
+                  associate a Cloud Firewall to a LinodeCluster
+                type: string
               enabled:
                 default: false
                 type: boolean

@@ -95,7 +95,7 @@ type LinodeMachineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.0/pkg/reconcile
 //
-//nolint:gocyclo,cyclop // As simple as possible.
+//nolint:cyclop // As simple as possible.
 func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
@@ -184,29 +184,13 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to create machine scope: %w", err)
 	}
 
-	clusterScope, err := scope.NewClusterScope(
-		ctx,
-		r.LinodeApiKey,
-		scope.ClusterScopeParams{
-			Client:        r.Client,
-			Cluster:       cluster,
-			LinodeCluster: linodeCluster,
-		},
-	)
-	if err != nil {
-		log.Error(err, "Failed to create cluster scope")
-
-		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
-	}
-
-	return r.reconcile(ctx, log, machineScope, clusterScope)
+	return r.reconcile(ctx, log, machineScope)
 }
 
 func (r *LinodeMachineReconciler) reconcile(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-	clusterScope *scope.ClusterScope,
 ) (res ctrl.Result, err error) {
 	res = ctrl.Result{}
 
@@ -292,7 +276,7 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		return
 	}
-	linodeInstance, err = r.reconcileCreate(ctx, logger, machineScope, clusterScope)
+	linodeInstance, err = r.reconcileCreate(ctx, logger, machineScope)
 
 	return
 }
@@ -301,7 +285,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-	clusterScope *scope.ClusterScope,
 ) (*linodego.Instance, error) {
 	logger.Info("creating machine")
 
@@ -391,7 +374,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		})
 	}
 
-	if err = services.AddNodeToNB(ctx, logger, machineScope, clusterScope); err != nil {
+	if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 		logger.Error(err, "Failed to add instance to Node Balancer backend")
 
 		return linodeInstance, err

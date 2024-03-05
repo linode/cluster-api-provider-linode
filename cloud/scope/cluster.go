@@ -32,9 +32,10 @@ import (
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	Client        client.Client
-	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1alpha1.LinodeCluster
+	Client               client.Client
+	Cluster              *clusterv1.Cluster
+	LinodeCluster        *infrav1alpha1.LinodeCluster
+	ControlPlaneFirewall *infrav1alpha1.LinodeFirewall
 }
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
@@ -43,6 +44,9 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 	}
 	if params.LinodeCluster == nil {
 		return errors.New("linodeCluster is required when creating a ClusterScope")
+	}
+	if params.ControlPlaneFirewall == nil {
+		return errors.New("controlPlaneFirewall is required when creating a ClusterScope")
 	}
 
 	return nil
@@ -71,11 +75,12 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 	}
 
 	return &ClusterScope{
-		client:        params.Client,
-		Cluster:       params.Cluster,
-		LinodeClient:  linodeClient,
-		LinodeCluster: params.LinodeCluster,
-		PatchHelper:   helper,
+		client:               params.Client,
+		Cluster:              params.Cluster,
+		LinodeClient:         linodeClient,
+		LinodeCluster:        params.LinodeCluster,
+		ControlPlaneFirewall: params.ControlPlaneFirewall,
+		PatchHelper:          helper,
 	}, nil
 }
 
@@ -83,10 +88,11 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 type ClusterScope struct {
 	client client.Client
 
-	PatchHelper   *patch.Helper
-	LinodeClient  *linodego.Client
-	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1alpha1.LinodeCluster
+	PatchHelper          *patch.Helper
+	LinodeClient         *linodego.Client
+	Cluster              *clusterv1.Cluster
+	LinodeCluster        *infrav1alpha1.LinodeCluster
+	ControlPlaneFirewall *infrav1alpha1.LinodeFirewall
 }
 
 // PatchObject persists the cluster configuration and status.

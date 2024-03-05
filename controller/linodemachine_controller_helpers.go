@@ -62,6 +62,11 @@ func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScop
 
 	createConfig.PrivateIP = true
 
+	if kutil.IsControlPlaneMachine(machineScope.Machine) &&
+		machineScope.LinodeCluster.Spec.ControlPlaneFirewall.FirewallID != nil {
+		createConfig.FirewallID = *machineScope.LinodeCluster.Spec.ControlPlaneFirewall.FirewallID
+	}
+
 	bootstrapData, err := machineScope.GetBootstrapData(ctx)
 	if err != nil {
 		logger.Info("Failed to get bootstrap data", "error", err.Error())

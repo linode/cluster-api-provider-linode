@@ -31,6 +31,10 @@ type LinodeFirewallSpec struct {
 	FirewallID *int `json:"firewallID,omitempty"`
 
 	// +optional
+	// ClusterUID is used by the LinodeCluster controller to associate a Cloud Firewall to a LinodeCluster
+	ClusterUID string `json:"clusterUID,omitempty"`
+
+	// +optional
 	// +kubebuilder:default=false
 	Enabled bool `json:"enabled,omitempty"`
 

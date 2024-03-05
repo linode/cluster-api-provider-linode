@@ -7,3 +7,6 @@ spec:
   region: ${LINODE_REGION}
   credentialsRef:
     name: ${CLUSTER_NAME}-credentials
+  controlPlaneFirewall:
+    enabled: true
+    allowSSH: true

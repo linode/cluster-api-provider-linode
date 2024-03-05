@@ -46,15 +46,10 @@ type LinodeClusterSpec struct {
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 
+	// ControlPlaneFirewall encapsulates all things related to the Firewall for the
+	// control plane nodes.
 	// +optional
-	// ControlPlaneFirewallRefs contains a list of LinodeFirewall references to restrict traffic
-	// to/from the control plane nodes
-	ControlPlaneFirewallRefs []*corev1.ObjectReference `json:"controlPlaneFirewallRefs,omitempty"`
-
-	// +optional
-	// WorkerFirewallRefs contains a list of LinodeFirewall references to restrict traffic
-	// to/from the worker nodes
-	WorkerFirewallRefs []*corev1.ObjectReference `json:"workerFirewallRefs,omitempty"`
+	ControlPlaneFirewall FirewallSpec `json:"controlPlaneFirewall,omitempty"`
 }
 
 // LinodeClusterStatus defines the observed state of LinodeCluster
@@ -121,6 +116,32 @@ type NetworkSpec struct {
 	// NodeBalancerConfigID is the config ID of api server NodeBalancer.
 	// +optional
 	NodeBalancerConfigID *int `json:"nodeBalancerConfigID,omitempty"`
+}
+
+// FirewallSpec encapsulates Linode Firewall configuration for nodes.
+type FirewallSpec struct {
+	// Enabled specifies if the default api server firewall should be enabled
+	// +kubebuilder:default:=true
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+	// AllowedIPV4Addresses specifies additional IPV4 addresses aside from the worker nodes
+	// that should be permitted to reach the K8s API server
+	// Per the Linode API:
+	// Must contain only valid IPv4 addresses or networks (both must be in ip/mask format)
+	// +optional
+	// +kubebuilder:default:={"0.0.0.0/0"}
+	AllowedIPV4Addresses []string `json:"allowedIPV4Addresses,omitempty"`
+	// AllowedIPV6Addresses specifies additional IPV6 addresses aside from the worker nodes
+	// that should be permitted to reach the K8s API server
+	// +optional
+	// +kubebuilder:default:={"::/0"}
+	AllowedIPV6Addresses []string `json:"allowedIPV6Addresses,omitempty"`
+	// AllowSSH specifies if SSH should be permitted for the firewall
+	// +optional
+	AllowSSH bool `json:"allowSSH,omitempty"`
+	// FirewallID is the ID of the Cloud Firewall.
+	// +optional
+	FirewallID *int `json:"firewallID,omitempty"`
 }
 
 // +kubebuilder:object:root=true

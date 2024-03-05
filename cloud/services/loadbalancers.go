@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultLBPort = 6443
+	DefaultLBPort = 6443
 )
 
 // CreateNodeBalancer creates a new NodeBalancer if one doesn't exist
@@ -84,7 +84,7 @@ func CreateNodeBalancerConfig(
 	var linodeNBConfig *linodego.NodeBalancerConfig
 	var err error
 
-	lbPort := defaultLBPort
+	lbPort := DefaultLBPort
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
 		lbPort = clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort
 	}
@@ -113,7 +113,6 @@ func AddNodeToNB(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-	clusterScope *scope.ClusterScope,
 ) error {
 	// Update the NB backend with the new instance if it's a control plane node
 	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
@@ -133,9 +132,9 @@ func AddNodeToNB(
 		return err
 	}
 
-	lbPort := defaultLBPort
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
-		lbPort = clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort
+	lbPort := DefaultLBPort
+	if machineScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
+		lbPort = machineScope.LinodeCluster.Spec.Network.LoadBalancerPort
 	}
 	if machineScope.LinodeCluster.Spec.Network.NodeBalancerConfigID == nil {
 		err := errors.New("nil NodeBalancer Config ID")

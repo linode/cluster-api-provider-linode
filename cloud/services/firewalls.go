@@ -2,18 +2,15 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/linode/cluster-api-provider-linode/util"
-	"net/http"
 	"slices"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 const (
@@ -27,16 +24,16 @@ var (
 	errDuplicateFirewalls = errors.New("duplicate firewalls found")
 )
 
+// HandleFirewall takes the CAPL firewall representation and uses it to either create or update the Cloud Firewall
+// via the given linode client
 func HandleFirewall(
 	ctx context.Context,
-	firewallScope *scope.FirewallScope,
+	firewall *infrav1alpha1.LinodeFirewall,
+	linodeClient *linodego.Client,
 	logger logr.Logger,
 ) (linodeFW *linodego.Firewall, err error) {
-	clusterUID := string(firewallScope.LinodeCluster.UID)
-	tags := []string{string(firewallScope.LinodeCluster.UID)}
-	fwName := firewallScope.LinodeFirewall.Name
-
-	linodeFWs, err := fetchFirewalls(ctx, firewallScope)
+	clusterUID := firewall.Spec.ClusterUID
+	linodeFWs, err := fetchFirewalls(ctx, firewall.Name, *linodeClient)
 	if err != nil {
 		logger.Info("Failed to list Firewalls", "error", err.Error())
 
@@ -51,7 +48,7 @@ func HandleFirewall(
 	}
 
 	// build out the firewall rules for create or update
-	fwConfig, err := processACL(firewallScope.LinodeFirewall, tags)
+	fwConfig, err := processACL(firewall, []string{clusterUID})
 	if err != nil {
 		logger.Info("Failed to process ACL", "error", err.Error())
 
@@ -59,39 +56,25 @@ func HandleFirewall(
 	}
 
 	if len(linodeFWs) == 0 {
-		logger.Info(fmt.Sprintf("Creating firewall %s", fwName))
-
-		if linodeFW, err = firewallScope.LinodeClient.CreateFirewall(ctx, *fwConfig); err != nil {
-			logger.Info("Failed to create Linode Firewall", "error", err.Error())
-			// Already exists is not an error
-			apiErr := linodego.Error{}
-			if errors.As(err, &apiErr) && apiErr.Code != http.StatusFound {
-				return nil, err
-			}
-
-			if linodeFW != nil {
-				logger.Info(fmt.Sprintf("Linode Firewall %s already exists", fwName))
-			}
-		}
-
-	} else {
-		logger.Info(fmt.Sprintf("Updating firewall %s", fwName))
-
-		linodeFW = &linodeFWs[0]
-		if !slices.Contains(linodeFW.Tags, clusterUID) {
-			err := errors.New("firewall conflict")
-			logger.Error(err, fmt.Sprintf(
-				"Firewall %s is not associated with cluster UID %s. Owner cluster is %s",
-				fwName,
-				clusterUID,
-				linodeFW.Tags[0],
-			))
+		logger.Info(fmt.Sprintf("Creating firewall %s", firewall.Name))
+		linodeFW, err = linodeClient.CreateFirewall(ctx, *fwConfig)
+		if err != nil {
+			logger.Info("Failed to create firewall", "error", err.Error())
 
 			return nil, err
 		}
+		if linodeFW == nil {
+			err = errors.New("nil firewall")
+			logger.Error(err, "Created firewall is nil")
 
-		if _, err := firewallScope.LinodeClient.UpdateFirewallRules(ctx, linodeFW.ID, fwConfig.Rules); err != nil {
-			logger.Info("Failed to update Linode Firewall", "error", err.Error())
+			return nil, err
+		}
+	} else {
+		logger.Info(fmt.Sprintf("Updating firewall %s", firewall.Name))
+
+		linodeFW = &linodeFWs[0]
+		if err = updateFirewall(ctx, linodeClient, linodeFW, clusterUID, fwConfig); err != nil {
+			logger.Info("Failed to update firewall", "error", err.Error())
 
 			return nil, err
 		}
@@ -100,17 +83,17 @@ func HandleFirewall(
 	// Need to make sure the firewall is appropriately enabled or disabled after
 	// create or update and the tags are properly set
 	var status linodego.FirewallStatus
-	if firewallScope.LinodeFirewall.Spec.Enabled {
+	if firewall.Spec.Enabled {
 		status = linodego.FirewallEnabled
 	} else {
 		status = linodego.FirewallDisabled
 	}
-	if _, err = firewallScope.LinodeClient.UpdateFirewall(
+	if _, err = linodeClient.UpdateFirewall(
 		ctx,
 		linodeFW.ID,
 		linodego.FirewallUpdateOptions{
 			Status: status,
-			Tags:   util.Pointer(tags),
+			Tags:   util.Pointer([]string{clusterUID}),
 		},
 	); err != nil {
 		logger.Info("Failed to update Linode Firewall status and tags", "error", err.Error())
@@ -121,20 +104,48 @@ func HandleFirewall(
 	return linodeFW, nil
 }
 
-// fetch Firewalls returns all Linode firewalls with a label matching the CAPL Firewall name
-func fetchFirewalls(ctx context.Context, firewallScope *scope.FirewallScope) (firewalls []linodego.Firewall, err error) {
-	var linodeFWs []linodego.Firewall
-	filter := map[string]string{
-		"label": firewallScope.LinodeFirewall.Name,
+func updateFirewall(
+	ctx context.Context,
+	linodeClient *linodego.Client,
+	linodeFW *linodego.Firewall,
+	clusterUID string,
+	fwConfig *linodego.FirewallCreateOptions,
+) error {
+	if !slices.Contains(linodeFW.Tags, clusterUID) {
+		err := fmt.Errorf(
+			"firewall %s is not associated with cluster UID %s. Owner cluster is %s",
+			linodeFW.Label,
+			clusterUID,
+			linodeFW.Tags[0],
+		)
+
+		return err
 	}
 
-	rawFilter, err := json.Marshal(filter)
-	if err != nil {
+	if _, err := linodeClient.UpdateFirewallRules(ctx, linodeFW.ID, fwConfig.Rules); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// fetch Firewalls returns all Linode firewalls with a label matching the CAPL Firewall name
+func fetchFirewalls(
+	ctx context.Context,
+	name string,
+	linodeClient linodego.Client,
+) (firewalls []linodego.Firewall, err error) {
+	var linodeFWs []linodego.Firewall
+	if linodeFWs, err = linodeClient.ListFirewalls(
+		ctx,
+		linodego.NewListOptions(
+			1,
+			util.CreateLinodeAPIFilter(name, []string{}),
+		),
+	); err != nil {
 		return nil, err
 	}
-	if linodeFWs, err = firewallScope.LinodeClient.ListFirewalls(ctx, linodego.NewListOptions(1, string(rawFilter))); err != nil {
-		return nil, err
-	}
+
 	return linodeFWs, nil
 }
 
@@ -166,9 +177,15 @@ func chunkIPs(ips []string) [][]string {
 	return chunks
 }
 
-// processACL builds out a Linode firewall configuration for a given CAPL Firewall object which can then
-// be used to create or update a Linode firewall
-func processACL(firewall *infrav1alpha1.LinodeFirewall, tags []string) (*linodego.FirewallCreateOptions, error) {
+// processACL uses the CAPL LinodeFirewall representation to build out the inbound
+// and outbound rules for a linode Cloud Firewall and returns the configuration
+// for creating or updating the Firewall
+//
+//nolint:gocyclo,cyclop // As simple as possible.
+func processACL(firewall *infrav1alpha1.LinodeFirewall, tags []string) (
+	*linodego.FirewallCreateOptions,
+	error,
+) {
 	createOpts := &linodego.FirewallCreateOptions{
 		Label: firewall.Name,
 		Tags:  tags,
@@ -176,8 +193,8 @@ func processACL(firewall *infrav1alpha1.LinodeFirewall, tags []string) (*linodeg
 
 	// process inbound rules
 	for _, rule := range firewall.Spec.InboundRules {
-		var ruleIPv4s []string
-		var ruleIPv6s []string
+		ruleIPv4s := []string{}
+		ruleIPv6s := []string{}
 
 		if rule.Addresses.IPv4 != nil {
 			ruleIPv4s = append(ruleIPv4s, *rule.Addresses.IPv4...)
@@ -187,7 +204,7 @@ func processACL(firewall *infrav1alpha1.LinodeFirewall, tags []string) (*linodeg
 			ruleIPv6s = append(ruleIPv6s, *rule.Addresses.IPv6...)
 		}
 
-		ruleLabel := fmt.Sprintf("%s-%s", firewall.Spec.InboundPolicy, rule.Label)
+		ruleLabel := fmt.Sprintf("%s-%s", rule.Action, rule.Label)
 		if len(ruleLabel) > maxFirewallRuleLabelLen {
 			ruleLabel = ruleLabel[0:maxFirewallRuleLabelLen]
 		}
@@ -232,8 +249,8 @@ func processACL(firewall *infrav1alpha1.LinodeFirewall, tags []string) (*linodeg
 
 	// process outbound rules
 	for _, rule := range firewall.Spec.OutboundRules {
-		var ruleIPv4s []string
-		var ruleIPv6s []string
+		ruleIPv4s := []string{}
+		ruleIPv6s := []string{}
 
 		if rule.Addresses.IPv4 != nil {
 			ruleIPv4s = append(ruleIPv4s, *rule.Addresses.IPv4...)

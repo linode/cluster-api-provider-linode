@@ -67,15 +67,12 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	linodeCluster := &infrav1alpha1.LinodeCluster{}
-
 	// Create the firewall scope.
 	firewallScope, err := scope.NewFirewallScope(
 		r.LinodeApiKey,
 		scope.FirewallScopeParams{
 			Client:         r.Client,
 			LinodeFirewall: linodeFirewall,
-			LinodeCluster:  linodeCluster,
 		})
 	if err != nil {
 		logger.Info("Failed to create firewall scope", "error", err.Error())
@@ -171,7 +168,7 @@ func (r *LinodeFirewallReconciler) reconcileCreate(
 	logger logr.Logger,
 	firewallScope *scope.FirewallScope,
 ) error {
-	linodeFW, err := services.HandleFirewall(ctx, firewallScope, logger)
+	linodeFW, err := services.HandleFirewall(ctx, firewallScope.LinodeFirewall, firewallScope.LinodeClient, logger)
 	if err != nil || linodeFW == nil {
 		r.setFailureReason(firewallScope, infrav1alpha1.CreateFirewallError, err)
 
@@ -187,7 +184,7 @@ func (r *LinodeFirewallReconciler) reconcileUpdate(
 	logger logr.Logger,
 	firewallScope *scope.FirewallScope,
 ) error {
-	linodeFW, err := services.HandleFirewall(ctx, firewallScope, logger)
+	linodeFW, err := services.HandleFirewall(ctx, firewallScope.LinodeFirewall, firewallScope.LinodeClient, logger)
 	if err != nil || linodeFW == nil {
 		r.setFailureReason(firewallScope, infrav1alpha1.UpdateFirewallError, err)
 
