@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,24 +12,16 @@ import (
 	"github.com/linode/linodego"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
-	filter := map[string]string{
-		"label": *bScope.Bucket.Spec.Label,
-	}
-
-	rawFilter, err := json.Marshal(filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list buckets in cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
-	}
-
-	var buckets []linodego.ObjectStorageBucket
-	if buckets, err = bScope.LinodeClient.ListObjectStorageBucketsInCluster(
+	buckets, err := bScope.LinodeClient.ListObjectStorageBucketsInCluster(
 		ctx,
-		linodego.NewListOptions(1, string(rawFilter)),
+		linodego.NewListOptions(1, util.CreateLinodeAPIFilter(*bScope.Bucket.Spec.Label, nil)),
 		bScope.Bucket.Spec.Cluster,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, fmt.Errorf("failed to list buckets in cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
 	}
 	if len(buckets) == 1 {
