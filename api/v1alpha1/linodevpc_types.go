@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -41,6 +42,11 @@ type LinodeVPCSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	Subnets []VPCSubnetCreateOptions `json:"subnets,omitempty"`
+
+	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not
+	// supplied then the credentials of the controller will be used.
+	// +optional
+	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 
 // VPCSubnetCreateOptions defines subnet options
