@@ -28,16 +28,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	ctrl "sigs.k8s.io/controller-runtime"
+	"github.com/linode/linodego"
 
 	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
-	"github.com/linode/linodego"
 )
 
 var _ = Describe("LinodeObjectStorageBucket controller", func() {
