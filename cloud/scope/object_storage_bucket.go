@@ -56,11 +56,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 
 	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
 	if params.Object.Spec.CredentialsRef != nil {
-		credRef := *params.Object.Spec.CredentialsRef
-		if credRef.Namespace == "" {
-			credRef.Namespace = params.Object.Namespace
-		}
-		data, err := getCredentialDataFromRef(ctx, params.Client, &credRef)
+		data, err := getCredentialDataFromRef(ctx, params.Client, *params.Object.Spec.CredentialsRef, params.Object.GetNamespace())
 		if err != nil {
 			return nil, fmt.Errorf("credentials from cluster secret ref: %w", err)
 		}

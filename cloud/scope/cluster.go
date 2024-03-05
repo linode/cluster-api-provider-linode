@@ -50,11 +50,19 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 
 // NewClusterScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewClusterScope(apiKey string, params ClusterScopeParams) (*ClusterScope, error) {
+func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopeParams) (*ClusterScope, error) {
 	if err := validateClusterScopeParams(params); err != nil {
 		return nil, err
 	}
 
+	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
+	if params.LinodeCluster.Spec.CredentialsRef != nil {
+		data, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeCluster.Spec.CredentialsRef, params.LinodeCluster.GetNamespace())
+		if err != nil {
+			return nil, fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		apiKey = string(data)
+	}
 	linodeClient := CreateLinodeClient(apiKey)
 
 	helper, err := patch.NewHelper(params.LinodeCluster, params.Client)

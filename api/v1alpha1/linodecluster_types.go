@@ -40,6 +40,11 @@ type LinodeClusterSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
+
+	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
+	// supplied then the credentials of the controller will be used.
+	// +optional
+	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 
 // LinodeClusterStatus defines the observed state of LinodeCluster

@@ -5,3 +5,5 @@ metadata:
   name: ${CLUSTER_NAME}
 spec:
   region: ${LINODE_REGION}
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
