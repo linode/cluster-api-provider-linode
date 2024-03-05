@@ -95,6 +95,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	// Create the cluster scope.
 	clusterScope, err := scope.NewClusterScope(
+		ctx,
 		r.LinodeApiKey,
 		scope.ClusterScopeParams{
 			Client:        r.Client,

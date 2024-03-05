@@ -52,11 +52,19 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(apiKey string, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(ctx context.Context, apiKey string, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
 
+	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
+	if params.LinodeCluster.Spec.CredentialsRef != nil {
+		data, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeCluster.Spec.CredentialsRef, params.LinodeCluster.GetNamespace())
+		if err != nil {
+			return nil, fmt.Errorf("credentials from cluster secret ref: %w", err)
+		}
+		apiKey = string(data)
+	}
 	linodeClient := createLinodeClient(apiKey)
 
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
