@@ -41,6 +41,7 @@ func Test_createLinodeClient(t *testing.T) {
 	}
 }
 
+// Test_getCredentialDataFromRef tests the getCredentialDataFromRef function.
 func Test_getCredentialDataFromRef(t *testing.T) {
 	type args struct {
 		ctx              context.Context
@@ -153,8 +154,8 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			// Create an instance of the mock crClient
-			mockClient := mock.NewMockk8sReader(ctrl)
+			// Create an instance of the mock K8sClient
+			mockClient := mock.NewMockk8sClient(ctrl)
 
 			// Setup Expected behaviour
 			expectedSecretRef := client.ObjectKey{
@@ -163,7 +164,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 			}
 			mockClient.EXPECT().Get(gomock.Any(), expectedSecretRef, gomock.Any()).DoAndReturn(tt.args.funcBehavior)
 
-			// Call the function under test with the mock client
+			// Call getCredentialDataFromRef using the mock client
 			got, err := getCredentialDataFromRef(tt.args.ctx, mockClient, tt.args.providedCredentialsRef, tt.args.defaultNamespace)
 
 			// Check that the function returned the expected result

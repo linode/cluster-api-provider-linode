@@ -28,7 +28,7 @@ func createLinodeClient(apiKey string) *linodego.Client {
 	return &linodeClient
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient k8sReader, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
+func getCredentialDataFromRef(ctx context.Context, crClient k8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
 	secretRef := client.ObjectKey{
 		Name:      credentialsRef.Name,
 		Namespace: credentialsRef.Namespace,
