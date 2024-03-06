@@ -86,7 +86,7 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 .PHONY: generate-mock-client
 generate-mock-client: mockgen ## Generate mocks for the Linode API client.
-	$(MOCKGEN) -source=./cloud/scope/client.go -destination ./mock/mock_client.go -package mockobjects
+	$(MOCKGEN) -source=./cloud/scope/client.go -destination ./mock/mock_client.go -package mock
 
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
