@@ -39,18 +39,23 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 
 		return err
 	}
-
 	if createConfig.Label == "" {
 		createConfig.Label = vpcScope.LinodeVPC.Name
 	}
 
-	if vpcs, err := vpcScope.LinodeClient.ListVPCs(ctx, linodego.NewListOptions(1, util.CreateLinodeAPIFilter(createConfig.Label, nil))); err != nil {
+	listFilter := util.Filter{
+		ID:    vpcScope.LinodeVPC.Spec.VPCID,
+		Label: createConfig.Label,
+		Tags:  nil,
+	}
+	if vpcs, err := vpcScope.LinodeClient.ListVPCs(ctx, linodego.NewListOptions(1, listFilter.String())); err != nil {
 		logger.Error(err, "Failed to list VPCs")
 
 		return err
 	} else if len(vpcs) != 0 {
 		// Labels are unique
 		vpcScope.LinodeVPC.Spec.VPCID = &vpcs[0].ID
+		vpcScope.LinodeVPC.Spec.Label = vpcs[0].Label
 
 		return nil
 	}
