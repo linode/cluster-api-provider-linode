@@ -154,7 +154,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 			defer ctrl.Finish()
 
 			// Create an instance of the mock crClient
-			mockClient := mock.NewMockcrClient(ctrl)
+			mockClient := mock.NewMockk8sReader(ctrl)
 
 			// Setup Expected behaviour
 			expectedSecretRef := client.ObjectKey{

@@ -14,35 +14,91 @@ import (
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
-	types "k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockcrClient is a mock of crClient interface.
-type MockcrClient struct {
+// Mockk8sReader is a mock of k8sReader interface.
+type Mockk8sReader struct {
 	ctrl     *gomock.Controller
-	recorder *MockcrClientMockRecorder
+	recorder *Mockk8sReaderMockRecorder
 }
 
-// MockcrClientMockRecorder is the mock recorder for MockcrClient.
-type MockcrClientMockRecorder struct {
-	mock *MockcrClient
+// Mockk8sReaderMockRecorder is the mock recorder for Mockk8sReader.
+type Mockk8sReaderMockRecorder struct {
+	mock *Mockk8sReader
 }
 
-// NewMockcrClient creates a new mock instance.
-func NewMockcrClient(ctrl *gomock.Controller) *MockcrClient {
-	mock := &MockcrClient{ctrl: ctrl}
-	mock.recorder = &MockcrClientMockRecorder{mock}
+// NewMockk8sReader creates a new mock instance.
+func NewMockk8sReader(ctrl *gomock.Controller) *Mockk8sReader {
+	mock := &Mockk8sReader{ctrl: ctrl}
+	mock.recorder = &Mockk8sReaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcrClient) EXPECT() *MockcrClientMockRecorder {
+func (m *Mockk8sReader) EXPECT() *Mockk8sReaderMockRecorder {
 	return m.recorder
 }
 
+// Create mocks base method.
+func (m *Mockk8sReader) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, obj}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Create", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *Mockk8sReaderMockRecorder) Create(ctx, obj any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, obj}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*Mockk8sReader)(nil).Create), varargs...)
+}
+
+// Delete mocks base method.
+func (m *Mockk8sReader) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, obj}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *Mockk8sReaderMockRecorder) Delete(ctx, obj any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, obj}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*Mockk8sReader)(nil).Delete), varargs...)
+}
+
+// DeleteAllOf mocks base method.
+func (m *Mockk8sReader) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, obj}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteAllOf", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAllOf indicates an expected call of DeleteAllOf.
+func (mr *Mockk8sReaderMockRecorder) DeleteAllOf(ctx, obj any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, obj}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllOf", reflect.TypeOf((*Mockk8sReader)(nil).DeleteAllOf), varargs...)
+}
+
 // Get mocks base method.
-func (m *MockcrClient) Get(ctx context.Context, key types.NamespacedName, obj client.Object, opts ...client.GetOption) error {
+func (m *Mockk8sReader) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, key, obj}
 	for _, a := range opts {
@@ -54,8 +110,65 @@ func (m *MockcrClient) Get(ctx context.Context, key types.NamespacedName, obj cl
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockcrClientMockRecorder) Get(ctx, key, obj any, opts ...any) *gomock.Call {
+func (mr *Mockk8sReaderMockRecorder) Get(ctx, key, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, key, obj}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockcrClient)(nil).Get), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*Mockk8sReader)(nil).Get), varargs...)
+}
+
+// List mocks base method.
+func (m *Mockk8sReader) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, list}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// List indicates an expected call of List.
+func (mr *Mockk8sReaderMockRecorder) List(ctx, list any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, list}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*Mockk8sReader)(nil).List), varargs...)
+}
+
+// Patch mocks base method.
+func (m *Mockk8sReader) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, obj, patch}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Patch", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Patch indicates an expected call of Patch.
+func (mr *Mockk8sReaderMockRecorder) Patch(ctx, obj, patch any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, obj, patch}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*Mockk8sReader)(nil).Patch), varargs...)
+}
+
+// Update mocks base method.
+func (m *Mockk8sReader) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, obj}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Update", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *Mockk8sReaderMockRecorder) Update(ctx, obj any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, obj}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*Mockk8sReader)(nil).Update), varargs...)
 }
