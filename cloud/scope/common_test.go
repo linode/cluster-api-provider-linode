@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/linode/cluster-api-provider-linode/cloud/scope/mock"
+	mock "github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
