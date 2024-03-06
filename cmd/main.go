@@ -65,7 +65,6 @@ func main() {
 		machineWatchFilter             string
 		clusterWatchFilter             string
 		objectStorageBucketWatchFilter string
-		firewallWatchFilter            string
 		metricsAddr                    string
 		enableLeaderElection           bool
 		probeAddr                      string
@@ -73,7 +72,6 @@ func main() {
 	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
 	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
 	flag.StringVar(&objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
-	flag.StringVar(&firewallWatchFilter, "firewall-watch-filter", "", "The firewalls to watch by label.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -153,15 +151,6 @@ func main() {
 		LinodeApiKey:     linodeToken,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
-		os.Exit(1)
-	}
-	if err = (&caplController.LinodeFirewallReconciler{
-		Client:           mgr.GetClient(),
-		Recorder:         mgr.GetEventRecorderFor("LinodeFirewallReconciler"),
-		WatchFilterValue: firewallWatchFilter,
-		LinodeApiKey:     linodeToken,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeFirewall")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
