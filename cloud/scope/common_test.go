@@ -16,6 +16,8 @@ import (
 
 // Test_createLinodeClient tests the createLinodeClient function. Checks if the client does not error out.
 func Test_createLinodeClient(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		apiKey string
@@ -32,10 +34,14 @@ func Test_createLinodeClient(t *testing.T) {
 			createLinodeClient(""),
 		},
 	}
+
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := createLinodeClient(tt.apiKey); got != nil {
-				assert.EqualExportedValues(t, got, tt.want, "Checking is the objects are equal")
+		testCase := tt
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := createLinodeClient(testCase.apiKey); got != nil {
+				assert.EqualExportedValues(t, testCase.want, got, "Checking is the objects are equal")
 			}
 		})
 	}
@@ -43,13 +49,15 @@ func Test_createLinodeClient(t *testing.T) {
 
 // Test_getCredentialDataFromRef tests the getCredentialDataFromRef function.
 func Test_getCredentialDataFromRef(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
-		ctx                    context.Context
 		providedCredentialsRef corev1.SecretReference
 		expectedCredentialsRef corev1.SecretReference
 		defaultNamespace       string
 		funcBehavior           func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
 	}
+
 	tests := []struct {
 		name          string
 		args          args
@@ -59,7 +67,6 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 		{
 			name: "Check is the function works correctly",
 			args: args{
-				ctx: context.Background(),
 				providedCredentialsRef: corev1.SecretReference{
 					Name:      "example",
 					Namespace: "test",
@@ -76,6 +83,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 						},
 					}
 					*obj = cred
+
 					return nil
 				},
 			},
@@ -85,7 +93,6 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 		{
 			name: "Empty namespace test case",
 			args: args{
-				ctx: context.Background(),
 				providedCredentialsRef: corev1.SecretReference{
 					Name:      "example",
 					Namespace: "",
@@ -102,6 +109,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 						},
 					}
 					*obj = cred
+
 					return nil
 				},
 			},
@@ -111,7 +119,6 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 		{
 			name: "Handle error from crClient",
 			args: args{
-				ctx: context.Background(),
 				providedCredentialsRef: corev1.SecretReference{
 					Name:      "example",
 					Namespace: "test",
@@ -131,7 +138,6 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 		{
 			name: "Handle error after getting empty secret from crClient",
 			args: args{
-				ctx: context.Background(),
 				providedCredentialsRef: corev1.SecretReference{
 					Name:      "example",
 					Namespace: "test",
@@ -149,8 +155,12 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 			expectedError: "no apiToken key in credentials secret test/example",
 		},
 	}
+
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		testCase := tt
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
@@ -159,19 +169,19 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 
 			// Setup Expected behaviour
 			expectedSecretRef := client.ObjectKey{
-				Name:      tt.args.expectedCredentialsRef.Name,
-				Namespace: tt.args.expectedCredentialsRef.Namespace,
+				Name:      testCase.args.expectedCredentialsRef.Name,
+				Namespace: testCase.args.expectedCredentialsRef.Namespace,
 			}
-			mockClient.EXPECT().Get(gomock.Any(), expectedSecretRef, gomock.Any()).DoAndReturn(tt.args.funcBehavior)
+			mockClient.EXPECT().Get(gomock.Any(), expectedSecretRef, gomock.Any()).DoAndReturn(testCase.args.funcBehavior)
 
 			// Call getCredentialDataFromRef using the mock client
-			got, err := getCredentialDataFromRef(tt.args.ctx, mockClient, tt.args.providedCredentialsRef, tt.args.defaultNamespace)
+			got, err := getCredentialDataFromRef(context.Background(), mockClient, testCase.args.providedCredentialsRef, testCase.args.defaultNamespace)
 
 			// Check that the function returned the expected result
-			if tt.expectedError != "" {
-				assert.EqualError(t, err, tt.expectedError)
+			if testCase.expectedError != "" {
+				assert.EqualError(t, err, testCase.expectedError)
 			} else {
-				assert.Equal(t, tt.expectedByte, got)
+				assert.Equal(t, testCase.expectedByte, got)
 			}
 		})
 	}
