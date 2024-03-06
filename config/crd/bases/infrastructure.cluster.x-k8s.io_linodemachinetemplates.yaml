@@ -75,6 +75,25 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
+                      credentialsRef:
+                        description: |-
+                          CredentialsRef is a reference to a Secret that contains the credentials
+                          to use for provisioning this machine. If not supplied then these
+                          credentials will be used in-order:
+                            1. Machine
+                            2. Cluster
+                            2. Controller
+                        properties:
+                          name:
+                            description: name is unique within a namespace to reference
+                              a secret resource.
+                            type: string
+                          namespace:
+                            description: namespace defines the space within which
+                              the secret name must be unique.
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
                       firewallId:
                         type: integer
                         x-kubernetes-validations:

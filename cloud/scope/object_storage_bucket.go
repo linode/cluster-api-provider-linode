@@ -19,13 +19,13 @@ import (
 
 type ObjectStorageBucketScopeParams struct {
 	Client client.Client
-	Object *infrav1alpha1.LinodeObjectStorageBucket
+	Bucket *infrav1alpha1.LinodeObjectStorageBucket
 	Logger *logr.Logger
 }
 
 type ObjectStorageBucketScope struct {
 	client            client.Client
-	Object            *infrav1alpha1.LinodeObjectStorageBucket
+	Bucket            *infrav1alpha1.LinodeObjectStorageBucket
 	Logger            logr.Logger
 	LinodeClient      *linodego.Client
 	BucketPatchHelper *patch.Helper
@@ -35,7 +35,7 @@ const AccessKeyNameTemplate = "%s-access-keys"
 const NumAccessKeys = 2
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
-	if params.Object == nil {
+	if params.Bucket == nil {
 		return errors.New("object storage bucket is required when creating an ObjectStorageBucketScope")
 	}
 	if params.Logger == nil {
@@ -51,8 +51,8 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 	}
 
 	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
-	if params.Object.Spec.CredentialsRef != nil {
-		data, err := getCredentialDataFromRef(ctx, params.Client, *params.Object.Spec.CredentialsRef, params.Object.GetNamespace())
+	if params.Bucket.Spec.CredentialsRef != nil {
+		data, err := getCredentialDataFromRef(ctx, params.Client, *params.Bucket.Spec.CredentialsRef, params.Bucket.GetNamespace())
 		if err != nil {
 			return nil, fmt.Errorf("credentials from cluster secret ref: %w", err)
 		}
@@ -60,14 +60,14 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 	}
 	linodeClient := createLinodeClient(apiKey)
 
-	bucketPatchHelper, err := patch.NewHelper(params.Object, params.Client)
+	bucketPatchHelper, err := patch.NewHelper(params.Bucket, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	return &ObjectStorageBucketScope{
 		client:            params.Client,
-		Object:            params.Object,
+		Bucket:            params.Bucket,
 		Logger:            *params.Logger,
 		LinodeClient:      linodeClient,
 		BucketPatchHelper: bucketPatchHelper,
@@ -76,7 +76,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 
 // PatchObject persists the object storage bucket configuration and status.
 func (s *ObjectStorageBucketScope) PatchObject(ctx context.Context) error {
-	return s.BucketPatchHelper.Patch(ctx, s.Object)
+	return s.BucketPatchHelper.Patch(ctx, s.Bucket)
 }
 
 // Close closes the current scope persisting the object storage bucket configuration and status.
@@ -87,7 +87,7 @@ func (s *ObjectStorageBucketScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.Object, infrav1alpha1.GroupVersion.String()) {
+	if controllerutil.AddFinalizer(s.Bucket, infrav1alpha1.GroupVersion.String()) {
 		return s.Close(ctx)
 	}
 
@@ -109,7 +109,7 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
-			Namespace: s.Object.Namespace,
+			Namespace: s.Bucket.Namespace,
 		},
 		StringData: map[string]string{
 			"read_write": string(accessKeys[0]),
@@ -117,14 +117,14 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 		},
 	}
 
-	if err := controllerutil.SetOwnerReference(s.Object, secret, s.client.Scheme()); err != nil {
+	if err := controllerutil.SetOwnerReference(s.Bucket, secret, s.client.Scheme()); err != nil {
 		return fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
 	}
 
 	// Add finalizer to secret so it isn't deleted when bucket deletion is triggered
 	controllerutil.AddFinalizer(secret, infrav1alpha1.GroupVersion.String())
 
-	if s.Object.Status.KeySecretName == nil {
+	if s.Bucket.Status.KeySecretName == nil {
 		if err := s.client.Create(ctx, secret); err != nil {
 			return fmt.Errorf("could not create access key secret %s: %w", secretName, err)
 		}
@@ -140,10 +140,10 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 }
 
 func (s *ObjectStorageBucketScope) GetAccessKeySecret(ctx context.Context) (*corev1.Secret, error) {
-	secretName := fmt.Sprintf(AccessKeyNameTemplate, s.Object.Name)
+	secretName := fmt.Sprintf(AccessKeyNameTemplate, *s.Bucket.Spec.Label)
 
 	objKey := client.ObjectKey{
-		Namespace: s.Object.Namespace,
+		Namespace: s.Bucket.Namespace,
 		Name:      secretName,
 	}
 	var secret corev1.Secret
@@ -177,5 +177,5 @@ func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, 
 }
 
 func (s *ObjectStorageBucketScope) ShouldRotateKeys() bool {
-	return *s.Object.Spec.KeyGeneration != *s.Object.Status.LastKeyGeneration
+	return *s.Bucket.Spec.KeyGeneration != *s.Bucket.Status.LastKeyGeneration
 }
