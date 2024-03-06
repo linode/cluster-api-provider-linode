@@ -16,9 +16,15 @@ import (
 )
 
 func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
+	// Buckets do not have IDs so hardcode it to 0
+	listFilter := util.Filter{
+		ID:    nil,
+		Label: *bScope.Bucket.Spec.Label,
+		Tags:  nil,
+	}
 	buckets, err := bScope.LinodeClient.ListObjectStorageBucketsInCluster(
 		ctx,
-		linodego.NewListOptions(1, util.CreateLinodeAPIFilter(*bScope.Bucket.Spec.Label, nil)),
+		linodego.NewListOptions(1, listFilter.String()),
 		bScope.Bucket.Spec.Cluster,
 	)
 	if err != nil {

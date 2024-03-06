@@ -56,11 +56,11 @@ type LinodeVPCReconciler struct {
 	ReconcileTimeout time.Duration
 }
 
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs/finalizers,verbs=update
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs/finalizers,verbs=update
 
-//+kubebuilder:rbac:groups="",resources=events,verbs=create;update;patch
+// +kubebuilder:rbac:groups="",resources=events,verbs=create;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the VPC closer to the desired state.
@@ -221,8 +221,6 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 			logger.Error(err, "Failed to fetch VPC")
 
 			return res, err
-		} else if vpc == nil {
-			return res, errors.New("failed to fetch VPC")
 		}
 
 		if vpc != nil {
