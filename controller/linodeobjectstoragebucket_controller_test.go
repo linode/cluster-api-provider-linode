@@ -26,6 +26,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,39 +46,51 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 
 	obj := &infrastructurev1alpha1.LinodeObjectStorageBucket{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sample",
+			Name:      "sample-bucket",
 			Namespace: "default",
 		},
 		Spec: infrastructurev1alpha1.LinodeObjectStorageBucketSpec{
 			Cluster: "cluster",
+			Label:   util.Pointer("sample"),
 		},
 	}
 
+	recorder := record.NewFakeRecorder(3)
+
+	secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, *obj.Spec.Label)
+
+	var secret corev1.Secret
 	var mockCtrl *gomock.Controller
 
 	BeforeEach(func() {
+		// Create a new gomock controller for each test run
 		mockCtrl = gomock.NewController(GinkgoT())
 	})
 
 	AfterEach(func() {
+		// At the end of each test run, tell the gomock controller it's done
+		// so it can check configured expectations and validate the methods called
 		mockCtrl.Finish()
 	})
 
-	It("should reconcile an object", func() {
+	It("should reconcile an object apply", func() {
 		mockClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)
 
-		mockClient.EXPECT().
-			ListObjectStorageBucketsInCluster(gomock.Any(), gomock.Any(), gomock.Any()).
-			Return([]linodego.ObjectStorageBucket{}, nil)
+		listCall := mockClient.EXPECT().
+			ListObjectStorageBucketsInCluster(gomock.Any(), gomock.Any(), obj.Spec.Cluster).
+			Return([]linodego.ObjectStorageBucket{}, nil).
+			Times(1)
 
-		mockClient.EXPECT().
+		createBucketCall := mockClient.EXPECT().
 			CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
 			Return(&linodego.ObjectStorageBucket{
-				Label:    obj.Name,
+				Label:    *obj.Spec.Label,
 				Cluster:  obj.Spec.Cluster,
 				Created:  util.Pointer(time.Now()),
 				Hostname: "hostname",
-			}, nil)
+			}, nil).
+			Times(1).
+			After(listCall)
 
 		for idx, permission := range []string{"rw", "ro"} {
 			mockClient.EXPECT().
@@ -89,17 +102,19 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 							return false
 						}
 
-						return createOpt.Label == fmt.Sprintf("%s-%s", obj.Name, permission)
+						return createOpt.Label == fmt.Sprintf("%s-%s", *obj.Spec.Label, permission)
 					}),
 				).
-				Return(&linodego.ObjectStorageKey{ID: idx}, nil)
+				Return(&linodego.ObjectStorageKey{ID: idx}, nil).
+				Times(1).
+				After(createBucketCall)
 		}
 
-		controllerReconciler := &LinodeObjectStorageBucketReconciler{
+		reconciler := &LinodeObjectStorageBucketReconciler{
 			Client:   k8sClient,
 			Scheme:   k8sClient.Scheme(),
 			Logger:   ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-			Recorder: record.NewFakeRecorder(3),
+			Recorder: recorder,
 			LinodeClientFactory: func(apiKey string) scope.LinodeObjectStorageClient {
 				return mockClient
 			},
@@ -107,7 +122,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 
 		objectKey := client.ObjectKeyFromObject(obj)
 		Expect(k8sClient.Create(ctx, obj)).To(Succeed())
-		_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+		_, err := reconciler.Reconcile(ctx, reconcile.Request{
 			NamespacedName: objectKey,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -115,19 +130,54 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 		By("updating its status fields")
 		Expect(k8sClient.Get(ctx, objectKey, obj)).To(Succeed())
 		Expect(*obj.Status.Hostname).To(Equal("hostname"))
-		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, obj.Name)
 		Expect(*obj.Status.KeySecretName).To(Equal(secretName))
 		Expect(*obj.Status.LastKeyGeneration).To(Equal(*obj.Spec.KeyGeneration))
 		Expect(*obj.Status.LastKeyGeneration).To(Equal(0))
 		Expect(obj.Status.Ready).To(BeTrue())
 
 		By("creating a Secret with access keys")
-		var secret corev1.Secret
 		Expect(k8sClient.Get(ctx, client.ObjectKey{
 			Name:      secretName,
 			Namespace: obj.Namespace,
 		}, &secret)).To(Succeed())
 		Expect(secret.Data["read_write"]).To(Not(BeNil()))
 		Expect(secret.Data["read_only"]).To(Not(BeNil()))
+
+		By("recording the expected event")
+		Expect(<-recorder.Events).To(ContainSubstring("Object storage bucket applied"))
+	})
+
+	It("should reconcile an object delete", func() {
+		mockClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)
+
+		for i := range 2 {
+			mockClient.EXPECT().
+				DeleteObjectStorageKey(gomock.Any(), i).
+				Return(nil).
+				Times(1)
+		}
+
+		reconciler := &LinodeObjectStorageBucketReconciler{
+			Client:   k8sClient,
+			Scheme:   k8sClient.Scheme(),
+			Logger:   ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
+			Recorder: recorder,
+			LinodeClientFactory: func(apiKey string) scope.LinodeObjectStorageClient {
+				return mockClient
+			},
+		}
+
+		objectKey := client.ObjectKeyFromObject(obj)
+		Expect(k8sClient.Delete(ctx, obj)).To(Succeed())
+		_, err := reconciler.Reconcile(ctx, reconcile.Request{
+			NamespacedName: objectKey,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("removing the finalizer so it is deleted")
+		Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, obj))).To(BeTrue())
+
+		By("recording the expected event")
+		Expect(<-recorder.Events).To(ContainSubstring("Object storage bucket deleted"))
 	})
 })

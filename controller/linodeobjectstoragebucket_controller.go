@@ -178,7 +178,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		bScope.Bucket.Status.LastKeyGeneration = bScope.Bucket.Spec.KeyGeneration
 	}
 
-	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Ready", "Object storage bucket configuration applied")
+	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Ready", "Object storage bucket applied")
 
 	bScope.Bucket.Status.Ready = true
 	conditions.MarkTrue(bScope.Bucket, clusterv1.ReadyCondition)
@@ -198,7 +198,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 	}
 
 	if err := services.RevokeObjectStorageKeys(ctx, bScope, secret); err != nil {
-		bScope.Logger.Error(err, "failed to revoke access keys; keys must be manually revoked")
+		bScope.Logger.Error(err, "Failed to revoke access keys; keys must be manually revoked")
 		r.setFailure(bScope, err)
 
 		return err
@@ -225,6 +225,8 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 		return err
 	}
+
+	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Ready", "Object storage bucket deleted")
 
 	return nil
 }
