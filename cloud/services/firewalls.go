@@ -10,6 +10,7 @@ import (
 	"github.com/linode/linodego"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 )
 
@@ -310,4 +311,142 @@ func processACL(firewall *infrav1alpha1.LinodeFirewall, tags []string) (
 	}
 
 	return createOpts, nil
+}
+
+// AddNodeToApiServerFW adds a Node's IPs to the given Cloud Firewall's inbound rules
+func AddNodeToApiServerFW(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	firewall *infrav1alpha1.LinodeFirewall,
+) error {
+	if firewall.Spec.FirewallID == nil {
+		err := errors.New("no firewall ID")
+		logger.Error(err, "no ID is set for the firewall")
+
+		return err
+	}
+
+	ipv4s, ipv6s, err := getInstanceIPs(ctx, machineScope.LinodeClient, machineScope.LinodeMachine.Spec.InstanceID)
+	if err != nil {
+		logger.Error(err, "Failed get instance IP addresses")
+
+		return err
+	}
+
+	// get the rules and append a new rule for this Node to access the api server
+	newRule := infrav1alpha1.FirewallRule{
+		Action:      "ACCEPT",
+		Label:       "api-server",
+		Description: "Rule created by CAPL",
+		Ports:       fmt.Sprint(machineScope.LinodeCluster.Spec.ControlPlaneEndpoint.Port),
+		Protocol:    linodego.TCP,
+		Addresses: &infrav1alpha1.NetworkAddresses{
+			IPv4: util.Pointer(ipv4s),
+			IPv6: util.Pointer(ipv6s),
+		},
+	}
+	// update the inbound rules
+	firewall.Spec.InboundRules = append(firewall.Spec.InboundRules, newRule)
+
+	// reprocess the firewall to make sure we won't exceed the IP and rule limit
+	clusterUID := firewall.Spec.ClusterUID
+	fwConfig, err := processACL(firewall, []string{clusterUID})
+	if err != nil {
+		logger.Info("Failed to process ACL", "error", err.Error())
+
+		return err
+	}
+
+	// finally, update the firewall
+	if _, err := machineScope.LinodeClient.UpdateFirewallRules(ctx, *firewall.Spec.FirewallID, fwConfig.Rules); err != nil {
+		logger.Info("Failed to update firewall", "error", err.Error())
+
+		return err
+	}
+
+	return nil
+}
+
+// DeleteNodeFromApiServerFW removes Node from the given Cloud Firewall's inbound rules
+func DeleteNodeFromApiServerFW(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	firewall *infrav1alpha1.LinodeFirewall,
+) error {
+	if firewall.Spec.FirewallID == nil {
+		logger.Info("Firewall already deleted, no Firewall address to remove")
+
+		return nil
+	}
+
+	if machineScope.LinodeMachine.Spec.InstanceID == nil {
+		return errors.New("no InstanceID")
+	}
+
+	ipv4s, ipv6s, err := getInstanceIPs(ctx, machineScope.LinodeClient, machineScope.LinodeMachine.Spec.InstanceID)
+	if err != nil {
+		logger.Error(err, "Failed get instance IP addresses")
+
+		return err
+	}
+
+	for _, rule := range firewall.Spec.InboundRules {
+		rule.Addresses.IPv4 = util.Pointer(setDiff(*rule.Addresses.IPv4, ipv4s))
+		rule.Addresses.IPv6 = util.Pointer(setDiff(*rule.Addresses.IPv6, ipv6s))
+	}
+
+	// reprocess the firewall
+	clusterUID := firewall.Spec.ClusterUID
+	fwConfig, err := processACL(firewall, []string{clusterUID})
+	if err != nil {
+		logger.Info("Failed to process ACL", "error", err.Error())
+
+		return err
+	}
+
+	// finally, update the firewall
+	if _, err := machineScope.LinodeClient.UpdateFirewallRules(ctx, *firewall.Spec.FirewallID, fwConfig.Rules); err != nil {
+		logger.Info("Failed to update firewall", "error", err.Error())
+
+		return err
+	}
+
+	return nil
+}
+
+func getInstanceIPs(ctx context.Context, client *linodego.Client, instanceID *int) (ipv4s, ipv6s []string, err error) {
+	addresses, err := client.GetInstanceIPAddresses(ctx, *instanceID)
+	if err != nil {
+		return ipv4s, ipv6s, err
+	}
+
+	// get all the ipv4 addresses for the node
+	for _, addr := range addresses.IPv4.Private {
+		ipv4s = append(ipv4s, addr.Address)
+	}
+	for _, addr := range addresses.IPv4.Public {
+		ipv4s = append(ipv4s, addr.Address)
+	}
+
+	// get all the ipv6 addresses for the node
+	ipv6s = []string{addresses.IPv6.SLAAC.Address, addresses.IPv6.LinkLocal.Address}
+
+	return ipv4s, ipv6s, nil
+}
+
+// setDiff: A - B
+func setDiff(a, b []string) (diff []string) {
+	m := make(map[string]bool)
+	for _, item := range b {
+		m[item] = true
+	}
+	for _, item := range a {
+		if _, ok := m[item]; !ok {
+			diff = append(diff, item)
+		}
+	}
+
+	return diff
 }

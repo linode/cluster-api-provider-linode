@@ -89,6 +89,8 @@ type LinodeMachineReconciler struct {
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets;,verbs=get;list;watch
 
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls,verbs=get;list;watch;update;patch;
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 //
@@ -281,6 +283,7 @@ func (r *LinodeMachineReconciler) reconcile(
 	return
 }
 
+//nolint:gocyclo,cyclop // As simple as possible.
 func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
@@ -376,6 +379,18 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 	if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 		logger.Error(err, "Failed to add instance to Node Balancer backend")
+
+		return linodeInstance, err
+	}
+
+	linodeFW, err := r.getFirewall(ctx, machineScope)
+	if err != nil {
+		logger.Error(err, "Failed to fetch LinodeFirewall")
+
+		return linodeInstance, err
+	}
+	if err = services.AddNodeToApiServerFW(ctx, logger, machineScope, linodeFW); err != nil {
+		logger.Error(err, "Failed to add instance to Firewall")
 
 		return linodeInstance, err
 	}
@@ -510,6 +525,18 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
 		logger.Error(err, "Failed to remove node from Node Balancer backend")
+
+		return err
+	}
+
+	linodeFW, err := r.getFirewall(ctx, machineScope)
+	if err != nil {
+		logger.Error(err, "Failed to fetch LinodeFirewall")
+
+		return err
+	}
+	if err := services.DeleteNodeFromApiServerFW(ctx, logger, machineScope, linodeFW); err != nil {
+		logger.Error(err, "Failed to remove node from Firewall")
 
 		return err
 	}

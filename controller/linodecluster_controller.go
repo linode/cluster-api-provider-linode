@@ -63,6 +63,8 @@ type LinodeClusterReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
 
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls,verbs=get;list;watch;create;update;patch;delete
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 
@@ -94,20 +96,14 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	controlPlaneFW := &infrav1alpha1.LinodeFirewall{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-api-server", linodeCluster.Name),
-		},
-	}
 	// Create the cluster scope.
 	clusterScope, err := scope.NewClusterScope(
 		ctx,
 		r.LinodeApiKey,
 		scope.ClusterScopeParams{
-			Client:               r.Client,
-			Cluster:              cluster,
-			LinodeCluster:        linodeCluster,
-			ControlPlaneFirewall: controlPlaneFW,
+			Client:        r.Client,
+			Cluster:       cluster,
+			LinodeCluster: linodeCluster,
 		})
 	if err != nil {
 		logger.Info("Failed to create cluster scope", "error", err.Error())
@@ -166,8 +162,9 @@ func (r *LinodeClusterReconciler) reconcile(
 	return res, nil
 }
 
-func createControlPlaneFirewallSpec(linodeCluster *infrav1alpha1.LinodeCluster) *infrav1alpha1.LinodeFirewallSpec {
-	// TODO: get node IPs and append
+func (r *LinodeClusterReconciler) createControlPlaneFirewallSpec(
+	linodeCluster *infrav1alpha1.LinodeCluster,
+) *infrav1alpha1.LinodeFirewallSpec {
 	// Per the Linode API:
 	// Must contain only valid IPv4 addresses or networks (both must be in ip/mask format)
 	apiServerIPV4 := append(
@@ -214,46 +211,62 @@ func createControlPlaneFirewallSpec(linodeCluster *infrav1alpha1.LinodeCluster) 
 	}
 }
 
-func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.ClusterStatusError, err error, lcr *LinodeClusterReconciler) {
+func (r *LinodeClusterReconciler) setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.ClusterStatusError, err error) {
 	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(err.Error())
 
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
 
-	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
+	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
 }
 
 func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	// handle NodeBalancer
 	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
 	if err != nil {
-		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+		r.setFailureReason(clusterScope, cerrs.CreateClusterError, err)
 
 		return err
 	}
-
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = linodeNB.ID
-
 	linodeNBConfig, err := services.CreateNodeBalancerConfig(ctx, clusterScope, logger)
 	if err != nil {
-		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+		r.setFailureReason(clusterScope, cerrs.CreateClusterError, err)
 
 		return err
 	}
-
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerConfigID = util.Pointer(linodeNBConfig.ID)
 
+	// Set the control plane endpoint with the new Nodebalancer host and port
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: *linodeNB.IPv4,
 		Port: int32(linodeNBConfig.Port),
 	}
 
-	// build out the control plane firewall rules
-	clusterScope.ControlPlaneFirewall.Spec = *createControlPlaneFirewallSpec(clusterScope.LinodeCluster)
+	// build out the control plane Firewall rules
+	controlPlaneFW := &infrav1alpha1.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-api-server", clusterScope.LinodeCluster.Name),
+			Namespace: clusterScope.LinodeCluster.Namespace,
+		},
+		Spec: *r.createControlPlaneFirewallSpec(clusterScope.LinodeCluster),
+	}
 
-	// Handle firewalls
-	firewall, err := services.HandleFirewall(ctx, clusterScope.ControlPlaneFirewall, clusterScope.LinodeClient, logger)
+	// Handle the Firewall
+	if err := r.Client.Create(ctx, controlPlaneFW); err != nil {
+		r.setFailureReason(clusterScope, cerrs.CreateClusterError, err)
+
+		return err
+	}
+	clusterScope.LinodeCluster.Spec.ControlPlaneFirewallRef = &corev1.ObjectReference{
+		Kind:      controlPlaneFW.Kind,
+		Namespace: controlPlaneFW.Namespace,
+		Name:      controlPlaneFW.Name,
+	}
+	// NOTE: if we add a reconciler later on don't call this as the reconciler will take care of it
+	firewall, err := services.HandleFirewall(ctx, controlPlaneFW, clusterScope.LinodeClient, logger)
 	if err != nil {
-		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+		r.setFailureReason(clusterScope, cerrs.CreateClusterError, err)
 
 		return err
 	}
@@ -262,17 +275,28 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 
 	return nil
 }
+
 func (r *LinodeClusterReconciler) reconcileUpdate(
 	ctx context.Context,
 	logger logr.Logger,
 	clusterScope *scope.ClusterScope,
 ) error {
-	// build out the control plane firewall rules
-	clusterScope.ControlPlaneFirewall.Spec = *createControlPlaneFirewallSpec(clusterScope.LinodeCluster)
+	// Update the Firewall if necessary
+	controlPlaneFW := &infrav1alpha1.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-api-server", clusterScope.LinodeCluster.Name),
+			Namespace: clusterScope.LinodeCluster.Namespace,
+		},
+		Spec: *r.createControlPlaneFirewallSpec(clusterScope.LinodeCluster),
+	}
 
-	// Handle firewalls
-	if _, err := services.HandleFirewall(ctx, clusterScope.ControlPlaneFirewall, clusterScope.LinodeClient, logger); err != nil {
-		setFailureReason(clusterScope, cerrs.UpdateClusterError, err, r)
+	if err := r.Client.Update(ctx, controlPlaneFW); err != nil {
+		r.setFailureReason(clusterScope, cerrs.UpdateClusterError, err)
+
+		return err
+	}
+	if _, err := services.HandleFirewall(ctx, controlPlaneFW, clusterScope.LinodeClient, logger); err != nil {
+		r.setFailureReason(clusterScope, cerrs.UpdateClusterError, err)
 
 		return err
 	}
@@ -292,7 +316,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			// Not found is not an error
 			apiErr := linodego.Error{}
 			if errors.As(err, &apiErr) && apiErr.Code != http.StatusNotFound {
-				setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+				r.setFailureReason(clusterScope, cerrs.DeleteClusterError, err)
 
 				return err
 			}
@@ -312,7 +336,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		// Not found is not an error
 		apiErr := linodego.Error{}
 		if errors.As(err, &apiErr) && apiErr.Code != http.StatusNotFound {
-			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+			r.setFailureReason(clusterScope, cerrs.DeleteClusterError, err)
 
 			return err
 		}

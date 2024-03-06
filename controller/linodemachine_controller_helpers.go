@@ -46,7 +46,12 @@ import (
 // The decoded user_data must not exceed 16384 bytes per the Linode API
 const maxBootstrapDataBytes = 16384
 
-func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
+func (*LinodeMachineReconciler) newCreateConfig(
+	ctx context.Context,
+	machineScope *scope.MachineScope,
+	tags []string,
+	logger logr.Logger,
+) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
@@ -58,13 +63,17 @@ func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScop
 		return nil, err
 	}
 
+	// Do not boot the linode until extra configuration is done
 	createConfig.Booted = util.Pointer(false)
 
 	createConfig.PrivateIP = true
 
-	if kutil.IsControlPlaneMachine(machineScope.Machine) &&
-		machineScope.LinodeCluster.Spec.ControlPlaneFirewall.FirewallID != nil {
-		createConfig.FirewallID = *machineScope.LinodeCluster.Spec.ControlPlaneFirewall.FirewallID
+	if machineScope.LinodeCluster.Spec.ControlPlaneFirewall.FirewallID != nil {
+		// If this is a control plane machine, set it to be protected by the
+		// control plane Cloud Firewall
+		if kutil.IsControlPlaneMachine(machineScope.Machine) {
+			createConfig.FirewallID = *machineScope.LinodeCluster.Spec.ControlPlaneFirewall.FirewallID
+		}
 	}
 
 	bootstrapData, err := machineScope.GetBootstrapData(ctx)
@@ -291,4 +300,26 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha1.LinodeMac
 	}
 
 	return &createConfig
+}
+
+func (r *LinodeMachineReconciler) getFirewall(
+	ctx context.Context,
+	machineScope *scope.MachineScope,
+) (*infrav1alpha1.LinodeFirewall, error) {
+	name := machineScope.LinodeCluster.Spec.ControlPlaneFirewallRef.Name
+	namespace := machineScope.LinodeCluster.Spec.ControlPlaneFirewallRef.Namespace
+	if namespace == "" {
+		namespace = machineScope.LinodeCluster.Namespace
+	}
+	linodeFW := &infrav1alpha1.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(linodeFW), linodeFW); err != nil {
+		return nil, err
+	}
+
+	return linodeFW, nil
 }

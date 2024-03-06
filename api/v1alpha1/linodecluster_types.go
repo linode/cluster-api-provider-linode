@@ -50,6 +50,10 @@ type LinodeClusterSpec struct {
 	// control plane nodes.
 	// +optional
 	ControlPlaneFirewall FirewallSpec `json:"controlPlaneFirewall,omitempty"`
+
+	// ControlPlaneFirewallRef is a reference to the Firewall for the control plane nodes.
+	// +optional
+	ControlPlaneFirewallRef *corev1.ObjectReference `json:"controlPlaneFirewallRef,omitempty"`
 }
 
 // LinodeClusterStatus defines the observed state of LinodeCluster
