@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/linode/linodego"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -75,6 +76,15 @@ type LinodeMachineSpec struct {
 	Metadata *InstanceMetadataOptions `json:"metadata,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallId,omitempty"`
+
+	// CredentialsRef is a reference to a Secret that contains the credentials
+	// to use for provisioning this machine. If not supplied then these
+	// credentials will be used in-order:
+	//   1. LinodeMachine
+	//   2. Owner LinodeCluster
+	//   3. Controller
+	// +optional
+	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 
 // InstanceMetadataOptions defines metadata of instance
