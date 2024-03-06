@@ -44,17 +44,17 @@ func Test_createLinodeClient(t *testing.T) {
 // Test_getCredentialDataFromRef tests the getCredentialDataFromRef function.
 func Test_getCredentialDataFromRef(t *testing.T) {
 	type args struct {
-		ctx              context.Context
-		providedCredentialsRef   corev1.SecretReference
-		expectedCredentialsRef   corev1.SecretReference
-		defaultNamespace string
-		funcBehavior     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
+		ctx                    context.Context
+		providedCredentialsRef corev1.SecretReference
+		expectedCredentialsRef corev1.SecretReference
+		defaultNamespace       string
+		funcBehavior           func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
 	}
 	tests := []struct {
-		name    string
-		args    args
-		expectedByte    []byte
-		expectedError string 
+		name          string
+		args          args
+		expectedByte  []byte
+		expectedError string
 	}{
 		{
 			name: "Check is the function works correctly",
@@ -79,7 +79,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 					return nil
 				},
 			},
-			expectedByte: []byte("example"),
+			expectedByte:  []byte("example"),
 			expectedError: "",
 		},
 		{
@@ -105,7 +105,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 					return nil
 				},
 			},
-			expectedByte: []byte("example"),
+			expectedByte:  []byte("example"),
 			expectedError: "",
 		},
 		{
@@ -125,7 +125,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 					return errors.New("Could not find the secret")
 				},
 			},
-			expectedByte: []byte(nil),
+			expectedByte:  []byte(nil),
 			expectedError: "get credentials secret test/example: Could not find the secret",
 		},
 		{
@@ -145,7 +145,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 					return nil
 				},
 			},
-			expectedByte: []byte(nil),
+			expectedByte:  []byte(nil),
 			expectedError: "no apiToken key in credentials secret test/example",
 		},
 	}
