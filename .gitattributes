@@ -1,2 +1,4 @@
 *.sh text eol=lf
 *.yaml text eol=lf
+PROJECT linguist-generated=true
+api/**/zz_generated.deepcopy.go linguist-generated=true
