@@ -41,6 +41,16 @@ spec:
   credentialsRef:
     name: linode-credentials
   ...
+---
+# Example: LinodeMachine
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachine
+metadata:
+  name: test-machine
+spec:
+  credentialsRef:
+    name: linode-credentials
+  ...
 ```
 
 Secrets from other namespaces by additionally specifying an optional
@@ -49,3 +59,8 @@ Secrets from other namespaces by additionally specifying an optional
 ```admonish warning
 If `.spec.credentialsRef` is set for a LinodeCluster, it should also be set for adjacent resources (e.g. LinodeVPC).
 ```
+
+## LinodeMachine
+
+For LinodeMachines, credentials set on the LinodeMachine object will override any credentials supplied by the owner
+LinodeCluster. This can allow cross-account deployment of the Linodes for a cluster.
