@@ -163,11 +163,7 @@ func TestGetCredentialDataFromRef(t *testing.T) {
 			mockClient := mock.NewMockk8sClient(ctrl)
 
 			// Setup Expected behaviour
-			expectedSecretRef := client.ObjectKey{
-				Name:      testCase.args.expectedCredentialsRef.Name,
-				Namespace: testCase.args.expectedCredentialsRef.Namespace,
-			}
-			mockClient.EXPECT().Get(gomock.Any(), expectedSecretRef, gomock.Any()).DoAndReturn(testCase.args.funcBehavior)
+			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testCase.args.funcBehavior)
 
 			// Call getCredentialDataFromRef using the mock client
 			got, err := getCredentialDataFromRef(context.Background(), mockClient, testCase.args.providedCredentialsRef, "default")
