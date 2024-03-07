@@ -5,6 +5,5 @@ import (
 )
 
 type k8sClient interface {
-	client.Reader
-	client.Writer
+	client.Client
 }

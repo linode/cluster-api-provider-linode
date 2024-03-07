@@ -32,7 +32,7 @@ import (
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	Client        client.Client
+	Client        k8sClient
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
 }

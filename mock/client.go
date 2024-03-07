@@ -14,6 +14,9 @@ import (
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -116,6 +119,36 @@ func (mr *Mockk8sClientMockRecorder) Get(ctx, key, obj any, opts ...any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*Mockk8sClient)(nil).Get), varargs...)
 }
 
+// GroupVersionKindFor mocks base method.
+func (m *Mockk8sClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GroupVersionKindFor", obj)
+	ret0, _ := ret[0].(schema.GroupVersionKind)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GroupVersionKindFor indicates an expected call of GroupVersionKindFor.
+func (mr *Mockk8sClientMockRecorder) GroupVersionKindFor(obj any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupVersionKindFor", reflect.TypeOf((*Mockk8sClient)(nil).GroupVersionKindFor), obj)
+}
+
+// IsObjectNamespaced mocks base method.
+func (m *Mockk8sClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsObjectNamespaced", obj)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsObjectNamespaced indicates an expected call of IsObjectNamespaced.
+func (mr *Mockk8sClientMockRecorder) IsObjectNamespaced(obj any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsObjectNamespaced", reflect.TypeOf((*Mockk8sClient)(nil).IsObjectNamespaced), obj)
+}
+
 // List mocks base method.
 func (m *Mockk8sClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	m.ctrl.T.Helper()
@@ -152,6 +185,62 @@ func (mr *Mockk8sClientMockRecorder) Patch(ctx, obj, patch any, opts ...any) *go
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj, patch}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*Mockk8sClient)(nil).Patch), varargs...)
+}
+
+// RESTMapper mocks base method.
+func (m *Mockk8sClient) RESTMapper() meta.RESTMapper {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RESTMapper")
+	ret0, _ := ret[0].(meta.RESTMapper)
+	return ret0
+}
+
+// RESTMapper indicates an expected call of RESTMapper.
+func (mr *Mockk8sClientMockRecorder) RESTMapper() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTMapper", reflect.TypeOf((*Mockk8sClient)(nil).RESTMapper))
+}
+
+// Scheme mocks base method.
+func (m *Mockk8sClient) Scheme() *runtime.Scheme {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Scheme")
+	ret0, _ := ret[0].(*runtime.Scheme)
+	return ret0
+}
+
+// Scheme indicates an expected call of Scheme.
+func (mr *Mockk8sClientMockRecorder) Scheme() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Scheme", reflect.TypeOf((*Mockk8sClient)(nil).Scheme))
+}
+
+// Status mocks base method.
+func (m *Mockk8sClient) Status() client.SubResourceWriter {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Status")
+	ret0, _ := ret[0].(client.SubResourceWriter)
+	return ret0
+}
+
+// Status indicates an expected call of Status.
+func (mr *Mockk8sClientMockRecorder) Status() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*Mockk8sClient)(nil).Status))
+}
+
+// SubResource mocks base method.
+func (m *Mockk8sClient) SubResource(subResource string) client.SubResourceClient {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubResource", subResource)
+	ret0, _ := ret[0].(client.SubResourceClient)
+	return ret0
+}
+
+// SubResource indicates an expected call of SubResource.
+func (mr *Mockk8sClientMockRecorder) SubResource(subResource any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubResource", reflect.TypeOf((*Mockk8sClient)(nil).SubResource), subResource)
 }
 
 // Update mocks base method.
