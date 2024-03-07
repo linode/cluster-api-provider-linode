@@ -5,3 +5,4 @@ resources:
   - linodeCluster.yaml
   - linodeMachineTemplate.yaml
   - machineDeployment.yaml
+  - secret.yaml
