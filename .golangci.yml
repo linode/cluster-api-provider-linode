@@ -25,6 +25,14 @@ linters-settings:
     # see https://github.com/kisielk/errcheck#the-deprecated-method for details
     ignore: fmt:.*,io/ioutil:^Read.*
 
+  gci:
+    sections:
+      - standard
+      - default
+      - blank
+      - dot
+      - prefix(github.com/linode/cluster-api-provider-linode)
+
   govet:
     # report about shadowed variables
     check-shadowing: false
@@ -140,7 +148,7 @@ linters:
     - forbidigo
     - forcetypeassert
     # - funlen
-    # - gci
+    - gci
     - gocheckcompilerdirectives
     - gocognit
     - goconst
@@ -164,7 +172,7 @@ linters:
     - nestif
     - nilerr
     - nilnil
-    - nlreturn
+    # - nlreturn
     - noctx
     - nolintlint
     - paralleltest
@@ -209,6 +217,15 @@ issues:
       text: "(unnamedResult|exitAfterDefer)"
       linters:
         - gocritic
+
+    # Exclude gci check for //+kubebuilder:scaffold:imports comments. Waiting to
+    # resolve https://github.com/daixiang0/gci/issues/135
+    - path: cmd/main.go
+      linters:
+        - gci
+    - path: controller/suite_test.go
+      linters:
+        - gci
 
     # These are performance optimisations rather than style issues per se.
     # They warn when function arguments or range values copy a lot of memory
