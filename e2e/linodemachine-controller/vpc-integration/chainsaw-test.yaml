@@ -116,7 +116,7 @@ spec:
         - name: URI
           value: vpcs
         - name: FILTER
-          value: '{"label":"linodevpc-test"}'
+          value: '{"label":"machine-test-vpc"}'
         content: |
           set -e
           curl -s \
