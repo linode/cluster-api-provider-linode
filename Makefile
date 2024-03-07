@@ -85,8 +85,8 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: generate-mock-client
-generate-mock-client: mockgen ## Generate mocks for the Linode API client.
-	$(MOCKGEN) -source=./cloud/scope/client.go -destination ./cloud/scope/mock/client.go -package mock
+generate-mocks: mockgen ## Generate mocks for testing.
+	$(MOCKGEN) -source=./cloud/scope/client.go -destination ./mock/client.go -package mock
 
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
