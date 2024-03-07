@@ -65,7 +65,11 @@ spec:
         check:
           ($error): ~
           (json_parse($stdout)):
-            active: true
+            data:
+            - subnets:
+              - linodes:
+                - interfaces:
+                  - active: true
   - name: step-04
     try:
     - delete:
