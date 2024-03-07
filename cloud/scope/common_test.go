@@ -15,7 +15,7 @@ import (
 )
 
 // Test_createLinodeClient tests the createLinodeClient function. Checks if the client does not error out.
-func Test_createLinodeClient(t *testing.T) {
+func TestCreateLinodeClient(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -48,13 +48,12 @@ func Test_createLinodeClient(t *testing.T) {
 }
 
 // Test_getCredentialDataFromRef tests the getCredentialDataFromRef function.
-func Test_getCredentialDataFromRef(t *testing.T) {
+func TestGetCredentialDataFromRef(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
 		providedCredentialsRef corev1.SecretReference
 		expectedCredentialsRef corev1.SecretReference
-		defaultNamespace       string
 		funcBehavior           func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
 	}
 
@@ -75,7 +74,6 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 					Name:      "example",
 					Namespace: "test",
 				},
-				defaultNamespace: "default",
 				funcBehavior: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -101,7 +99,6 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 					Name:      "example",
 					Namespace: "default",
 				},
-				defaultNamespace: "default",
 				funcBehavior: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -127,7 +124,6 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 					Name:      "example",
 					Namespace: "test",
 				},
-				defaultNamespace: "default",
 				funcBehavior: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					return errors.New("Could not find the secret")
 				},
@@ -146,7 +142,6 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 					Name:      "example",
 					Namespace: "test",
 				},
-				defaultNamespace: "default",
 				funcBehavior: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					return nil
 				},
@@ -175,7 +170,7 @@ func Test_getCredentialDataFromRef(t *testing.T) {
 			mockClient.EXPECT().Get(gomock.Any(), expectedSecretRef, gomock.Any()).DoAndReturn(testCase.args.funcBehavior)
 
 			// Call getCredentialDataFromRef using the mock client
-			got, err := getCredentialDataFromRef(context.Background(), mockClient, testCase.args.providedCredentialsRef, testCase.args.defaultNamespace)
+			got, err := getCredentialDataFromRef(context.Background(), mockClient, testCase.args.providedCredentialsRef, "default")
 
 			// Check that the function returned the expected result
 			if testCase.expectedError != "" {

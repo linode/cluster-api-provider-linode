@@ -84,9 +84,9 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-.PHONY: generate-mock-client
-generate-mock-client: mockgen ## Generate mocks for the Linode API client.
-	$(MOCKGEN) -source=./cloud/scope/client.go -destination ./mock/mock_client.go -package mock
+.PHONY: generate-mock
+generate-mock: mockgen ## Generate mocks for the Linode API client.
+	$(MOCKGEN) -source=./cloud/scope/client.go -destination ./mock/client.go -package mock
 
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
