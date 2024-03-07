@@ -15,7 +15,8 @@
     "nilaway@latest",
     "tilt@latest",
     "mdbook@latest",
-    "mdbook-admonish@latest"
+    "mdbook-admonish@latest",
+    "mockgen@latest"
   ],
   "shell": {
     "init_hook": [],

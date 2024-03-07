@@ -5,13 +5,14 @@ import (
 	"errors"
 	"testing"
 
-	mock "github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 // Test_createLinodeClient tests the createLinodeClient function. Checks if the client does not error out.
