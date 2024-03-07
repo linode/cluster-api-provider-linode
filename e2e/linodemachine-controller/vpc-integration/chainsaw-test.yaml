@@ -95,7 +95,7 @@ spec:
         - name: URI
           value: linode/instances
         - name: FILTER
-          value: '{"tags":"linodecluster-test"}'
+          value: '{"tags":"machine-test-vpc"}'
         content: |
           set -e
           curl -s \
