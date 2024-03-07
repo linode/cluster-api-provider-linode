@@ -33,7 +33,7 @@ spec:
         - name: URI
           value: linode/instances
         - name: FILTER
-          value: '{"tags":"machine-test-vpc"}'
+          value: '{"tags":"vpc-machine-test"}'
         content: |
           set -e
           curl -s \
