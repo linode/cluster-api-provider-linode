@@ -24,7 +24,6 @@ import (
 	"github.com/linode/linodego"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -36,6 +35,8 @@ type ClusterScopeParams struct {
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
 }
+
+var patchNewHelper = patch.NewHelper
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
 	if params.Cluster == nil {
@@ -65,7 +66,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 	}
 	linodeClient := createLinodeClient(apiKey)
 
-	helper, err := patch.NewHelper(params.LinodeCluster, params.Client)
+	helper, err := patchNewHelper(params.LinodeCluster, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
@@ -81,9 +82,8 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	client client.Client
-
-	PatchHelper   *patch.Helper
+	client k8sClient
+	PatchHelper   PatchHelper
 	LinodeClient  *linodego.Client
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
