@@ -1,0 +1,22 @@
+name: Check Go Version
+
+on:
+  push:
+    branches:
+      - "*"
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  go-version:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+    - run: go version
