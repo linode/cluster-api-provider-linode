@@ -107,7 +107,7 @@ type NetworkSpec struct {
 	LoadBalancerPort int `json:"loadBalancerPort,omitempty"`
 	// NodeBalancerID is the id of api server NodeBalancer.
 	// +optional
-	NodeBalancerID int `json:"nodeBalancerID,omitempty"`
+	NodeBalancerID *int `json:"nodeBalancerID,omitempty"`
 	// NodeBalancerConfigID is the config ID of api server NodeBalancer.
 	// +optional
 	NodeBalancerConfigID *int `json:"nodeBalancerConfigID,omitempty"`
