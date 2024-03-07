@@ -35,7 +35,7 @@ import (
 
 	"github.com/linode/linodego"
 
-	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -44,12 +44,12 @@ import (
 var _ = Describe("LinodeObjectStorageBucket controller", func() {
 	ctx := context.Background()
 
-	obj := &infrastructurev1alpha1.LinodeObjectStorageBucket{
+	obj := &infrav1.LinodeObjectStorageBucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "sample-bucket",
 			Namespace: "default",
 		},
-		Spec: infrastructurev1alpha1.LinodeObjectStorageBucketSpec{
+		Spec: infrav1.LinodeObjectStorageBucketSpec{
 			Cluster: "cluster",
 			Label:   util.Pointer("sample"),
 		},

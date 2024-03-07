@@ -226,7 +226,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 		return err
 	}
 
-	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Ready", "Object storage bucket deleted")
+	r.Recorder.Event(bScope.Bucket, clusterv1.DeletedReason, "Ready", "Object storage bucket deleted")
 
 	return nil
 }
