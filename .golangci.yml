@@ -51,7 +51,7 @@ linters-settings:
     local-prefixes: github.com/crossplane/provider-template
 
   cyclop:
-    max-complexity: 17
+    max-complexity: 15
     
   maligned:
     # print struct with more effective memory layout or not, false by default
