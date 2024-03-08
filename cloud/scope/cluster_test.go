@@ -19,10 +19,9 @@ package scope
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +30,14 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/mock"
+)
+
+var (
+    mu    sync.Mutex
+    count int
 )
 
 func TestValidateClusterScopeParams(t *testing.T) {
@@ -140,7 +147,7 @@ func TestClusterScopeMethods(t *testing.T) {
 			mockPatchHelper := mock.NewMockPatchHelper(ctrl)
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
 
-			s := &ClusterScope{
+			cScope := &ClusterScope{
 				client:        mockK8sClient,
 				PatchHelper:   mockPatchHelper,
 				LinodeClient:  createLinodeClient("test-key"),
@@ -148,15 +155,15 @@ func TestClusterScopeMethods(t *testing.T) {
 				LinodeCluster: testcase.fields.LinodeCluster,
 			}
 
-			if s.LinodeCluster.Finalizers == nil {
+			if cScope.LinodeCluster.Finalizers == nil {
 				mockPatchHelper.EXPECT().Patch(gomock.Any(), gomock.Any()).Return(testcase.patchErr)
 			}
 
-			if err := s.AddFinalizer(context.Background()); err != nil {
+			if err := cScope.AddFinalizer(context.Background()); err != nil {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
-			if s.LinodeCluster.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
+			if cScope.LinodeCluster.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
 				t.Errorf("Finalizer was not added")
 			}
 		})
@@ -166,23 +173,20 @@ func TestClusterScopeMethods(t *testing.T) {
 func TestNewClusterScope(t *testing.T) {
 	t.Parallel()
 	type args struct {
-		ctx    context.Context
 		apiKey string
 		params ClusterScopeParams
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *ClusterScope
+		name          string
+		args          args
+		want          *ClusterScope
 		expectedError error
-		getFunc func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
-		patchFunc func (obj client.Object, crClient client.Client) (*patch.Helper, error)
-
+		getFunc       func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
+		patchFunc     func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid ClusterScope",
 			args: args{
-				ctx:    context.Background(),
 				apiKey: "test-key",
 				params: ClusterScopeParams{
 					Cluster:       &clusterv1.Cluster{},
@@ -200,18 +204,20 @@ func TestNewClusterScope(t *testing.T) {
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 				return nil
 			},
-			patchFunc: func (obj client.Object, crClient client.Client) (*patch.Helper, error) {
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				count++
 				return &patch.Helper{}, nil
 			},
 		},
 		{
 			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data and we create a valid ClusterScope",
 			args: args{
-				ctx:    context.Background(),
 				apiKey: "test-key",
 				params: ClusterScopeParams{
-					Client:        nil,
-					Cluster:       &clusterv1.Cluster{},
+					Client:  nil,
+					Cluster: &clusterv1.Cluster{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{
 						Spec: infrav1alpha1.LinodeClusterSpec{
 							CredentialsRef: &corev1.SecretReference{
@@ -231,23 +237,25 @@ func TestNewClusterScope(t *testing.T) {
 			},
 			expectedError: nil,
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				mu.Lock()
+				defer mu.Unlock()
+				count++
 				cred := corev1.Secret{
 					Data: map[string][]byte{
 						"apiToken": []byte("example"),
 					},
 				}
 				*obj = cred
-				
+
 				return nil
 			},
-			patchFunc: func (obj client.Object, crClient client.Client) (*patch.Helper, error) {
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
 				return &patch.Helper{}, nil
 			},
 		},
 		{
 			name: "Error - ValidateClusterScopeParams triggers error because ClusterScopeParams is empty",
 			args: args{
-				ctx:    context.Background(),
 				apiKey: "test-key",
 				params: ClusterScopeParams{},
 			},
@@ -262,14 +270,16 @@ func TestNewClusterScope(t *testing.T) {
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 				return nil
 			},
-			patchFunc: func (obj client.Object, crClient client.Client) (*patch.Helper, error) {
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				count++
 				return &patch.Helper{}, nil
 			},
 		},
 		{
 			name: "Error - patchHelper returns error. Checking error handle for when new patchHelper is invoked",
 			args: args{
-				ctx:    context.Background(),
 				apiKey: "test-key",
 				params: ClusterScopeParams{
 					Cluster:       &clusterv1.Cluster{},
@@ -287,18 +297,20 @@ func TestNewClusterScope(t *testing.T) {
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 				return nil
 			},
-			patchFunc: func (obj client.Object, crClient client.Client) (*patch.Helper, error) {
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				count++
 				return nil, fmt.Errorf("obj is nil")
 			},
 		},
 		{
 			name: "Error - Using getCredentialDataFromRef(), func returns an error. Unable to create a valid ClusterScope",
 			args: args{
-				ctx:    context.Background(),
 				apiKey: "test-key",
 				params: ClusterScopeParams{
-					Client:        nil,
-					Cluster:       &clusterv1.Cluster{},
+					Client:  nil,
+					Cluster: &clusterv1.Cluster{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{
 						Spec: infrav1alpha1.LinodeClusterSpec{
 							CredentialsRef: &corev1.SecretReference{
@@ -320,15 +332,19 @@ func TestNewClusterScope(t *testing.T) {
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 				return fmt.Errorf("failed to get secret")
 			},
-			patchFunc: func (obj client.Object, crClient client.Client) (*patch.Helper, error) {
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				mu.Lock()
+				defer mu.Unlock()
+				count++
 				return &patch.Helper{}, nil
 			},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -339,23 +355,15 @@ func TestNewClusterScope(t *testing.T) {
 				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc)
 			}
 
-			patchNewHelper = testcase.patchFunc
-
-			ph, _ := patchNewHelper(testcase.args.params.LinodeCluster, mockK8sClient)
-			testcase.want.PatchHelper = ph
-
 			testcase.args.params.Client = mockK8sClient
 
+			got, err := NewClusterScope(context.Background(), testcase.args.apiKey, testcase.args.params, testcase.patchFunc)
 
-			got, err := NewClusterScope(testcase.args.ctx, testcase.args.apiKey, testcase.args.params)
-			
 			if testcase.expectedError != nil {
 				assert.EqualError(t, err, testcase.expectedError.Error())
 			} else {
-				assert.NoError(t, err)
 				assert.NotEmpty(t, got)
 			}
-
 		})
 	}
 }

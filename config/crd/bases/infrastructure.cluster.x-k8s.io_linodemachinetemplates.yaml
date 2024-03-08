@@ -80,9 +80,9 @@ spec:
                           CredentialsRef is a reference to a Secret that contains the credentials
                           to use for provisioning this machine. If not supplied then these
                           credentials will be used in-order:
-                            1. Machine
-                            2. Cluster
-                            2. Controller
+                            1. LinodeMachine
+                            2. Owner LinodeCluster
+                            3. Controller
                         properties:
                           name:
                             description: name is unique within a namespace to reference
