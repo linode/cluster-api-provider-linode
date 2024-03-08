@@ -25,9 +25,9 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	client client.Client
+	client k8sClient
 
-	PatchHelper   *patch.Helper
+	PatchHelper   PatchHelper
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
 	LinodeClient  *linodego.Client

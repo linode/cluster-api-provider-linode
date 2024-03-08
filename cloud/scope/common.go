@@ -8,10 +8,13 @@ import (
 	"github.com/linode/linodego"
 	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/version"
 )
+
+type patchNewHelper func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 
 func createLinodeClient(apiKey string) *linodego.Client {
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: apiKey})
