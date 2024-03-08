@@ -46,7 +46,7 @@ import (
 // The decoded user_data must not exceed 16384 bytes per the Linode API
 const maxBootstrapDataBytes = 16384
 
-func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
+func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
@@ -94,7 +94,88 @@ func (*LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScop
 		createConfig.RootPass = uuid.NewString()
 	}
 
+	if machineScope.LinodeCluster.Spec.VPCRef != nil {
+		iface, err := r.getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get VPC interface config")
+
+			return nil, err
+		}
+		createConfig.Interfaces = append(createConfig.Interfaces, *iface)
+	}
+
 	return createConfig, nil
+}
+
+func buildInstanceAddrs(linodeInstance *linodego.Instance) []clusterv1.MachineAddress {
+	addrs := []clusterv1.MachineAddress{}
+	for _, addr := range linodeInstance.IPv4 {
+		addrType := clusterv1.MachineExternalIP
+		if addr.IsPrivate() {
+			addrType = clusterv1.MachineInternalIP
+		}
+		addrs = append(addrs, clusterv1.MachineAddress{
+			Type:    addrType,
+			Address: addr.String(),
+		})
+	}
+
+	return addrs
+}
+
+func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha1.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
+	machine, err := kutil.GetOwnerMachine(ctx, r.Client, linodeMachine.ObjectMeta)
+	if err != nil {
+		if err = client.IgnoreNotFound(err); err != nil {
+			log.Error(err, "Failed to fetch owner machine")
+		}
+
+		return nil, err
+	}
+	if machine == nil {
+		log.Info("Machine Controller has not yet set OwnerRef, skipping reconciliation")
+
+		return nil, err
+	}
+	if skippedMachinePhases[machine.Status.Phase] {
+		return nil, err
+	}
+	match := false
+	for i := range linodeMachine.OwnerReferences {
+		if match = linodeMachine.OwnerReferences[i].UID == machine.UID; match {
+			break
+		}
+	}
+	if !match {
+		log.Info("Failed to find the referenced owner machine, skipping reconciliation", "references", linodeMachine.OwnerReferences, "machine", machine.ObjectMeta)
+
+		return nil, err
+	}
+
+	return machine, nil
+}
+
+func (r *LinodeMachineReconciler) getClusterFromMetadata(ctx context.Context, machine clusterv1.Machine, log logr.Logger) (*clusterv1.Cluster, error) {
+	cluster, err := kutil.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
+	if err != nil {
+		if err = client.IgnoreNotFound(err); err != nil {
+			log.Error(err, "Failed to fetch cluster by label")
+		}
+
+		return nil, err
+	}
+	if cluster == nil {
+		log.Error(nil, "Missing cluster")
+
+		return nil, errors.New("missing cluster")
+	}
+	if cluster.Spec.InfrastructureRef == nil {
+		log.Error(nil, "Missing infrastructure reference")
+
+		return nil, errors.New("missing infrastructure reference")
+	}
+
+	return cluster, nil
 }
 
 func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logger) handler.MapFunc {
@@ -230,38 +311,33 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 	for i := range existingIfaces {
 		if existingIfaces[i].Primary {
 			hasPrimary = true
-
 			break
 		}
 	}
 
 	var subnetID int
 	vpc, err := machineScope.LinodeClient.GetVPC(ctx, *linodeVPC.Spec.VPCID)
-	switch {
-	case err != nil:
+	if err != nil {
 		logger.Error(err, "Failed to fetch LinodeVPC")
 
 		return nil, err
-	case vpc == nil:
-		err = errors.New("failed to fetch VPC")
-
-		logger.Error(err, "Failed to fetch VPC")
-
-		return nil, err
-	case len(vpc.Subnets) == 0:
-		err = errors.New("failed to find subnet")
-
-		logger.Error(err, "Failed to find subnet")
-
-		return nil, err
-	default:
-		// Place node into the least busy subnet
-		sort.Slice(vpc.Subnets, func(i, j int) bool {
-			return len(vpc.Subnets[i].Linodes) > len(vpc.Subnets[j].Linodes)
-		})
-
-		subnetID = vpc.Subnets[0].ID
 	}
+	if vpc == nil {
+		logger.Error(nil, "Failed to fetch VPC")
+
+		return nil, errors.New("failed to fetch VPC")
+	}
+	if len(vpc.Subnets) == 0 {
+		logger.Error(nil, "Failed to find subnet")
+
+		return nil, errors.New("failed to find subnet")
+	}
+	// Place node into the least busy subnet
+	sort.Slice(vpc.Subnets, func(i, j int) bool {
+		return len(vpc.Subnets[i].Linodes) > len(vpc.Subnets[j].Linodes)
+	})
+
+	subnetID = vpc.Subnets[0].ID
 
 	return &linodego.InstanceConfigInterfaceCreateOptions{
 		Purpose:  linodego.InterfacePurposeVPC,
