@@ -12,6 +12,18 @@ local_resource(
     cmd='EXP_CLUSTER_RESOURCE_SET=true CLUSTER_TOPOLOGY=true clusterctl init --addon helm',
 )
 
+if os.getenv('INSTALL_K3S_PROVIDER'):
+    local_resource(
+        'capi-k3s-controller-manager',
+        cmd='clusterctl init --bootstrap k3s --control-plane k3s',
+    )
+
+if os.getenv('INSTALL_RKE2_PROVIDER'):
+    local_resource(
+        'capi-rke2-controller-manager',
+        cmd='clusterctl init --bootstrap rke2 --control-plane rke2',
+    )
+
 manager_yaml = decode_yaml_stream(kustomize("config/default"))
 for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":

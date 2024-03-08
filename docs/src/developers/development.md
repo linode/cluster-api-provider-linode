@@ -96,6 +96,15 @@ go get <repository>@<version>
 
 
 ### Using tilt
+~~~admonish note
+If you want to create RKE2 and/or K3s clusters, make sure to
+set the following env vars first:
+```
+export INSTALL_RKE2_PROVIDER=true
+export INSTALL_K3S_PROVIDER=true
+```
+~~~
+
 To build a kind cluster and start Tilt, simply run:
 ```sh
 make local-deploy
