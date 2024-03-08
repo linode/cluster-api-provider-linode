@@ -84,6 +84,10 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
+.PHONY: generate-mock
+generate-mock: mockgen ## Generate mocks for the Linode API client.
+	$(MOCKGEN) -source=./cloud/scope/client.go -destination ./mock/client.go -package mock
+
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
 	./hack/generate-flavors.sh
@@ -300,6 +304,7 @@ ENVTEST        ?= $(CACHE_BIN)/setup-envtest
 HUSKY          ?= $(LOCALBIN)/husky
 NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
+MOCKGEN        ?= $(LOCALBIN)/mockgen
 
 ## Tool Versions
 KUSTOMIZE_VERSION        ?= v5.1.1
@@ -313,9 +318,10 @@ CHAINSAW_VERSION         ?= v0.1.7
 HUSKY_VERSION            ?= v0.2.16
 NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.0.1
+MOCKGEN_VERSION          ?= v0.4.0
 
 .PHONY: tools
-tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(KUTTL) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC)
+tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(KUTTL) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN)
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -386,3 +392,8 @@ $(NILAWAY): $(LOCALBIN)
 govulncheck: $(GOVULNC) ## Download govulncheck locally if necessary.
 $(GOVULNC): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNC_VERSION)
+
+.PHONY: mockgen
+mockgen: $(MOCKGEN) ## Download mockgen locally if necessary.
+$(MOCKGEN): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
