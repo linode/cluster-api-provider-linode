@@ -23,11 +23,11 @@ import (
 	"errors"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/linodego"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Logger) error {

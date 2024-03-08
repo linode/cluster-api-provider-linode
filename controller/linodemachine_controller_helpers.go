@@ -27,8 +27,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +37,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
 // Size limit in bytes on the decoded metadata.user_data for cloud-init
