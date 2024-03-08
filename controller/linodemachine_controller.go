@@ -24,9 +24,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/util"
-	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,7 +43,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
+	"github.com/linode/cluster-api-provider-linode/util"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
 // default etcd Disk size in MB
@@ -94,8 +94,6 @@ type LinodeMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.0/pkg/reconcile
-//
-//nolint:gocyclo,cyclop // As simple as possible.
 func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
