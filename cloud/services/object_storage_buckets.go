@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-
-	"github.com/linode/linodego"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
