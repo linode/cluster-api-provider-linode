@@ -127,6 +127,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Client:        r.Client,
 			Cluster:       cluster,
 			Machine:       machine,
+			LinodeCluster: &infrav1alpha1.LinodeCluster{},
 			LinodeMachine: linodeMachine,
 		},
 	)
