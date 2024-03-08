@@ -281,6 +281,26 @@
         }
       }
     },
+    "mockgen@latest": {
+      "last_modified": "2024-02-24T23:06:34Z",
+      "resolved": "github:NixOS/nixpkgs/9a9dae8f6319600fa9aebde37f340975cab4b8c0#mockgen",
+      "source": "devbox-search",
+      "version": "0.4.0",
+      "systems": {
+        "aarch64-darwin": {
+          "store_path": "/nix/store/mxdpm47nvdk6xqc35bpl8ddizga49i1x-mockgen-0.4.0"
+        },
+        "aarch64-linux": {
+          "store_path": "/nix/store/ydq44fx1pp428s5lp5gd6lzcdy2idynl-mockgen-0.4.0"
+        },
+        "x86_64-darwin": {
+          "store_path": "/nix/store/3qaik38wgyqca4ndrdfx1fvv44xd6igf-mockgen-0.4.0"
+        },
+        "x86_64-linux": {
+          "store_path": "/nix/store/z6cz5hbdx40v7s1ba1a6gsc5xlrkwcp5-mockgen-0.4.0"
+        }
+      }
+    },
     "nilaway@latest": {
       "last_modified": "2024-02-26T19:46:43Z",
       "resolved": "github:NixOS/nixpkgs/548a86b335d7ecd8b57ec617781f5e652ab0c38e#nilaway",
