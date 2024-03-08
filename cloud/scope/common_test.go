@@ -65,7 +65,7 @@ func TestGetCredentialDataFromRef(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name: "Check is the function works correctly",
+			name: "Testing functionality using valid/good data. No error should be returned",
 			args: args{
 				providedCredentialsRef: corev1.SecretReference{
 					Name:      "example",
@@ -90,7 +90,7 @@ func TestGetCredentialDataFromRef(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			name: "Empty namespace test case",
+			name: "Empty namespace provided and default namespace is used. No error should be returned",
 			args: args{
 				providedCredentialsRef: corev1.SecretReference{
 					Name:      "example",
@@ -115,7 +115,7 @@ func TestGetCredentialDataFromRef(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			name: "Handle error from crClient",
+			name: "Handle error from crClient. Error should be returned.",
 			args: args{
 				providedCredentialsRef: corev1.SecretReference{
 					Name:      "example",
@@ -133,7 +133,7 @@ func TestGetCredentialDataFromRef(t *testing.T) {
 			expectedError: "get credentials secret test/example: Could not find the secret",
 		},
 		{
-			name: "Handle error after getting empty secret from crClient",
+			name: "Handle error after getting empty secret from crClient. Error should be returned.",
 			args: args{
 				providedCredentialsRef: corev1.SecretReference{
 					Name:      "example",
