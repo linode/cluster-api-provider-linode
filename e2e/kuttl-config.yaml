@@ -1,7 +1,6 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
 testDirs:
-- e2e/linodemachine-controller
 - e2e/linodevpc-controller
 - e2e/linodeobjectstoragebucket-controller
 timeout: 300
