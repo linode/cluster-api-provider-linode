@@ -19,7 +19,6 @@ package scope
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,11 +32,6 @@ import (
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/mock"
-)
-
-var (
-    mu    sync.Mutex
-    count int
 )
 
 func TestValidateClusterScopeParams(t *testing.T) {
@@ -205,9 +199,6 @@ func TestNewClusterScope(t *testing.T) {
 				return nil
 			},
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				mu.Lock()
-				defer mu.Unlock()
-				count++
 				return &patch.Helper{}, nil
 			},
 		},
@@ -237,9 +228,6 @@ func TestNewClusterScope(t *testing.T) {
 			},
 			expectedError: nil,
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				mu.Lock()
-				defer mu.Unlock()
-				count++
 				cred := corev1.Secret{
 					Data: map[string][]byte{
 						"apiToken": []byte("example"),
@@ -271,9 +259,6 @@ func TestNewClusterScope(t *testing.T) {
 				return nil
 			},
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				mu.Lock()
-				defer mu.Unlock()
-				count++
 				return &patch.Helper{}, nil
 			},
 		},
@@ -298,9 +283,6 @@ func TestNewClusterScope(t *testing.T) {
 				return nil
 			},
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				mu.Lock()
-				defer mu.Unlock()
-				count++
 				return nil, fmt.Errorf("obj is nil")
 			},
 		},
@@ -333,9 +315,6 @@ func TestNewClusterScope(t *testing.T) {
 				return fmt.Errorf("failed to get secret")
 			},
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				mu.Lock()
-				defer mu.Unlock()
-				count++
 				return &patch.Helper{}, nil
 			},
 		},

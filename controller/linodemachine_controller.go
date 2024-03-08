@@ -34,7 +34,6 @@ import (
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -191,14 +190,10 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Cluster:       cluster,
 			LinodeCluster: linodeCluster,
 		},
-		func (obj client.Object, crClient client.Client) (*patch.Helper, error) {
-			return patch.NewHelper(obj, crClient)
-			
-		},
+		util.NewPatchHelper,
 	)
 	if err != nil {
 		log.Error(err, "Failed to create cluster scope")
-
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 

@@ -39,7 +39,7 @@ type ClusterScopeParams struct {
 
 // var patchNewHelper = patch.NewHelper
 
-type patchHelper func (obj client.Object, crClient client.Client) (*patch.Helper, error)
+type patchHelper func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
 	if params.Cluster == nil {
