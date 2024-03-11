@@ -6,13 +6,13 @@ IMAGE_NAME          ?= cluster-api-provider-linode
 CONTROLLER_IMAGE    ?= $(REGISTRY)/$(IMAGE_NAME)
 TAG                 ?= dev
 ENVTEST_K8S_VERSION := 1.28.0
+VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
 .SHELLFLAGS          = -ec
 CONTAINER_TOOL      ?= docker
 MDBOOK_DEV_HOST      = 0.0.0.0
 MDBOOK_DEV_PORT      = 3000
-VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 
 # ENVTEST_K8S_VERSION
 # - refers to the version of kubebuilder assets to be downloaded by envtest binary.
@@ -161,6 +161,10 @@ chainsaw-test: manifests generate local-deploy
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
 	go build -ldflags="-X github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)" -o bin/manager cmd/main.go
+
+.PHONY: docker-tmp
+docker-tmp:
+	@echo $(BUILD_ARGS)
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
