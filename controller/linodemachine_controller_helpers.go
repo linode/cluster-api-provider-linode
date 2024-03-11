@@ -109,20 +109,59 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 	return createConfig, nil
 }
 
-func buildInstanceAddrs(linodeInstance *linodego.Instance) []clusterv1.MachineAddress {
+func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) ([]clusterv1.MachineAddress, error) {
 	addrs := []clusterv1.MachineAddress{}
-	for _, addr := range linodeInstance.IPv4 {
-		addrType := clusterv1.MachineExternalIP
-		if addr.IsPrivate() {
-			addrType = clusterv1.MachineInternalIP
-		}
+	ips, err := r.getInstanceIPv4Addresses(ctx, logger, machineScope, instanceID)
+	if err != nil {
+		logger.Error(err, "Failed to get instance ip addresses")
+		return nil, err
+	}
+
+	// add all instance ips to machine's status
+	for _, ip := range ips {
 		addrs = append(addrs, clusterv1.MachineAddress{
-			Type:    addrType,
-			Address: addr.String(),
+			Type:    ip.ipType,
+			Address: ip.ip,
 		})
 	}
 
-	return addrs
+	return addrs, nil
+}
+
+func (r *LinodeMachineReconciler) getInstanceIPv4Addresses(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) ([]nodeIP, error) {
+	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, instanceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// get the default instance config
+	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, instanceID, &linodego.ListOptions{})
+	if err != nil || len(configs) == 0 {
+		logger.Error(err, "Failed to list instance configs")
+		return nil, err
+	}
+
+	ips := []nodeIP{}
+	// check if a node has public ip and store it
+	if len(addresses.IPv4.Public) != 0 {
+		ips = append(ips, nodeIP{ip: addresses.IPv4.Public[0].Address, ipType: clusterv1.MachineExternalIP})
+	}
+
+	// Iterate over interfaces in config and find VPC specific ips
+	for _, iface := range configs[0].Interfaces {
+		if iface.VPCID != nil && iface.IPv4.VPC != "" {
+			ips = append(ips, nodeIP{ip: iface.IPv4.VPC, ipType: clusterv1.MachineInternalIP})
+		}
+	}
+
+	// if a node has private ip, store it as well
+	// NOTE: We specifically store VPC ips first so that they are used first during
+	//       bootstrap when we set `registrationMethod: internal-only-ips`
+	if len(addresses.IPv4.Private) != 0 {
+		ips = append(ips, nodeIP{ip: addresses.IPv4.Private[0].Address, ipType: clusterv1.MachineInternalIP})
+	}
+
+	return ips, nil
 }
 
 func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha1.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {

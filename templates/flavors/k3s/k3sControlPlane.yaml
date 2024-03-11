@@ -33,6 +33,36 @@ spec:
             name: linode-${CLUSTER_NAME}-crs-0
         owner: root:root
         path: /var/lib/rancher/k3s/server/manifests/linode-token-region.yaml
+      - path: /var/lib/rancher/k3s/server/manifests/k3s-cilium-config.yaml
+        owner: root:root
+        permissions: "0640"
+        content: |
+          apiVersion: helm.cattle.io/v1
+          kind: HelmChartConfig
+          metadata:
+            name: cilium
+            namespace: kube-system
+          spec:
+            valuesContent: |-
+              routingMode: native
+              kubeProxyReplacement: true
+              ipv4NativeRoutingCIDR: 10.0.0.0/8
+              tunnelProtocol: ""
+              enableIPv4Masquerade: true
+              egressMasqueradeInterfaces: eth0
+              k8sServiceHost: 10.0.0.2
+              k8sServicePort: 6443
+              extraArgs:
+              - --direct-routing-device=eth1
+              - --nodeport-addresses=0.0.0.0/0
+              ipam:
+                mode: kubernetes
+              ipv4:
+                enabled: true
+              ipv6:
+                enabled: false
+              k8s:
+                requireIPv4PodCIDR: true
     serverConfig:
       disableComponents:
         - servicelb
@@ -41,7 +71,7 @@ spec:
       nodeName: '{{ ds.meta_data.label }}'
     preK3sCommands:
       - |
-        echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+        echo "node-ip: $(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
       - sed -i '/swap/d' /etc/fstab
       - swapoff -a
       - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname

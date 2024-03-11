@@ -83,6 +83,11 @@ var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
 	linodego.InstanceResizing:     true,
 }
 
+type nodeIP struct {
+	ip     string
+	ipType clusterv1.MachineAddressType
+}
+
 // LinodeMachineReconciler reconciles a LinodeMachine object
 type LinodeMachineReconciler struct {
 	client.Client
@@ -359,7 +364,12 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
-	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
+
+	addrs, err := r.buildInstanceAddrs(ctx, logger, machineScope, linodeInstance.ID)
+	if err != nil {
+		return linodeInstance, err
+	}
+	machineScope.LinodeMachine.Status.Addresses = addrs
 
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)

@@ -23,6 +23,12 @@ spec:
     ipv4NativeRoutingCIDR: 10.0.0.0/8
     tunnelProtocol: ""
     enableIPv4Masquerade: true
+    egressMasqueradeInterfaces: eth0
+    k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
+    k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
+    extraArgs:
+    - --direct-routing-device=eth1
+    - --nodeport-addresses=0.0.0.0/0
     ipam:
       mode: kubernetes
     ipv4:
@@ -36,3 +42,7 @@ spec:
         enabled: true
       ui:
         enabled: true
+#    ipMasqAgent:
+#      enabled: true
+#    bpf:
+#      masquerade: true

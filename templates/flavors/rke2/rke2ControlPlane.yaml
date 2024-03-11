@@ -21,39 +21,16 @@ spec:
           name: linode-${CLUSTER_NAME}-crs-0
       owner: root:root
       path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
-    - path: /var/lib/rancher/rke2/server/manifests/rke2-cilium-config.yaml
-      owner: root:root
-      permissions: "0640"
-      content: |
-        apiVersion: helm.cattle.io/v1
-        kind: HelmChartConfig
-        metadata:
-          name: rke2-cilium
-          namespace: kube-system
-        spec:
-          valuesContent: |-
-            routingMode: native
-            kubeProxyReplacement: true
-            ipv4NativeRoutingCIDR: 10.0.0.0/8
-            tunnelProtocol: ""
-            enableIPv4Masquerade: true
-            ipam:
-              mode: kubernetes
-            ipv4:
-              enabled: true
-            ipv6:
-              enabled: false
-            k8s:
-              requireIPv4PodCIDR: true
   registrationMethod: internal-only-ips
   serverConfig:
-    cni: cilium
+    cni: none
     cloudProviderName: external
     disableComponents:
       pluginComponents:
         - "rke2-ingress-nginx"
       kubernetesComponents:
         - "cloudController"
+        - "kubeProxy"
   agentConfig:
     version: ${KUBERNETES_VERSION}
     nodeName: '{{ ds.meta_data.label }}'
@@ -62,7 +39,7 @@ spec:
   preRKE2Commands:
     - |
       mkdir -p /etc/rancher/rke2/config.yaml.d/
-      echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
+      echo "node-ip: $(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
     - sed -i '/swap/d' /etc/fstab
     - swapoff -a
     - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
