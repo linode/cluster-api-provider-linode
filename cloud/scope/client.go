@@ -3,6 +3,8 @@ package scope
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/linode/linodego"
 )
 
@@ -16,3 +18,8 @@ type LinodeObjectStorageClient interface {
 
 // LinodeObjectStorageClientFactory is a function that returns a LinodeObjectStorageClient.
 type LinodeObjectStorageClientFactory func(apiKey string) LinodeObjectStorageClient
+
+type k8sClient interface {
+	client.Reader
+	client.Writer
+}

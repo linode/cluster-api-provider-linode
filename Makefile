@@ -84,8 +84,8 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-.PHONY: generate-mock-client
-generate-mocks: mockgen ## Generate mocks for testing.
+.PHONY: generate-mock
+generate-mock: mockgen ## Generate mocks for the Linode API client.
 	$(MOCKGEN) -source=./cloud/scope/client.go -destination ./mock/client.go -package mock
 
 .PHONY: generate-flavors ## Generate template flavors.
@@ -150,7 +150,7 @@ _e2etest: manifests generate local-deploy
 
 .PHONY: chainsaw-test
 chainsaw-test: manifests generate local-deploy
-	$(CHAINSAW) test ./e2e/linodecluster-controller
+	$(CHAINSAW) test ./e2e/linodecluster-controller ./e2e/linodemachine-controller
 
 ## --------------------------------------
 ## Build

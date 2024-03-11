@@ -2,17 +2,17 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"slices"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/linodego"
 	kutil "sigs.k8s.io/cluster-api/util"
+
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 const (
@@ -21,20 +21,18 @@ const (
 
 // CreateNodeBalancer creates a new NodeBalancer if one doesn't exist
 func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancer, error) {
-	var linodeNBs []linodego.NodeBalancer
 	var linodeNB *linodego.NodeBalancer
+
 	NBLabel := fmt.Sprintf("%s-api-server", clusterScope.LinodeCluster.Name)
 	clusterUID := string(clusterScope.LinodeCluster.UID)
 	tags := []string{string(clusterScope.LinodeCluster.UID)}
-	filter := map[string]string{
-		"label": NBLabel,
+	listFilter := util.Filter{
+		ID:    clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		Label: NBLabel,
+		Tags:  tags,
 	}
-
-	rawFilter, err := json.Marshal(filter)
+	linodeNBs, err := clusterScope.LinodeClient.ListNodeBalancers(ctx, linodego.NewListOptions(1, listFilter.String()))
 	if err != nil {
-		return nil, err
-	}
-	if linodeNBs, err = clusterScope.LinodeClient.ListNodeBalancers(ctx, linodego.NewListOptions(1, string(rawFilter))); err != nil {
 		logger.Info("Failed to list NodeBalancers", "error", err.Error())
 
 		return nil, err
@@ -97,7 +95,7 @@ func CreateNodeBalancerConfig(
 
 	if linodeNBConfig, err = clusterScope.LinodeClient.CreateNodeBalancerConfig(
 		ctx,
-		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
 		createConfig,
 	); err != nil {
 		logger.Info("Failed to create Linode NodeBalancer config", "error", err.Error())
@@ -113,7 +111,6 @@ func AddNodeToNB(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-	clusterScope *scope.ClusterScope,
 ) error {
 	// Update the NB backend with the new instance if it's a control plane node
 	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
@@ -134,8 +131,8 @@ func AddNodeToNB(
 	}
 
 	lbPort := defaultLBPort
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
-		lbPort = clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort
+	if machineScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
+		lbPort = machineScope.LinodeCluster.Spec.Network.LoadBalancerPort
 	}
 	if machineScope.LinodeCluster.Spec.Network.NodeBalancerConfigID == nil {
 		err := errors.New("nil NodeBalancer Config ID")
@@ -145,7 +142,7 @@ func AddNodeToNB(
 	}
 	_, err = machineScope.LinodeClient.CreateNodeBalancerNode(
 		ctx,
-		machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
 		*machineScope.LinodeCluster.Spec.Network.NodeBalancerConfigID,
 		linodego.NodeBalancerNodeCreateOptions{
 			Label:   machineScope.Cluster.Name,
@@ -185,7 +182,7 @@ func DeleteNodeFromNB(
 
 	err := machineScope.LinodeClient.DeleteNodeBalancerNode(
 		ctx,
-		machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
 		*machineScope.LinodeCluster.Spec.Network.NodeBalancerConfigID,
 		*machineScope.LinodeMachine.Spec.InstanceID,
 	)

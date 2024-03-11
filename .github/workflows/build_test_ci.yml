@@ -45,7 +45,8 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version-file: 'go.mod'
+        check-latest: true
 
     - name: Build
       run: make build
@@ -79,7 +80,8 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version-file: 'go.mod'
+        check-latest: true
 
     - name: Docker cache
       uses: ScribeMD/docker-cache@0.3.7
@@ -135,7 +137,8 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version-file: 'go.mod'
+        check-latest: true
 
     - name: Docker cache
       uses: ScribeMD/docker-cache@0.3.7
@@ -157,6 +160,7 @@ jobs:
       with:
         name: logs
         path: .logs/*
+        overwrite: true
 
   chainsaw-test:
     needs:  [go-build-test, docker-build]
@@ -195,7 +199,8 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version-file: 'go.mod'
+        check-latest: true
 
     - name: Docker cache
       uses: ScribeMD/docker-cache@0.3.7
@@ -217,6 +222,7 @@ jobs:
       with:
         name: logs
         path: .logs/*
+        overwrite: true
 
   docker-build:
     runs-on: ubuntu-latest

@@ -57,9 +57,28 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 		return nil, err
 	}
 
-	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
-	if params.LinodeCluster.Spec.CredentialsRef != nil {
-		data, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeCluster.Spec.CredentialsRef, params.LinodeCluster.GetNamespace())
+	// Override the controller credentials with ones from the Machine's Secret reference (if supplied).
+	// Credentials will be used in the following order:
+	//   1. LinodeMachine
+	//   2. Owner LinodeCluster
+	//   3. Controller
+	var (
+		credentialRef    *corev1.SecretReference
+		defaultNamespace string
+	)
+	switch {
+	case params.LinodeMachine.Spec.CredentialsRef != nil:
+		credentialRef = params.LinodeMachine.Spec.CredentialsRef
+		defaultNamespace = params.LinodeMachine.GetNamespace()
+	case params.LinodeCluster.Spec.CredentialsRef != nil:
+		credentialRef = params.LinodeCluster.Spec.CredentialsRef
+		defaultNamespace = params.LinodeCluster.GetNamespace()
+	default:
+		// Use default (controller) credentials
+	}
+
+	if credentialRef != nil {
+		data, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace)
 		if err != nil {
 			return nil, fmt.Errorf("credentials from cluster secret ref: %w", err)
 		}
