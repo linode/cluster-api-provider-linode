@@ -37,6 +37,22 @@ func Test_validateVPCScopeParams(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
+		{
+			name: "Valid VPCScopeParams",
+			args: args{
+				params: VPCScopeParams{
+					LinodeVPC: &infrav1alpha1.LinodeVPC{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid VPCScopeParams",
+			args: args{
+				params: VPCScopeParams{},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
