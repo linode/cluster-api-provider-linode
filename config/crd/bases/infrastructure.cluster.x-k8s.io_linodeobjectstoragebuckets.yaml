@@ -156,6 +156,14 @@ spec:
               lastKeyGeneration:
                 description: LastKeyGeneration tracks the last known value of .spec.keyGeneration.
                 type: integer
+              readOnlyKeyID:
+                description: ReadOnlyKeyID is the ID of the Object Storage key with
+                  read-only access to the bucket.
+                type: integer
+              readWriteKeyID:
+                description: ReadWriteKeyID is the ID of the Object Storage key with
+                  read-write access to the bucket.
+                type: integer
               ready:
                 default: false
                 description: Ready denotes that the bucket has been provisioned along
