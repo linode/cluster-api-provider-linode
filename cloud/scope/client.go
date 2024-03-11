@@ -5,6 +5,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
 )
 
@@ -19,9 +20,16 @@ type LinodeObjectStorageClient interface {
 // LinodeObjectStorageClientBuilder is a function that returns a LinodeObjectStorageClient.
 type LinodeObjectStorageClientBuilder func(apiKey string) LinodeObjectStorageClient
 
-// CreateLinodeObjectStorageClient implements LinodeObjectStorageClientBuilder.
+// CreateLinodeObjectStorageClient is the main implementation of LinodeObjectStorageClientBuilder.
 func CreateLinodeObjectStorageClient(apiKey string) LinodeObjectStorageClient {
 	return CreateLinodeClient(apiKey)
+}
+
+// CreateMockLinodeObjectStorageClient returns a mock LinodeObjectStorageClientBuilder for tests.
+func CreateMockLinodeObjectStorageClientBuilder(m *mock.MockLinodeObjectStorageClient) LinodeObjectStorageClientBuilder {
+	return func(_ string) LinodeObjectStorageClient {
+		return m
+	}
 }
 
 type k8sClient interface {

@@ -115,7 +115,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 			Scheme:              k8sClient.Scheme(),
 			Logger:              ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
 			Recorder:            recorder,
-			LinodeClientBuilder: mockClient.Builder,
+			LinodeClientBuilder: scope.CreateMockLinodeObjectStorageClientBuilder(mockClient),
 		}
 
 		objectKey := client.ObjectKeyFromObject(obj)
@@ -160,7 +160,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 			Scheme:              k8sClient.Scheme(),
 			Logger:              ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
 			Recorder:            recorder,
-			LinodeClientBuilder: mockClient.Builder,
+			LinodeClientBuilder: scope.CreateMockLinodeObjectStorageClientBuilder(mockClient),
 		}
 
 		objectKey := client.ObjectKeyFromObject(obj)
