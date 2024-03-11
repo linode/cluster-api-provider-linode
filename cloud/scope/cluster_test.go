@@ -141,10 +141,15 @@ func TestClusterScopeMethods(t *testing.T) {
 			mockPatchHelper := mock.NewMockPatchHelper(ctrl)
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
 
+			lClient, err := createLinodeClient("test-key")
+			if err != nil {
+				t.Errorf("createLinodeClient() error = %v", err)
+			}
+
 			cScope := &ClusterScope{
 				client:        mockK8sClient,
 				PatchHelper:   mockPatchHelper,
-				LinodeClient:  createLinodeClient("test-key"),
+				LinodeClient:  lClient,
 				Cluster:       testcase.fields.Cluster,
 				LinodeCluster: testcase.fields.LinodeCluster,
 			}
@@ -173,7 +178,6 @@ func TestNewClusterScope(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          args
-		want          *ClusterScope
 		expectedError error
 		getFunc       func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
 		patchFunc     func(obj client.Object, crClient client.Client) (*patch.Helper, error)
@@ -186,13 +190,6 @@ func TestNewClusterScope(t *testing.T) {
 					Cluster:       &clusterv1.Cluster{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{},
 				},
-			},
-			want: &ClusterScope{
-				client:        nil,
-				PatchHelper:   nil,
-				LinodeClient:  createLinodeClient("test-key"),
-				Cluster:       &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{},
 			},
 			expectedError: nil,
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -219,13 +216,6 @@ func TestNewClusterScope(t *testing.T) {
 					},
 				},
 			},
-			want: &ClusterScope{
-				client:        nil,
-				PatchHelper:   nil,
-				LinodeClient:  createLinodeClient("example"),
-				Cluster:       &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{},
-			},
 			expectedError: nil,
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 				cred := corev1.Secret{
@@ -247,13 +237,6 @@ func TestNewClusterScope(t *testing.T) {
 				apiKey: "test-key",
 				params: ClusterScopeParams{},
 			},
-			want: &ClusterScope{
-				client:        nil,
-				PatchHelper:   nil,
-				LinodeClient:  createLinodeClient("test-key"),
-				Cluster:       &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{},
-			},
 			expectedError: fmt.Errorf("cluster is required when creating a ClusterScope"),
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 				return nil
@@ -270,13 +253,6 @@ func TestNewClusterScope(t *testing.T) {
 					Cluster:       &clusterv1.Cluster{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{},
 				},
-			},
-			want: &ClusterScope{
-				client:        nil,
-				PatchHelper:   nil,
-				LinodeClient:  createLinodeClient("test-key"),
-				Cluster:       &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{},
 			},
 			expectedError: fmt.Errorf("failed to init patch helper: obj is nil"),
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -303,16 +279,26 @@ func TestNewClusterScope(t *testing.T) {
 					},
 				},
 			},
-			want: &ClusterScope{
-				client:        nil,
-				PatchHelper:   nil,
-				LinodeClient:  createLinodeClient("example"),
-				Cluster:       &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{},
-			},
 			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: failed to get secret"),
 			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 				return fmt.Errorf("failed to get secret")
+			},
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				return &patch.Helper{}, nil
+			},
+		},
+		{
+			name: "Error - createLinodeCluster throws an error for passing empty apiKey. Unable to create a valid ClusterScope",
+			args: args{
+				apiKey: "",
+				params: ClusterScopeParams{
+					Cluster:       &clusterv1.Cluster{},
+					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+				},
+			},
+			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				return nil
 			},
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
 				return &patch.Helper{}, nil

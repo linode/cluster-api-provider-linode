@@ -83,7 +83,10 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 		}
 		apiKey = string(data)
 	}
-	linodeClient := createLinodeClient(apiKey)
+	linodeClient, err := createLinodeClient(apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
 
 	helper, err := patchNewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
