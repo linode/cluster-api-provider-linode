@@ -32,10 +32,14 @@ import (
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	Client        client.Client
+	Client        k8sClient
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
 }
+
+// var patchNewHelper = patch.NewHelper
+
+type patchHelper func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
 	if params.Cluster == nil {
@@ -50,7 +54,7 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 
 // NewClusterScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopeParams) (*ClusterScope, error) {
+func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopeParams, patchNewHelper patchHelper) (*ClusterScope, error) {
 	if err := validateClusterScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -68,7 +72,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
-	helper, err := patch.NewHelper(params.LinodeCluster, params.Client)
+	helper, err := patchNewHelper(params.LinodeCluster, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
@@ -84,9 +88,8 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	client client.Client
-
-	PatchHelper   *patch.Helper
+	client        k8sClient
+	PatchHelper   PatchHelper
 	LinodeClient  *linodego.Client
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster

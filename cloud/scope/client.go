@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/linode/linodego"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -33,6 +34,9 @@ func CreateMockLinodeObjectStorageClientBuilder(m *mock.MockLinodeObjectStorageC
 }
 
 type k8sClient interface {
-	client.Reader
-	client.Writer
+	client.Client
+}
+
+type PatchHelper interface {
+	Patch(ctx context.Context, obj client.Object, opts ...patch.Option) error
 }
