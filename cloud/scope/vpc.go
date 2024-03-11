@@ -67,7 +67,10 @@ func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VP
 		}
 		apiKey = string(data)
 	}
-	linodeClient := createLinodeClient(apiKey)
+	linodeClient, err := createLinodeClient(apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
 
 	helper, err := patch.NewHelper(params.LinodeVPC, params.Client)
 	if err != nil {
