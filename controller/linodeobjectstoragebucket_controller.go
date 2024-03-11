@@ -141,10 +141,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		return err
 	}
 
-	if bScope.Bucket.Spec.Label == nil {
-		bScope.Bucket.Spec.Label = util.Pointer(bScope.Bucket.Name)
-	}
-
 	bucket, err := services.EnsureObjectStorageBucket(ctx, bScope)
 	if err != nil {
 		bScope.Logger.Error(err, "Failed to ensure bucket exists")
@@ -164,7 +160,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 			return err
 		}
 
-		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, *bScope.Bucket.Spec.Label)
+		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bScope.Bucket.Name)
 		if err := bScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
 			bScope.Logger.Error(err, "Failed to apply access key secret")
 			r.setFailure(bScope, err)

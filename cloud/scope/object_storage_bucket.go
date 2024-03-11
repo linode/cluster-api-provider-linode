@@ -140,7 +140,7 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 }
 
 func (s *ObjectStorageBucketScope) GetAccessKeySecret(ctx context.Context) (*corev1.Secret, error) {
-	secretName := fmt.Sprintf(AccessKeyNameTemplate, *s.Bucket.Spec.Label)
+	secretName := fmt.Sprintf(AccessKeyNameTemplate, s.Bucket.Name)
 
 	objKey := client.ObjectKey{
 		Namespace: s.Bucket.Namespace,
