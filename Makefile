@@ -133,26 +133,17 @@ test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
 
 .PHONY: e2etest
-e2etest:
-	make --no-print-directory _e2etest # Workaround to force the flag on Github Action
+e2etest: manifests generate local-deploy chainsaw
+	$(CHAINSAW) test ./e2e
 
-local-deploy: kind ctlptl tilt kuttl chainsaw kustomize clusterctl
+local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci --timeout 240s -f Tiltfile
 
-_e2etest: manifests generate local-deploy
-	ROOT_DIR="$(PWD)" $(KUTTL) test --config e2e/kuttl-config.yaml
-
-.PHONY: chainsaw-test
-chainsaw-test: manifests generate local-deploy
-	$(CHAINSAW) test ./e2e/linodecluster-controller ./e2e/linodemachine-controller ./e2e/linodeobjectstoragebucket-controller
-
 ## --------------------------------------
 ## Build
 ## --------------------------------------
-
-##@ Build:
 
 .PHONY: build
 build: manifests generate fmt vet ## Build manager binary.
@@ -294,7 +285,6 @@ CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
 CONTROLLER_GEN ?= $(CACHE_BIN)/controller-gen
 TILT           ?= $(LOCALBIN)/tilt
 KIND           ?= $(LOCALBIN)/kind
-KUTTL          ?= $(LOCALBIN)/kubectl-kuttl
 CHAINSAW       ?= $(CACHE_BIN)/chainsaw
 ENVTEST        ?= $(CACHE_BIN)/setup-envtest
 HUSKY          ?= $(LOCALBIN)/husky
@@ -308,14 +298,13 @@ CLUSTERCTL_VERSION       ?= v1.5.3
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 TILT_VERSION             ?= 0.33.6
 KIND_VERSION             ?= 0.20.0
-KUTTL_VERSION            ?= 0.15.0
 CHAINSAW_VERSION         ?= v0.1.7
 HUSKY_VERSION            ?= v0.2.16
 NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.0.1
 
 .PHONY: tools
-tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(KUTTL) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC)
+tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC)
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
@@ -353,12 +342,6 @@ kind: $(KIND) ## Download kind locally if necessary.
 $(KIND): $(LOCALBIN)
 	curl -Lso $(KIND) https://github.com/kubernetes-sigs/kind/releases/download/v$(KIND_VERSION)/kind-$(OS)-$(ARCH_SHORT)
 	chmod +x $(KIND)
-
-.PHONY: kuttl
-kuttl: $(KUTTL) ## Download kuttl locally if necessary.
-$(KUTTL): $(LOCALBIN)
-	curl -Lso $(KUTTL) https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$(OS)_$(ARCH)
-	chmod +x $(KUTTL)
 
 .PHONY: chainsaw
 chainsaw: $(CHAINSAW) ## Download chainsaw locally if necessary.
