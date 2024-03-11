@@ -18,16 +18,23 @@ package scope
 
 import (
 	"context"
-	"reflect"
+	"fmt"
 	"testing"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
-	"github.com/linode/linodego"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 func Test_validateVPCScopeParams(t *testing.T) {
+	t.Parallel()
 	type args struct {
 		params VPCScopeParams
 	}
@@ -36,7 +43,6 @@ func Test_validateVPCScopeParams(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Valid VPCScopeParams",
 			args: args{
@@ -55,70 +61,241 @@ func Test_validateVPCScopeParams(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := validateVPCScopeParams(tt.args.params); (err != nil) != tt.wantErr {
-				t.Errorf("validateVPCScopeParams() error = %v, wantErr %v", err, tt.wantErr)
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			if err := validateVPCScopeParams(testcase.args.params); (err != nil) != testcase.wantErr {
+				t.Errorf("validateVPCScopeParams() error = %v, wantErr %v", err, testcase.wantErr)
 			}
 		})
 	}
 }
 
 func TestNewVPCScope(t *testing.T) {
+	t.Parallel()
 	type args struct {
-		ctx    context.Context
 		apiKey string
 		params VPCScopeParams
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *VPCScope
-		wantErr bool
+		name          string
+		args          args
+		want          *VPCScope
+		expectedError error
+		getFunc       func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
+		patchFunc     func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Success - Pass in valid args and get a valid VPCScope",
+			args: args{
+				apiKey: "test-key",
+				params: VPCScopeParams{
+					LinodeVPC: &infrav1alpha1.LinodeVPC{},
+				},
+			},
+			expectedError: nil,
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				return nil
+			},
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				return &patch.Helper{}, nil
+			},
+		},
+		{
+			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data and we create a valid ClusterScope",
+			args: args{
+				apiKey: "test-key",
+				params: VPCScopeParams{
+					LinodeVPC: &infrav1alpha1.LinodeVPC{
+						Spec: infrav1alpha1.LinodeVPCSpec{
+							CredentialsRef: &corev1.SecretReference{
+								Namespace: "test-namespace",
+								Name:      "test-name",
+							},
+						},
+					},
+				},
+			},
+			expectedError: nil,
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				cred := corev1.Secret{
+					Data: map[string][]byte{
+						"apiToken": []byte("example-api-token"),
+					},
+				}
+				*obj = cred
+				return nil
+			},
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				return &patch.Helper{}, nil
+			},
+		},
+		{
+			name: "Error - Pass in invalid args and get an error",
+			args: args{
+				apiKey: "test-key",
+				params: VPCScopeParams{},
+			},
+			expectedError: fmt.Errorf("linodeVPC is required when creating a VPCScope"),
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				return nil
+			},
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				return &patch.Helper{}, nil
+			},
+		},
+		{
+			name: "Error - Pass in valid args but get an error when getting the credentials secret",
+			args: args{
+				apiKey: "test-key",
+				params: VPCScopeParams{
+					LinodeVPC: &infrav1alpha1.LinodeVPC{
+						Spec: infrav1alpha1.LinodeVPCSpec{
+							CredentialsRef: &corev1.SecretReference{
+								Namespace: "test-namespace",
+								Name:      "test-name",
+							},
+						},
+					},
+				},
+			},
+			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				return fmt.Errorf("test error")
+			},
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				return &patch.Helper{}, nil
+			},
+		},
+		{
+			name: "Error - Pass in valid args but get an error when creating a new linode client",
+			args: args{
+				apiKey: "",
+				params: VPCScopeParams{
+					LinodeVPC: &infrav1alpha1.LinodeVPC{},
+				},
+			},
+			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				return nil
+			},
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				return &patch.Helper{}, nil
+			},
+		},
+		{
+			name: "Error - Pass in valid args but get an error when creating a new patch helper",
+			args: args{
+				apiKey: "test-key",
+				params: VPCScopeParams{
+					LinodeVPC: &infrav1alpha1.LinodeVPC{},
+				},
+			},
+			expectedError: fmt.Errorf("failed to init patch helper: test error"),
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				return nil
+			},
+			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
+				return nil, fmt.Errorf("test error")
+			},
+		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewVPCScope(tt.args.ctx, tt.args.apiKey, tt.args.params)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewVPCScope() error = %v, wantErr %v", err, tt.wantErr)
-				return
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockk8sClient(ctrl)
+
+			if testcase.args.params.LinodeVPC != nil && testcase.args.params.LinodeVPC.Spec.CredentialsRef != nil {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewVPCScope() = %v, want %v", got, tt.want)
+
+			testcase.args.params.Client = mockK8sClient
+
+			got, err := NewVPCScope(context.Background(), testcase.args.apiKey, testcase.args.params, testcase.patchFunc)
+
+			if testcase.expectedError != nil {
+				assert.EqualError(t, err, testcase.expectedError.Error())
+			} else {
+				assert.NotEmpty(t, got)
 			}
 		})
 	}
 }
 
-func TestVPCScope_AddFinalizer(t *testing.T) {
+func TestVPCScopeMethods(t *testing.T) {
+	t.Parallel()
 	type fields struct {
-		client       client.Client
-		PatchHelper  *patch.Helper
-		LinodeClient *linodego.Client
-		LinodeVPC    *infrav1alpha1.LinodeVPC
-	}
-	type args struct {
-		ctx context.Context
+		LinodeVPC *infrav1alpha1.LinodeVPC
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name     string
+		fields   fields
+		wantErr  bool
+		patchErr error
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Success - finalizer should be added to the Linode VPC object",
+			fields: fields{
+				LinodeVPC: &infrav1alpha1.LinodeVPC{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-vpc",
+					},
+				},
+			},
+			wantErr:  false,
+			patchErr: nil,
+		},
+		{
+			name: "AddFinalizer error - finalizer should not be added to the Linode VPC object. Function returns nil since it was already present",
+			fields: fields{
+				LinodeVPC: &infrav1alpha1.LinodeVPC{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-vpc",
+						Finalizers: []string{infrav1alpha1.GroupVersion.String()},
+					},
+				},
+			},
+			wantErr:  false,
+			patchErr: nil,
+		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &VPCScope{
-				client:       tt.fields.client,
-				PatchHelper:  tt.fields.PatchHelper,
-				LinodeClient: tt.fields.LinodeClient,
-				LinodeVPC:    tt.fields.LinodeVPC,
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockPatchHelper := mock.NewMockPatchHelper(ctrl)
+			mockK8sClient := mock.NewMockk8sClient(ctrl)
+
+			lClient, err := createLinodeClient("test-key")
+			if err != nil {
+				t.Errorf("failed to create linode client: %v", err)
 			}
-			if err := s.AddFinalizer(tt.args.ctx); (err != nil) != tt.wantErr {
-				t.Errorf("VPCScope.AddFinalizer() error = %v, wantErr %v", err, tt.wantErr)
+
+			vScope := &VPCScope{
+				client:       mockK8sClient,
+				PatchHelper:  mockPatchHelper,
+				LinodeClient: lClient,
+				LinodeVPC:    testcase.fields.LinodeVPC,
+			}
+
+			if vScope.LinodeVPC.Finalizers == nil {
+				mockPatchHelper.EXPECT().Patch(gomock.Any(), gomock.Any()).Return(testcase.patchErr)
+			}
+
+			if err := vScope.AddFinalizer(context.Background()); err != nil {
+				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
+			}
+
+			if vScope.LinodeVPC.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
+				t.Errorf("Finalizer was not added")
 			}
 		})
 	}
