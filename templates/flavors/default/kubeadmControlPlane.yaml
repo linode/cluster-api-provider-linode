@@ -56,6 +56,8 @@ spec:
       - - LABEL=etcd_data
         - /var/lib/etcd_data
     initConfiguration:
+      skipPhases:
+        - addon/kube-proxy
       nodeRegistration:
         kubeletExtraArgs:
           cloud-provider: external
