@@ -3,20 +3,21 @@ package scope
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 func TestValidateMachineScopeParams(t *testing.T) {
@@ -138,7 +139,6 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 	for _, tt := range tests {
 		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
-
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
@@ -168,7 +168,6 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 			if mScope.LinodeMachine.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
 				t.Errorf("Not able to add finalizer")
 			}
-
 		})
 	}
 }
@@ -180,18 +179,17 @@ func TestNewMachineScope(t *testing.T) {
 		params MachineScopeParams
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *MachineScope
-		wantErr bool
+		name        string
+		args        args
+		want        *MachineScope
 		expectedErr error
-		patchFunc func(obj client.Object, crClient client.Client) (*patch.Helper, error)
-		getFunc   func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
+		patchFunc   func(obj client.Object, crClient client.Client) (*patch.Helper, error)
+		getFunc     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
 	}{
 		// TODO: Add test cases.
 		{
 			name: "Success - Pass in valid args and get a valid MachineScope",
-			args : args{
+			args: args{
 				apiKey: "test-key",
 				params: MachineScopeParams{
 					Client:        nil,
@@ -201,8 +199,7 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want: &MachineScope{},
-			wantErr: false,
+			want:        &MachineScope{},
 			expectedErr: nil,
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
 				return &patch.Helper{}, nil
@@ -212,7 +209,7 @@ func TestNewMachineScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Sucess - Pass in credential ref through MachineScopeParams.LinodeMachine and get a valid MachineScope",
+			name: "Success - Pass in credential ref through MachineScopeParams.LinodeMachine and get a valid MachineScope",
 			args: args{
 				apiKey: "test-key",
 				params: MachineScopeParams{
@@ -230,8 +227,7 @@ func TestNewMachineScope(t *testing.T) {
 					},
 				},
 			},
-			want: &MachineScope{},
-			wantErr: false,
+			want:        &MachineScope{},
 			expectedErr: nil,
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
 				return &patch.Helper{}, nil
@@ -248,13 +244,13 @@ func TestNewMachineScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Sucess - Pass in credential ref through MachineScopeParams.LinodeCluster and get a valid MachineScope",
+			name: "Success - Pass in credential ref through MachineScopeParams.LinodeCluster and get a valid MachineScope",
 			args: args{
 				apiKey: "test-key",
 				params: MachineScopeParams{
-					Client:        nil,
-					Cluster:       &clusterv1.Cluster{},
-					Machine:       &clusterv1.Machine{},
+					Client:  nil,
+					Cluster: &clusterv1.Cluster{},
+					Machine: &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{
 						Spec: infrav1alpha1.LinodeClusterSpec{
 							CredentialsRef: &corev1.SecretReference{
@@ -266,8 +262,7 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want: &MachineScope{},
-			wantErr: false,
+			want:        &MachineScope{},
 			expectedErr: nil,
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
 				return &patch.Helper{}, nil
@@ -288,9 +283,9 @@ func TestNewMachineScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: MachineScopeParams{
-					Client:        nil,
-					Cluster:       &clusterv1.Cluster{},
-					Machine:       &clusterv1.Machine{},
+					Client:  nil,
+					Cluster: &clusterv1.Cluster{},
+					Machine: &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{
 						Spec: infrav1alpha1.LinodeClusterSpec{
 							CredentialsRef: &corev1.SecretReference{
@@ -302,8 +297,7 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want: &MachineScope{},
-			wantErr: true,
+			want:        &MachineScope{},
 			expectedErr: errors.New("credentials from cluster secret ref: get credentials secret test/example: Creds not found"),
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
 				return &patch.Helper{}, nil
@@ -324,8 +318,7 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want: nil,
-			wantErr: true,
+			want:        nil,
 			expectedErr: errors.New("custer is required when creating a MachineScope"),
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
 				return &patch.Helper{}, nil
@@ -336,7 +329,7 @@ func TestNewMachineScope(t *testing.T) {
 		},
 		{
 			name: "Error - Pass in valid args but couldn't get patch helper",
-			args : args{
+			args: args{
 				apiKey: "test-key",
 				params: MachineScopeParams{
 					Client:        nil,
@@ -346,8 +339,7 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want: &MachineScope{},
-			wantErr: true,
+			want:        &MachineScope{},
 			expectedErr: errors.New("failed to init patch helper: failed to create patch helper"),
 			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
 				return nil, errors.New("failed to create patch helper")
@@ -372,14 +364,14 @@ func TestNewMachineScope(t *testing.T) {
 			linodeCluster := testcase.args.params.LinodeCluster
 
 			if (linodeMachine != nil && linodeMachine.Spec.CredentialsRef != nil) ||
-			(linodeCluster != nil && linodeCluster.Spec.CredentialsRef != nil) {
+				(linodeCluster != nil && linodeCluster.Spec.CredentialsRef != nil) {
 				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc).Times(1)
 			}
 
 			testcase.args.params.Client = mockK8sClient
 
 			got, err := NewMachineScope(context.Background(), testcase.args.apiKey, testcase.args.params, testcase.patchFunc)
-			
+
 			if testcase.expectedErr != nil {
 				assert.EqualError(t, err, testcase.expectedErr.Error())
 			} else {
@@ -399,41 +391,158 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 		LinodeMachine *infrav1alpha1.LinodeMachine
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		want    []byte
-		wantErr bool
+		name        string
+		fields      fields
+		want        []byte
+		expectedErr error
+		getFunc     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
 	}{
 		// TODO: Add test cases.
+		{
+			name: "Success - Using a valid MachineScope. Get bootstrap data",
+			fields: fields{
+				Cluster: &clusterv1.Cluster{},
+				Machine: &clusterv1.Machine{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: ptr.To("test-data"),
+						},
+					},
+				},
+				LinodeClient:  &linodego.Client{},
+				LinodeCluster: &infrav1alpha1.LinodeCluster{},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-linode-machine",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+			want:        []byte("test-data"),
+			expectedErr: nil,
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				cred := corev1.Secret{
+					Data: map[string][]byte{
+						"value": []byte("test-data"),
+					},
+				}
+				*obj = cred
+				return nil
+			},
+		},
+		{
+			name: "Error - Set MachineScope.Machine.Spec.Bootstrap.DataSecretName to nil. Returns an error",
+			fields: fields{
+				Cluster: &clusterv1.Cluster{},
+				Machine: &clusterv1.Machine{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: nil,
+						},
+					},
+				},
+				LinodeClient:  &linodego.Client{},
+				LinodeCluster: &infrav1alpha1.LinodeCluster{},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-linode-machine",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+			want:        nil,
+			expectedErr: errors.New("bootstrap data secret is nil for LinodeMachine test-namespace/test-linode-machine"),
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				return nil
+			},
+		},
+		{
+			name: "Error - client.Get return an error while retrieving bootstrap data secret",
+			fields: fields{
+				Cluster: &clusterv1.Cluster{},
+				Machine: &clusterv1.Machine{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: ptr.To("test-data"),
+						},
+					},
+				},
+				LinodeClient:  &linodego.Client{},
+				LinodeCluster: &infrav1alpha1.LinodeCluster{},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-linode-machine",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+			want:        nil,
+			expectedErr: errors.New("failed to retrieve bootstrap data secret for LinodeMachine test-namespace/test-linode-machine"),
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				return errors.New("test-error")
+			},
+		},
+		{
+			name: "Error - client.Get return some data but it doesn't contain the bootstrap data secret and secret key 'value' is missing",
+			fields: fields{
+				Cluster: &clusterv1.Cluster{},
+				Machine: &clusterv1.Machine{
+					Spec: clusterv1.MachineSpec{
+						Bootstrap: clusterv1.Bootstrap{
+							DataSecretName: ptr.To("test-data"),
+						},
+					},
+				},
+				LinodeClient:  &linodego.Client{},
+				LinodeCluster: &infrav1alpha1.LinodeCluster{},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-linode-machine",
+						Namespace: "test-namespace",
+					},
+				},
+			},
+			want:        nil,
+			expectedErr: errors.New("bootstrap data secret value key is missing for LinodeMachine test-namespace/test-linode-machine"),
+			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				cred := corev1.Secret{
+					Data: map[string][]byte{},
+				}
+				*obj = cred
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
-			mockPatchHelper := mock.NewMockPatchHelper(ctrl)
 
-			m := &MachineScope{
+			if testcase.fields.Machine.Spec.Bootstrap.DataSecretName != nil {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc).Times(1)
+			}
+
+			mScope := &MachineScope{
 				client:        mockK8sClient,
-				PatchHelper:   mockPatchHelper,
-				Cluster:       tt.fields.Cluster,
-				Machine:       tt.fields.Machine,
-				LinodeClient:  tt.fields.LinodeClient,
-				LinodeCluster: tt.fields.LinodeCluster,
-				LinodeMachine: tt.fields.LinodeMachine,
+				PatchHelper:   &patch.Helper{}, // empty patch helper
+				Cluster:       testcase.fields.Cluster,
+				Machine:       testcase.fields.Machine,
+				LinodeClient:  testcase.fields.LinodeClient,
+				LinodeCluster: testcase.fields.LinodeCluster,
+				LinodeMachine: testcase.fields.LinodeMachine,
 			}
-			got, err := m.GetBootstrapData(context.Background())
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MachineScope.GetBootstrapData() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MachineScope.GetBootstrapData() = %v, want %v", got, tt.want)
+
+			got, err := mScope.GetBootstrapData(context.Background())
+
+			if testcase.expectedErr != nil {
+				assert.EqualError(t, err, testcase.expectedErr.Error())
+			} else {
+				assert.Equal(t, testcase.want, got)
 			}
 		})
 	}
