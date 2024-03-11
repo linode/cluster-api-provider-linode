@@ -58,7 +58,10 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		}
 		apiKey = string(data)
 	}
-	linodeClient := createLinodeClient(apiKey)
+	linodeClient, err := createLinodeClient(apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
 
 	bucketPatchHelper, err := patch.NewHelper(params.Bucket, params.Client)
 	if err != nil {
