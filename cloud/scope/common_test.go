@@ -19,16 +19,19 @@ func TestCreateLinodeClient(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
-		apiKey string
+		name        string
+		apiKey      string
+		expectedErr error
 	}{
 		{
-			"Valid API Key",
+			"Success - Valid API Key",
 			"test-key",
+			nil,
 		},
 		{
-			"Empty API Key",
+			"Error - Empty API Key",
 			"",
+			errors.New("missing Linode API key"),
 		},
 	}
 
@@ -37,9 +40,13 @@ func TestCreateLinodeClient(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := createLinodeClient(testCase.apiKey)
+			got, err := createLinodeClient(testCase.apiKey)
 
-			assert.NotEmpty(t, got)
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
+			} else {
+				assert.NotNil(t, got)
+			}
 		})
 	}
 }
