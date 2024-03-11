@@ -5,23 +5,10 @@ metadata:
   creationTimestamp: null
   name: minimal-linodeobjectstoragebucket
 spec:
+  template: true
   steps:
   - name: step-00
     try:
-    - script:
-        env:
-        - name: TARGET_API
-          value: api.linode.com
-        - name: TARGET_API_VERSION
-          value: v4beta
-        - name: URI
-          value: object-storage/buckets/us-sea-1/linodeobjectstoragebucket-sample
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -X DELETE
-            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
     - assert:
         file: 00-assert.yaml
   - name: step-01
@@ -38,24 +25,18 @@ spec:
           value: api.linode.com
         - name: TARGET_API_VERSION
           value: v4beta
-        - name: URI
-          value: object-storage/buckets/us-sea-1
+        - name: NAMESPACE
+          value: ($namespace)
         content: |
           set -e
-          curl -s \
+          curl -s\
             -H "Authorization: Bearer $LINODE_TOKEN" \
             -H "Content-Type: application/json" \
-            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
-        # TODO check equivalent to grep linodeobjectstoragebucket-sample.us-sea-1.linodeobjects.com
-        # check:
-        #   ($error): ~
-        #   (json_parse($stdout)):
-        #     results: 1
-    - script:
-        content: |-
-          secret=$(kubectl -n $NAMESPACE get secret linodeobjectstoragebucket-sample-access-keys -oyaml)
-          echo $secret | grep read_write
-          echo $secret | grep read_only
+            "https://$TARGET_API/$TARGET_API_VERSION/object-storage/buckets/us-sea-1/$NAMESPACE-backups"
+        check:
+          ($error): ~
+          (json_parse($stdout)):
+            label: (join('-', [($namespace), 'backups']))
   - name: step-03
     try:
     - apply:
@@ -68,7 +49,7 @@ spec:
         ref:
           apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
           kind: LinodeObjectStorageBucket
-          name: linodeobjectstoragebucket-sample
+          name: (join('-', [($namespace), 'backups']))
   - name: step-05
     try:
     - error:
