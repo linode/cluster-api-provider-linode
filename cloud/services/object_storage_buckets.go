@@ -98,8 +98,11 @@ func createObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBuck
 
 func RevokeObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
 	var errs []error
-	for _, keyID := range []int{*bScope.Bucket.Status.ReadWriteKeyID, *bScope.Bucket.Status.ReadOnlyKeyID} {
-		if err := revokeObjectStorageKey(ctx, bScope, keyID); err != nil {
+	for _, keyID := range []*int{bScope.Bucket.Status.ReadWriteKeyID, bScope.Bucket.Status.ReadOnlyKeyID} {
+		if keyID == nil {
+			continue
+		}
+		if err := revokeObjectStorageKey(ctx, bScope, *keyID); err != nil {
 			errs = append(errs, err)
 		}
 	}
