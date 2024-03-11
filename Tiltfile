@@ -3,7 +3,7 @@ load("ext://k8s_attach", "k8s_attach")
 docker_build(
     "docker.io/linode/cluster-api-provider-linode",
     context = ".",
-    only=("Dockerfile", "Makefile", "vendor","go.mod", "go.sum", "./api", "./cloud","./cmd", "./controller", "./util", "./version"),
+    only=("Dockerfile", "Makefile", "vendor","go.mod", "go.sum", "./api", "./cloud","./cmd", "./controller", "./util", "./version", "./mock"),
     build_args={'VERSION': os.getenv("VERSION","")},
 )
 
