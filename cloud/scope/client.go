@@ -18,17 +18,17 @@ type LinodeObjectStorageClient interface {
 }
 
 // LinodeObjectStorageClientBuilder is a function that returns a LinodeObjectStorageClient.
-type LinodeObjectStorageClientBuilder func(apiKey string) LinodeObjectStorageClient
+type LinodeObjectStorageClientBuilder func(apiKey string) (LinodeObjectStorageClient, error)
 
 // CreateLinodeObjectStorageClient is the main implementation of LinodeObjectStorageClientBuilder.
-func CreateLinodeObjectStorageClient(apiKey string) LinodeObjectStorageClient {
+func CreateLinodeObjectStorageClient(apiKey string) (LinodeObjectStorageClient, error) {
 	return CreateLinodeClient(apiKey)
 }
 
 // CreateMockLinodeObjectStorageClient returns a mock LinodeObjectStorageClientBuilder for tests.
 func CreateMockLinodeObjectStorageClientBuilder(m *mock.MockLinodeObjectStorageClient) LinodeObjectStorageClientBuilder {
-	return func(_ string) LinodeObjectStorageClient {
-		return m
+	return func(_ string) (LinodeObjectStorageClient, error) {
+		return m, nil
 	}
 }
 

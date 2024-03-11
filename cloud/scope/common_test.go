@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -20,19 +19,19 @@ func TestCreateLinodeClient(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
-		apiKey string
-		want   *linodego.Client
+		name        string
+		apiKey      string
+		expectedErr error
 	}{
 		{
-			"Valid API Key",
+			"Success - Valid API Key",
 			"test-key",
-			CreateLinodeClient("test-key"),
+			nil,
 		},
 		{
-			"Empty API Key",
+			"Error - Empty API Key",
 			"",
-			CreateLinodeClient(""),
+			errors.New("missing Linode API key"),
 		},
 	}
 
@@ -41,8 +40,12 @@ func TestCreateLinodeClient(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := CreateLinodeClient(testCase.apiKey); got != nil {
-				assert.EqualExportedValues(t, testCase.want, got, "Checking is the objects are equal")
+			got, err := CreateLinodeClient(testCase.apiKey)
+
+			if testCase.expectedErr != nil {
+				assert.EqualError(t, err, testCase.expectedErr.Error())
+			} else {
+				assert.NotNil(t, got)
 			}
 		})
 	}

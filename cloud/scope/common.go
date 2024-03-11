@@ -2,6 +2,7 @@ package scope
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -13,7 +14,11 @@ import (
 	"github.com/linode/cluster-api-provider-linode/version"
 )
 
-func CreateLinodeClient(apiKey string) *linodego.Client {
+func CreateLinodeClient(apiKey string) (*linodego.Client, error) {
+	if apiKey == "" {
+		return nil, errors.New("missing Linode API key")
+	}
+
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: apiKey})
 
 	oauth2Client := &http.Client{
@@ -25,7 +30,7 @@ func CreateLinodeClient(apiKey string) *linodego.Client {
 
 	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
-	return &linodeClient
+	return &linodeClient, nil
 }
 
 func getCredentialDataFromRef(ctx context.Context, crClient k8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
