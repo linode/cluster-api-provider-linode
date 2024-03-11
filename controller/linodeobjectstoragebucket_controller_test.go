@@ -111,13 +111,11 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 		}
 
 		reconciler := &LinodeObjectStorageBucketReconciler{
-			Client:   k8sClient,
-			Scheme:   k8sClient.Scheme(),
-			Logger:   ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-			Recorder: recorder,
-			LinodeClientFactory: func(apiKey string) scope.LinodeObjectStorageClient {
-				return mockClient
-			},
+			Client:              k8sClient,
+			Scheme:              k8sClient.Scheme(),
+			Logger:              ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
+			Recorder:            recorder,
+			LinodeClientBuilder: mockClient.Builder,
 		}
 
 		objectKey := client.ObjectKeyFromObject(obj)
@@ -158,13 +156,11 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 		}
 
 		reconciler := &LinodeObjectStorageBucketReconciler{
-			Client:   k8sClient,
-			Scheme:   k8sClient.Scheme(),
-			Logger:   ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-			Recorder: recorder,
-			LinodeClientFactory: func(apiKey string) scope.LinodeObjectStorageClient {
-				return mockClient
-			},
+			Client:              k8sClient,
+			Scheme:              k8sClient.Scheme(),
+			Logger:              ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
+			Recorder:            recorder,
+			LinodeClientBuilder: mockClient.Builder,
 		}
 
 		objectKey := client.ObjectKeyFromObject(obj)

@@ -19,7 +19,7 @@ import (
 
 type ObjectStorageBucketScopeParams struct {
 	Client              client.Client
-	LinodeClientFactory LinodeObjectStorageClientFactory
+	LinodeClientBuilder LinodeObjectStorageClientBuilder
 	Bucket              *infrav1alpha1.LinodeObjectStorageBucket
 	Logger              *logr.Logger
 }
@@ -42,8 +42,8 @@ func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParam
 	if params.Logger == nil {
 		return errors.New("logger is required when creating an ObjectStorageBucketScope")
 	}
-	if params.LinodeClientFactory == nil {
-		return errors.New("LinodeClientFactory is required when creating an ObjectStorageBucketScope")
+	if params.LinodeClientBuilder == nil {
+		return errors.New("LinodeClientBuilder is required when creating an ObjectStorageBucketScope")
 	}
 
 	return nil
@@ -72,7 +72,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		client:            params.Client,
 		Bucket:            params.Bucket,
 		Logger:            *params.Logger,
-		LinodeClient:      params.LinodeClientFactory(apiKey),
+		LinodeClient:      params.LinodeClientBuilder(apiKey),
 		BucketPatchHelper: bucketPatchHelper,
 	}, nil
 }

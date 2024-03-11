@@ -50,7 +50,7 @@ type LinodeObjectStorageBucketReconciler struct {
 	Logger              logr.Logger
 	Recorder            record.EventRecorder
 	LinodeApiKey        string
-	LinodeClientFactory scope.LinodeObjectStorageClientFactory
+	LinodeClientBuilder scope.LinodeObjectStorageClientBuilder
 	WatchFilterValue    string
 	ReconcileTimeout    time.Duration
 }
@@ -91,7 +91,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		r.LinodeApiKey,
 		scope.ObjectStorageBucketScopeParams{
 			Client:              r.Client,
-			LinodeClientFactory: r.LinodeClientFactory,
+			LinodeClientBuilder: r.LinodeClientBuilder,
 			Bucket:              objectStorageBucket,
 			Logger:              &logger,
 		},

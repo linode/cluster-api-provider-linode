@@ -27,12 +27,12 @@ func TestCreateLinodeClient(t *testing.T) {
 		{
 			"Valid API Key",
 			"test-key",
-			createLinodeClient("test-key"),
+			CreateLinodeClient("test-key"),
 		},
 		{
 			"Empty API Key",
 			"",
-			createLinodeClient(""),
+			CreateLinodeClient(""),
 		},
 	}
 
@@ -41,7 +41,7 @@ func TestCreateLinodeClient(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := createLinodeClient(testCase.apiKey); got != nil {
+			if got := CreateLinodeClient(testCase.apiKey); got != nil {
 				assert.EqualExportedValues(t, testCase.want, got, "Checking is the objects are equal")
 			}
 		})
