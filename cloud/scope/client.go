@@ -3,10 +3,10 @@ package scope
 import (
 	"context"
 
+	"github.com/linode/linodego"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
-	"github.com/linode/linodego"
 )
 
 // LinodeObjectStorageClient defines functions suitable for provisioning object storage buckets and keys.
