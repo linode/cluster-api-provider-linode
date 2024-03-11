@@ -2,7 +2,6 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  creationTimestamp: null
   name: minimal-linodevpc
 spec:
   template: true
@@ -21,12 +20,6 @@ spec:
       try:
         - script:
             env:
-              - name: TARGET_API
-                value: api.linode.com
-              - name: TARGET_API_VERSION
-                value: v4beta
-              - name: URI
-                value: vpcs
               - name: VPC_NAME
                 value: ($namespace)
             content: |
@@ -35,7 +28,7 @@ spec:
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "X-Filter: {\"label\":\"$VPC_NAME\"}" \
                 -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+                "https://api.linode.com/v4/vpcs"
             check:
               ($error): ~
               (json_parse($stdout)):
@@ -53,12 +46,6 @@ spec:
       try:
         - script:
             env:
-              - name: TARGET_API
-                value: api.linode.com
-              - name: TARGET_API_VERSION
-                value: v4beta
-              - name: URI
-                value: nodebalancers
               - name: FILTER
                 value: '{"label":"($namespace)"}'
             content: |
@@ -67,7 +54,7 @@ spec:
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "X-Filter: $FILTER" \
                 -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+                "https://api.linode.com/v4/nodebalancers"
             check:
               ($error): ~
               (json_parse($stdout)):

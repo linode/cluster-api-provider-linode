@@ -2,7 +2,6 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  creationTimestamp: null
   name: minimal-linodeobjectstoragebucket
 spec:
   template: true
@@ -21,18 +20,14 @@ spec:
     try:
     - script:
         env:
-        - name: TARGET_API
-          value: api.linode.com
-        - name: TARGET_API_VERSION
-          value: v4beta
         - name: NAMESPACE
           value: ($namespace)
         content: |
           set -e
-          curl -s\
+          curl -s \
             -H "Authorization: Bearer $LINODE_TOKEN" \
             -H "Content-Type: application/json" \
-            "https://$TARGET_API/$TARGET_API_VERSION/object-storage/buckets/us-sea-1/$NAMESPACE-backups"
+            "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$NAMESPACE-backups"
         check:
           ($error): ~
           (json_parse($stdout)):
