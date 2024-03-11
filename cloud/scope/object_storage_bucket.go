@@ -2,7 +2,6 @@ package scope
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -96,33 +95,20 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 
 // ApplyAccessKeySecret applies a Secret containing keys created for accessing the bucket.
 func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [NumAccessKeys]linodego.ObjectStorageKey, secretName string) error {
-	var err error
-
-	accessKeys := make([]json.RawMessage, NumAccessKeys)
-	for i, key := range keys {
-		accessKeys[i], err = json.Marshal(key)
-		if err != nil {
-			return fmt.Errorf("could not unmarshal access key %s: %w", key.Label, err)
-		}
-	}
-
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: s.Bucket.Namespace,
 		},
 		StringData: map[string]string{
-			"read_write": string(accessKeys[0]),
-			"read_only":  string(accessKeys[1]),
+			"read_write": keys[0].AccessKey,
+			"read_only":  keys[1].AccessKey,
 		},
 	}
 
 	if err := controllerutil.SetOwnerReference(s.Bucket, secret, s.client.Scheme()); err != nil {
 		return fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
 	}
-
-	// Add finalizer to secret so it isn't deleted when bucket deletion is triggered
-	controllerutil.AddFinalizer(secret, infrav1alpha1.GroupVersion.String())
 
 	if s.Bucket.Status.KeySecretName == nil {
 		if err := s.client.Create(ctx, secret); err != nil {
@@ -137,43 +123,6 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 	}
 
 	return nil
-}
-
-func (s *ObjectStorageBucketScope) GetAccessKeySecret(ctx context.Context) (*corev1.Secret, error) {
-	secretName := fmt.Sprintf(AccessKeyNameTemplate, s.Bucket.Name)
-
-	objKey := client.ObjectKey{
-		Namespace: s.Bucket.Namespace,
-		Name:      secretName,
-	}
-	var secret corev1.Secret
-	if err := s.client.Get(ctx, objKey, &secret); err != nil {
-		return nil, err
-	}
-
-	return &secret, nil
-}
-
-// GetAccessKeysFromSecret gets the access key IDs for the OBJ buckets from a Secret.
-func (s *ObjectStorageBucketScope) GetAccessKeysFromSecret(ctx context.Context, secret *corev1.Secret) ([NumAccessKeys]int, error) {
-	var keyIDs [NumAccessKeys]int
-
-	permissions := [NumAccessKeys]string{"read_write", "read_only"}
-	for idx, permission := range permissions {
-		secretDataForKey, ok := secret.Data[permission]
-		if !ok {
-			return keyIDs, fmt.Errorf("secret %s missing data field %s", secret.Name, permission)
-		}
-
-		var key linodego.ObjectStorageKey
-		if err := json.Unmarshal(secretDataForKey, &key); err != nil {
-			return keyIDs, fmt.Errorf("error unmarshaling key: %w", err)
-		}
-
-		keyIDs[idx] = key.ID
-	}
-
-	return keyIDs, nil
 }
 
 func (s *ObjectStorageBucketScope) ShouldRotateKeys() bool {
