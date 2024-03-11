@@ -162,10 +162,6 @@ chainsaw-test: manifests generate local-deploy
 build: manifests generate fmt vet ## Build manager binary.
 	go build -ldflags="-X github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)" -o bin/manager cmd/main.go
 
-.PHONY: docker-tmp
-docker-tmp:
-	@echo $(BUILD_ARGS)
-
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
