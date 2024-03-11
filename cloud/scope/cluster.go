@@ -48,7 +48,7 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 
 // NewClusterScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopeParams, patchNewHelper patchHelper) (*ClusterScope, error) {
+func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopeParams, patchNewHelper patchNewHelper) (*ClusterScope, error) {
 	if err := validateClusterScopeParams(params); err != nil {
 		return nil, err
 	}

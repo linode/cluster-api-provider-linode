@@ -53,7 +53,7 @@ func validateVPCScopeParams(params VPCScopeParams) error {
 
 // NewVPCScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams, patchNewHelper patchHelper) (*VPCScope, error) {
+func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams, patchNewHelper patchNewHelper) (*VPCScope, error) {
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
 	}

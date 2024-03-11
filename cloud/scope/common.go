@@ -15,7 +15,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/version"
 )
 
-type patchHelper func(obj client.Object, crClient client.Client) (*patch.Helper, error)
+type patchNewHelper func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 
 func createLinodeClient(apiKey string) (*linodego.Client, error) {
 	if apiKey == "" {
