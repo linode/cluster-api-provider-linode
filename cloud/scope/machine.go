@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -25,9 +24,9 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	client client.Client
+	client k8sClient
 
-	PatchHelper   *patch.Helper
+	PatchHelper   PatchHelper
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
 	LinodeClient  *linodego.Client
@@ -52,7 +51,7 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(ctx context.Context, apiKey string, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(ctx context.Context, apiKey string, params MachineScopeParams, patchNewHelper patchNewHelper) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -84,9 +83,12 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 		}
 		apiKey = string(data)
 	}
-	linodeClient := createLinodeClient(apiKey)
+	linodeClient, err := createLinodeClient(apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
 
-	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
+	helper, err := patchNewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}

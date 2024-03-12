@@ -1,7 +1,7 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeVPC
 metadata:
-  name: linodevpc-test
+  name: ($namespace)
 spec:
   region: us-sea
 status:

@@ -2,18 +2,26 @@ package scope
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/linode/linodego"
 	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/version"
 )
 
-func createLinodeClient(apiKey string) *linodego.Client {
+type patchNewHelper func(obj client.Object, crClient client.Client) (*patch.Helper, error)
+
+func createLinodeClient(apiKey string) (*linodego.Client, error) {
+	if apiKey == "" {
+		return nil, errors.New("missing Linode API key")
+	}
+
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: apiKey})
 
 	oauth2Client := &http.Client{
@@ -25,7 +33,7 @@ func createLinodeClient(apiKey string) *linodego.Client {
 
 	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
-	return &linodeClient
+	return &linodeClient, nil
 }
 
 func getCredentialDataFromRef(ctx context.Context, crClient k8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {

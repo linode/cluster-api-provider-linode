@@ -1,11 +1,17 @@
+---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeObjectStorageBucket
 metadata:
-  name: linodeobjectstoragebucket-test
+  name: (join('-', [$namespace, 'backups']))
 spec:
   cluster: us-sea-1
   keyGeneration: 0
 status:
   ready: true
-  keySecretName: linodeobjectstoragebucket-test-access-keys
+  keySecretName: (join('-', [$namespace, 'backups-access-keys']))
   lastKeyGeneration: 0
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [$namespace, 'backups-access-keys']))

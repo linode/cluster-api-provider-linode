@@ -130,6 +130,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			LinodeCluster: &infrav1alpha1.LinodeCluster{},
 			LinodeMachine: linodeMachine,
 		},
+		util.NewPatchHelper,
 	)
 	if err != nil {
 		log.Error(err, "Failed to create machine scope")
