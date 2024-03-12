@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
 
 func Test_validateObjectStorageBucketScopeParams(t *testing.T) {
