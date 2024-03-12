@@ -153,7 +153,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 	It("should reconcile an object delete", func() {
 		mockClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)
 
-		for i := 0; i < 2; i++ {
+		for i := range 2 {
 			mockClient.EXPECT().
 				DeleteObjectStorageKey(gomock.Any(), i).
 				Return(nil).
