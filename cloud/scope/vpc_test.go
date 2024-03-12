@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -77,8 +76,6 @@ func TestNewVPCScope(t *testing.T) {
 		want          *VPCScope
 		expectedError error
 		expects       func(m *mock.Mockk8sClient)
-		getFunc       func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
-		patchFunc     func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid VPCScope",
@@ -138,12 +135,6 @@ func TestNewVPCScope(t *testing.T) {
 			},
 			expects:       func(mock *mock.Mockk8sClient) {},
 			expectedError: fmt.Errorf("linodeVPC is required when creating a VPCScope"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
-			},
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
-			},
 		},
 		{
 			name: "Error - Pass in valid args but get an error when getting the credentials secret",
@@ -161,9 +152,7 @@ func TestNewVPCScope(t *testing.T) {
 				},
 			},
 			expects: func(mock *mock.Mockk8sClient) {
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					return fmt.Errorf("test error")
-				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
 			},
 			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
 		},
@@ -188,10 +177,7 @@ func TestNewVPCScope(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("failed to init patch helper: no kind is registered for the type v1alpha1.LinodeVPC in scheme \"pkg/runtime/scheme.go:100\""),
 			expects: func(mock *mock.Mockk8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					return s
-				})
+				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
 		},
 	}

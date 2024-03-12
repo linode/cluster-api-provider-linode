@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -190,8 +189,6 @@ func TestNewClusterScope(t *testing.T) {
 		args          args
 		expectedError error
 		expects       func(mock *mock.Mockk8sClient)
-		getFunc       func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
-		patchFunc     func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid ClusterScope",
@@ -266,10 +263,7 @@ func TestNewClusterScope(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("failed to init patch helper: no kind is registered for the type v1alpha1.LinodeCluster in scheme \"pkg/runtime/scheme.go:100\""),
 			expects: func(mock *mock.Mockk8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					return s
-				})
+				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
 		},
 		{
@@ -291,9 +285,7 @@ func TestNewClusterScope(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: failed to get secret"),
 			expects: func(mock *mock.Mockk8sClient) {
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					return fmt.Errorf("failed to get secret")
-				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
 			},
 		},
 		{

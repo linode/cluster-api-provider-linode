@@ -201,8 +201,6 @@ func TestNewMachineScope(t *testing.T) {
 		want        *MachineScope
 		expectedErr error
 		expects     func(mock *mock.Mockk8sClient)
-		patchFunc   func(obj client.Object, crClient client.Client) (*patch.Helper, error)
-		getFunc     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid MachineScope",
@@ -352,10 +350,7 @@ func TestNewMachineScope(t *testing.T) {
 			},
 			expectedErr: errors.New("failed to init patch helper: no kind is registered for the type v1alpha1.LinodeMachine in scheme \"pkg/runtime/scheme.go:100\""),
 			expects: func(mock *mock.Mockk8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					return s
-				})
+				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
 		},
 		{
@@ -414,7 +409,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 		fields      fields
 		want        []byte
 		expectedErr error
-		getFunc     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
+		expects     func(mock *mock.Mockk8sClient)
 	}{
 		// TODO: Add test cases.
 		{
@@ -439,14 +434,16 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        []byte("test-data"),
 			expectedErr: nil,
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				cred := corev1.Secret{
-					Data: map[string][]byte{
-						"value": []byte("test-data"),
-					},
-				}
-				*obj = cred
-				return nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"value": []byte("test-data"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
 			},
 		},
 		{
@@ -471,9 +468,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("bootstrap data secret is nil for LinodeMachine test-namespace/test-linode-machine"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
-			},
+			expects:     func(mock *mock.Mockk8sClient) {},
 		},
 		{
 			name: "Error - client.Get return an error while retrieving bootstrap data secret",
@@ -497,8 +492,8 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("failed to retrieve bootstrap data secret for LinodeMachine test-namespace/test-linode-machine"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return errors.New("test-error")
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test-error"))
 			},
 		},
 		{
@@ -523,12 +518,16 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("bootstrap data secret value key is missing for LinodeMachine test-namespace/test-linode-machine"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				cred := corev1.Secret{
-					Data: map[string][]byte{},
-				}
-				*obj = cred
-				return nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+						cred := corev1.Secret{
+							Data: map[string][]byte{},
+						}
+						*obj = cred
+						return nil
+					},
+				)
 			},
 		},
 	}
@@ -541,10 +540,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
-
-			if testcase.fields.Machine.Spec.Bootstrap.DataSecretName != nil {
-				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc).Times(1)
-			}
+			testcase.expects(mockK8sClient)
 
 			mScope := &MachineScope{
 				client:        mockK8sClient,
