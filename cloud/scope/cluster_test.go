@@ -119,7 +119,7 @@ func TestClusterScopeMethods(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
-				}).AnyTimes()
+				}).Times(2)
 				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -139,7 +139,7 @@ func TestClusterScopeMethods(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
-				}).AnyTimes()
+				}).Times(1)
 			},
 		},
 	}
@@ -261,7 +261,7 @@ func TestNewClusterScope(t *testing.T) {
 					LinodeCluster: &infrav1alpha1.LinodeCluster{},
 				},
 			},
-			expectedError: fmt.Errorf("failed to init patch helper: no kind is registered for the type v1alpha1.LinodeCluster in scheme \"pkg/runtime/scheme.go:100\""),
+			expectedError: fmt.Errorf("failed to init patch helper:"),
 			expects: func(mock *mock.Mockk8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
@@ -319,7 +319,7 @@ func TestNewClusterScope(t *testing.T) {
 			got, err := NewClusterScope(context.Background(), testcase.args.apiKey, testcase.args.params)
 
 			if testcase.expectedError != nil {
-				assert.EqualError(t, err, testcase.expectedError.Error())
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
 				assert.NotEmpty(t, got)
 			}

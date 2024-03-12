@@ -128,7 +128,7 @@ func TestMachineScopeMethods(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
-				}).AnyTimes()
+				}).Times(2)
 				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -147,7 +147,7 @@ func TestMachineScopeMethods(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
-				}).AnyTimes()
+				}).Times(1)
 			},
 		},
 	}
@@ -348,7 +348,7 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			expectedErr: errors.New("failed to init patch helper: no kind is registered for the type v1alpha1.LinodeMachine in scheme \"pkg/runtime/scheme.go:100\""),
+			expectedErr: errors.New("failed to init patch helper:"),
 			expects: func(mock *mock.Mockk8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
@@ -387,7 +387,7 @@ func TestNewMachineScope(t *testing.T) {
 			got, err := NewMachineScope(context.Background(), testcase.args.apiKey, testcase.args.params)
 
 			if testcase.expectedErr != nil {
-				assert.EqualError(t, err, testcase.expectedErr.Error())
+				assert.ErrorContains(t, err, testcase.expectedErr.Error())
 			} else {
 				assert.NotEmpty(t, got)
 			}

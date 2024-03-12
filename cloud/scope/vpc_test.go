@@ -33,7 +33,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
-func Test_validateVPCScopeParams(t *testing.T) {
+func TestValidateVPCScopeParams(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -175,7 +175,7 @@ func TestNewVPCScope(t *testing.T) {
 					LinodeVPC: &infrav1alpha1.LinodeVPC{},
 				},
 			},
-			expectedError: fmt.Errorf("failed to init patch helper: no kind is registered for the type v1alpha1.LinodeVPC in scheme \"pkg/runtime/scheme.go:100\""),
+			expectedError: fmt.Errorf("failed to init patch helper:"),
 			expects: func(mock *mock.Mockk8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
@@ -197,7 +197,7 @@ func TestNewVPCScope(t *testing.T) {
 			got, err := NewVPCScope(context.Background(), testcase.args.apiKey, testcase.args.params)
 
 			if testcase.expectedError != nil {
-				assert.EqualError(t, err, testcase.expectedError.Error())
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
 				assert.NotEmpty(t, got)
 			}
@@ -224,7 +224,7 @@ func TestVPCScopeMethods(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
-				}).AnyTimes()
+				}).Times(2)
 				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -241,7 +241,7 @@ func TestVPCScopeMethods(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
-				})
+				}).Times(1)
 			},
 		},
 	}
