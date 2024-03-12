@@ -103,6 +103,7 @@ jobs:
   e2e-test:
     needs:  [go-build-test, docker-build]
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@v2

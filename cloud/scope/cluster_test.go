@@ -141,7 +141,7 @@ func TestClusterScopeMethods(t *testing.T) {
 			mockPatchHelper := mock.NewMockPatchHelper(ctrl)
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
 
-			lClient, err := createLinodeClient("test-key")
+			lClient, err := CreateLinodeClient("test-key")
 			if err != nil {
 				t.Errorf("createLinodeClient() error = %v", err)
 			}
