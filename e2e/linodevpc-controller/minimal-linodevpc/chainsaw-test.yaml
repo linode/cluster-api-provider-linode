@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: minimal-linodevpc
+spec:
+  template: true
+  steps:
+    - name: step-00
+      try:
+        - assert:
+            file: 00-assert.yaml
+    - name: step-01
+      try:
+        - apply:
+            file: 01-create-vpc.yaml
+        - assert:
+            file: 01-assert.yaml
+    - name: step-02
+      try:
+        - script:
+            env:
+              - name: VPC_NAME
+                value: ($namespace)
+            content: |
+              set -e
+              curl -s\
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: {\"label\":\"$VPC_NAME\"}" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/vpcs"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 1
+    - name: step-03
+      try:
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+              kind: LinodeVPC
+              name: ($namespace)
+        - error:
+            file: 03-error.yaml
+    - name: step-04
+      try:
+        - script:
+            env:
+              - name: FILTER
+                value: '{"label":"($namespace)"}'
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/nodebalancers"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
