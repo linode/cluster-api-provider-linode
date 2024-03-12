@@ -11,28 +11,22 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
-	// Buckets do not have IDs so hardcode it to 0
-	listFilter := util.Filter{
-		ID:    nil,
-		Label: *bScope.Bucket.Spec.Label,
-		Tags:  nil,
-	}
-	buckets, err := bScope.LinodeClient.ListObjectStorageBucketsInCluster(
+	bucket, err := bScope.LinodeClient.GetObjectStorageBucket(
 		ctx,
-		linodego.NewListOptions(1, listFilter.String()),
 		bScope.Bucket.Spec.Cluster,
+		*bScope.Bucket.Spec.Label,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list buckets in cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
+	linodeErr := &linodego.Error{}
+	if errors.As(err, linodeErr) && linodeErr.StatusCode() != http.StatusNotFound {
+		return nil, fmt.Errorf("failed to get bucket from cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
 	}
-	if len(buckets) == 1 {
+	if bucket != nil {
 		bScope.Logger.Info("Bucket exists")
 
-		return &buckets[0], nil
+		return bucket, nil
 	}
 
 	opts := linodego.ObjectStorageBucketCreateOptions{
@@ -41,7 +35,6 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 		ACL:     linodego.ACLPrivate,
 	}
 
-	var bucket *linodego.ObjectStorageBucket
 	if bucket, err = bScope.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {
 		return nil, fmt.Errorf("failed to create bucket: %w", err)
 	}
