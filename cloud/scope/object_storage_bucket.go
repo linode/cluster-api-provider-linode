@@ -24,11 +24,11 @@ type ObjectStorageBucketScopeParams struct {
 }
 
 type ObjectStorageBucketScope struct {
-	client            client.Client
+	client            k8sClient
 	Bucket            *infrav1alpha1.LinodeObjectStorageBucket
 	Logger            logr.Logger
 	LinodeClient      *linodego.Client
-	BucketPatchHelper *patch.Helper
+	BucketPatchHelper PatchHelper
 }
 
 const AccessKeyNameTemplate = "%s-access-keys"
