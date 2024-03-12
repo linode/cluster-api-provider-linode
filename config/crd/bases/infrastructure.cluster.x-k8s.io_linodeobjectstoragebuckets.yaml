@@ -90,6 +90,12 @@ spec:
             description: LinodeObjectStorageBucketStatus defines the observed state
               of LinodeObjectStorageBucket
             properties:
+              accessKeyRefs:
+                description: AccessKeyRefs stores IDs for Object Storage keys provisioned
+                  along with the bucket.
+                items:
+                  type: integer
+                type: array
               conditions:
                 description: Conditions specify the service state of the LinodeObjectStorageBucket.
                 items:
@@ -155,14 +161,6 @@ spec:
                 type: string
               lastKeyGeneration:
                 description: LastKeyGeneration tracks the last known value of .spec.keyGeneration.
-                type: integer
-              readOnlyKeyID:
-                description: ReadOnlyKeyID is the ID of the Object Storage key with
-                  read-only access to the bucket.
-                type: integer
-              readWriteKeyID:
-                description: ReadWriteKeyID is the ID of the Object Storage key with
-                  read-write access to the bucket.
                 type: integer
               ready:
                 default: false

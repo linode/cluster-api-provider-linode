@@ -654,15 +654,10 @@ func (in *LinodeObjectStorageBucketStatus) DeepCopyInto(out *LinodeObjectStorage
 		*out = new(string)
 		**out = **in
 	}
-	if in.ReadWriteKeyID != nil {
-		in, out := &in.ReadWriteKeyID, &out.ReadWriteKeyID
-		*out = new(int)
-		**out = **in
-	}
-	if in.ReadOnlyKeyID != nil {
-		in, out := &in.ReadOnlyKeyID, &out.ReadOnlyKeyID
-		*out = new(int)
-		**out = **in
+	if in.AccessKeyRefs != nil {
+		in, out := &in.AccessKeyRefs, &out.AccessKeyRefs
+		*out = make([]int, len(*in))
+		copy(*out, *in)
 	}
 }
 

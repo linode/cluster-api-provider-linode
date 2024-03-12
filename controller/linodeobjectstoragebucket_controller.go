@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -159,8 +160,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 			return err
 		}
-		bScope.Bucket.Status.ReadWriteKeyID = &keys[0].ID
-		bScope.Bucket.Status.ReadOnlyKeyID = &keys[1].ID
+		bScope.Bucket.Status.AccessKeyRefs = []int{keys[0].ID, keys[1].ID}
 
 		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bScope.Bucket.Name)
 		if err := bScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
@@ -192,7 +192,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 	}
 
 	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha1.GroupVersion.String()) {
-		err := fmt.Errorf("failed to remove finalizer from bucket; unable to delete")
+		err := errors.New("failed to remove finalizer from bucket; unable to delete")
 		bScope.Logger.Error(err, "controllerutil.RemoveFinalizer")
 		r.setFailure(bScope, err)
 

@@ -81,13 +81,9 @@ type LinodeObjectStorageBucketStatus struct {
 	// +optional
 	KeySecretName *string `json:"keySecretName,omitempty"`
 
-	// ReadWriteKeyID is the ID of the Object Storage key with read-write access to the bucket.
+	// AccessKeyRefs stores IDs for Object Storage keys provisioned along with the bucket.
 	// +optional
-	ReadWriteKeyID *int `json:"readWriteKeyID,omitempty"`
-
-	// ReadOnlyKeyID is the ID of the Object Storage key with read-only access to the bucket.
-	// +optional
-	ReadOnlyKeyID *int `json:"readOnlyKeyID,omitempty"`
+	AccessKeyRefs []int `json:"accessKeyRefs,omitempty"`
 }
 
 // +kubebuilder:object:root=true
