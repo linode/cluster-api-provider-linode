@@ -113,17 +113,12 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 		return fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
 	}
 
-	if s.Bucket.Status.KeySecretName == nil {
-		if err := s.client.Create(ctx, secret); err != nil {
-			return fmt.Errorf("could not create access key secret %s: %w", secretName, err)
-		}
-
-		return nil
+	result, err := controllerutil.CreateOrPatch(ctx, s.client, secret, func() error { return nil })
+	if err != nil {
+		return fmt.Errorf("could not create/patch access key secret %s: %w", secretName, err)
 	}
 
-	if err := s.client.Update(ctx, secret); err != nil {
-		return fmt.Errorf("could not update access key secret %s: %w", secretName, err)
-	}
+	s.Logger.Info(fmt.Sprintf("Secret %s was %s with new access keys", secret.Name, result))
 
 	return nil
 }
