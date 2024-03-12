@@ -81,9 +81,9 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 	It("should reconcile an object apply", func() {
 		mockClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)
 
-		listCall := mockClient.EXPECT().
-			ListObjectStorageBucketsInCluster(gomock.Any(), gomock.Any(), obj.Spec.Cluster).
-			Return([]linodego.ObjectStorageBucket{}, nil).
+		getCall := mockClient.EXPECT().
+			GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).
+			Return(nil, nil).
 			Times(1)
 
 		createBucketCall := mockClient.EXPECT().
@@ -95,7 +95,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 				Hostname: "hostname",
 			}, nil).
 			Times(1).
-			After(listCall)
+			After(getCall)
 
 		for idx, permission := range []string{"rw", "ro"} {
 			mockClient.EXPECT().

@@ -89,19 +89,19 @@ func (mr *MockLinodeObjectStorageClientMockRecorder) DeleteObjectStorageKey(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjectStorageKey", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).DeleteObjectStorageKey), ctx, keyID)
 }
 
-// ListObjectStorageBucketsInCluster mocks base method.
-func (m *MockLinodeObjectStorageClient) ListObjectStorageBucketsInCluster(ctx context.Context, opts *linodego.ListOptions, cluster string) ([]linodego.ObjectStorageBucket, error) {
+// GetObjectStorageBucket mocks base method.
+func (m *MockLinodeObjectStorageClient) GetObjectStorageBucket(ctx context.Context, cluster, label string) (*linodego.ObjectStorageBucket, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListObjectStorageBucketsInCluster", ctx, opts, cluster)
-	ret0, _ := ret[0].([]linodego.ObjectStorageBucket)
+	ret := m.ctrl.Call(m, "GetObjectStorageBucket", ctx, cluster, label)
+	ret0, _ := ret[0].(*linodego.ObjectStorageBucket)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListObjectStorageBucketsInCluster indicates an expected call of ListObjectStorageBucketsInCluster.
-func (mr *MockLinodeObjectStorageClientMockRecorder) ListObjectStorageBucketsInCluster(ctx, opts, cluster any) *gomock.Call {
+// GetObjectStorageBucket indicates an expected call of GetObjectStorageBucket.
+func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageBucket(ctx, cluster, label any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListObjectStorageBucketsInCluster", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).ListObjectStorageBucketsInCluster), ctx, opts, cluster)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucket", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageBucket), ctx, cluster, label)
 }
 
 // Mockk8sClient is a mock of k8sClient interface.
