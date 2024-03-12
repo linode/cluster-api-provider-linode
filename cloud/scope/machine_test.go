@@ -10,6 +10,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -106,7 +107,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 	}
 }
 
-func TestMachineScopeAddFinalizer(t *testing.T) {
+func TestMachineScopeMethods(t *testing.T) {
 	t.Parallel()
 	type fields struct {
 		LinodeMachine *infrav1alpha1.LinodeMachine
@@ -114,7 +115,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		wantErr bool
+		expects func(mock *mock.Mockk8sClient)
 	}{
 		// TODO: Add test cases.
 		{
@@ -122,18 +123,32 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 			fields{
 				LinodeMachine: &infrav1alpha1.LinodeMachine{},
 			},
-			false,
+			func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				}).Times(2)
+				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
 		},
 		{
 			"AddFinalizer error - finalizer should not be added to the Linode Machine object. Function returns nil since it was already present",
 			fields{
 				LinodeMachine: &infrav1alpha1.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-machine",
 						Finalizers: []string{infrav1alpha1.GroupVersion.String()},
 					},
 				},
 			},
-			false,
+			func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				}).Times(1)
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -144,25 +159,27 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPatchHelper := mock.NewMockPatchHelper(ctrl)
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
 
-			mScope := &MachineScope{
-				client:        mockK8sClient,
-				PatchHelper:   mockPatchHelper,
-				Cluster:       &clusterv1.Cluster{},
-				Machine:       &clusterv1.Machine{},
-				LinodeClient:  &linodego.Client{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{},
-				LinodeMachine: testcase.fields.LinodeMachine,
+			testcase.expects(mockK8sClient)
+
+			mScope, err := NewMachineScope(
+				context.Background(),
+				"test-key",
+				MachineScopeParams{
+					Client:        mockK8sClient,
+					Cluster:       &clusterv1.Cluster{},
+					Machine:       &clusterv1.Machine{},
+					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeMachine: testcase.fields.LinodeMachine,
+				},
+			)
+			if err != nil {
+				t.Errorf("NewMachineScope() error = %v", err)
 			}
 
-			if mScope.LinodeMachine.Finalizers == nil {
-				mockPatchHelper.EXPECT().Patch(gomock.Any(), gomock.Any()).Return(nil)
-			}
-
-			if err := mScope.AddFinalizer(context.Background()); (err != nil) != testcase.wantErr {
-				t.Errorf("MachineScope.AddFinalizer() error = %v, wantErr %v", err, testcase.wantErr)
+			if err := mScope.AddFinalizer(context.Background()); err != nil {
+				t.Errorf("MachineScope.AddFinalizer() error = %v", err)
 			}
 
 			if mScope.LinodeMachine.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
@@ -183,10 +200,8 @@ func TestNewMachineScope(t *testing.T) {
 		args        args
 		want        *MachineScope
 		expectedErr error
-		patchFunc   func(obj client.Object, crClient client.Client) (*patch.Helper, error)
-		getFunc     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
+		expects     func(mock *mock.Mockk8sClient)
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Success - Pass in valid args and get a valid MachineScope",
 			args: args{
@@ -199,13 +214,13 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want:        &MachineScope{},
 			expectedErr: nil,
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
-			},
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
 			},
 		},
 		{
@@ -227,20 +242,22 @@ func TestNewMachineScope(t *testing.T) {
 					},
 				},
 			},
-			want:        &MachineScope{},
 			expectedErr: nil,
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
-			},
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				cred := corev1.Secret{
-					Data: map[string][]byte{
-						"apiToken": []byte("example"),
-					},
-				}
-				*obj = cred
-
-				return nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
 			},
 		},
 		{
@@ -262,20 +279,22 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want:        &MachineScope{},
 			expectedErr: nil,
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
-			},
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				cred := corev1.Secret{
-					Data: map[string][]byte{
-						"apiToken": []byte("example"),
-					},
-				}
-				*obj = cred
-
-				return nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
 			},
 		},
 		{
@@ -297,13 +316,9 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want:        &MachineScope{},
 			expectedErr: errors.New("credentials from cluster secret ref: get credentials secret test/example: Creds not found"),
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
-			},
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return errors.New("Creds not found")
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("Creds not found"))
 			},
 		},
 		{
@@ -318,14 +333,8 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want:        nil,
 			expectedErr: errors.New("custer is required when creating a MachineScope"),
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
-			},
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
-			},
+			expects:     func(mock *mock.Mockk8sClient) {},
 		},
 		{
 			name: "Error - Pass in valid args but couldn't get patch helper",
@@ -339,14 +348,25 @@ func TestNewMachineScope(t *testing.T) {
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
-			want:        &MachineScope{},
-			expectedErr: errors.New("failed to init patch helper: failed to create patch helper"),
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return nil, errors.New("failed to create patch helper")
+			expectedErr: errors.New("failed to init patch helper:"),
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
+		},
+		{
+			name: "Error - createLinodeClient() returns error for passing empty apiKey",
+			args: args{
+				apiKey: "",
+				params: MachineScopeParams{
+					Client:        nil,
+					Cluster:       &clusterv1.Cluster{},
+					Machine:       &clusterv1.Machine{},
+					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+				},
 			},
+			expectedErr: errors.New("failed to create linode client: missing Linode API key"),
+			expects:     func(mock *mock.Mockk8sClient) {},
 		},
 	}
 
@@ -360,20 +380,14 @@ func TestNewMachineScope(t *testing.T) {
 
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
 
-			linodeMachine := testcase.args.params.LinodeMachine
-			linodeCluster := testcase.args.params.LinodeCluster
-
-			if (linodeMachine != nil && linodeMachine.Spec.CredentialsRef != nil) ||
-				(linodeCluster != nil && linodeCluster.Spec.CredentialsRef != nil) {
-				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc).Times(1)
-			}
+			testcase.expects(mockK8sClient)
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewMachineScope(context.Background(), testcase.args.apiKey, testcase.args.params, testcase.patchFunc)
+			got, err := NewMachineScope(context.Background(), testcase.args.apiKey, testcase.args.params)
 
 			if testcase.expectedErr != nil {
-				assert.EqualError(t, err, testcase.expectedErr.Error())
+				assert.ErrorContains(t, err, testcase.expectedErr.Error())
 			} else {
 				assert.NotEmpty(t, got)
 			}
@@ -395,7 +409,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 		fields      fields
 		want        []byte
 		expectedErr error
-		getFunc     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
+		expects     func(mock *mock.Mockk8sClient)
 	}{
 		// TODO: Add test cases.
 		{
@@ -420,14 +434,16 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        []byte("test-data"),
 			expectedErr: nil,
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				cred := corev1.Secret{
-					Data: map[string][]byte{
-						"value": []byte("test-data"),
-					},
-				}
-				*obj = cred
-				return nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"value": []byte("test-data"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
 			},
 		},
 		{
@@ -452,9 +468,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("bootstrap data secret is nil for LinodeMachine test-namespace/test-linode-machine"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
-			},
+			expects:     func(mock *mock.Mockk8sClient) {},
 		},
 		{
 			name: "Error - client.Get return an error while retrieving bootstrap data secret",
@@ -478,8 +492,8 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("failed to retrieve bootstrap data secret for LinodeMachine test-namespace/test-linode-machine"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return errors.New("test-error")
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test-error"))
 			},
 		},
 		{
@@ -504,12 +518,16 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("bootstrap data secret value key is missing for LinodeMachine test-namespace/test-linode-machine"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				cred := corev1.Secret{
-					Data: map[string][]byte{},
-				}
-				*obj = cred
-				return nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+						cred := corev1.Secret{
+							Data: map[string][]byte{},
+						}
+						*obj = cred
+						return nil
+					},
+				)
 			},
 		},
 	}
@@ -522,10 +540,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
-
-			if testcase.fields.Machine.Spec.Bootstrap.DataSecretName != nil {
-				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc).Times(1)
-			}
+			testcase.expects(mockK8sClient)
 
 			mScope := &MachineScope{
 				client:        mockK8sClient,

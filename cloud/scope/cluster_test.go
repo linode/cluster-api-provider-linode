@@ -25,9 +25,9 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -100,9 +100,9 @@ func TestClusterScopeMethods(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		fields   fields
-		patchErr error
+		name    string
+		fields  fields
+		expects func(mock *mock.Mockk8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode Cluster object",
@@ -114,7 +114,14 @@ func TestClusterScopeMethods(t *testing.T) {
 					},
 				},
 			},
-			patchErr: nil,
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				}).Times(2)
+				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
 		},
 		{
 			name: "AddFinalizer error - finalizer should not be added to the Linode Cluster object. Function returns nil since it was already present",
@@ -127,7 +134,13 @@ func TestClusterScopeMethods(t *testing.T) {
 					},
 				},
 			},
-			patchErr: nil,
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				}).Times(1)
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -138,24 +151,20 @@ func TestClusterScopeMethods(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPatchHelper := mock.NewMockPatchHelper(ctrl)
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
 
-			lClient, err := CreateLinodeClient("test-key")
+			testcase.expects(mockK8sClient)
+
+			cScope, err := NewClusterScope(
+				context.Background(),
+				"test-key",
+				ClusterScopeParams{
+					Cluster:       testcase.fields.Cluster,
+					LinodeCluster: testcase.fields.LinodeCluster,
+					Client:        mockK8sClient,
+				})
 			if err != nil {
-				t.Errorf("createLinodeClient() error = %v", err)
-			}
-
-			cScope := &ClusterScope{
-				client:        mockK8sClient,
-				PatchHelper:   mockPatchHelper,
-				LinodeClient:  lClient,
-				Cluster:       testcase.fields.Cluster,
-				LinodeCluster: testcase.fields.LinodeCluster,
-			}
-
-			if cScope.LinodeCluster.Finalizers == nil {
-				mockPatchHelper.EXPECT().Patch(gomock.Any(), gomock.Any()).Return(testcase.patchErr)
+				t.Errorf("ClusterScope() error = %v", err)
 			}
 
 			if err := cScope.AddFinalizer(context.Background()); err != nil {
@@ -179,8 +188,7 @@ func TestNewClusterScope(t *testing.T) {
 		name          string
 		args          args
 		expectedError error
-		getFunc       func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
-		patchFunc     func(obj client.Object, crClient client.Client) (*patch.Helper, error)
+		expects       func(mock *mock.Mockk8sClient)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid ClusterScope",
@@ -192,11 +200,12 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
-			},
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
 			},
 		},
 		{
@@ -217,18 +226,21 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				cred := corev1.Secret{
-					Data: map[string][]byte{
-						"apiToken": []byte("example"),
-					},
-				}
-				*obj = cred
-
-				return nil
-			},
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
 			},
 		},
 		{
@@ -238,12 +250,7 @@ func TestNewClusterScope(t *testing.T) {
 				params: ClusterScopeParams{},
 			},
 			expectedError: fmt.Errorf("cluster is required when creating a ClusterScope"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
-			},
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
-			},
+			expects:       func(mock *mock.Mockk8sClient) {},
 		},
 		{
 			name: "Error - patchHelper returns error. Checking error handle for when new patchHelper is invoked",
@@ -254,12 +261,9 @@ func TestNewClusterScope(t *testing.T) {
 					LinodeCluster: &infrav1alpha1.LinodeCluster{},
 				},
 			},
-			expectedError: fmt.Errorf("failed to init patch helper: obj is nil"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
-			},
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return nil, fmt.Errorf("obj is nil")
+			expectedError: fmt.Errorf("failed to init patch helper:"),
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
 		},
 		{
@@ -280,11 +284,8 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: failed to get secret"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return fmt.Errorf("failed to get secret")
-			},
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
 			},
 		},
 		{
@@ -297,12 +298,7 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
-			getFunc: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-				return nil
-			},
-			patchFunc: func(obj client.Object, crClient client.Client) (*patch.Helper, error) {
-				return &patch.Helper{}, nil
-			},
+			expects:       func(mock *mock.Mockk8sClient) {},
 		},
 	}
 
@@ -316,16 +312,14 @@ func TestNewClusterScope(t *testing.T) {
 
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
 
-			if testcase.args.params.LinodeCluster != nil && testcase.args.params.LinodeCluster.Spec.CredentialsRef != nil {
-				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc)
-			}
+			testcase.expects(mockK8sClient)
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewClusterScope(context.Background(), testcase.args.apiKey, testcase.args.params, testcase.patchFunc)
+			got, err := NewClusterScope(context.Background(), testcase.args.apiKey, testcase.args.params)
 
 			if testcase.expectedError != nil {
-				assert.EqualError(t, err, testcase.expectedError.Error())
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
 				assert.NotEmpty(t, got)
 			}
