@@ -12,6 +12,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -69,7 +70,6 @@ func Test_validateObjectStorageBucketScopeParams(t *testing.T) {
 func TestNewObjectStorageBucketScope(t *testing.T) {
 	t.Parallel()
 	type args struct {
-		ctx    context.Context
 		apiKey string
 		params ObjectStorageBucketScopeParams
 	}
@@ -78,6 +78,9 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 		args    args
 		want    *ObjectStorageBucketScope
 		wantErr bool
+		expectedErr error
+		patchFunc   func(obj client.Object, crClient client.Client) (*patch.Helper, error)
+		getFunc     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
 	}{
 		// TODO: Add test cases.
 	}
@@ -85,13 +88,25 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := NewObjectStorageBucketScope(testcase.args.ctx, testcase.args.apiKey, testcase.args.params)
-			if (err != nil) != testcase.wantErr {
-				t.Errorf("NewObjectStorageBucketScope() error = %v, wantErr %v", err, testcase.wantErr)
-				return
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockk8sClient(ctrl)
+
+			Bucket := testcase.args.params.Bucket
+
+			if Bucket != nil && Bucket.Spec.CredentialsRef != nil {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc).Times(1)
 			}
-			if !reflect.DeepEqual(got, testcase.want) {
-				t.Errorf("NewObjectStorageBucketScope() = %v, want %v", got, testcase.want)
+
+			testcase.args.params.Client = mockK8sClient
+
+			got, err := NewObjectStorageBucketScope(context.Background(), testcase.args.apiKey, testcase.args.params)
+
+			if testcase.expectedErr != nil {
+				assert.EqualError(t, err, testcase.expectedErr.Error())
+			} else {
+				assert.NotEmpty(t, got)
 			}
 		})
 	}
