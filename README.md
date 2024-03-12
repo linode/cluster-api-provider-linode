@@ -7,6 +7,10 @@
 <!-- goreportcard badge -->
 <a href="https://goreportcard.com/report/github.com/linode/cluster-api-provider-linode">
 <img src="https://goreportcard.com/badge/github.com/linode/cluster-api-provider-linode"></a>
+<!-- codecov badge -->
+<a href="https://codecov.io/github/linode/cluster-api-provider-linode" > 
+<img src="https://codecov.io/github/linode/cluster-api-provider-linode/graph/badge.svg?token=YQFKF86KJ6"/> 
+</a>
 <!-- join kubernetes slack channel for linode -->
 <a href="https://kubernetes.slack.com/messages/CD4B15LUR">
 <img src="https://img.shields.io/badge/join%20slack-%23linode-brightgreen"></a>
