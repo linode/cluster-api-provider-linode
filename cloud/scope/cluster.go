@@ -62,7 +62,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 		}
 		apiKey = string(data)
 	}
-	linodeClient, err := createLinodeClient(apiKey)
+	linodeClient, err := CreateLinodeClient(apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
