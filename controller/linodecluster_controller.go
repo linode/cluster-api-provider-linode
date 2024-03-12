@@ -100,7 +100,6 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Cluster:       cluster,
 			LinodeCluster: linodeCluster,
 		},
-		util.NewPatchHelper,
 	)
 
 	if err != nil {
