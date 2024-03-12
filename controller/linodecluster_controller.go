@@ -99,10 +99,12 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Client:        r.Client,
 			Cluster:       cluster,
 			LinodeCluster: linodeCluster,
-		})
+		},
+		util.NewPatchHelper,
+	)
+
 	if err != nil {
 		logger.Info("Failed to create cluster scope", "error", err.Error())
-
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 
