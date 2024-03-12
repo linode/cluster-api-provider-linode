@@ -40,6 +40,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func mockClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.LinodeObjectStorageClientBuilder {
+	return func(_ string) (scope.LinodeObjectStorageClient, error) {
+		return m, nil
+	}
+}
+
 var _ = Describe("LinodeObjectStorageBucket controller", func() {
 	ctx := context.Background()
 
@@ -114,7 +120,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 			Scheme:              k8sClient.Scheme(),
 			Logger:              ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
 			Recorder:            recorder,
-			LinodeClientBuilder: scope.CreateMockLinodeObjectStorageClientBuilder(mockClient),
+			LinodeClientBuilder: mockClientBuilder(mockClient),
 		}
 
 		objectKey := client.ObjectKeyFromObject(obj)
@@ -159,7 +165,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 			Scheme:              k8sClient.Scheme(),
 			Logger:              ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
 			Recorder:            recorder,
-			LinodeClientBuilder: scope.CreateMockLinodeObjectStorageClientBuilder(mockClient),
+			LinodeClientBuilder: mockClientBuilder(mockClient),
 		}
 
 		objectKey := client.ObjectKeyFromObject(obj)

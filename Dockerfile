@@ -19,7 +19,6 @@ COPY controller/ controller/
 COPY cloud/ cloud/
 COPY util/ util/
 COPY version/ version/
-COPY mock/ mock/
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
