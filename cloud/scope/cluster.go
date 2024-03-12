@@ -23,8 +23,6 @@ import (
 
 	"github.com/linode/linodego"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/patch"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -36,10 +34,6 @@ type ClusterScopeParams struct {
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
 }
-
-// var patchNewHelper = patch.NewHelper
-
-type patchHelper func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
 	if params.Cluster == nil {
@@ -54,7 +48,7 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 
 // NewClusterScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopeParams, patchNewHelper patchHelper) (*ClusterScope, error) {
+func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopeParams, patchNewHelper patchNewHelper) (*ClusterScope, error) {
 	if err := validateClusterScopeParams(params); err != nil {
 		return nil, err
 	}

@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: minimal-linodeobjectstoragebucket
+spec:
+  template: true
+  steps:
+  - name: step-00
+    try:
+    - assert:
+        file: 00-assert.yaml
+  - name: step-01
+    try:
+    - apply:
+        file: 01-create-linodeobjectstoragebucket.yaml
+    - assert:
+        file: 01-assert.yaml
+  - name: step-02
+    try:
+    - script:
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+        content: |
+          set -e
+          curl -s \
+            -H "Authorization: Bearer $LINODE_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$NAMESPACE-backups"
+        check:
+          ($error): ~
+          (json_parse($stdout)):
+            label: (join('-', [($namespace), 'backups']))
+  - name: step-03
+    try:
+    - apply:
+        file: 03-patch-bucket.yaml
+    - assert:
+        file: 03-assert.yaml
+  - name: step-04
+    try:
+    - delete:
+        ref:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+          kind: LinodeObjectStorageBucket
+          name: (join('-', [($namespace), 'backups']))
+  - name: step-05
+    try:
+    - error:
+        file: 05-errors.yaml
