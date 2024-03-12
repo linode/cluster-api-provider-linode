@@ -90,7 +90,6 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			Client:    r.Client,
 			LinodeVPC: linodeVPC,
 		},
-		util.NewPatchHelper,
 	)
 	if err != nil {
 		log.Error(err, "Failed to create VPC scope")

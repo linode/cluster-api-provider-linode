@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/linode/linodego"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -32,14 +32,14 @@ import (
 type VPCScope struct {
 	client k8sClient
 
-	PatchHelper  PatchHelper
+	PatchHelper  *patch.Helper
 	LinodeClient *linodego.Client
 	LinodeVPC    *infrav1alpha1.LinodeVPC
 }
 
 // VPCScopeParams defines the input parameters used to create a new Scope.
 type VPCScopeParams struct {
-	Client    client.Client
+	Client    k8sClient
 	LinodeVPC *infrav1alpha1.LinodeVPC
 }
 
@@ -53,7 +53,7 @@ func validateVPCScopeParams(params VPCScopeParams) error {
 
 // NewVPCScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams, patchNewHelper patchNewHelper) (*VPCScope, error) {
+func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VPCScope, error) {
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams, patc
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
-	helper, err := patchNewHelper(params.LinodeVPC, params.Client)
+	helper, err := patch.NewHelper(params.LinodeVPC, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
