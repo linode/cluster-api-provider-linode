@@ -32,6 +32,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	controller2 "github.com/linode/cluster-api-provider-linode/controller"
 	"github.com/linode/cluster-api-provider-linode/version"
 
@@ -140,12 +141,13 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller2.LinodeObjectStorageBucketReconciler{
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-		Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-		Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
-		WatchFilterValue: objectStorageBucketWatchFilter,
-		LinodeApiKey:     linodeToken,
+		Client:              mgr.GetClient(),
+		Scheme:              mgr.GetScheme(),
+		Logger:              ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
+		Recorder:            mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
+		WatchFilterValue:    objectStorageBucketWatchFilter,
+		LinodeApiKey:        linodeToken,
+		LinodeClientBuilder: scope.CreateLinodeObjectStorageClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)
