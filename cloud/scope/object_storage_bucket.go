@@ -17,16 +17,17 @@ import (
 )
 
 type ObjectStorageBucketScopeParams struct {
-	Client client.Client
-	Bucket *infrav1alpha1.LinodeObjectStorageBucket
-	Logger *logr.Logger
+	Client              client.Client
+	LinodeClientBuilder LinodeObjectStorageClientBuilder
+	Bucket              *infrav1alpha1.LinodeObjectStorageBucket
+	Logger              *logr.Logger
 }
 
 type ObjectStorageBucketScope struct {
 	client            client.Client
 	Bucket            *infrav1alpha1.LinodeObjectStorageBucket
 	Logger            logr.Logger
-	LinodeClient      *linodego.Client
+	LinodeClient      LinodeObjectStorageClient
 	BucketPatchHelper *patch.Helper
 }
 
@@ -39,6 +40,9 @@ func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParam
 	}
 	if params.Logger == nil {
 		return errors.New("logger is required when creating an ObjectStorageBucketScope")
+	}
+	if params.LinodeClientBuilder == nil {
+		return errors.New("LinodeClientBuilder is required when creating an ObjectStorageBucketScope")
 	}
 
 	return nil
@@ -57,7 +61,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		}
 		apiKey = string(data)
 	}
-	linodeClient, err := createLinodeClient(apiKey)
+	linodeClient, err := params.LinodeClientBuilder(apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}

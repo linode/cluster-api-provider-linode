@@ -47,12 +47,13 @@ import (
 // LinodeObjectStorageBucketReconciler reconciles a LinodeObjectStorageBucket object
 type LinodeObjectStorageBucketReconciler struct {
 	client.Client
-	Scheme           *runtime.Scheme
-	Logger           logr.Logger
-	Recorder         record.EventRecorder
-	LinodeApiKey     string
-	WatchFilterValue string
-	ReconcileTimeout time.Duration
+	Scheme              *runtime.Scheme
+	Logger              logr.Logger
+	Recorder            record.EventRecorder
+	LinodeApiKey        string
+	LinodeClientBuilder scope.LinodeObjectStorageClientBuilder
+	WatchFilterValue    string
+	ReconcileTimeout    time.Duration
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets,verbs=get;list;watch;create;update;patch;delete
@@ -90,9 +91,10 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		ctx,
 		r.LinodeApiKey,
 		scope.ObjectStorageBucketScopeParams{
-			Client: r.Client,
-			Bucket: objectStorageBucket,
-			Logger: &logger,
+			Client:              r.Client,
+			LinodeClientBuilder: r.LinodeClientBuilder,
+			Bucket:              objectStorageBucket,
+			Logger:              &logger,
 		},
 	)
 	if err != nil {
@@ -173,7 +175,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		bScope.Bucket.Status.LastKeyGeneration = bScope.Bucket.Spec.KeyGeneration
 	}
 
-	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Ready", "Object storage bucket configuration applied")
+	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Ready", "Object storage bucket applied")
 
 	bScope.Bucket.Status.Ready = true
 	conditions.MarkTrue(bScope.Bucket, clusterv1.ReadyCondition)
@@ -198,6 +200,8 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 		return err
 	}
+
+	r.Recorder.Event(bScope.Bucket, clusterv1.DeletedReason, "Ready", "Object storage bucket deleted")
 
 	return nil
 }
