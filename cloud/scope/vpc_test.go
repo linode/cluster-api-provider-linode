@@ -35,36 +35,29 @@ import (
 
 func Test_validateVPCScopeParams(t *testing.T) {
 	t.Parallel()
-	type args struct {
-		params VPCScopeParams
-	}
 	tests := []struct {
 		name    string
-		args    args
 		wantErr bool
+		params VPCScopeParams
 	}{
 		{
 			name: "Valid VPCScopeParams",
-			args: args{
-				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha1.LinodeVPC{},
-				},
-			},
 			wantErr: false,
+			params: VPCScopeParams{
+				LinodeVPC: &infrav1alpha1.LinodeVPC{},
+			},
 		},
 		{
 			name: "Invalid VPCScopeParams",
-			args: args{
-				params: VPCScopeParams{},
-			},
 			wantErr: true,
+			params: VPCScopeParams{},
 		},
 	}
 	for _, tt := range tests {
 		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			if err := validateVPCScopeParams(testcase.args.params); (err != nil) != testcase.wantErr {
+			if err := validateVPCScopeParams(testcase.params); (err != nil) != testcase.wantErr {
 				t.Errorf("validateVPCScopeParams() error = %v, wantErr %v", err, testcase.wantErr)
 			}
 		})
@@ -233,17 +226,15 @@ func TestVPCScopeMethods(t *testing.T) {
 	}
 	tests := []struct {
 		name     string
-		fields   fields
+		LinodeVPC *infrav1alpha1.LinodeVPC
 		wantErr  bool
 		patchErr error
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode VPC object",
-			fields: fields{
-				LinodeVPC: &infrav1alpha1.LinodeVPC{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-vpc",
-					},
+			LinodeVPC: &infrav1alpha1.LinodeVPC{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-vpc",
 				},
 			},
 			wantErr:  false,
@@ -251,12 +242,10 @@ func TestVPCScopeMethods(t *testing.T) {
 		},
 		{
 			name: "AddFinalizer error - finalizer should not be added to the Linode VPC object. Function returns nil since it was already present",
-			fields: fields{
-				LinodeVPC: &infrav1alpha1.LinodeVPC{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-vpc",
-						Finalizers: []string{infrav1alpha1.GroupVersion.String()},
-					},
+			LinodeVPC: &infrav1alpha1.LinodeVPC{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-vpc",
+					Finalizers: []string{infrav1alpha1.GroupVersion.String()},
 				},
 			},
 			wantErr:  false,
@@ -283,7 +272,7 @@ func TestVPCScopeMethods(t *testing.T) {
 				client:       mockK8sClient,
 				PatchHelper:  mockPatchHelper,
 				LinodeClient: lClient,
-				LinodeVPC:    testcase.fields.LinodeVPC,
+				LinodeVPC:    testcase.LinodeVPC,
 			}
 
 			if vScope.LinodeVPC.Finalizers == nil {
