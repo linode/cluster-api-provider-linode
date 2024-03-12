@@ -17,7 +17,7 @@ import (
 
 type patchNewHelper func(obj client.Object, crClient client.Client) (*patch.Helper, error)
 
-func createLinodeClient(apiKey string) (*linodego.Client, error) {
+func CreateLinodeClient(apiKey string) (*linodego.Client, error) {
 	if apiKey == "" {
 		return nil, errors.New("missing Linode API key")
 	}
