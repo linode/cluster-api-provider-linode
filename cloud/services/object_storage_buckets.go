@@ -63,7 +63,7 @@ func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBuc
 	}
 
 	// If key revocation fails here, just log the errors since new keys have been created
-	if bScope.Bucket.Status.LastKeyGeneration != nil && bScope.ShouldRotateKeys() {
+	if !bScope.ShouldInitKeys() && bScope.ShouldRotateKeys() {
 		if err := RevokeObjectStorageKeys(ctx, bScope); err != nil {
 			bScope.Logger.Error(err, "Failed to revoke access keys; keys must be manually revoked")
 		}
@@ -120,4 +120,22 @@ func revokeObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBuck
 	bScope.Logger.Info("Revoked access key", "id", keyID)
 
 	return nil
+}
+
+func GetObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([2]linodego.ObjectStorageKey, error) {
+	var keys [2]linodego.ObjectStorageKey
+	var errs []error
+
+	for idx, keyID := range bScope.Bucket.Status.AccessKeyRefs {
+		key, err := bScope.LinodeClient.GetObjectStorageKey(ctx, keyID)
+		if err != nil {
+			errs = append(errs, err)
+
+			continue
+		}
+
+		keys[idx] = *key
+	}
+
+	return keys, utilerrors.NewAggregate(errs)
 }
