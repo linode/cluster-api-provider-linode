@@ -164,7 +164,7 @@ func TestClusterScopeMethods(t *testing.T) {
 					Client:        mockK8sClient,
 				})
 			if err != nil {
-				t.Errorf("ClusterScope() error = %v", err)
+				t.Errorf("NewClusterScope() error = %v", err)
 			}
 
 			if err := cScope.AddFinalizer(context.Background()); err != nil {

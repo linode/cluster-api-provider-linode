@@ -3,7 +3,6 @@ package scope
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -12,7 +11,9 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,27 +21,29 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
-func Test_validateObjectStorageBucketScopeParams(t *testing.T) {
+func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
-		name    string
-		params ObjectStorageBucketScopeParams
+		name        string
+		params      ObjectStorageBucketScopeParams
 		expectedErr error
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Success - Valid ObjectStorageBucketScopeParams",
 			params: ObjectStorageBucketScopeParams{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
-				Logger: &logr.Logger{},
+				LinodeClientBuilder: CreateLinodeObjectStorageClient,
+				Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
+				Logger:              &logr.Logger{},
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "Failure - Invalid ObjectStorageBucketScopeParams. Logger is nil",
 			params: ObjectStorageBucketScopeParams{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
-				Logger: nil,
+				LinodeClientBuilder: CreateLinodeObjectStorageClient,
+				Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
+				Logger:              nil,
 			},
 			expectedErr: fmt.Errorf("logger is required when creating an ObjectStorageBucketScope"),
 		},
@@ -48,10 +51,20 @@ func Test_validateObjectStorageBucketScopeParams(t *testing.T) {
 		{
 			name: "Failure - Invalid ObjectStorageBucketScopeParams. Bucket is nil",
 			params: ObjectStorageBucketScopeParams{
-				Bucket: nil,
-				Logger: &logr.Logger{},
+				LinodeClientBuilder: CreateLinodeObjectStorageClient,
+				Bucket:              nil,
+				Logger:              &logr.Logger{},
 			},
 			expectedErr: fmt.Errorf("object storage bucket is required when creating an ObjectStorageBucketScope"),
+		},
+		{
+			name: "Failure - Invalid ObjectStorageBucketScopeParams. LinodeClientBuilder is nil",
+			params: ObjectStorageBucketScopeParams{
+				LinodeClientBuilder: nil,
+				Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
+				Logger:              &logr.Logger{},
+			},
+			expectedErr: fmt.Errorf("LinodeClientBuilder is required when creating an ObjectStorageBucketScope"),
 		},
 	}
 	for _, tt := range tests {
@@ -74,37 +87,149 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 		params ObjectStorageBucketScopeParams
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *ObjectStorageBucketScope
-		wantErr bool
-		expectedErr error
-		patchFunc   func(obj client.Object, crClient client.Client) (*patch.Helper, error)
-		getFunc     func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error
+		name            string
+		args            args
+		expectedErr     error
+		expects         func(k8s *mock.Mockk8sClient)
+		clientBuildFunc func(apiKey string) (LinodeObjectStorageClient, error)
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Success - Pass in valid args and get a valid ObjectStorageBucketScope",
+			args: args{
+				apiKey: "apikey",
+				params: ObjectStorageBucketScopeParams{
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
+					Client:              nil,
+					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
+					Logger:              &logr.Logger{},
+				},
+			},
+			expectedErr: nil,
+			expects: func(k8s *mock.Mockk8sClient) {
+				k8s.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+			},
+		},
+		{
+			name: "Success - Validate getCredentialDataFromRef() return some apiKey Data and we create a valid ClusterScope",
+			args: args{
+				apiKey: "apikey",
+				params: ObjectStorageBucketScopeParams{
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
+					Client:              nil,
+					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+						Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+							CredentialsRef: &corev1.SecretReference{
+								Name:      "example",
+								Namespace: "test",
+							},
+						},
+					},
+					Logger: &logr.Logger{},
+				},
+			},
+			expectedErr: nil,
+			expects: func(k8s *mock.Mockk8sClient) {
+				k8s.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				k8s.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, name types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+			},
+		},
+		{
+			name: "Error - ValidateClusterScopeParams triggers error because ClusterScopeParams is empty",
+			args: args{
+				apiKey: "apikey",
+				params: ObjectStorageBucketScopeParams{},
+			},
+			expectedErr: fmt.Errorf("object storage bucket is required when creating an ObjectStorageBucketScope"),
+			expects:     func(k8s *mock.Mockk8sClient) {},
+		},
+		{
+			name: "Error - patchHelper returns error. Checking error handle for when new patchHelper is invoked",
+			args: args{
+				apiKey: "apikey",
+				params: ObjectStorageBucketScopeParams{
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
+					Client:              nil,
+					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
+					Logger:              &logr.Logger{},
+				},
+			},
+			expectedErr: fmt.Errorf("failed to init patch helper:"),
+			expects: func(k8s *mock.Mockk8sClient) {
+				k8s.EXPECT().Scheme().Return(runtime.NewScheme())
+			},
+		},
+		{
+			name: "Error - Using getCredentialDataFromRef(), func returns an error. Unable to create a valid ClusterScope",
+			args: args{
+				apiKey: "test-key",
+				params: ObjectStorageBucketScopeParams{
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
+					Client:              nil,
+					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+						Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+							CredentialsRef: &corev1.SecretReference{
+								Name:      "example",
+								Namespace: "test",
+							},
+						},
+					},
+					Logger: &logr.Logger{},
+				},
+			},
+			expectedErr: fmt.Errorf("credentials from cluster secret ref: get credentials secret test/example: failed to get secret"),
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
+			},
+		},
+		{
+			name: "Error - createLinodeCluster throws an error for passing empty apiKey. Unable to create a valid ClusterScope",
+			args: args{
+				apiKey: "",
+				params: ObjectStorageBucketScopeParams{
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
+					Client:              nil,
+					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
+					Logger:              &logr.Logger{},
+				},
+			},
+			expectedErr: fmt.Errorf("failed to create linode client: missing Linode API key"),
+			expects:     func(mock *mock.Mockk8sClient) {},
+		},
 	}
 	for _, tt := range tests {
 		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
+
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
 
-			Bucket := testcase.args.params.Bucket
-
-			if Bucket != nil && Bucket.Spec.CredentialsRef != nil {
-				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testcase.getFunc).Times(1)
-			}
+			testcase.expects(mockK8sClient)
 
 			testcase.args.params.Client = mockK8sClient
 
 			got, err := NewObjectStorageBucketScope(context.Background(), testcase.args.apiKey, testcase.args.params)
 
 			if testcase.expectedErr != nil {
-				assert.EqualError(t, err, testcase.expectedErr.Error())
+				assert.ErrorContains(t, err, testcase.expectedErr.Error())
 			} else {
 				assert.NotEmpty(t, got)
 			}
@@ -117,12 +242,19 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 	tests := []struct {
 		name    string
 		Bucket  *infrav1alpha1.LinodeObjectStorageBucket
-		wantErr bool
+		expects func(mock *mock.Mockk8sClient)
 	}{
 		{
-			name: "Success - finalizer should be added to the Linode Machine object",
+			name:   "Success - finalizer should be added to the Linode Machine object",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
-			wantErr: false,
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				}).Times(2)
+				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
 		},
 		{
 			name: "Failure - finalizer should not be added to the Bucket object. Function returns nil since it was already present",
@@ -131,7 +263,13 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 					Finalizers: []string{infrav1alpha1.GroupVersion.String()},
 				},
 			},
-			wantErr: false,
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				}).Times(1)
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -143,191 +281,498 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockk8sClient(ctrl)
-			mockPatchHelper := mock.NewMockPatchHelper(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			objScope, err := NewObjectStorageBucketScope(
+				context.Background(),
+				"test-key",
+				ObjectStorageBucketScopeParams{
+					Client:              mockK8sClient,
+					Bucket:              testcase.Bucket,
+					Logger:              &logr.Logger{},
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
+				})
+			if err != nil {
+				t.Errorf("NewObjectStorageBucketScope() error = %v", err)
+			}
+
+			if err := objScope.AddFinalizer(context.Background()); err != nil {
+				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
+			}
+
+			if objScope.Bucket.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
+				t.Errorf("Finalizer was not added")
+			}
+		})
+	}
+}
+
+func TestApplyAccessKeySecretUpdate(t *testing.T) {
+	t.Parallel()
+	type args struct {
+		keys       [NumAccessKeys]linodego.ObjectStorageKey
+		secretName string
+	}
+	tests := []struct {
+		name        string
+		Bucket      *infrav1alpha1.LinodeObjectStorageBucket
+		args        args
+		expectedErr error
+		expects     func(mock *mock.Mockk8sClient)
+	}{
+		{
+			name: "Success - Update access key secret. Return no error",
+			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bucket",
+					Namespace: "test-namespace",
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					KeySecretName: ptr.To("test-secret"),
+				},
+			},
+			args: args{
+				keys: [NumAccessKeys]linodego.ObjectStorageKey{
+					{
+						ID:        1,
+						Label:     "read_write",
+						SecretKey: "read_write_key",
+						AccessKey: "read_write_access_key",
+						Limited:   false,
+						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+							{
+								BucketName:  "bucket",
+								Cluster:     "test-bucket",
+								Permissions: "read_write",
+							},
+						},
+					},
+					{
+						ID:        2,
+						Label:     "read_only",
+						SecretKey: "read_only_key",
+						AccessKey: "read_only_access_key",
+						Limited:   true,
+						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+							{
+								BucketName:  "bucket",
+								Cluster:     "test-bucket",
+								Permissions: "read_only",
+							},
+						},
+					},
+				},
+				secretName: "test-secret",
+			},
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "Error - Update access key secret: Could not update secret",
+			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bucket",
+					Namespace: "test-namespace",
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					KeySecretName: ptr.To("test-secret"),
+				},
+			},
+			args: args{
+				keys: [NumAccessKeys]linodego.ObjectStorageKey{
+					{
+						ID:        1,
+						Label:     "read_write",
+						SecretKey: "read_write_key",
+						AccessKey: "read_write_access_key",
+						Limited:   false,
+						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+							{
+								BucketName:  "bucket",
+								Cluster:     "test-bucket",
+								Permissions: "read_write",
+							},
+						},
+					},
+				},
+				secretName: "test-secret",
+			},
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fmt.Errorf("could not update secret")).Times(1)
+			},
+			expectedErr: fmt.Errorf("could not update access key secret"),
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			testcase.expects(mockK8sClient)
 
 			objScope := &ObjectStorageBucketScope{
 				client:            mockK8sClient,
 				Bucket:            testcase.Bucket,
 				Logger:            logr.Logger{},
-				LinodeClient:      &linodego.Client{},
-				BucketPatchHelper: mockPatchHelper,
+				LinodeClient:      nil,
+				BucketPatchHelper: nil,
 			}
 
-			if testcase.Bucket.Finalizers == nil {
-				mockPatchHelper.EXPECT().Patch(gomock.Any(), gomock.Any()).Return(nil)
+			err := objScope.ApplyAccessKeySecret(context.Background(), testcase.args.keys, testcase.args.secretName)
+			if testcase.expectedErr != nil {
+				assert.ErrorContains(t, err, testcase.expectedErr.Error())
 			}
-
-			
-			if err := objScope.AddFinalizer(context.Background()); (err != nil) != testcase.wantErr {
-				t.Errorf("ObjectStorageBucketScope.AddFinalizer() error = %v, wantErr %v", err, testcase.wantErr)
-			}
-
-			if objScope.Bucket.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
-				t.Errorf("Not able to add finalizer: %s", infrav1alpha1.GroupVersion.String())
-			}
-
 		})
 	}
 }
 
-func TestObjectStorageBucketScope_ApplyAccessKeySecret(t *testing.T) {
+func TestApplyAccessKeySecretCreate(t *testing.T) {
 	t.Parallel()
-	type fields struct {
-		client            client.Client
-		Bucket            *infrav1alpha1.LinodeObjectStorageBucket
-		Logger            logr.Logger
-		LinodeClient      *linodego.Client
-		BucketPatchHelper *patch.Helper
-	}
 	type args struct {
-		ctx        context.Context
 		keys       [NumAccessKeys]linodego.ObjectStorageKey
 		secretName string
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name        string
+		Bucket      *infrav1alpha1.LinodeObjectStorageBucket
+		args        args
+		expectedErr error
+		expects     func(mock *mock.Mockk8sClient)
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Success - Create access key secret. Return no error",
+			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bucket",
+					Namespace: "test-namespace",
+				},
+			},
+			args: args{
+				keys: [NumAccessKeys]linodego.ObjectStorageKey{
+					{
+						ID:        1,
+						Label:     "read_write",
+						SecretKey: "read_write_key",
+						AccessKey: "read_write_access_key",
+						Limited:   false,
+						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+							{
+								BucketName:  "bucket",
+								Cluster:     "test-bucket",
+								Permissions: "read_write",
+							},
+						},
+					},
+				},
+				secretName: "test-secret",
+			},
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "Error - Create access key secret: Returns an error. Could not create secret",
+			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bucket",
+					Namespace: "test-namespace",
+				},
+			},
+			args: args{
+				keys: [NumAccessKeys]linodego.ObjectStorageKey{
+					{
+						ID:        1,
+						Label:     "read_write",
+						SecretKey: "read_write_key",
+						AccessKey: "read_write_access_key",
+						Limited:   false,
+						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+							{
+								BucketName:  "bucket",
+								Cluster:     "test-bucket",
+								Permissions: "read_write",
+							},
+						},
+					},
+				},
+				secretName: "test-secret",
+			},
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(fmt.Errorf("could not create access key secret")).Times(1)
+			},
+			expectedErr: fmt.Errorf("could not create access key secret"),
+		},
+		{
+			name: "Error - controllerutil.SetOwnerReference() return an error",
+			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bucket",
+					Namespace: "test-namespace",
+				},
+			},
+			args: args{
+				keys: [NumAccessKeys]linodego.ObjectStorageKey{
+					{
+						ID:           1,
+						Label:        "read_write",
+						SecretKey:    "read_write_key",
+						AccessKey:    "read_write_access_key",
+						Limited:      false,
+						BucketAccess: nil,
+					},
+				},
+				secretName: "test-secret",
+			},
+			expects: func(mock *mock.Mockk8sClient) {
+				mock.EXPECT().Scheme().Return(runtime.NewScheme())
+			},
+			expectedErr: fmt.Errorf("could not set owner ref on access key secret"),
+		},
 	}
 	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			s := &ObjectStorageBucketScope{
-				client:            tt.fields.client,
-				Bucket:            tt.fields.Bucket,
-				Logger:            tt.fields.Logger,
-				LinodeClient:      tt.fields.LinodeClient,
-				BucketPatchHelper: tt.fields.BucketPatchHelper,
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			testcase.expects(mockK8sClient)
+
+			objScope := &ObjectStorageBucketScope{
+				client:            mockK8sClient,
+				Bucket:            testcase.Bucket,
+				Logger:            logr.Logger{},
+				LinodeClient:      nil,
+				BucketPatchHelper: nil,
 			}
-			if err := s.ApplyAccessKeySecret(tt.args.ctx, tt.args.keys, tt.args.secretName); (err != nil) != tt.wantErr {
-				t.Errorf("ObjectStorageBucketScope.ApplyAccessKeySecret() error = %v, wantErr %v", err, tt.wantErr)
+
+			err := objScope.ApplyAccessKeySecret(context.Background(), testcase.args.keys, testcase.args.secretName)
+			if testcase.expectedErr != nil {
+				assert.ErrorContains(t, err, testcase.expectedErr.Error())
 			}
 		})
 	}
 }
 
-func TestObjectStorageBucketScope_GetAccessKeySecret(t *testing.T) {
+func TestGetAccessKeySecret(t *testing.T) {
 	t.Parallel()
-	type fields struct {
-		client            client.Client
-		Bucket            *infrav1alpha1.LinodeObjectStorageBucket
-		Logger            logr.Logger
-		LinodeClient      *linodego.Client
-		BucketPatchHelper *patch.Helper
-	}
-	type args struct {
-		ctx context.Context
-	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *corev1.Secret
-		wantErr bool
+		name         string
+		wantedSecret *corev1.Secret
+		bucket       *infrav1alpha1.LinodeObjectStorageBucket
+		expectedErr  error
+		expects      func(k8s *mock.Mockk8sClient)
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Success - Get secret successfully",
+			wantedSecret: &corev1.Secret{
+				Data: map[string][]byte{
+					"read_write": []byte(`{"id":1}`),
+					"read_only":  []byte(`{"id":2}`),
+				},
+			},
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bucket",
+					Namespace: "test-namespace",
+				},
+				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					Label: ptr.To("test-label"),
+				},
+			},
+			expects: func(k8s *mock.Mockk8sClient) {
+				k8s.EXPECT().Get(context.Background(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"read_write": []byte(`{"id":1}`),
+							"read_only":  []byte(`{"id":2}`),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+			},
+		},
+		{
+			name:         "Fail - Get secret fails",
+			wantedSecret: nil,
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bucket",
+					Namespace: "test-namespace",
+				},
+				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					Label: ptr.To("test-label"),
+				},
+			},
+			expects: func(k8s *mock.Mockk8sClient) {
+				k8s.EXPECT().Get(context.Background(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
+			},
+			expectedErr: fmt.Errorf("failed to get secret"),
+		},
 	}
 	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			s := &ObjectStorageBucketScope{
-				client:            tt.fields.client,
-				Bucket:            tt.fields.Bucket,
-				Logger:            tt.fields.Logger,
-				LinodeClient:      tt.fields.LinodeClient,
-				BucketPatchHelper: tt.fields.BucketPatchHelper,
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			testcase.expects(mockK8sClient)
+
+			objScope := &ObjectStorageBucketScope{
+				client:            mockK8sClient,
+				Bucket:            testcase.bucket,
+				Logger:            logr.Logger{},
+				LinodeClient:      nil,
+				BucketPatchHelper: nil,
 			}
-			got, err := s.GetAccessKeySecret(tt.args.ctx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ObjectStorageBucketScope.GetAccessKeySecret() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ObjectStorageBucketScope.GetAccessKeySecret() = %v, want %v", got, tt.want)
+			got, err := objScope.GetAccessKeySecret(context.Background())
+			if testcase.expectedErr != nil {
+				assert.ErrorContains(t, err, testcase.expectedErr.Error())
+			} else {
+				assert.NotEmpty(t, got)
+				assert.Equal(t, testcase.wantedSecret, got)
 			}
 		})
 	}
 }
 
-func TestObjectStorageBucketScope_GetAccessKeysFromSecret(t *testing.T) {
+func TestGetAccessKeysFromSecret(t *testing.T) {
 	t.Parallel()
-	type fields struct {
-		client            client.Client
-		Bucket            *infrav1alpha1.LinodeObjectStorageBucket
-		Logger            logr.Logger
-		LinodeClient      *linodego.Client
-		BucketPatchHelper *patch.Helper
-	}
-	type args struct {
-		ctx    context.Context
-		secret *corev1.Secret
-	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    [NumAccessKeys]int
-		wantErr bool
+		name        string
+		want        [NumAccessKeys]int
+		wantErr     bool
+		expectedErr error
+		secret      *corev1.Secret
 	}{
-		// TODO: Add test cases.
+		{
+			name:        "Valid Secret",
+			want:        [NumAccessKeys]int{1, 2},
+			wantErr:     false,
+			expectedErr: nil,
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					"read_write": []byte(`{"id":1}`),
+					"read_only":  []byte(`{"id":2}`),
+				},
+			},
+		},
+		{
+			name:        "Error - Invalid Secret. Missing read_only key",
+			want:        [NumAccessKeys]int{},
+			wantErr:     true,
+			expectedErr: fmt.Errorf("missing data field read_only"),
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					"read_write": []byte(`{"id":1}`),
+				},
+			},
+		},
+		{
+			name:        "Error - Invalid Secret. JSON unmarshal error",
+			want:        [NumAccessKeys]int{},
+			wantErr:     true,
+			expectedErr: fmt.Errorf("error unmarshaling key:"),
+			secret: &corev1.Secret{
+				Data: map[string][]byte{
+					"read_write": []byte(`1`),
+					"read_only":  []byte(`{"id":2}`),
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+		tescase := tt
+		t.Run(tescase.name, func(t *testing.T) {
 			t.Parallel()
-			s := &ObjectStorageBucketScope{
-				client:            tt.fields.client,
-				Bucket:            tt.fields.Bucket,
-				Logger:            tt.fields.Logger,
-				LinodeClient:      tt.fields.LinodeClient,
-				BucketPatchHelper: tt.fields.BucketPatchHelper,
+			objScope := &ObjectStorageBucketScope{
+				client:            nil,
+				Bucket:            nil,
+				Logger:            logr.Logger{},
+				LinodeClient:      nil,
+				BucketPatchHelper: nil,
 			}
-			got, err := s.GetAccessKeysFromSecret(tt.args.ctx, tt.args.secret)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ObjectStorageBucketScope.GetAccessKeysFromSecret() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ObjectStorageBucketScope.GetAccessKeysFromSecret() = %v, want %v", got, tt.want)
+			got, err := objScope.GetAccessKeysFromSecret(context.Background(), tescase.secret)
+			if tescase.expectedErr != nil {
+				assert.ErrorContains(t, err, tescase.expectedErr.Error())
+			} else {
+				assert.NotEmpty(t, got)
 			}
 		})
 	}
 }
 
-func TestObjectStorageBucketScope_ShouldRotateKeys(t *testing.T) {
+func TestShouldRotateKeys(t *testing.T) {
 	t.Parallel()
-	type fields struct {
-		client            client.Client
-		Bucket            *infrav1alpha1.LinodeObjectStorageBucket
-		Logger            logr.Logger
-		LinodeClient      *linodego.Client
-		BucketPatchHelper *patch.Helper
-	}
 	tests := []struct {
 		name   string
-		fields fields
 		want   bool
+		Bucket *infrav1alpha1.LinodeObjectStorageBucket
 	}{
-		// TODO: Add test cases.
+		{
+			name: "should rotate keys",
+			want: true,
+			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					KeyGeneration: ptr.To(1),
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					LastKeyGeneration: ptr.To(0),
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			s := &ObjectStorageBucketScope{
-				client:            tt.fields.client,
-				Bucket:            tt.fields.Bucket,
-				Logger:            tt.fields.Logger,
-				LinodeClient:      tt.fields.LinodeClient,
-				BucketPatchHelper: tt.fields.BucketPatchHelper,
+
+			objScope := &ObjectStorageBucketScope{
+				client:            nil,
+				Bucket:            testcase.Bucket,
+				Logger:            logr.Logger{},
+				LinodeClient:      &linodego.Client{},
+				BucketPatchHelper: &patch.Helper{},
 			}
-			if got := s.ShouldRotateKeys(); got != tt.want {
-				t.Errorf("ObjectStorageBucketScope.ShouldRotateKeys() = %v, want %v", got, tt.want)
+
+			rotate := objScope.ShouldRotateKeys()
+
+			if rotate != testcase.want {
+				t.Errorf("ObjectStorageBucketScope.ShouldRotateKeys() = %v, want %v", rotate, testcase.want)
 			}
 		})
 	}
