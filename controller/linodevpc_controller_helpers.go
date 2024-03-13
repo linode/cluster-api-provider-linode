@@ -39,10 +39,8 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 
 		return err
 	}
-	if createConfig.Label == "" {
-		createConfig.Label = vpcScope.LinodeVPC.Name
-	}
 
+	createConfig.Label = vpcScope.LinodeVPC.Name
 	listFilter := util.Filter{
 		ID:    vpcScope.LinodeVPC.Spec.VPCID,
 		Label: createConfig.Label,
@@ -55,7 +53,6 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 	} else if len(vpcs) != 0 {
 		// Labels are unique
 		vpcScope.LinodeVPC.Spec.VPCID = &vpcs[0].ID
-		vpcScope.LinodeVPC.Spec.Label = vpcs[0].Label
 
 		return nil
 	}
@@ -73,7 +70,6 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 		return err
 	}
 
-	vpcScope.LinodeVPC.Spec.Label = vpc.Label
 	vpcScope.LinodeVPC.Spec.VPCID = &vpc.ID
 
 	return nil
