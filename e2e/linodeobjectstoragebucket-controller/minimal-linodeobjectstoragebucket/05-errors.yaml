@@ -1,11 +1,11 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeObjectStorageBucket
 metadata:
-  name: (join('-', [$namespace, 'backups']))
+  name: ($bucket)
 
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: (join('-', [$namespace, 'backups-access-keys']))
+  name: ($access_keys_secret)
 
