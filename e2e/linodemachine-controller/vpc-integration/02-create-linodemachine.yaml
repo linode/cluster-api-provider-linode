@@ -29,4 +29,3 @@ spec:
         spec:
             region: us-sea
             type: g5-nanode-1
-
