@@ -1,0 +1,123 @@
+
+resources:
+- ../default
+
+patches:
+  - target:
+      version: v1
+      group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: linodeclusters.infrastructure.cluster.x-k8s.io
+    patch: |-
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/vpcRef/x-kubernetes-validations
+  - target:
+      version: v1
+      group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: linodeclustertemplates.infrastructure.cluster.x-k8s.io
+    patch: |-
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/vpcRef/x-kubernetes-validations
+  - target:
+      version: v1
+      group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: linodemachines.infrastructure.cluster.x-k8s.io
+    patch: |-
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/region/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/type/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/label/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/group/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/rootPass/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/authorizedKeys/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/authorizedUsers/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/stackscriptId/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/stackscriptData/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/backupId/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/image/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/interfaces/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/backupsEnabled/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/privateIp/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/tags/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/metadata/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/firewallId/x-kubernetes-validations
+  - target:
+      version: v1
+      group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: linodemachinetemplates.infrastructure.cluster.x-k8s.io
+    patch: |-
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/region/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/type/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/label/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/group/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/rootPass/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/authorizedKeys/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/authorizedUsers/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/stackscriptId/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/stackscriptData/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/backupId/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/image/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/interfaces/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/backupsEnabled/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/privateIp/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/tags/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/metadata/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/template/properties/spec/properties/firewallId/x-kubernetes-validations
+  - target:
+      version: v1
+      group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: linodeobjectstoragebuckets.infrastructure.cluster.x-k8s.io
+    patch: |-
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/cluster/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/label/x-kubernetes-validations
+  - target:
+      version: v1
+      group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: linodevpcs.infrastructure.cluster.x-k8s.io
+    patch: |-
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/label/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/region/x-kubernetes-validations
+      - op: remove
+        path: /spec/versions/0/schema/openAPIV3Schema/properties/spec/properties/subnets/x-kubernetes-validations
