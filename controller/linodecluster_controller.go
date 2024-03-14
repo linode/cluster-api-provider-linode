@@ -167,6 +167,12 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 		return err
 	}
 
+	if linodeNB == nil {
+		err := fmt.Errorf("NodeBalancer created was nil")
+		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+		return err
+	}
+
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = &linodeNB.ID
 
 	linodeNBConfig, err := services.CreateNodeBalancerConfig(ctx, clusterScope, logger)

@@ -17,9 +17,11 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 		bScope.Bucket.Spec.Cluster,
 		bScope.Bucket.Name,
 	)
-	linodeErr := linodego.NewError(err)
-	if linodeErr.StatusCode() != http.StatusNotFound {
-		return nil, fmt.Errorf("failed to get bucket from cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
+	if err != nil {
+		linodeErr := linodego.NewError(err)
+		if linodeErr.StatusCode() != http.StatusNotFound {
+			return nil, fmt.Errorf("failed to get bucket from cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
+		}
 	}
 	if bucket != nil {
 		bScope.Logger.Info("Bucket exists")
