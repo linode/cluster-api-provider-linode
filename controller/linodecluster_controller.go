@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -200,8 +199,8 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		logger.Info("Failed to delete Linode NodeBalancer", "error", err.Error())
 
 		// Not found is not an error
-		apiErr := linodego.Error{}
-		if errors.As(err, &apiErr) && apiErr.Code != http.StatusNotFound {
+		apiErr := linodego.NewError(err)
+		if apiErr.Code != http.StatusNotFound {
 			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 
 			return err

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -18,8 +17,8 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 		bScope.Bucket.Spec.Cluster,
 		bScope.Bucket.Name,
 	)
-	linodeErr := &linodego.Error{}
-	if errors.As(err, linodeErr) && linodeErr.StatusCode() != http.StatusNotFound {
+	linodeErr := linodego.NewError(err)
+	if linodeErr.StatusCode() != http.StatusNotFound {
 		return nil, fmt.Errorf("failed to get bucket from cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
 	}
 	if bucket != nil {
@@ -109,8 +108,8 @@ func RevokeObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBuc
 
 func revokeObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBucketScope, keyID int) error {
 	if err := bScope.LinodeClient.DeleteObjectStorageKey(ctx, keyID); err != nil {
-		linodeErr := &linodego.Error{}
-		if errors.As(err, linodeErr) && linodeErr.StatusCode() != http.StatusNotFound {
+		linodeErr := linodego.NewError(err)
+		if linodeErr.StatusCode() != http.StatusNotFound {
 			bScope.Logger.Error(err, "Failed to revoke access key", "id", keyID)
 
 			return fmt.Errorf("failed to revoke access key: %w", err)
