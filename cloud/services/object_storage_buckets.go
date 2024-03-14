@@ -9,6 +9,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
@@ -17,11 +18,8 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 		bScope.Bucket.Spec.Cluster,
 		bScope.Bucket.Name,
 	)
-	if err != nil {
-		linodeErr := linodego.NewError(err)
-		if linodeErr.StatusCode() != http.StatusNotFound {
-			return nil, fmt.Errorf("failed to get bucket from cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
-		}
+	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+		return nil, fmt.Errorf("failed to get bucket from cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
 	}
 	if bucket != nil {
 		bScope.Logger.Info("Bucket exists")
@@ -109,13 +107,10 @@ func RevokeObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBuc
 }
 
 func revokeObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBucketScope, keyID int) error {
-	if err := bScope.LinodeClient.DeleteObjectStorageKey(ctx, keyID); err != nil {
-		linodeErr := linodego.NewError(err)
-		if linodeErr.StatusCode() != http.StatusNotFound {
-			bScope.Logger.Error(err, "Failed to revoke access key", "id", keyID)
-
-			return fmt.Errorf("failed to revoke access key: %w", err)
-		}
+	err := bScope.LinodeClient.DeleteObjectStorageKey(ctx, keyID)
+	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+		bScope.Logger.Error(err, "Failed to revoke access key", "id", keyID)
+		return fmt.Errorf("failed to revoke access key: %w", err)
 	}
 
 	bScope.Logger.Info("Revoked access key", "id", keyID)

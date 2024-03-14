@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -201,16 +200,10 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		return nil
 	}
 
-	if err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID); err != nil {
-		logger.Info("Failed to delete Linode NodeBalancer", "error", err.Error())
-
-		// Not found is not an error
-		apiErr := linodego.NewError(err)
-		if apiErr.Code != http.StatusNotFound {
-			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
-
-			return err
-		}
+	err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
+	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+		return err
 	}
 
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")

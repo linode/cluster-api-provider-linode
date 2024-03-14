@@ -372,8 +372,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 	}
 
 	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
-		err = util.IgnoreLinodeAPIError(err, http.StatusNotFound)
-		if err != nil {
+		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to get Linode machine instance")
 		} else {
 			logger.Info("Instance not found, let's create a new one")
