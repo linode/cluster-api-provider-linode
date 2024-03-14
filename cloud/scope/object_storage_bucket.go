@@ -142,13 +142,13 @@ func (s *ObjectStorageBucketScope) ShouldRotateKeys() bool {
 }
 
 func (s *ObjectStorageBucketScope) ShouldRestoreKeySecret(ctx context.Context) (bool, error) {
-	if s.Bucket.Status.KeySecretName != nil {
-		secret := &corev1.Secret{}
-		key := client.ObjectKey{Namespace: s.Bucket.Namespace, Name: *s.Bucket.Status.KeySecretName}
-		if err := s.client.Get(ctx, key, secret); err != nil {
-			return apierrors.IsNotFound(err), client.IgnoreNotFound(err)
-		}
+	if s.Bucket.Status.KeySecretName == nil {
+		return false, nil
 	}
 
-	return false, nil
+	secret := &corev1.Secret{}
+	key := client.ObjectKey{Namespace: s.Bucket.Namespace, Name: *s.Bucket.Status.KeySecretName}
+	err := s.client.Get(ctx, key, secret)
+
+	return apierrors.IsNotFound(err), client.IgnoreNotFound(err)
 }
