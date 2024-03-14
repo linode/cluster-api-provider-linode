@@ -243,6 +243,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeObjectStorageBucket{}).
+		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(
 			predicates.ResourceHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
