@@ -56,13 +56,12 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 		},
 		Spec: infrav1.LinodeObjectStorageBucketSpec{
 			Cluster: "cluster",
-			Label:   util.Pointer("sample"),
 		},
 	}
 
 	recorder := record.NewFakeRecorder(3)
 
-	secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, *obj.Spec.Label)
+	secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, obj.Name)
 
 	var secret corev1.Secret
 	var mockCtrl *gomock.Controller
@@ -89,7 +88,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 		createBucketCall := mockClient.EXPECT().
 			CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
 			Return(&linodego.ObjectStorageBucket{
-				Label:    *obj.Spec.Label,
+				Label:    obj.Name,
 				Cluster:  obj.Spec.Cluster,
 				Created:  util.Pointer(time.Now()),
 				Hostname: "hostname",
@@ -107,7 +106,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 							return false
 						}
 
-						return createOpt.Label == fmt.Sprintf("%s-%s", *obj.Spec.Label, permission)
+						return createOpt.Label == fmt.Sprintf("%s-%s", obj.Name, permission)
 					}),
 				).
 				Return(&linodego.ObjectStorageKey{ID: idx}, nil).
