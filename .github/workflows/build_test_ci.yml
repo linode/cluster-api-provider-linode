@@ -54,6 +54,9 @@ jobs:
     - name: Build
       run: make build
 
+    - name: Check for generated diff
+      run: make check-gen-diff
+
     - name: Test
       run: make test
 
