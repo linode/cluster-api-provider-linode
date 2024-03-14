@@ -83,16 +83,6 @@ spec:
                 description: KeyGeneration may be modified to trigger rotations of
                   access keys created for the bucket.
                 type: integer
-              label:
-                description: |-
-                  Label specifies the name of the Object Storage Bucket.
-                  If not supplied then the name of the LinodeObjectStorageBucket resource will be used.
-                maxLength: 63
-                minLength: 3
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
             required:
             - cluster
             type: object
@@ -100,6 +90,12 @@ spec:
             description: LinodeObjectStorageBucketStatus defines the observed state
               of LinodeObjectStorageBucket
             properties:
+              accessKeyRefs:
+                description: AccessKeyRefs stores IDs for Object Storage keys provisioned
+                  along with the bucket.
+                items:
+                  type: integer
+                type: array
               conditions:
                 description: Conditions specify the service state of the LinodeObjectStorageBucket.
                 items:

@@ -10,15 +10,5 @@ metadata:
     app.kubernetes.io/created-by: cluster-api-provider-linode
   name: linodeobjectstoragebucket-sample
 spec:
-  credentialsRef:
-    name: api-key-secret
-    namespace: default
   keyGeneration: 0
   cluster: us-ord-1
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: api-key-secret
-stringData:
-  apiToken: "changeme"

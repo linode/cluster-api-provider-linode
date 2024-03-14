@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -143,10 +144,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		return err
 	}
 
-	if bScope.Bucket.Spec.Label == nil {
-		bScope.Bucket.Spec.Label = util.Pointer(bScope.Bucket.Name)
-	}
-
 	bucket, err := services.EnsureObjectStorageBucket(ctx, bScope)
 	if err != nil {
 		bScope.Logger.Error(err, "Failed to ensure bucket exists")
@@ -165,8 +162,9 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 			return err
 		}
+		bScope.Bucket.Status.AccessKeyRefs = []int{keys[0].ID, keys[1].ID}
 
-		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, *bScope.Bucket.Spec.Label)
+		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bScope.Bucket.Name)
 		if err := bScope.ApplyAccessKeySecret(ctx, keys, secretName); err != nil {
 			bScope.Logger.Error(err, "Failed to apply access key secret")
 			r.setFailure(bScope, err)
@@ -188,38 +186,16 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
 	bScope.Logger.Info("Reconciling delete")
 
-	secret, err := bScope.GetAccessKeySecret(ctx)
-	if err != nil {
-		bScope.Logger.Error(err, "Failed to read secret with access keys to revoke")
-		r.setFailure(bScope, err)
-
-		return err
-	}
-
-	if err := services.RevokeObjectStorageKeys(ctx, bScope, secret); err != nil {
-		bScope.Logger.Error(err, "Failed to revoke access keys; keys must be manually revoked")
-		r.setFailure(bScope, err)
-
-		return err
-	}
-
-	// Only permit Secret and LinodeObjectStorageBucket deletion if keys were revoked
-	if !controllerutil.RemoveFinalizer(secret, infrav1alpha1.GroupVersion.String()) {
-		bScope.Logger.Error(err, "Failed to remove finalizer from secret; will not be deleted")
-		r.setFailure(bScope, err)
-
-		return err
-	}
-
-	if err := r.Client.Update(ctx, secret); err != nil {
-		bScope.Logger.Error(err, "Failed to remove finalizer from secret; will not be deleted")
+	if err := services.RevokeObjectStorageKeys(ctx, bScope); err != nil {
+		bScope.Logger.Error(err, "failed to revoke access keys; keys must be manually revoked")
 		r.setFailure(bScope, err)
 
 		return err
 	}
 
 	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha1.GroupVersion.String()) {
-		bScope.Logger.Error(err, "Failed to remove finalizer from bucket; will not be deleted")
+		err := errors.New("failed to remove finalizer from bucket; unable to delete")
+		bScope.Logger.Error(err, "controllerutil.RemoveFinalizer")
 		r.setFailure(bScope, err)
 
 		return err
