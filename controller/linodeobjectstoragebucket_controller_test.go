@@ -174,16 +174,13 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 			).
 			Times(1)
 
-		for i := range 2 {
+		for idx := range 2 {
 			mockClient.EXPECT().
-				GetObjectStorageKey(gomock.Any(), i).
-				Return(
-					&linodego.ObjectStorageKey{
-						ID:        i,
-						AccessKey: fmt.Sprintf("key-%d", i),
-					},
-					nil,
-				).
+				GetObjectStorageKey(gomock.Any(), idx).
+				Return(&linodego.ObjectStorageKey{
+					ID:        idx,
+					AccessKey: fmt.Sprintf("key-%d", idx),
+				}, nil).
 				Times(1).
 				After(getCall)
 		}

@@ -172,7 +172,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "KeysAssigned", "Object storage keys assigned")
 
 	case bScope.Bucket.Status.AccessKeyRefs != nil:
-		ok, err := bScope.ShouldRestoreKeySecret(ctx)
+		secretDeleted, err := bScope.ShouldRestoreKeySecret(ctx)
 		if err != nil {
 			bScope.Logger.Error(err, "Failed to ensure access key secret exists")
 			r.setFailure(bScope, err)
@@ -180,7 +180,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 			return err
 		}
 
-		if ok {
+		if secretDeleted {
 			sameKeys, err := services.GetObjectStorageKeys(ctx, bScope)
 			if err != nil {
 				bScope.Logger.Error(err, "Failed to restore access keys for deleted secret")
