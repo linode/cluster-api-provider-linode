@@ -92,6 +92,10 @@ generate-mock: mockgen ## Generate mocks for the Linode API client.
 generate-flavors: $(KUSTOMIZE)
 	./hack/generate-flavors.sh
 
+.PHONY: check-gen-diff
+check-gen-diff:
+	git diff --no-ext-diff --quiet --exit-code
+
 ## --------------------------------------
 ## Development
 ## --------------------------------------
@@ -133,7 +137,7 @@ docs:
 ##@ Testing:
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: manifests generate generate-mock fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
 
 .PHONY: e2etest
