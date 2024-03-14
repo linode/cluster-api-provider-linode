@@ -9,7 +9,7 @@ spec:
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
   chartName: ccm-linode
   namespace: kube-system
-  version: ${LINODE_CCM_VERSION:=v0.3.24}
+  version: ${LINODE_CCM_VERSION:=v0.4.1}
   options:
     waitForJobs: true
     wait: true
@@ -17,9 +17,8 @@ spec:
   valuesTemplate: |
     routeController:
       vpcName: ${VPC_NAME:=${CLUSTER_NAME}}
-      linodeNodePrivateSubnet: 10.0.0.0/8
+      clusterCIDR: 10.0.0.0/8
       configureCloudRoutes: true
-      routeReconciliationPeriod: 1m
     secretRef:
       name: "linode-token-region"
     image:
