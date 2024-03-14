@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/linode/linodego"
-	corev1 "k8s.io/api/core/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -17,7 +16,7 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 	bucket, err := bScope.LinodeClient.GetObjectStorageBucket(
 		ctx,
 		bScope.Bucket.Spec.Cluster,
-		*bScope.Bucket.Spec.Label,
+		bScope.Bucket.Name,
 	)
 	linodeErr := &linodego.Error{}
 	if errors.As(err, linodeErr) && linodeErr.StatusCode() != http.StatusNotFound {
@@ -31,7 +30,7 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 
 	opts := linodego.ObjectStorageBucketCreateOptions{
 		Cluster: bScope.Bucket.Spec.Cluster,
-		Label:   *bScope.Bucket.Spec.Label,
+		Label:   bScope.Bucket.Name,
 		ACL:     linodego.ACLPrivate,
 	}
 
@@ -54,7 +53,7 @@ func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBuc
 		{"read_write", "rw"},
 		{"read_only", "ro"},
 	} {
-		keyLabel := fmt.Sprintf("%s-%s", *bScope.Bucket.Spec.Label, permission.suffix)
+		keyLabel := fmt.Sprintf("%s-%s", bScope.Bucket.Name, permission.suffix)
 		key, err := createObjectStorageKey(ctx, bScope, keyLabel, permission.name)
 		if err != nil {
 			return newKeys, err
@@ -65,12 +64,7 @@ func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBuc
 
 	// If key revocation fails here, just log the errors since new keys have been created
 	if bScope.Bucket.Status.LastKeyGeneration != nil && bScope.ShouldRotateKeys() {
-		secret, err := bScope.GetAccessKeySecret(ctx)
-		if err != nil {
-			bScope.Logger.Error(err, "Failed to read secret with access keys to revoke; keys must be manually revoked")
-		}
-
-		if err := RevokeObjectStorageKeys(ctx, bScope, secret); err != nil {
+		if err := RevokeObjectStorageKeys(ctx, bScope); err != nil {
 			bScope.Logger.Error(err, "Failed to revoke access keys; keys must be manually revoked")
 		}
 	}
@@ -83,7 +77,7 @@ func createObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBuck
 		Label: label,
 		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 			{
-				BucketName:  *bScope.Bucket.Spec.Label,
+				BucketName:  bScope.Bucket.Name,
 				Cluster:     bScope.Bucket.Spec.Cluster,
 				Permissions: permission,
 			},
@@ -102,20 +96,9 @@ func createObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBuck
 	return key, nil
 }
 
-func RevokeObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope, secret *corev1.Secret) error {
-	if secret == nil {
-		return errors.New("unable to read access keys from nil secret")
-	}
-
-	keyIDs, err := bScope.GetAccessKeysFromSecret(ctx, secret)
-	if err != nil {
-		bScope.Logger.Error(err, "Failed to read secret with access keys to revoke; must be manually revoked")
-
-		return fmt.Errorf("failed to read secret %s with access keys: %w", secret.Name, err)
-	}
-
+func RevokeObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
 	var errs []error
-	for _, keyID := range keyIDs {
+	for _, keyID := range bScope.Bucket.Status.AccessKeyRefs {
 		if err := revokeObjectStorageKey(ctx, bScope, keyID); err != nil {
 			errs = append(errs, err)
 		}
