@@ -20,7 +20,6 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 	machineSpec := infrav1alpha1.LinodeMachineSpec{
 		Region:          "region",
 		Type:            "type",
-		Label:           "label",
 		Group:           "group",
 		RootPass:        "rootPass",
 		AuthorizedKeys:  []string{"key"},

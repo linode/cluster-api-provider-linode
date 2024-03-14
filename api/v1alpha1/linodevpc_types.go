@@ -29,12 +29,6 @@ import (
 type LinodeVPCSpec struct {
 	// +optional
 	VPCID *int `json:"vpcID,omitempty"`
-
-	// +kubebuilder:validation:MinLength=3
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	Label string `json:"label,omitempty"`
 	// +optional
 	Description string `json:"description,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
@@ -109,8 +103,8 @@ type LinodeVPCStatus struct {
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // LinodeVPC is the Schema for the linodemachines API
 type LinodeVPC struct {
@@ -129,7 +123,7 @@ func (lm *LinodeVPC) SetConditions(conditions clusterv1.Conditions) {
 	lm.Status.Conditions = conditions
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // LinodeVPCList contains a list of LinodeVPC
 type LinodeVPCList struct {
