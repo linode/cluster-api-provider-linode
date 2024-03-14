@@ -165,7 +165,6 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
 	if err != nil {
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
-
 		return err
 	}
 
