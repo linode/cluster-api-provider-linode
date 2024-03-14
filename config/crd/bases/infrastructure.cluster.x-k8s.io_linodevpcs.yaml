@@ -56,13 +56,6 @@ spec:
                 x-kubernetes-map-type: atomic
               description:
                 type: string
-              label:
-                maxLength: 63
-                minLength: 3
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               region:
                 type: string
                 x-kubernetes-validations:
