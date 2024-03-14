@@ -34,14 +34,6 @@ type LinodeObjectStorageBucketSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Cluster string `json:"cluster"`
 
-	// Label specifies the name of the Object Storage Bucket.
-	// If not supplied then the name of the LinodeObjectStorageBucket resource will be used.
-	// +kubebuilder:validation:MinLength=3
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	Label *string `json:"label,omitempty"`
-
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
 	// If not supplied then the credentials of the controller will be used.
 	// +optional
@@ -88,6 +80,10 @@ type LinodeObjectStorageBucketStatus struct {
 	// KeySecretName specifies the name of the Secret containing access keys for the bucket.
 	// +optional
 	KeySecretName *string `json:"keySecretName,omitempty"`
+
+	// AccessKeyRefs stores IDs for Object Storage keys provisioned along with the bucket.
+	// +optional
+	AccessKeyRefs []int `json:"accessKeyRefs,omitempty"`
 }
 
 // +kubebuilder:object:root=true
