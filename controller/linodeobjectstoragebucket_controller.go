@@ -156,6 +156,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		err = fmt.Errorf("bucket created is nil")
 		bScope.Logger.Error(err, "Failed to ensure bucket exists")
 		r.setFailure(bScope, err)
+		return err
 	}
 
 	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
