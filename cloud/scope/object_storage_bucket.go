@@ -10,21 +10,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
 
 type ObjectStorageBucketScopeParams struct {
-	Client              client.Client
+	Client              k8sClient
 	LinodeClientBuilder LinodeObjectStorageClientBuilder
 	Bucket              *infrav1alpha1.LinodeObjectStorageBucket
 	Logger              *logr.Logger
 }
 
 type ObjectStorageBucketScope struct {
-	client            client.Client
+	client            k8sClient
 	Bucket            *infrav1alpha1.LinodeObjectStorageBucket
 	Logger            logr.Logger
 	LinodeClient      LinodeObjectStorageClient
