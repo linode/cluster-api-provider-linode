@@ -140,7 +140,7 @@ docs:
 
 .PHONY: test
 test: generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
 
 .PHONY: e2etest
 e2etest: generate local-deploy chainsaw

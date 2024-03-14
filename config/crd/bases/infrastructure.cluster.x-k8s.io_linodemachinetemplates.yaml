@@ -150,13 +150,6 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
-                      label:
-                        maxLength: 63
-                        minLength: 3
-                        type: string
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
                       metadata:
                         description: InstanceMetadataOptions defines metadata of instance
                         properties:

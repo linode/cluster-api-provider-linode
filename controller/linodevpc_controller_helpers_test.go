@@ -15,7 +15,6 @@ func TestLinodeVPCSpecToCreateVPCConfig(t *testing.T) {
 	t.Parallel()
 
 	vpcSpec := infrav1alpha1.LinodeVPCSpec{
-		Label:       "label",
 		Description: "description",
 		Region:      "region",
 		Subnets: []infrav1alpha1.VPCSubnetCreateOptions{
