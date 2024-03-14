@@ -75,13 +75,15 @@ help: ## Display this help.
 ## --------------------------------------
 
 ##@ Generate:
+.PHONY: generate
+generate: generate-manifests generate-code generate-mock
 
-.PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+.PHONY: generate-manifests
+generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
-.PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+.PHONY: generate-code
+generate-code: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: generate-mock
@@ -91,6 +93,10 @@ generate-mock: mockgen ## Generate mocks for the Linode API client.
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
 	./hack/generate-flavors.sh
+
+.PHONY: check-gen-diff
+check-gen-diff:
+	git diff --no-ext-diff --quiet --exit-code
 
 ## --------------------------------------
 ## Development
@@ -133,11 +139,11 @@ docs:
 ##@ Testing:
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s ./... -coverprofile cover.out
 
 .PHONY: e2etest
-e2etest: manifests generate local-deploy chainsaw
+e2etest: generate local-deploy chainsaw
 	$(CHAINSAW) test ./e2e
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
@@ -150,7 +156,7 @@ local-deploy: kind ctlptl tilt kustomize clusterctl
 ## --------------------------------------
 
 .PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
+build: generate fmt vet ## Build manager binary.
 	go build -ldflags="-X github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)" -o bin/manager cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
