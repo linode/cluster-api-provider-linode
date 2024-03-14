@@ -114,11 +114,11 @@ func (s *ObjectStorageBucketScope) ApplyKeySecret(ctx context.Context, keys [Num
 		},
 	}
 
-	if err := controllerutil.SetOwnerReference(s.Bucket, secret, s.client.Scheme()); err != nil {
+	scheme := s.client.Scheme()
+	if err := controllerutil.SetOwnerReference(s.Bucket, secret, scheme); err != nil {
 		return fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
 	}
-
-	if err := controllerutil.SetControllerReference(s.Bucket, secret, s.client.Scheme()); err != nil {
+	if err := controllerutil.SetControllerReference(s.Bucket, secret, scheme); err != nil {
 		return fmt.Errorf("could not set controller ref on access key secret %s: %w", secretName, err)
 	}
 

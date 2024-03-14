@@ -245,7 +245,7 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 		expects func(mock *mock.Mockk8sClient)
 	}{
 		{
-			name:   "Success - finalizer should be added to the Linode Machine object",
+			name:   "Success - finalizer should be added to the Linode Object Storage Bucket object",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
 			expects: func(mock *mock.Mockk8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
@@ -308,7 +308,7 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 	}
 }
 
-func TestApplyAccessKeySecretUpdate(t *testing.T) {
+func TestApplyKeySecretUpdate(t *testing.T) {
 	t.Parallel()
 	type args struct {
 		keys       [NumAccessKeys]linodego.ObjectStorageKey
@@ -322,7 +322,7 @@ func TestApplyAccessKeySecretUpdate(t *testing.T) {
 		expects     func(mock *mock.Mockk8sClient)
 	}{
 		{
-			name: "Success - Create/Patch access key secret. Return no error",
+			name: "Success - Create/Update access key secret. Return no error",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
@@ -370,13 +370,13 @@ func TestApplyAccessKeySecretUpdate(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
-				})
+				}).Times(1)
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectedErr: nil,
 		},
 		{
-			name: "Error - could not create/patch access key secret",
+			name: "Error - could not create/update access key secret",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
@@ -410,10 +410,10 @@ func TestApplyAccessKeySecretUpdate(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
-				})
+				}).Times(1)
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("could not update secret")).Times(1)
 			},
-			expectedErr: fmt.Errorf("could not create/patch access key secret"),
+			expectedErr: fmt.Errorf("could not create/update access key secret"),
 		},
 		{
 			name: "Error - controllerutil.SetOwnerReference() return an error",
