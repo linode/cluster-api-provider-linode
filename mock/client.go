@@ -18,7 +18,6 @@ import (
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
-	patch "sigs.k8s.io/cluster-api/util/patch"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -359,46 +358,4 @@ func (mr *Mockk8sClientMockRecorder) Update(ctx, obj any, opts ...any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*Mockk8sClient)(nil).Update), varargs...)
-}
-
-// MockPatchHelper is a mock of PatchHelper interface.
-type MockPatchHelper struct {
-	ctrl     *gomock.Controller
-	recorder *MockPatchHelperMockRecorder
-}
-
-// MockPatchHelperMockRecorder is the mock recorder for MockPatchHelper.
-type MockPatchHelperMockRecorder struct {
-	mock *MockPatchHelper
-}
-
-// NewMockPatchHelper creates a new mock instance.
-func NewMockPatchHelper(ctrl *gomock.Controller) *MockPatchHelper {
-	mock := &MockPatchHelper{ctrl: ctrl}
-	mock.recorder = &MockPatchHelperMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockPatchHelper) EXPECT() *MockPatchHelperMockRecorder {
-	return m.recorder
-}
-
-// Patch mocks base method.
-func (m *MockPatchHelper) Patch(ctx context.Context, obj client.Object, opts ...patch.Option) error {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, obj}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Patch", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Patch indicates an expected call of Patch.
-func (mr *MockPatchHelperMockRecorder) Patch(ctx, obj any, opts ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, obj}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockPatchHelper)(nil).Patch), varargs...)
 }
