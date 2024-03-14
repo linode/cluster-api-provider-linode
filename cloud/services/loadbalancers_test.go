@@ -10,6 +10,9 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestCreateNodeBalancer(t *testing.T) {
@@ -25,7 +28,25 @@ func TestCreateNodeBalancer(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{
-			name: "",
+			name: "Success - Create NodeBalancer",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha1.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:   "test-uid",
+					},
+					Spec: infrav1alpha1.LinodeClusterSpec{
+						Network: infrav1alpha1.NetworkSpec{
+							NodeBalancerID: nil,
+						},
+					},
+				},
+			},
+			expects: func(mock *mock.MockLinodeClient) {
+				mock.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{}, nil)
+				mock.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancer{}, nil)
+			},
+			
 		},
 	}
 	for _, tt := range tests {
@@ -38,11 +59,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 
 			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
 
-			mockLinodeClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{
-				{
-					ID: 1,
-				},
-			}, nil)
+			testcase.expects(mockLinodeClient)
 
 			got, err := CreateNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
 			if (err != nil) != testcase.wantErr {
