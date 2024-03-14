@@ -145,7 +145,10 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	}
 
 	bucket, err := services.EnsureObjectStorageBucket(ctx, bScope)
-	if err != nil {
+	if err != nil || bucket == nil {
+		if err == nil {
+			err = fmt.Errorf("bucket created is nil")
+		}
 		bScope.Logger.Error(err, "Failed to ensure bucket exists")
 		r.setFailure(bScope, err)
 
