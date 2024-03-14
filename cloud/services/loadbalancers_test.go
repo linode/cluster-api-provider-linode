@@ -14,16 +14,14 @@ import (
 
 func TestCreateNodeBalancer(t *testing.T) {
 	t.Parallel()
-	type args struct {
-		ctx          context.Context
-		clusterScope *scope.ClusterScope
-		logger       logr.Logger
-	}
 	tests := []struct {
 		name    string
-		args    args
+		clusterScope *scope.ClusterScope
 		want    *linodego.NodeBalancer
 		wantErr bool
+		expects func(mock *mock.MockLinodeClient)
+		expectedNodeBalancer *linodego.NodeBalancer
+		expected error
 	}{
 		// TODO: Add test cases.
 		{
@@ -38,10 +36,15 @@ func TestCreateNodeBalancer(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockLinodeClient := mock.NewMockLinodeObjectStorageClient(ctrl)
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
 
+			mockLinodeClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{
+				{
+					ID: 1,
+				},
+			}, nil)
 
-			got, err := CreateNodeBalancer(testcase.args.ctx, testcase.args.clusterScope, testcase.args.logger)
+			got, err := CreateNodeBalancer(context.Background(), testcase.args.clusterScope, logr.Discard())
 			if (err != nil) != testcase.wantErr {
 				t.Errorf("CreateNodeBalancer() error = %v, wantErr %v", err, testcase.wantErr)
 				return

@@ -40,8 +40,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func mockClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.LinodeObjectStorageClientBuilder {
-	return func(_ string) (scope.LinodeObjectStorageClient, error) {
+func mockClientBuilder(m *mock.MockLinodeClient) scope.LinodeClientBuilder {
+	return func(_ string) (scope.LinodeClient, error) {
 		return m, nil
 	}
 }
@@ -78,7 +78,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 	})
 
 	It("should reconcile an object apply", func() {
-		mockClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)
+		mockClient := mock.NewMockLinodeClient(mockCtrl)
 
 		getCall := mockClient.EXPECT().
 			GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).
@@ -150,7 +150,7 @@ var _ = Describe("LinodeObjectStorageBucket controller", func() {
 	})
 
 	It("should reconcile an object delete", func() {
-		mockClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)
+		mockClient := mock.NewMockLinodeClient(mockCtrl)
 
 		for i := range 2 {
 			mockClient.EXPECT().

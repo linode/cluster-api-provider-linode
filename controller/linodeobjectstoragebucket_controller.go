@@ -51,7 +51,7 @@ type LinodeObjectStorageBucketReconciler struct {
 	Logger              logr.Logger
 	Recorder            record.EventRecorder
 	LinodeApiKey        string
-	LinodeClientBuilder scope.LinodeObjectStorageClientBuilder
+	LinodeClientBuilder scope.LinodeClientBuilder
 	WatchFilterValue    string
 	ReconcileTimeout    time.Duration
 }
