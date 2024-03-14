@@ -322,7 +322,7 @@ func TestApplyAccessKeySecretUpdate(t *testing.T) {
 		expects     func(mock *mock.Mockk8sClient)
 	}{
 		{
-			name: "Success - Update access key secret. Return no error",
+			name: "Success - Create/Patch access key secret. Return no error",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
@@ -371,12 +371,12 @@ func TestApplyAccessKeySecretUpdate(t *testing.T) {
 					infrav1alpha1.AddToScheme(s)
 					return s
 				})
-				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectedErr: nil,
 		},
 		{
-			name: "Error - Update access key secret: Could not update secret",
+			name: "Error - could not create/patch access key secret",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
@@ -411,124 +411,9 @@ func TestApplyAccessKeySecretUpdate(t *testing.T) {
 					infrav1alpha1.AddToScheme(s)
 					return s
 				})
-				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(fmt.Errorf("could not update secret")).Times(1)
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("could not update secret")).Times(1)
 			},
-			expectedErr: fmt.Errorf("could not update access key secret"),
-		},
-	}
-	for _, tt := range tests {
-		testcase := tt
-		t.Run(testcase.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
-			testcase.expects(mockK8sClient)
-
-			objScope := &ObjectStorageBucketScope{
-				client:            mockK8sClient,
-				Bucket:            testcase.Bucket,
-				Logger:            logr.Logger{},
-				LinodeClient:      nil,
-				BucketPatchHelper: nil,
-			}
-
-			err := objScope.ApplyAccessKeySecret(context.Background(), testcase.args.keys, testcase.args.secretName)
-			if testcase.expectedErr != nil {
-				assert.ErrorContains(t, err, testcase.expectedErr.Error())
-			}
-		})
-	}
-}
-
-func TestApplyAccessKeySecretCreate(t *testing.T) {
-	t.Parallel()
-	type args struct {
-		keys       [NumAccessKeys]linodego.ObjectStorageKey
-		secretName string
-	}
-	tests := []struct {
-		name        string
-		Bucket      *infrav1alpha1.LinodeObjectStorageBucket
-		args        args
-		expectedErr error
-		expects     func(mock *mock.Mockk8sClient)
-	}{
-		{
-			name: "Success - Create access key secret. Return no error",
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
-					Namespace: "test-namespace",
-				},
-			},
-			args: args{
-				keys: [NumAccessKeys]linodego.ObjectStorageKey{
-					{
-						ID:        1,
-						Label:     "read_write",
-						SecretKey: "read_write_key",
-						AccessKey: "read_write_access_key",
-						Limited:   false,
-						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
-							{
-								BucketName:  "bucket",
-								Cluster:     "test-bucket",
-								Permissions: "read_write",
-							},
-						},
-					},
-				},
-				secretName: "test-secret",
-			},
-			expects: func(mock *mock.Mockk8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
-					return s
-				})
-				mock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil).Times(1)
-			},
-			expectedErr: nil,
-		},
-		{
-			name: "Error - Create access key secret: Returns an error. Could not create secret",
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
-					Namespace: "test-namespace",
-				},
-			},
-			args: args{
-				keys: [NumAccessKeys]linodego.ObjectStorageKey{
-					{
-						ID:        1,
-						Label:     "read_write",
-						SecretKey: "read_write_key",
-						AccessKey: "read_write_access_key",
-						Limited:   false,
-						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
-							{
-								BucketName:  "bucket",
-								Cluster:     "test-bucket",
-								Permissions: "read_write",
-							},
-						},
-					},
-				},
-				secretName: "test-secret",
-			},
-			expects: func(mock *mock.Mockk8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
-					return s
-				})
-				mock.EXPECT().Create(gomock.Any(), gomock.Any()).Return(fmt.Errorf("could not create access key secret")).Times(1)
-			},
-			expectedErr: fmt.Errorf("could not create access key secret"),
+			expectedErr: fmt.Errorf("could not create/patch access key secret"),
 		},
 		{
 			name: "Error - controllerutil.SetOwnerReference() return an error",
@@ -579,158 +464,6 @@ func TestApplyAccessKeySecretCreate(t *testing.T) {
 			err := objScope.ApplyAccessKeySecret(context.Background(), testcase.args.keys, testcase.args.secretName)
 			if testcase.expectedErr != nil {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())
-			}
-		})
-	}
-}
-
-func TestGetAccessKeySecret(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name         string
-		wantedSecret *corev1.Secret
-		bucket       *infrav1alpha1.LinodeObjectStorageBucket
-		expectedErr  error
-		expects      func(k8s *mock.Mockk8sClient)
-	}{
-		{
-			name: "Success - Get secret successfully",
-			wantedSecret: &corev1.Secret{
-				Data: map[string][]byte{
-					"read_write": []byte(`{"id":1}`),
-					"read_only":  []byte(`{"id":2}`),
-				},
-			},
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
-					Namespace: "test-namespace",
-				},
-				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-					Label: ptr.To("test-label"),
-				},
-			},
-			expects: func(k8s *mock.Mockk8sClient) {
-				k8s.EXPECT().Get(context.Background(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"read_write": []byte(`{"id":1}`),
-							"read_only":  []byte(`{"id":2}`),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-			},
-		},
-		{
-			name:         "Fail - Get secret fails",
-			wantedSecret: nil,
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
-					Namespace: "test-namespace",
-				},
-				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-					Label: ptr.To("test-label"),
-				},
-			},
-			expects: func(k8s *mock.Mockk8sClient) {
-				k8s.EXPECT().Get(context.Background(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
-			},
-			expectedErr: fmt.Errorf("failed to get secret"),
-		},
-	}
-	for _, tt := range tests {
-		testcase := tt
-		t.Run(testcase.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
-			testcase.expects(mockK8sClient)
-
-			objScope := &ObjectStorageBucketScope{
-				client:            mockK8sClient,
-				Bucket:            testcase.bucket,
-				Logger:            logr.Logger{},
-				LinodeClient:      nil,
-				BucketPatchHelper: nil,
-			}
-			got, err := objScope.GetAccessKeySecret(context.Background())
-			if testcase.expectedErr != nil {
-				assert.ErrorContains(t, err, testcase.expectedErr.Error())
-			} else {
-				assert.NotEmpty(t, got)
-				assert.Equal(t, testcase.wantedSecret, got)
-			}
-		})
-	}
-}
-
-func TestGetAccessKeysFromSecret(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name        string
-		want        [NumAccessKeys]int
-		wantErr     bool
-		expectedErr error
-		secret      *corev1.Secret
-	}{
-		{
-			name:        "Valid Secret",
-			want:        [NumAccessKeys]int{1, 2},
-			wantErr:     false,
-			expectedErr: nil,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"read_write": []byte(`{"id":1}`),
-					"read_only":  []byte(`{"id":2}`),
-				},
-			},
-		},
-		{
-			name:        "Error - Invalid Secret. Missing read_only key",
-			want:        [NumAccessKeys]int{},
-			wantErr:     true,
-			expectedErr: fmt.Errorf("missing data field read_only"),
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"read_write": []byte(`{"id":1}`),
-				},
-			},
-		},
-		{
-			name:        "Error - Invalid Secret. JSON unmarshal error",
-			want:        [NumAccessKeys]int{},
-			wantErr:     true,
-			expectedErr: fmt.Errorf("error unmarshaling key:"),
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					"read_write": []byte(`1`),
-					"read_only":  []byte(`{"id":2}`),
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		tescase := tt
-		t.Run(tescase.name, func(t *testing.T) {
-			t.Parallel()
-			objScope := &ObjectStorageBucketScope{
-				client:            nil,
-				Bucket:            nil,
-				Logger:            logr.Logger{},
-				LinodeClient:      nil,
-				BucketPatchHelper: nil,
-			}
-			got, err := objScope.GetAccessKeysFromSecret(context.Background(), tescase.secret)
-			if tescase.expectedErr != nil {
-				assert.ErrorContains(t, err, tescase.expectedErr.Error())
-			} else {
-				assert.NotEmpty(t, got)
 			}
 		})
 	}
