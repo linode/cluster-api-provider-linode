@@ -162,10 +162,13 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 
 func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
-	if err != nil || linodeNB == nil {
-		if err == nil {
-			err = fmt.Errorf("nodeBalancer created was nil")
-		}
+	if err != nil {
+		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+		return err
+	}
+
+	if linodeNB == nil {
+		err = fmt.Errorf("nodeBalancer created was nil")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		return err
 	}
