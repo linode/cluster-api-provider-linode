@@ -44,7 +44,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 				},
 			}, nil)
 
-			got, err := CreateNodeBalancer(context.Background(), testcase.args.clusterScope, logr.Discard())
+			got, err := CreateNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
 			if (err != nil) != testcase.wantErr {
 				t.Errorf("CreateNodeBalancer() error = %v, wantErr %v", err, testcase.wantErr)
 				return
