@@ -461,7 +461,7 @@ func TestApplyAccessKeySecretUpdate(t *testing.T) {
 				BucketPatchHelper: nil,
 			}
 
-			err := objScope.ApplyAccessKeySecret(context.Background(), testcase.args.keys, testcase.args.secretName)
+			err := objScope.ApplyKeySecret(context.Background(), testcase.args.keys, testcase.args.secretName)
 			if testcase.expectedErr != nil {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())
 			}
