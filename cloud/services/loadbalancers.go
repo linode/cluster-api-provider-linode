@@ -60,18 +60,12 @@ func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 		Tags:   tags,
 	}
 
-	if linodeNB, err = clusterScope.LinodeClient.CreateNodeBalancer(ctx, createConfig); err != nil {
-		logger.Info("Failed to create Linode NodeBalancer", "error", err.Error())
-
-		// Already exists is not an error
-		apiErr := linodego.Error{}
-		if errors.As(err, &apiErr) && apiErr.Code != http.StatusFound {
-			return nil, err
-		}
-
-		if linodeNB != nil {
-			logger.Info("Linode NodeBalancer already exists", "existing", linodeNB.Label)
-		}
+	linodeNB, err = clusterScope.LinodeClient.CreateNodeBalancer(ctx, createConfig)
+	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+		return nil, err
+	}
+	if linodeNB != nil {
+		logger.Info("Linode NodeBalancer already exists", "existing", linodeNB.Label)
 	}
 
 	return linodeNB, nil
