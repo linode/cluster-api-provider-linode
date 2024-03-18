@@ -3,7 +3,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeMachine
 metadata:
   labels:
-    cluster.x-k8s.io/cluster-name: vpc-cluster-test
+    cluster.x-k8s.io/cluster-name: ($cluster)
 spec:
   region: us-sea
   type: g5-nanode-1
@@ -15,9 +15,9 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: Machine
 metadata:
   labels:
-    cluster.x-k8s.io/cluster-name: vpc-cluster-test
+    cluster.x-k8s.io/cluster-name: ($cluster)
 spec:
-  clusterName: vpc-cluster-test
+  clusterName: ($cluster)
 status:
   bootstrapReady: true
   infrastructureReady: true
