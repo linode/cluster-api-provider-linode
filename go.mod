@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/linode/linodego v1.30.0
 	github.com/onsi/ginkgo/v2 v2.16.0
-	github.com/onsi/gomega v1.31.1
+	github.com/onsi/gomega v1.32.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/mock v0.4.0
