@@ -2,6 +2,7 @@ package scope
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -10,8 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -469,6 +472,48 @@ func TestApplyKeySecretUpdate(t *testing.T) {
 	}
 }
 
+func TestShouldInitKeys(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		want   bool
+		Bucket *infrav1alpha1.LinodeObjectStorageBucket
+	}{
+		{
+			name: "should init keys",
+			want: true,
+			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					KeyGeneration: ptr.To(1),
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					LastKeyGeneration: nil,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			objScope := &ObjectStorageBucketScope{
+				client:            nil,
+				Bucket:            testcase.Bucket,
+				Logger:            logr.Logger{},
+				LinodeClient:      &linodego.Client{},
+				BucketPatchHelper: &patch.Helper{},
+			}
+
+			shouldInit := objScope.ShouldInitKeys()
+
+			if shouldInit != testcase.want {
+				t.Errorf("ObjectStorageBucketScope.ShouldInitKeys() = %v, want %v", shouldInit, testcase.want)
+			}
+		})
+	}
+}
+
 func TestShouldRotateKeys(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -506,6 +551,110 @@ func TestShouldRotateKeys(t *testing.T) {
 
 			if rotate != testcase.want {
 				t.Errorf("ObjectStorageBucketScope.ShouldRotateKeys() = %v, want %v", rotate, testcase.want)
+			}
+		})
+	}
+}
+
+func TestShouldRestoreKeySecret(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		bucket      *infrav1alpha1.LinodeObjectStorageBucket
+		expects     func(k8s *mock.Mockk8sClient)
+		want        bool
+		expectedErr error
+	}{
+		{
+			name: "status has no secret name",
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					KeySecretName: nil,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "status has secret name and secret exists",
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bucket",
+					Namespace: "ns",
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					KeySecretName: ptr.To("secret"),
+				},
+			},
+			expects: func(k8s *mock.Mockk8sClient) {
+				k8s.EXPECT().
+					Get(gomock.Any(), client.ObjectKey{Namespace: "ns", Name: "secret"}, gomock.Any()).
+					Return(nil)
+			},
+			want: false,
+		},
+		{
+			name: "status has secret name and secret is missing",
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bucket",
+					Namespace: "ns",
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					KeySecretName: ptr.To("secret"),
+				},
+			},
+			expects: func(k8s *mock.Mockk8sClient) {
+				k8s.EXPECT().
+					Get(gomock.Any(), client.ObjectKey{Namespace: "ns", Name: "secret"}, gomock.Any()).
+					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "secret"))
+			},
+			want: true,
+		},
+		{
+			name: "non-404 api error",
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bucket",
+					Namespace: "ns",
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					KeySecretName: ptr.To("secret"),
+				},
+			},
+			expects: func(k8s *mock.Mockk8sClient) {
+				k8s.EXPECT().
+					Get(gomock.Any(), client.ObjectKey{Namespace: "ns", Name: "secret"}, gomock.Any()).
+					Return(errors.New("unexpected error"))
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var mockClient *mock.Mockk8sClient
+			if testcase.expects != nil {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				mockClient = mock.NewMockk8sClient(ctrl)
+				testcase.expects(mockClient)
+			}
+
+			objScope := &ObjectStorageBucketScope{
+				client: mockClient,
+				Bucket: testcase.bucket,
+			}
+
+			restore, err := objScope.ShouldRestoreKeySecret(context.TODO())
+			if testcase.expectedErr != nil {
+				assert.ErrorContains(t, err, testcase.expectedErr.Error())
+			}
+
+			if restore != testcase.want {
+				t.Errorf("ObjectStorageBucketScope.ShouldRotateKeys() = %v, want %v", restore, testcase.want)
 			}
 		})
 	}
