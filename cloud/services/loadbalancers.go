@@ -31,7 +31,11 @@ func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 		Label: NBLabel,
 		Tags:  tags,
 	}
-	linodeNBs, err := clusterScope.LinodeClient.ListNodeBalancers(ctx, linodego.NewListOptions(1, listFilter.String()))
+	filter, err := listFilter.String()
+	if err != nil {
+		return nil, err
+	}
+	linodeNBs, err := clusterScope.LinodeClient.ListNodeBalancers(ctx, linodego.NewListOptions(1, filter))
 	if err != nil {
 		logger.Info("Failed to list NodeBalancers", "error", err.Error())
 

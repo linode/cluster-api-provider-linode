@@ -248,7 +248,11 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		Label: machineScope.LinodeMachine.Name,
 		Tags:  tags,
 	}
-	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, listFilter.String()))
+	filter, err := listFilter.String()
+	if err != nil {
+		return nil, err
+	}
+	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
 	if err != nil {
 		logger.Error(err, "Failed to list Linode machine instances")
 
