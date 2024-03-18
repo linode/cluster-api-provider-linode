@@ -46,7 +46,11 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 		Label: createConfig.Label,
 		Tags:  nil,
 	}
-	if vpcs, err := vpcScope.LinodeClient.ListVPCs(ctx, linodego.NewListOptions(1, listFilter.String())); err != nil {
+	filter, err := listFilter.String()
+	if err != nil {
+		return err
+	}
+	if vpcs, err := vpcScope.LinodeClient.ListVPCs(ctx, linodego.NewListOptions(1, filter)); err != nil {
 		logger.Error(err, "Failed to list VPCs")
 
 		return err

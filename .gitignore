@@ -2,7 +2,7 @@
 .idea
 bin/*
 kind-logs-*
-cover.out
+cover.out*
 kubeconfig*
 .devbox/*
 docs/book

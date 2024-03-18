@@ -35,11 +35,11 @@ func (f Filter) MarshalJSON() ([]byte, error) {
 
 // String returns the string representation of the encoded value from
 // [Filter.MarshalJSON].
-func (f Filter) String() string {
+func (f Filter) String() (string, error) {
 	p, err := f.MarshalJSON()
 	if err != nil {
-		panic("this should not have failed")
+		return "", err
 	}
 
-	return string(p)
+	return string(p), nil
 }
