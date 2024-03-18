@@ -114,6 +114,11 @@ func AddNodeToNB(
 	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
 		return nil
 	}
+
+	if machineScope.LinodeMachine.Spec.InstanceID == nil {
+		return errors.New("no InstanceID set for LinodeMachine.Spec")
+	}
+
 	// Get the private IP that was assigned
 	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
 	if err != nil {
@@ -132,12 +137,21 @@ func AddNodeToNB(
 	if machineScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
 		lbPort = machineScope.LinodeCluster.Spec.Network.LoadBalancerPort
 	}
+
 	if machineScope.LinodeCluster.Spec.Network.NodeBalancerConfigID == nil {
 		err := errors.New("nil NodeBalancer Config ID")
 		logger.Error(err, "config ID for NodeBalancer is nil")
 
 		return err
 	}
+
+	if machineScope.LinodeCluster.Spec.Network.NodeBalancerID == nil {
+		err := errors.New("nil NodeBalancer ID")
+		logger.Error(err, "NodeBalancer ID is nil")
+
+		return err
+	}
+
 	_, err = machineScope.LinodeClient.CreateNodeBalancerNode(
 		ctx,
 		*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
@@ -169,7 +183,7 @@ func DeleteNodeFromNB(
 	}
 
 	if machineScope.LinodeMachine.Spec.InstanceID == nil {
-		return errors.New("no InstanceID")
+		return errors.New("no InstanceID set for LinodeMachine.Spec")
 	}
 
 	if machineScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {

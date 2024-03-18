@@ -7,7 +7,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// LinodeClient defines functions suitable for provisioning object storage buckets and keys.
+// LinodeClient defines around the LinodeGo Client. It defines all the functions that are required to create, delete, and get resources
+// from Linode such as object storage buckets, node balancers, linodes, VPCs, etc.
 type LinodeClient interface {
 	GetObjectStorageBucket(ctx context.Context, cluster, label string) (*linodego.ObjectStorageBucket, error)
 	CreateObjectStorageBucket(ctx context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error)
@@ -19,6 +20,17 @@ type LinodeClient interface {
 	GetInstanceIPAddresses(ctx context.Context, linodeID int) (*linodego.InstanceIPAddressResponse, error)
 	DeleteNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, nodeID int) error
 	DeleteNodeBalancer(ctx context.Context, nodebalancerID int) error
+	CreateNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, opts linodego.NodeBalancerNodeCreateOptions) (*linodego.NodeBalancerNode, error)
+	ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error)
+	CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error)
+	BootInstance(ctx context.Context, linodeID int, configID int) error
+	ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error)
+	GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (*linodego.InstanceDisk, error)
+	ResizeInstanceDisk(ctx context.Context, linodeID int, diskID int, size int) error
+	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
+	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
+	DeleteInstance(ctx context.Context, linodeID int) error
+	GetVPC(ctx context.Context, vpcID int) (*linodego.VPC, error)
 }
 
 // LinodeClientBuilder is a function that returns a LinodeClient.
