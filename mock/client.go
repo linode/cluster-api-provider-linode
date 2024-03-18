@@ -104,6 +104,20 @@ func (mr *MockLinodeClientMockRecorder) CreateObjectStorageKey(ctx, opts any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateObjectStorageKey", reflect.TypeOf((*MockLinodeClient)(nil).CreateObjectStorageKey), ctx, opts)
 }
 
+// DeleteNodeBalancer mocks base method.
+func (m *MockLinodeClient) DeleteNodeBalancer(ctx context.Context, nodebalancerID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteNodeBalancer", ctx, nodebalancerID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteNodeBalancer indicates an expected call of DeleteNodeBalancer.
+func (mr *MockLinodeClientMockRecorder) DeleteNodeBalancer(ctx, nodebalancerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNodeBalancer", reflect.TypeOf((*MockLinodeClient)(nil).DeleteNodeBalancer), ctx, nodebalancerID)
+}
+
 // DeleteNodeBalancerNode mocks base method.
 func (m *MockLinodeClient) DeleteNodeBalancerNode(ctx context.Context, nodebalancerID, configID, nodeID int) error {
 	m.ctrl.T.Helper()

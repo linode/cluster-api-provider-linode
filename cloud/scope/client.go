@@ -18,6 +18,7 @@ type LinodeClient interface {
 	CreateNodeBalancerConfig(ctx context.Context, nodebalancerID int, opts linodego.NodeBalancerConfigCreateOptions) (*linodego.NodeBalancerConfig, error)
 	GetInstanceIPAddresses(ctx context.Context, linodeID int) (*linodego.InstanceIPAddressResponse, error)
 	DeleteNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, nodeID int) error
+	DeleteNodeBalancer(ctx context.Context, nodebalancerID int) error
 }
 
 // LinodeClientBuilder is a function that returns a LinodeClient.
