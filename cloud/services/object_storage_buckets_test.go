@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"testing"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 func TestEnsureObjectStorageBucket(t *testing.T) {
@@ -174,17 +175,17 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(c *mock.MockLinodeClient) {
-				c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+			expects: func(mock *mock.MockLinodeClient) {
+				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-rw",
 					ID:    1234,
 				}, nil)
-				c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-ro",
 					ID:    5678,
 				}, nil)
-				c.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
-				c.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
+				mock.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
+				mock.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		{
@@ -218,16 +219,16 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(c *mock.MockLinodeClient) {
-				c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+			expects: func(mock *mock.MockLinodeClient) {
+				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-rw",
 					ID:    1234,
 				}, nil)
-				c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-ro",
 					ID:    5678,
 				}, nil)
-				c.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error in deleting access key")).Times(2)
+				mock.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error in deleting access key")).Times(2)
 			},
 		},
 		{
