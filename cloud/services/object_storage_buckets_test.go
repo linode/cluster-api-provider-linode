@@ -16,6 +16,8 @@ import (
 )
 
 func TestGetObjectStorageKeys(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		bScope  *scope.ObjectStorageBucketScope
@@ -32,8 +34,8 @@ func TestGetObjectStorageKeys(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mc *mock.MockLinodeObjectStorageClient) {
-				mc.EXPECT().
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				mockClient.EXPECT().
 					GetObjectStorageKey(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(_ any, keyID int) (*linodego.ObjectStorageKey, error) {
 						return &linodego.ObjectStorageKey{ID: keyID}, nil
@@ -60,13 +62,13 @@ func TestGetObjectStorageKeys(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mc *mock.MockLinodeObjectStorageClient) {
-				mc.EXPECT().
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				mockClient.EXPECT().
 					GetObjectStorageKey(gomock.Any(), 0).
 					DoAndReturn(func(_ any, keyID int) (*linodego.ObjectStorageKey, error) {
 						return &linodego.ObjectStorageKey{ID: keyID}, nil
 					})
-				mc.EXPECT().
+				mockClient.EXPECT().
 					GetObjectStorageKey(gomock.Any(), 1).
 					DoAndReturn(func(_ any, keyID int) (*linodego.ObjectStorageKey, error) {
 						return nil, errors.New("some error")
@@ -81,6 +83,8 @@ func TestGetObjectStorageKeys(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			var mockClient *mock.MockLinodeObjectStorageClient
 			if tt.expects != nil {
 				ctrl := gomock.NewController(t)
