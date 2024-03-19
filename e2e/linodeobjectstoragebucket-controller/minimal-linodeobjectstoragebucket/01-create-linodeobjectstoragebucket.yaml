@@ -1,6 +1,6 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeObjectStorageBucket
 metadata:
-  name: (join('-', [$namespace, 'backups']))
+  name: ($bucket)
 spec:
   cluster: us-sea-1

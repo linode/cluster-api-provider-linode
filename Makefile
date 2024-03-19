@@ -7,6 +7,7 @@ CONTROLLER_IMAGE    ?= $(REGISTRY)/$(IMAGE_NAME)
 TAG                 ?= dev
 ENVTEST_K8S_VERSION := 1.28.0
 VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
+GIT_REF             ?= $(shell git rev-parse --short HEAD)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
 .SHELLFLAGS          = -ec
@@ -146,7 +147,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-deploy chainsaw
-	$(CHAINSAW) test ./e2e
+	echo "git_ref: $(GIT_REF)" | $(CHAINSAW) test ./e2e --values -
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
