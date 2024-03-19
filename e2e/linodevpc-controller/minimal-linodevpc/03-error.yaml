@@ -1,6 +1,6 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeVPC
 metadata:
-  name: ($namespace)
+  name: ($vpc)
 spec:
   region: us-sea

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/linode/linodego"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -85,7 +84,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 type ClusterScope struct {
 	client        k8sClient
 	PatchHelper   *patch.Helper
-	LinodeClient  *linodego.Client
+	LinodeClient  LinodeClient
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
 }

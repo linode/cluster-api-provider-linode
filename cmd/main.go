@@ -147,7 +147,7 @@ func main() {
 		Recorder:            mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
 		WatchFilterValue:    objectStorageBucketWatchFilter,
 		LinodeApiKey:        linodeToken,
-		LinodeClientBuilder: scope.CreateLinodeObjectStorageClient,
+		LinodeClientBuilder: scope.CreateLinodeClientBuilder,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)

@@ -51,7 +51,7 @@ type LinodeObjectStorageBucketReconciler struct {
 	Logger              logr.Logger
 	Recorder            record.EventRecorder
 	LinodeApiKey        string
-	LinodeClientBuilder scope.LinodeObjectStorageClientBuilder
+	LinodeClientBuilder scope.LinodeClientBuilder
 	WatchFilterValue    string
 	ReconcileTimeout    time.Duration
 }
@@ -151,6 +151,14 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 		return err
 	}
+
+	if bucket == nil {
+		err = fmt.Errorf("bucket created is nil")
+		bScope.Logger.Error(err, "Failed to ensure bucket exists")
+		r.setFailure(bScope, err)
+		return err
+	}
+
 	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
 	bScope.Bucket.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
