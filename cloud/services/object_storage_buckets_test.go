@@ -19,11 +19,11 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		bScope *scope.ObjectStorageBucketScope
-		want    *linodego.ObjectStorageBucket
+		name          string
+		bScope        *scope.ObjectStorageBucketScope
+		want          *linodego.ObjectStorageBucket
 		expectedError error
-		expects func(mock *mock.MockLinodeClient)
+		expects       func(mock *mock.MockLinodeClient)
 	}{
 		{
 			name: "Success - Successfully get the OBJ bucket",
@@ -39,13 +39,11 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			},
 			want: &linodego.ObjectStorageBucket{
 				Label: "test-bucket",
-				
 			},
 			expects: func(c *mock.MockLinodeClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
 					Label: "test-bucket",
-
-				}, nil)	
+				}, nil)
 			},
 			expectedError: nil,
 		},
@@ -63,7 +61,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			},
 			want: nil,
 			expects: func(c *mock.MockLinodeClient) {
-				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in getting object storage bucket"))	
+				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in getting object storage bucket"))
 			},
 			expectedError: fmt.Errorf("failed to get bucket from cluster"),
 		},
@@ -81,7 +79,6 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			},
 			want: &linodego.ObjectStorageBucket{
 				Label: "test-bucket",
-				
 			},
 			expects: func(c *mock.MockLinodeClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
@@ -140,11 +137,11 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 func TestRotateObjectStorageKeys(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name    string
-		bScope *scope.ObjectStorageBucketScope
-		want    [scope.NumAccessKeys]linodego.ObjectStorageKey
+		name          string
+		bScope        *scope.ObjectStorageBucketScope
+		want          [scope.NumAccessKeys]linodego.ObjectStorageKey
 		expectedError error
-		expects func(c *mock.MockLinodeClient)
+		expects       func(c *mock.MockLinodeClient)
 	}{
 		{
 			name: "Success - Create new access keys and revoke old access keys",
@@ -154,12 +151,12 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 						Name: "test-bucket",
 					},
 					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster: "test-cluster",
+						Cluster:       "test-cluster",
 						KeyGeneration: ptr.To(1),
 					},
 					Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
 						LastKeyGeneration: ptr.To(0),
-						AccessKeyRefs:     []int{
+						AccessKeyRefs: []int{
 							11,
 							22,
 						},
@@ -168,11 +165,11 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 			},
 			want: [scope.NumAccessKeys]linodego.ObjectStorageKey{
 				{
-					ID: 1234,
+					ID:    1234,
 					Label: "test-bucket-rw",
 				},
 				{
-					ID: 5678,
+					ID:    5678,
 					Label: "test-bucket-ro",
 				},
 			},
@@ -198,12 +195,12 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 						Name: "test-bucket",
 					},
 					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster: "test-cluster",
+						Cluster:       "test-cluster",
 						KeyGeneration: ptr.To(1),
 					},
 					Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
 						LastKeyGeneration: ptr.To(0),
-						AccessKeyRefs:     []int{
+						AccessKeyRefs: []int{
 							11,
 							22,
 						},
@@ -212,11 +209,11 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 			},
 			want: [scope.NumAccessKeys]linodego.ObjectStorageKey{
 				{
-					ID: 1234,
+					ID:    1234,
 					Label: "test-bucket-rw",
 				},
 				{
-					ID: 5678,
+					ID:    5678,
 					Label: "test-bucket-ro",
 				},
 			},
@@ -245,7 +242,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 					},
 				},
 			},
-			want: [scope.NumAccessKeys]linodego.ObjectStorageKey{},
+			want:          [scope.NumAccessKeys]linodego.ObjectStorageKey{},
 			expectedError: fmt.Errorf("failed to create access key:"),
 			expects: func(c *mock.MockLinodeClient) {
 				c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in creating access key"))
