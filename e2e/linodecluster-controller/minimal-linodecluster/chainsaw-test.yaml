@@ -5,6 +5,17 @@ metadata:
   creationTimestamp: null
   name: minimal-linodecluster
 spec:
+  bindings:
+    # A short identifier for the E2E test run
+  - name: run
+    value: (join('-', ['e2e', 'min-cluster', ($values.git_ref)]))
+  - name: cluster
+    # Format the cluster name into a valid Linode label
+    # TODO: This is over-truncated to account for the Linode NodeBalancer label
+    value: (trim((truncate(($run), `21`)), '-'))
+  - name: nodebalancer
+    value: (join('-', [($cluster), 'api-server']))
+  template: true
   steps:
   - name: step-00
     try:
@@ -31,7 +42,7 @@ spec:
         - name: URI
           value: nodebalancers
         - name: FILTER
-          value: '{"label":"linodecluster-test-api-server"}'
+          value: (to_string({"label":($nodebalancer)}))
         content: |
           set -e
           curl -s \
@@ -49,7 +60,7 @@ spec:
         ref:
           apiVersion: cluster.x-k8s.io/v1beta1
           kind: Cluster
-          name: cluster-test
+          name: ($cluster)
     - error:
         file: 04-error.yaml
   - name: step-05
@@ -63,7 +74,7 @@ spec:
         - name: URI
           value: nodebalancers
         - name: FILTER
-          value: '{"label":"linodecluster-test-api-server"}'
+          value: (to_string({"label":($nodebalancer)}))
         content: |
           set -e
           curl -s \
