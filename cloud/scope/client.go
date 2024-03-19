@@ -43,9 +43,8 @@ type LinodeNodeBalancerClient interface {
 	CreateNodeBalancerConfig(ctx context.Context, nodebalancerID int, opts linodego.NodeBalancerConfigCreateOptions) (*linodego.NodeBalancerConfig, error)
 	DeleteNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, nodeID int) error
 	DeleteNodeBalancer(ctx context.Context, nodebalancerID int) error
-	CreateNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, opts linodego.NodeBalancerNodeCreateOptions) (*linodego.NodeBalancerNode, error)	
+	CreateNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, opts linodego.NodeBalancerNodeCreateOptions) (*linodego.NodeBalancerNode, error)
 }
-
 
 // LinodeObjectStorageClient defines the methods that a Linode client must have to interact with Linode's Object Storage service.
 type LinodeObjectStorageClient interface {
