@@ -70,11 +70,6 @@ var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
 	linodego.InstanceResizing:     true,
 }
 
-type nodeIP struct {
-	ip     string
-	ipType clusterv1.MachineAddressType
-}
-
 // LinodeMachineReconciler reconciles a LinodeMachine object
 type LinodeMachineReconciler struct {
 	client.Client
@@ -305,7 +300,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 
-	addrs, err := r.buildInstanceAddrs(ctx, logger, machineScope, linodeInstance.ID)
+	addrs, err := r.buildInstanceAddrs(ctx, machineScope, linodeInstance.ID)
 	if err != nil {
 		return linodeInstance, err
 	}
