@@ -7,7 +7,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'min-obj', ($values.git_ref)]))
+    value: (join('-', ['e2e', 'min-obj', env('GIT_REF')]))
   - name: bucket
     # Format the bucket name into a valid Kubernetes object name
     # TODO: This is over-truncated to account for the Kubernetes access key Secret
