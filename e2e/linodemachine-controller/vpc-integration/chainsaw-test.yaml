@@ -8,7 +8,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'lm-vpc', ($values.git_ref)]))
+    value: (join('-', ['e2e', 'lm-vpc', env('GIT_REF')]))
   - name: cluster
     # Format the cluster name into a valid Linode label
     # TODO: This is over-truncated to account for the Linode NodeBalancer label
