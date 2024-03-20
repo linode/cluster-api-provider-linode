@@ -182,22 +182,50 @@
       }
     },
     "kubernetes-controller-tools@latest": {
-      "last_modified": "2024-02-26T19:46:43Z",
-      "resolved": "github:NixOS/nixpkgs/548a86b335d7ecd8b57ec617781f5e652ab0c38e#kubernetes-controller-tools",
+      "last_modified": "2024-03-08T13:51:52Z",
+      "resolved": "github:NixOS/nixpkgs/a343533bccc62400e8a9560423486a3b6c11a23b#kubernetes-controller-tools",
       "source": "devbox-search",
-      "version": "0.13.0",
+      "version": "0.14.0",
       "systems": {
         "aarch64-darwin": {
-          "store_path": "/nix/store/4ziq9d177mqvxm1bczfvac3y2hc3c9s8-controller-tools-0.13.0"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/jblk86f5bi2dwg2w8g42xl9mpw1yrbi4-controller-tools-0.14.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/jblk86f5bi2dwg2w8g42xl9mpw1yrbi4-controller-tools-0.14.0"
         },
         "aarch64-linux": {
-          "store_path": "/nix/store/6np0xywcrplmz44ic6njywi038il0ka2-controller-tools-0.13.0"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/sq48wn8yyqkya8as690h61d1dlxwlkbi-controller-tools-0.14.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/sq48wn8yyqkya8as690h61d1dlxwlkbi-controller-tools-0.14.0"
         },
         "x86_64-darwin": {
-          "store_path": "/nix/store/2zmj05mi78d7x8y6lldlhmpcyk0bxd4z-controller-tools-0.13.0"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/nm2vx0f6ajmqpbi2c6z8wani5f1fdqb4-controller-tools-0.14.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/nm2vx0f6ajmqpbi2c6z8wani5f1fdqb4-controller-tools-0.14.0"
         },
         "x86_64-linux": {
-          "store_path": "/nix/store/wpx1w04rdi4q83l9bzm4vr20xk4qf6mk-controller-tools-0.13.0"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/f8h9pj08ksm49v980yb0slzrbpqqc98r-controller-tools-0.14.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/f8h9pj08ksm49v980yb0slzrbpqqc98r-controller-tools-0.14.0"
         }
       }
     },
@@ -238,6 +266,54 @@
         },
         "x86_64-linux": {
           "store_path": "/nix/store/0cwpsdz70z1xfwqnjrmbij9h9cng34bb-kuttl-0.15.0"
+        }
+      }
+    },
+    "kyverno-chainsaw@latest": {
+      "last_modified": "2024-03-17T01:03:25Z",
+      "resolved": "github:NixOS/nixpkgs/299d4668ba61600311553920d9fd9c102145b2cb#kyverno-chainsaw",
+      "source": "devbox-search",
+      "version": "0.1.9",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/fnm4za9fnq10q8l535bhg0gfx2ixws7m-kyverno-chainsaw-0.1.9",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/fnm4za9fnq10q8l535bhg0gfx2ixws7m-kyverno-chainsaw-0.1.9"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/qy0dpkapp6yw92kxhkixmz7crwgmm23p-kyverno-chainsaw-0.1.9",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/qy0dpkapp6yw92kxhkixmz7crwgmm23p-kyverno-chainsaw-0.1.9"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/660ps3ll008jfmvb5zx8lnq785wlqi4q-kyverno-chainsaw-0.1.9",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/660ps3ll008jfmvb5zx8lnq785wlqi4q-kyverno-chainsaw-0.1.9"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ar8sgxvjvdsb0vy6l00ld2sm6r1yyzrx-kyverno-chainsaw-0.1.9",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ar8sgxvjvdsb0vy6l00ld2sm6r1yyzrx-kyverno-chainsaw-0.1.9"
         }
       }
     },
