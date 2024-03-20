@@ -153,13 +153,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		return err
 	}
 
-	if bucket == nil {
-		err = fmt.Errorf("bucket created is nil")
-		bScope.Logger.Error(err, "Failed to ensure bucket exists")
-		r.setFailure(bScope, err)
-		return err
-	}
-
 	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
 	bScope.Bucket.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
@@ -205,15 +198,18 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	if keys[0] != nil && keys[1] != nil {
 		secret, err := bScope.GenerateKeySecret(ctx, keys)
 		if err != nil {
-			bScope.Logger.Error(err, "Failed to apply access key secret")
+			bScope.Logger.Error(err, "Failed to generate key secret")
 			r.setFailure(bScope, err)
 
 			return err
 		}
 
-		result, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error { return nil })
+		result, err := controllerutil.CreateOrUpdate(ctx, bScope.Client, secret, func() error { return nil })
 		if err != nil {
-			return fmt.Errorf("could not create/update access key secret %s: %w", secret.Name, err)
+			bScope.Logger.Error(err, "Failed to apply key secret")
+			r.setFailure(bScope, err)
+
+			return err
 		}
 		bScope.Logger.Info(fmt.Sprintf("Secret %s was %s with new access keys", secret.Name, result))
 

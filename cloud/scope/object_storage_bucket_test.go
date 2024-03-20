@@ -459,7 +459,7 @@ func TestGenerateKeySecret(t *testing.T) {
 			}
 
 			objScope := &ObjectStorageBucketScope{
-				client:            mockClient,
+				Client:            mockClient,
 				Bucket:            testcase.Bucket,
 				Logger:            logr.Logger{},
 				LinodeClient:      nil,
@@ -504,7 +504,7 @@ func TestShouldInitKeys(t *testing.T) {
 			t.Parallel()
 
 			objScope := &ObjectStorageBucketScope{
-				client:            nil,
+				Client:            nil,
 				Bucket:            testcase.Bucket,
 				Logger:            logr.Logger{},
 				LinodeClient:      &linodego.Client{},
@@ -546,7 +546,7 @@ func TestShouldRotateKeys(t *testing.T) {
 			t.Parallel()
 
 			objScope := &ObjectStorageBucketScope{
-				client:            nil,
+				Client:            nil,
 				Bucket:            testcase.Bucket,
 				Logger:            logr.Logger{},
 				LinodeClient:      &linodego.Client{},
@@ -650,7 +650,7 @@ func TestShouldRestoreKeySecret(t *testing.T) {
 			}
 
 			objScope := &ObjectStorageBucketScope{
-				client: mockClient,
+				Client: mockClient,
 				Bucket: testcase.bucket,
 			}
 

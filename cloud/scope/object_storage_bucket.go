@@ -25,7 +25,7 @@ type ObjectStorageBucketScopeParams struct {
 }
 
 type ObjectStorageBucketScope struct {
-	client            k8sClient
+	Client            k8sClient
 	Bucket            *infrav1alpha1.LinodeObjectStorageBucket
 	Logger            logr.Logger
 	LinodeClient      LinodeObjectStorageClient
@@ -73,7 +73,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 	}
 
 	return &ObjectStorageBucketScope{
-		client:            params.Client,
+		Client:            params.Client,
 		Bucket:            params.Bucket,
 		Logger:            *params.Logger,
 		LinodeClient:      linodeClient,
@@ -123,7 +123,7 @@ func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [
 		},
 	}
 
-	scheme := s.client.Scheme()
+	scheme := s.Client.Scheme()
 	if err := controllerutil.SetOwnerReference(s.Bucket, secret, scheme); err != nil {
 		return nil, fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
 	}
@@ -150,7 +150,7 @@ func (s *ObjectStorageBucketScope) ShouldRestoreKeySecret(ctx context.Context) (
 
 	secret := &corev1.Secret{}
 	key := client.ObjectKey{Namespace: s.Bucket.Namespace, Name: *s.Bucket.Status.KeySecretName}
-	err := s.client.Get(ctx, key, secret)
+	err := s.Client.Get(ctx, key, secret)
 
 	return apierrors.IsNotFound(err), client.IgnoreNotFound(err)
 }
