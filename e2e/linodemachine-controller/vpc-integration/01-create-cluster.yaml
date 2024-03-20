@@ -2,31 +2,31 @@
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
-    name: vpc-cluster-test
+    name: ($cluster)
 spec:
     controlPlaneRef:
         apiVersion: controlplane.cluster.x-k8s.io/v1beta1
         kind: KubeadmControlPlane
-        name: linodecluster-test-control-plane
+        name: ($cluster)
     infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
         kind: LinodeCluster
-        name: vpc-machine-test
+        name: ($cluster)
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeCluster
 metadata:
-    name: vpc-machine-test
+    name: ($cluster)
 spec:
     region: us-sea
     vpcRef:
         kind: LinodeVPC
-        name: machine-test-vpc
+        name: ($vpc)
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeVPC
 metadata:
-    name: machine-test-vpc
+    name: ($vpc)
 spec:
     region: us-sea
     subnets:

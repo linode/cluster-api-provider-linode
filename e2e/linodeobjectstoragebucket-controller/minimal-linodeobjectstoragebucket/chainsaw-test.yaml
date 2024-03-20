@@ -4,6 +4,16 @@ kind: Test
 metadata:
   name: minimal-linodeobjectstoragebucket
 spec:
+  bindings:
+    # A short identifier for the E2E test run
+  - name: run
+    value: (join('-', ['e2e', 'min-obj', ($values.git_ref)]))
+  - name: bucket
+    # Format the bucket name into a valid Kubernetes object name
+    # TODO: This is over-truncated to account for the Kubernetes access key Secret
+    value: (trim((truncate(($run), `52`)), '-'))
+  - name: access_keys_secret
+    value: (join('-', [($bucket), 'access-keys']))
   template: true
   steps:
   - name: step-00
@@ -20,18 +30,18 @@ spec:
     try:
     - script:
         env:
-        - name: NAMESPACE
-          value: ($namespace)
+        - name: BUCKET
+          value: ($bucket)
         content: |
           set -e
           curl -s \
             -H "Authorization: Bearer $LINODE_TOKEN" \
             -H "Content-Type: application/json" \
-            "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$NAMESPACE-backups"
+            "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
         check:
           ($error): ~
           (json_parse($stdout)):
-            label: (join('-', [($namespace), 'backups']))
+            label: ($bucket)
   - name: step-03
     try:
     - apply:
@@ -55,7 +65,7 @@ spec:
         ref:
           apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
           kind: LinodeObjectStorageBucket
-          name: (join('-', [($namespace), 'backups']))
+          name: ($bucket)
   - name: step-07
     try:
     - error:
