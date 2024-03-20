@@ -22,5 +22,8 @@
   "shell": {
     "init_hook": [],
     "scripts":   {}
+  },
+  "env": {
+    "GOROOT": "/usr/local/go"
   }
 }
