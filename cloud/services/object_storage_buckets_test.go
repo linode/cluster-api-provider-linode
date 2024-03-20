@@ -24,7 +24,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 		bScope        *scope.ObjectStorageBucketScope
 		want          *linodego.ObjectStorageBucket
 		expectedError error
-		expects       func(mock *mock.MockLinodeClient)
+		expects       func(mock *mock.MockLinodeObjectStorageClient)
 	}{
 		{
 			name: "Success - Successfully get the OBJ bucket",
@@ -41,7 +41,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			want: &linodego.ObjectStorageBucket{
 				Label: "test-bucket",
 			},
-			expects: func(c *mock.MockLinodeClient) {
+			expects: func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
 					Label: "test-bucket",
 				}, nil)
@@ -61,7 +61,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				},
 			},
 			want: nil,
-			expects: func(c *mock.MockLinodeClient) {
+			expects: func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in getting object storage bucket"))
 			},
 			expectedError: fmt.Errorf("failed to get bucket from cluster"),
@@ -81,7 +81,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			want: &linodego.ObjectStorageBucket{
 				Label: "test-bucket",
 			},
-			expects: func(c *mock.MockLinodeClient) {
+			expects: func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 				c.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
 					Label: "test-bucket",
@@ -102,7 +102,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				},
 			},
 			want: nil,
-			expects: func(c *mock.MockLinodeClient) {
+			expects: func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 				c.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in creating object storage bucket"))
 			},
@@ -117,7 +117,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := mock.NewMockLinodeClient(ctrl)
+			mockClient := mock.NewMockLinodeObjectStorageClient(ctrl)
 
 			testcase.bScope.LinodeClient = mockClient
 
@@ -142,7 +142,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 		bScope        *scope.ObjectStorageBucketScope
 		want          [scope.NumAccessKeys]linodego.ObjectStorageKey
 		expectedError error
-		expects       func(c *mock.MockLinodeClient)
+		expects       func(c *mock.MockLinodeObjectStorageClient)
 	}{
 		{
 			name: "Success - Create new access keys and revoke old access keys",
@@ -175,7 +175,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(mock *mock.MockLinodeClient) {
+			expects: func(mock *mock.MockLinodeObjectStorageClient) {
 				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-rw",
 					ID:    1234,
@@ -219,7 +219,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(mock *mock.MockLinodeClient) {
+			expects: func(mock *mock.MockLinodeObjectStorageClient) {
 				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-rw",
 					ID:    1234,
@@ -245,7 +245,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 			},
 			want:          [scope.NumAccessKeys]linodego.ObjectStorageKey{},
 			expectedError: fmt.Errorf("failed to create access key:"),
-			expects: func(c *mock.MockLinodeClient) {
+			expects: func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in creating access key"))
 			},
 		},
@@ -258,7 +258,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := mock.NewMockLinodeClient(ctrl)
+			mockClient := mock.NewMockLinodeObjectStorageClient(ctrl)
 
 			testcase.bScope.LinodeClient = mockClient
 
