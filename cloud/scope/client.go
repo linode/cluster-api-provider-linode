@@ -10,8 +10,7 @@ import (
 // LinodeClient is an interface that defines the methods that a Linode client must have to interact with Linode.
 // It defines all the functions that are required to create, delete, and get resources
 // from Linode such as object storage buckets, node balancers, linodes, and VPCs.
-type LinodeClient interface {
-	LinodeObjectStorageClient
+type MachineScopeLinodeClient interface {
 	LinodeNodeBalancerClient
 	LinodeInstanceClient
 	LinodeVPCClient
@@ -54,11 +53,9 @@ type LinodeObjectStorageClient interface {
 	DeleteObjectStorageKey(ctx context.Context, keyID int) error
 }
 
-// LinodeClientBuilder is a function that returns a LinodeClient.
-type LinodeClientBuilder func(apiKey string) (LinodeClient, error)
+type LinodeObjectStorageBucketBuilder func(apiKey string) (LinodeObjectStorageClient, error)
 
-// CreateLinodeClientBuilder is the main implementation of LinodeClientBuilder.
-func CreateLinodeClientBuilder(apiKey string) (LinodeClient, error) {
+func CreateLinodeObjectStorageBucketClient(apiKey string) (LinodeObjectStorageClient, error) {
 	return CreateLinodeClient(apiKey)
 }
 

@@ -17,7 +17,7 @@ import (
 
 type ObjectStorageBucketScopeParams struct {
 	Client              k8sClient
-	LinodeClientBuilder LinodeClientBuilder
+	LinodeClientBuilder LinodeObjectStorageBucketBuilder
 	Bucket              *infrav1alpha1.LinodeObjectStorageBucket
 	Logger              *logr.Logger
 }
@@ -26,7 +26,7 @@ type ObjectStorageBucketScope struct {
 	client            k8sClient
 	Bucket            *infrav1alpha1.LinodeObjectStorageBucket
 	Logger            logr.Logger
-	LinodeClient      LinodeClient
+	LinodeClient      LinodeObjectStorageClient
 	BucketPatchHelper *patch.Helper
 }
 
