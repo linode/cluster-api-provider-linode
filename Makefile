@@ -147,7 +147,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-deploy chainsaw
-	echo "git_ref: $(GIT_REF)" | $(CHAINSAW) test ./e2e --values -
+	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
@@ -295,10 +295,10 @@ KUBECTL        ?= kubectl
 KUSTOMIZE      ?= $(LOCALBIN)/kustomize
 CTLPTL         ?= $(LOCALBIN)/ctlptl
 CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
-CONTROLLER_GEN ?= $(CACHE_BIN)/controller-gen
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 TILT           ?= $(LOCALBIN)/tilt
 KIND           ?= $(LOCALBIN)/kind
-CHAINSAW       ?= $(CACHE_BIN)/chainsaw
+CHAINSAW       ?= $(LOCALBIN)/chainsaw
 ENVTEST        ?= $(CACHE_BIN)/setup-envtest
 HUSKY          ?= $(LOCALBIN)/husky
 NILAWAY        ?= $(LOCALBIN)/nilaway
@@ -312,7 +312,7 @@ CLUSTERCTL_VERSION       ?= v1.5.3
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 TILT_VERSION             ?= 0.33.6
 KIND_VERSION             ?= 0.20.0
-CHAINSAW_VERSION         ?= v0.1.7
+CHAINSAW_VERSION         ?= v0.1.9
 HUSKY_VERSION            ?= v0.2.16
 NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.0.1
