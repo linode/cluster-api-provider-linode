@@ -84,7 +84,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 type ClusterScope struct {
 	client        k8sClient
 	PatchHelper   *patch.Helper
-	LinodeClient  LinodeClient
+	LinodeClient  LinodeNodeBalancerClient
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
 }
