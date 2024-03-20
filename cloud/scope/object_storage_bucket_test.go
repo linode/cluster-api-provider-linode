@@ -444,7 +444,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			expectedErr: fmt.Errorf("could not set owner ref on access key secret"),
 		},
 	}
-	for _, testcase := range tests {
+	for _, tt := range tests {
+		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -471,8 +472,8 @@ func TestGenerateKeySecret(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, secret.OwnerReferences[0].Kind, "LinodeObjectStorageBucket")
-			assert.Equal(t, *secret.OwnerReferences[0].Controller, true)
+			assert.Equal(t, "LinodeObjectStorageBucket", secret.OwnerReferences[0].Kind)
+			assert.True(t, *secret.OwnerReferences[0].Controller)
 		})
 	}
 }
@@ -634,7 +635,8 @@ func TestShouldRestoreKeySecret(t *testing.T) {
 			want: false,
 		},
 	}
-	for _, testcase := range tests {
+	for _, tt := range tests {
+		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 

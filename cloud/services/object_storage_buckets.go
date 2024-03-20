@@ -122,7 +122,7 @@ func revokeObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBuck
 func GetObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([2]*linodego.ObjectStorageKey, error) {
 	var keys [2]*linodego.ObjectStorageKey
 
-	if len(bScope.Bucket.Status.AccessKeyRefs) != 2 {
+	if len(bScope.Bucket.Status.AccessKeyRefs) != scope.NumAccessKeys {
 		return keys, errors.New("expected two object storage key IDs in .status.accessKeyRefs")
 	}
 

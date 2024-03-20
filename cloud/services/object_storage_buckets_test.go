@@ -76,7 +76,8 @@ func TestRotateObjectStorageKeysRevocation(t *testing.T) {
 		},
 	}
 
-	for _, testcase := range tests {
+	for _, tt := range tests {
+		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -171,25 +172,26 @@ func TestGetObjectStorageKeys(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
 			var mockClient *mock.MockLinodeObjectStorageClient
-			if tt.expects != nil {
+			if testcase.expects != nil {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
 				mockClient = mock.NewMockLinodeObjectStorageClient(ctrl)
-				tt.expects(mockClient)
-				tt.bScope.LinodeClient = mockClient
+				testcase.expects(mockClient)
+				testcase.bScope.LinodeClient = mockClient
 			}
 
-			got, err := GetObjectStorageKeys(context.TODO(), tt.bScope)
-			if tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)) {
-				t.Errorf("GetObjectStorageKeys() error = %v, should contain %v", err, tt.wantErr)
+			got, err := GetObjectStorageKeys(context.TODO(), testcase.bScope)
+			if testcase.wantErr != "" && (err == nil || !strings.Contains(err.Error(), testcase.wantErr)) {
+				t.Errorf("GetObjectStorageKeys() error = %v, should contain %v", err, testcase.wantErr)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetObjectStorageKeys() = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got, testcase.want) {
+				t.Errorf("GetObjectStorageKeys() = %v, want %v", got, testcase.want)
 			}
 		})
 	}
