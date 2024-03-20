@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -16,6 +14,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 func TestRotateObjectStorageKeysRevocation(t *testing.T) {
