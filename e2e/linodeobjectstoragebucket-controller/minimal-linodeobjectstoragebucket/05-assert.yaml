@@ -1,4 +1,4 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: (join('-', [$namespace, 'backups-access-keys']))
+  name: ($access_keys_secret)
