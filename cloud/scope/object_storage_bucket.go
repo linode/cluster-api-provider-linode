@@ -101,8 +101,17 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
-// ApplyKeySecret applies a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) ApplyKeySecret(ctx context.Context, keys [NumAccessKeys]linodego.ObjectStorageKey, secretName string) error {
+// GenerateKeySecret returns a secret suitable for submission to the Kubernetes API.
+// The secret is expected to contain keys for accessing the bucket, as well as owner and controller references.
+func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [NumAccessKeys]*linodego.ObjectStorageKey) (*corev1.Secret, error) {
+	for _, key := range keys {
+		if key == nil {
+			return nil, errors.New("expected two non-nil object storage keys")
+		}
+	}
+
+	secretName := fmt.Sprintf(AccessKeyNameTemplate, s.Bucket.Name)
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -116,20 +125,13 @@ func (s *ObjectStorageBucketScope) ApplyKeySecret(ctx context.Context, keys [Num
 
 	scheme := s.client.Scheme()
 	if err := controllerutil.SetOwnerReference(s.Bucket, secret, scheme); err != nil {
-		return fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
+		return nil, fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
 	}
 	if err := controllerutil.SetControllerReference(s.Bucket, secret, scheme); err != nil {
-		return fmt.Errorf("could not set controller ref on access key secret %s: %w", secretName, err)
+		return nil, fmt.Errorf("could not set controller ref on access key secret %s: %w", secretName, err)
 	}
 
-	result, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, func() error { return nil })
-	if err != nil {
-		return fmt.Errorf("could not create/update access key secret %s: %w", secretName, err)
-	}
-
-	s.Logger.Info(fmt.Sprintf("Secret %s was %s with new access keys", secret.Name, result))
-
-	return nil
+	return secret, nil
 }
 
 func (s *ObjectStorageBucketScope) ShouldInitKeys() bool {

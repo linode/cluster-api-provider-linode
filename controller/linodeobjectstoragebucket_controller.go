@@ -155,7 +155,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
 	bScope.Bucket.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
-	var keys *[2]linodego.ObjectStorageKey
+	var keys [2]*linodego.ObjectStorageKey
 
 	switch {
 	case bScope.ShouldInitKeys(), bScope.ShouldRotateKeys():
@@ -167,7 +167,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 			return err
 		}
 		bScope.Bucket.Status.AccessKeyRefs = []int{newKeys[0].ID, newKeys[1].ID}
-		keys = &newKeys
+		keys = newKeys
 
 		r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "KeysAssigned", "Object storage keys assigned")
 
@@ -188,27 +188,34 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 				return err
 			}
-			keys = &sameKeys
+			keys = sameKeys
 		}
 
 		r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "KeysRetrieved", "Object storage keys retrieved")
 	}
 
-	if keys != nil {
-		secretName := fmt.Sprintf(scope.AccessKeyNameTemplate, bScope.Bucket.Name)
-		if err := bScope.ApplyKeySecret(ctx, *keys, secretName); err != nil {
+	if keys[0] != nil && keys[1] != nil {
+		secret, err := bScope.GenerateKeySecret(ctx, keys)
+		if err != nil {
 			bScope.Logger.Error(err, "Failed to apply access key secret")
 			r.setFailure(bScope, err)
 
 			return err
 		}
-		bScope.Bucket.Status.KeySecretName = util.Pointer(secretName)
+
+		result, err := controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error { return nil })
+		if err != nil {
+			return fmt.Errorf("could not create/update access key secret %s: %w", secret.Name, err)
+		}
+		bScope.Logger.Info(fmt.Sprintf("Secret %s was %s with new access keys", secret.Name, result))
+
+		bScope.Bucket.Status.KeySecretName = util.Pointer(secret.Name)
 		bScope.Bucket.Status.LastKeyGeneration = bScope.Bucket.Spec.KeyGeneration
 
 		r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "KeysStored", "Object storage keys stored in secret")
 	}
 
-	r.Recorder.Event(bScope.Bucket, clusterv1.DeletedReason, "Synced", "Object storage bucket synced")
+	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Synced", "Object storage bucket synced")
 
 	bScope.Bucket.Status.Ready = true
 	conditions.MarkTrue(bScope.Bucket, clusterv1.ReadyCondition)

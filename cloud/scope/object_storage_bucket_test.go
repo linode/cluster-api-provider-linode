@@ -312,62 +312,55 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 	}
 }
 
-func TestApplyKeySecretUpdate(t *testing.T) {
+func TestGenerateKeySecret(t *testing.T) {
 	t.Parallel()
-	type args struct {
-		keys       [NumAccessKeys]linodego.ObjectStorageKey
-		secretName string
-	}
 	tests := []struct {
 		name        string
 		Bucket      *infrav1alpha1.LinodeObjectStorageBucket
-		args        args
+		keys        [NumAccessKeys]*linodego.ObjectStorageKey
 		expectedErr error
 		expects     func(mock *mock.Mockk8sClient)
 	}{
 		{
-			name: "Success - Create/Update access key secret. Return no error",
+			name: "happy path",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
 					Namespace: "test-namespace",
 				},
 				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
-					KeySecretName: ptr.To("test-secret"),
+					KeySecretName: ptr.To("test-bucket-access-keys"),
 				},
 			},
-			args: args{
-				keys: [NumAccessKeys]linodego.ObjectStorageKey{
-					{
-						ID:        1,
-						Label:     "read_write",
-						SecretKey: "read_write_key",
-						AccessKey: "read_write_access_key",
-						Limited:   false,
-						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
-							{
-								BucketName:  "bucket",
-								Cluster:     "test-bucket",
-								Permissions: "read_write",
-							},
-						},
-					},
-					{
-						ID:        2,
-						Label:     "read_only",
-						SecretKey: "read_only_key",
-						AccessKey: "read_only_access_key",
-						Limited:   true,
-						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
-							{
-								BucketName:  "bucket",
-								Cluster:     "test-bucket",
-								Permissions: "read_only",
-							},
+			keys: [NumAccessKeys]*linodego.ObjectStorageKey{
+				{
+					ID:        1,
+					Label:     "read_write",
+					SecretKey: "read_write_key",
+					AccessKey: "read_write_access_key",
+					Limited:   false,
+					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+						{
+							BucketName:  "bucket",
+							Cluster:     "test-bucket",
+							Permissions: "read_write",
 						},
 					},
 				},
-				secretName: "test-secret",
+				{
+					ID:        2,
+					Label:     "read_only",
+					SecretKey: "read_only_key",
+					AccessKey: "read_only_access_key",
+					Limited:   true,
+					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+						{
+							BucketName:  "bucket",
+							Cluster:     "test-bucket",
+							Permissions: "read_only",
+						},
+					},
+				},
 			},
 			expects: func(mock *mock.Mockk8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
@@ -375,70 +368,75 @@ func TestApplyKeySecretUpdate(t *testing.T) {
 					infrav1alpha1.AddToScheme(s)
 					return s
 				}).Times(1)
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectedErr: nil,
 		},
 		{
-			name: "Error - could not create/update access key secret",
+			name: "missing one or more keys",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
 					Namespace: "test-namespace",
 				},
 				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
-					KeySecretName: ptr.To("test-secret"),
+					KeySecretName: ptr.To("test-bucket-access-keys"),
 				},
 			},
-			args: args{
-				keys: [NumAccessKeys]linodego.ObjectStorageKey{
-					{
-						ID:        1,
-						Label:     "read_write",
-						SecretKey: "read_write_key",
-						AccessKey: "read_write_access_key",
-						Limited:   false,
-						BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
-							{
-								BucketName:  "bucket",
-								Cluster:     "test-bucket",
-								Permissions: "read_write",
-							},
+			keys: [NumAccessKeys]*linodego.ObjectStorageKey{
+				{
+					ID:        1,
+					Label:     "read_write",
+					SecretKey: "read_write_key",
+					AccessKey: "read_write_access_key",
+					Limited:   false,
+					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+						{
+							BucketName:  "bucket",
+							Cluster:     "test-bucket",
+							Permissions: "read_write",
 						},
 					},
 				},
-				secretName: "test-secret",
 			},
-			expects: func(mock *mock.Mockk8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
-					return s
-				}).Times(1)
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("could not update secret")).Times(1)
-			},
-			expectedErr: fmt.Errorf("could not create/update access key secret"),
+			expectedErr: errors.New("expected two non-nil object storage keys"),
 		},
 		{
-			name: "Error - controllerutil.SetOwnerReference() return an error",
+			name: "client scheme does not have infrav1alpha1",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
 					Namespace: "test-namespace",
 				},
 			},
-			args: args{
-				keys: [NumAccessKeys]linodego.ObjectStorageKey{
-					{
-						ID:           1,
-						Label:        "read_write",
-						SecretKey:    "read_write_key",
-						AccessKey:    "read_write_access_key",
-						Limited:      false,
-						BucketAccess: nil,
+			keys: [NumAccessKeys]*linodego.ObjectStorageKey{
+				{
+					ID:        1,
+					Label:     "read_write",
+					SecretKey: "read_write_key",
+					AccessKey: "read_write_access_key",
+					Limited:   false,
+					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+						{
+							BucketName:  "bucket",
+							Cluster:     "test-bucket",
+							Permissions: "read_write",
+						},
 					},
 				},
-				secretName: "test-secret",
+				{
+					ID:        2,
+					Label:     "read_only",
+					SecretKey: "read_only_key",
+					AccessKey: "read_only_access_key",
+					Limited:   true,
+					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+						{
+							BucketName:  "bucket",
+							Cluster:     "test-bucket",
+							Permissions: "read_only",
+						},
+					},
+				},
 			},
 			expects: func(mock *mock.Mockk8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
@@ -446,29 +444,35 @@ func TestApplyKeySecretUpdate(t *testing.T) {
 			expectedErr: fmt.Errorf("could not set owner ref on access key secret"),
 		},
 	}
-	for _, tt := range tests {
-		testcase := tt
+	for _, testcase := range tests {
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+			var mockClient *mock.Mockk8sClient
+			if testcase.expects != nil {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
-			testcase.expects(mockK8sClient)
+				mockClient = mock.NewMockk8sClient(ctrl)
+				testcase.expects(mockClient)
+			}
 
 			objScope := &ObjectStorageBucketScope{
-				client:            mockK8sClient,
+				client:            mockClient,
 				Bucket:            testcase.Bucket,
 				Logger:            logr.Logger{},
 				LinodeClient:      nil,
 				BucketPatchHelper: nil,
 			}
 
-			err := objScope.ApplyKeySecret(context.Background(), testcase.args.keys, testcase.args.secretName)
+			secret, err := objScope.GenerateKeySecret(context.Background(), testcase.keys)
 			if testcase.expectedErr != nil {
-				assert.ErrorContains(t, err, testcase.expectedErr.Error())
+				require.ErrorContains(t, err, testcase.expectedErr.Error())
+				return
 			}
+
+			assert.Equal(t, secret.OwnerReferences[0].Kind, "LinodeObjectStorageBucket")
+			assert.Equal(t, *secret.OwnerReferences[0].Controller, true)
 		})
 	}
 }
@@ -630,8 +634,7 @@ func TestShouldRestoreKeySecret(t *testing.T) {
 			want: false,
 		},
 	}
-	for _, tt := range tests {
-		testcase := tt
+	for _, testcase := range tests {
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -654,7 +657,7 @@ func TestShouldRestoreKeySecret(t *testing.T) {
 				require.ErrorContains(t, err, testcase.expectedErr.Error())
 			}
 
-			assert.Equal(t, restore, testcase.want)
+			assert.Equal(t, testcase.want, restore)
 		})
 	}
 }
