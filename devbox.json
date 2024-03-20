@@ -16,7 +16,8 @@
     "tilt@latest",
     "mdbook@latest",
     "mdbook-admonish@latest",
-    "mockgen@latest"
+    "mockgen@latest",
+    "kyverno-chainsaw@latest"
   ],
   "shell": {
     "init_hook": [],
