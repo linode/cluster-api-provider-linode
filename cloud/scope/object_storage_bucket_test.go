@@ -32,7 +32,7 @@ func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
 		{
 			name: "Success - Valid ObjectStorageBucketScopeParams",
 			params: ObjectStorageBucketScopeParams{
-				LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+				LinodeClientBuilder: CreateLinodeObjectStorageClient,
 				Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
 				Logger:              &logr.Logger{},
 			},
@@ -41,7 +41,7 @@ func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
 		{
 			name: "Failure - Invalid ObjectStorageBucketScopeParams. Logger is nil",
 			params: ObjectStorageBucketScopeParams{
-				LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+				LinodeClientBuilder: CreateLinodeObjectStorageClient,
 				Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
 				Logger:              nil,
 			},
@@ -51,7 +51,7 @@ func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
 		{
 			name: "Failure - Invalid ObjectStorageBucketScopeParams. Bucket is nil",
 			params: ObjectStorageBucketScopeParams{
-				LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+				LinodeClientBuilder: CreateLinodeObjectStorageClient,
 				Bucket:              nil,
 				Logger:              &logr.Logger{},
 			},
@@ -98,7 +98,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
 					Client:              nil,
 					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
 					Logger:              &logr.Logger{},
@@ -118,7 +118,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
 					Client:              nil,
 					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 						Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
@@ -163,7 +163,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
 					Client:              nil,
 					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
 					Logger:              &logr.Logger{},
@@ -179,7 +179,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
 					Client:              nil,
 					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 						Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
@@ -202,7 +202,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
 					Client:              nil,
 					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
 					Logger:              &logr.Logger{},
@@ -291,7 +291,7 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 					Client:              mockK8sClient,
 					Bucket:              testcase.Bucket,
 					Logger:              &logr.Logger{},
-					LinodeClientBuilder: CreateLinodeObjectStorageBucketClient,
+					LinodeClientBuilder: CreateLinodeObjectStorageClient,
 				})
 			if err != nil {
 				t.Errorf("NewObjectStorageBucketScope() error = %v", err)
