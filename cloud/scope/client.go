@@ -55,7 +55,7 @@ type LinodeObjectStorageClient interface {
 
 type LinodeObjectStorageClientBuilder func(apiKey string) (LinodeObjectStorageClient, error)
 
-func CreateLinodeObjectStorageBucketClient(apiKey string) (LinodeObjectStorageClient, error) {
+func CreateLinodeObjectStorageClient(apiKey string) (LinodeObjectStorageClient, error) {
 	return CreateLinodeClient(apiKey)
 }
 
