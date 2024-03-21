@@ -25,7 +25,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 		clusterScope         *scope.ClusterScope
 		want                 *linodego.NodeBalancer
 		wantErr              bool
-		expects              func(mock *mock.MockMachineScopeLinodeClient)
+		expects              func(mock *mock.MockMachineLinodeClient)
 		expectedNodeBalancer *linodego.NodeBalancer
 		expectedError        error
 	}{
@@ -44,7 +44,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mock *mock.MockMachineScopeLinodeClient) {
+			expects: func(mock *mock.MockMachineLinodeClient) {
 				mock.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{}, nil)
 				mock.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancer{
 					ID: 1234,
@@ -70,7 +70,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mock *mock.MockMachineScopeLinodeClient) {
+			expects: func(mock *mock.MockMachineLinodeClient) {
 				mock.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{
 					{
 						ID:    1234,
@@ -101,7 +101,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mock *mock.MockMachineScopeLinodeClient) {
+			expects: func(mock *mock.MockMachineLinodeClient) {
 				mock.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{
 					{
 						ID:    1234,
@@ -132,7 +132,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mock *mock.MockMachineScopeLinodeClient) {
+			expects: func(mock *mock.MockMachineLinodeClient) {
 				mock.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Unable to list NodeBalancers"))
 			},
 			expectedNodeBalancer: nil,
@@ -153,7 +153,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mock *mock.MockMachineScopeLinodeClient) {
+			expects: func(mock *mock.MockMachineLinodeClient) {
 				mock.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{}, nil)
 				mock.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Unable to create NodeBalancer"))
 			},
@@ -169,11 +169,11 @@ func TestCreateNodeBalancer(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockMachineScopeLinodeClient := mock.NewMockMachineScopeLinodeClient(ctrl)
+			MockMachineLinodeClient := mock.NewMockMachineLinodeClient(ctrl)
 
-			testcase.clusterScope.LinodeClient = MockMachineScopeLinodeClient
+			testcase.clusterScope.LinodeClient = MockMachineLinodeClient
 
-			testcase.expects(MockMachineScopeLinodeClient)
+			testcase.expects(MockMachineLinodeClient)
 
 			got, err := CreateNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
@@ -194,7 +194,7 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 		clusterScope   *scope.ClusterScope
 		expectedConfig *linodego.NodeBalancerConfig
 		expectedError  error
-		expects        func(m *mock.MockMachineScopeLinodeClient)
+		expects        func(m *mock.MockMachineLinodeClient)
 	}{
 		{
 			name: "Success - Create NodeBalancerConfig using default LB port",
@@ -220,7 +220,7 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 				NodeBalancerID: 1234,
 			},
 			expectedError: nil,
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
+			expects: func(m *mock.MockMachineLinodeClient) {
 				m.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
 					Port:           defaultLBPort,
 					Protocol:       linodego.ProtocolTCP,
@@ -255,7 +255,7 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 				NodeBalancerID: 1234,
 			},
 			expectedError: nil,
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
+			expects: func(m *mock.MockMachineLinodeClient) {
 				m.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
 					Port:           80,
 					Protocol:       linodego.ProtocolTCP,
@@ -289,7 +289,7 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 				NodeBalancerID: 1234,
 			},
 			expectedError: fmt.Errorf("error creating NodeBalancerConfig"),
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
+			expects: func(m *mock.MockMachineLinodeClient) {
 				m.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error creating NodeBalancerConfig"))
 			},
 		},
@@ -302,11 +302,11 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockMachineScopeLinodeClient := mock.NewMockMachineScopeLinodeClient(ctrl)
+			MockMachineLinodeClient := mock.NewMockMachineLinodeClient(ctrl)
 
-			testcase.clusterScope.LinodeClient = MockMachineScopeLinodeClient
+			testcase.clusterScope.LinodeClient = MockMachineLinodeClient
 
-			testcase.expects(MockMachineScopeLinodeClient)
+			testcase.expects(MockMachineLinodeClient)
 
 			got, err := CreateNodeBalancerConfig(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
@@ -326,60 +326,8 @@ func TestAddNodeToNBConditions(t *testing.T) {
 		name          string
 		machineScope  *scope.MachineScope
 		expectedError error
-		expects       func(mock *mock.MockMachineScopeLinodeClient)
+		expects       func(mock *mock.MockMachineLinodeClient)
 	}{
-		{
-			name: "Error - NodeBalancerID is not set on the LinodeCluster",
-			machineScope: &scope.MachineScope{
-				Machine: &clusterv1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-						Labels: map[string]string{
-							clusterv1.MachineControlPlaneLabel: "true",
-						},
-					},
-				},
-				Cluster: &clusterv1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-				},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
-							NodeBalancerConfigID: ptr.To(5678),
-						},
-					},
-				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
-					},
-				},
-			},
-			expectedError: fmt.Errorf("nil NodeBalancer ID"),
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
-				m.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
-					IPv4: &linodego.InstanceIPv4Response{
-						Private: []*linodego.InstanceIP{
-							{
-								Address: "1.2.3.4",
-							},
-						},
-					},
-				}, nil)
-			},
-		},
 		{
 			name: "Error - NodeBalancerConfigID are is set",
 			machineScope: &scope.MachineScope{
@@ -416,7 +364,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("nil NodeBalancer Config ID"),
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
+			expects: func(m *mock.MockMachineLinodeClient) {
 				m.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []*linodego.InstanceIP{
@@ -451,7 +399,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("no private IP address"),
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
+			expects: func(m *mock.MockMachineLinodeClient) {
 				m.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []*linodego.InstanceIP{},
@@ -482,31 +430,9 @@ func TestAddNodeToNBConditions(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("could not get instance IP addresses"),
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
+			expects: func(m *mock.MockMachineLinodeClient) {
 				m.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("could not get instance IP addresses"))
 			},
-		},
-		{
-			name: "Error - no InstanceID was set in LinodeMachine Spec",
-			machineScope: &scope.MachineScope{
-				Machine: &clusterv1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-						Labels: map[string]string{
-							clusterv1.MachineControlPlaneLabel: "true",
-						},
-					},
-				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-					},
-				},
-			},
-			expectedError: fmt.Errorf("no InstanceID set for LinodeMachine.Spec"),
-			expects:       func(m *mock.MockMachineScopeLinodeClient) {},
 		},
 	}
 	for _, tt := range tests {
@@ -516,11 +442,11 @@ func TestAddNodeToNBConditions(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockMachineScopeLinodeClient := mock.NewMockMachineScopeLinodeClient(ctrl)
+			MockMachineLinodeClient := mock.NewMockMachineLinodeClient(ctrl)
 
-			testcase.machineScope.LinodeClient = MockMachineScopeLinodeClient
+			testcase.machineScope.LinodeClient = MockMachineLinodeClient
 
-			testcase.expects(MockMachineScopeLinodeClient)
+			testcase.expects(MockMachineLinodeClient)
 
 			err := AddNodeToNB(context.Background(), logr.Discard(), testcase.machineScope)
 			if testcase.expectedError != nil {
@@ -537,7 +463,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 		name          string
 		machineScope  *scope.MachineScope
 		expectedError error
-		expects       func(mock *mock.MockMachineScopeLinodeClient)
+		expects       func(mock *mock.MockMachineLinodeClient)
 	}{
 		{
 			name: "If the machine is not a control plane node, do nothing",
@@ -556,7 +482,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects:       func(m *mock.MockMachineScopeLinodeClient) {},
+			expects:       func(m *mock.MockMachineLinodeClient) {},
 		},
 		{
 			name: "Success - If the machine is a control plane node, add the node to the NodeBalancer",
@@ -599,7 +525,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(mock *mock.MockMachineScopeLinodeClient) {
+			expects: func(mock *mock.MockMachineLinodeClient) {
 				mock.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []*linodego.InstanceIP{
@@ -653,7 +579,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("could not create node balancer node"),
-			expects: func(mock *mock.MockMachineScopeLinodeClient) {
+			expects: func(mock *mock.MockMachineLinodeClient) {
 				mock.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []*linodego.InstanceIP{
@@ -674,11 +600,11 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockMachineScopeLinodeClient := mock.NewMockMachineScopeLinodeClient(ctrl)
+			MockMachineLinodeClient := mock.NewMockMachineLinodeClient(ctrl)
 
-			testcase.machineScope.LinodeClient = MockMachineScopeLinodeClient
+			testcase.machineScope.LinodeClient = MockMachineLinodeClient
 
-			testcase.expects(MockMachineScopeLinodeClient)
+			testcase.expects(MockMachineLinodeClient)
 
 			err := AddNodeToNB(context.Background(), logr.Discard(), testcase.machineScope)
 			if testcase.expectedError != nil {
@@ -696,7 +622,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 		machineScope  *scope.MachineScope
 		wantErr       bool
 		expectedError error
-		expects       func(mock *mock.MockMachineScopeLinodeClient)
+		expects       func(mock *mock.MockMachineLinodeClient)
 	}{
 		// TODO: Add test cases.
 		{
@@ -716,29 +642,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects:       func(m *mock.MockMachineScopeLinodeClient) {},
-		},
-		{
-			name: "Error - If the machine is a control plane node, but no InstanceID is set, do nothing",
-			machineScope: &scope.MachineScope{
-				Machine: &clusterv1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-						Labels: map[string]string{
-							clusterv1.MachineControlPlaneLabel: "true",
-						},
-					},
-				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-					},
-				},
-			},
-			expectedError: fmt.Errorf("no InstanceID set for LinodeMachine.Spec"),
-			expects:       func(m *mock.MockMachineScopeLinodeClient) {},
+			expects:       func(m *mock.MockMachineLinodeClient) {},
 		},
 		{
 			name: "NodeBalancer is already deleted",
@@ -772,7 +676,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects:       func(m *mock.MockMachineScopeLinodeClient) {},
+			expects:       func(m *mock.MockMachineLinodeClient) {},
 		},
 		{
 			name: "Success - Delete Node from NodeBalancer",
@@ -810,7 +714,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
+			expects: func(m *mock.MockMachineLinodeClient) {
 				m.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -850,7 +754,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("error deleting node from NodeBalancer"),
-			expects: func(m *mock.MockMachineScopeLinodeClient) {
+			expects: func(m *mock.MockMachineLinodeClient) {
 				m.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error deleting node from NodeBalancer"))
 			},
 		},
@@ -863,11 +767,11 @@ func TestDeleteNodeFromNB(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockMachineScopeLinodeClient := mock.NewMockMachineScopeLinodeClient(ctrl)
+			MockMachineLinodeClient := mock.NewMockMachineLinodeClient(ctrl)
 
-			testcase.machineScope.LinodeClient = MockMachineScopeLinodeClient
+			testcase.machineScope.LinodeClient = MockMachineLinodeClient
 
-			testcase.expects(MockMachineScopeLinodeClient)
+			testcase.expects(MockMachineLinodeClient)
 
 			err := DeleteNodeFromNB(context.Background(), logr.Discard(), testcase.machineScope)
 			if testcase.expectedError != nil {
