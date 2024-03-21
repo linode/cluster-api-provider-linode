@@ -459,11 +459,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			}
 
 			objScope := &ObjectStorageBucketScope{
-				Client:            mockClient,
-				Bucket:            testcase.Bucket,
-				Logger:            logr.Logger{},
-				LinodeClient:      nil,
-				BucketPatchHelper: nil,
+				Client: mockClient,
+				Bucket: testcase.Bucket,
 			}
 
 			secret, err := objScope.GenerateKeySecret(context.Background(), testcase.keys)
@@ -504,11 +501,11 @@ func TestShouldInitKeys(t *testing.T) {
 			t.Parallel()
 
 			objScope := &ObjectStorageBucketScope{
-				Client:            nil,
-				Bucket:            testcase.Bucket,
-				Logger:            logr.Logger{},
-				LinodeClient:      &linodego.Client{},
-				BucketPatchHelper: &patch.Helper{},
+				Client:       nil,
+				Bucket:       testcase.Bucket,
+				Logger:       logr.Logger{},
+				LinodeClient: &linodego.Client{},
+				PatchHelper:  &patch.Helper{},
 			}
 
 			shouldInit := objScope.ShouldInitKeys()
@@ -546,11 +543,11 @@ func TestShouldRotateKeys(t *testing.T) {
 			t.Parallel()
 
 			objScope := &ObjectStorageBucketScope{
-				Client:            nil,
-				Bucket:            testcase.Bucket,
-				Logger:            logr.Logger{},
-				LinodeClient:      &linodego.Client{},
-				BucketPatchHelper: &patch.Helper{},
+				Client:       nil,
+				Bucket:       testcase.Bucket,
+				Logger:       logr.Logger{},
+				LinodeClient: &linodego.Client{},
+				PatchHelper:  &patch.Helper{},
 			}
 
 			rotate := objScope.ShouldRotateKeys()

@@ -25,11 +25,11 @@ type ObjectStorageBucketScopeParams struct {
 }
 
 type ObjectStorageBucketScope struct {
-	Client            k8sClient
-	Bucket            *infrav1alpha1.LinodeObjectStorageBucket
-	Logger            logr.Logger
-	LinodeClient      LinodeObjectStorageClient
-	BucketPatchHelper *patch.Helper
+	Client       k8sClient
+	Bucket       *infrav1alpha1.LinodeObjectStorageBucket
+	Logger       logr.Logger
+	LinodeClient LinodeObjectStorageClient
+	PatchHelper  *patch.Helper
 }
 
 const AccessKeyNameTemplate = "%s-access-keys"
@@ -67,23 +67,23 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
-	bucketPatchHelper, err := patch.NewHelper(params.Bucket, params.Client)
+	patchHelper, err := patch.NewHelper(params.Bucket, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	return &ObjectStorageBucketScope{
-		Client:            params.Client,
-		Bucket:            params.Bucket,
-		Logger:            *params.Logger,
-		LinodeClient:      linodeClient,
-		BucketPatchHelper: bucketPatchHelper,
+		Client:       params.Client,
+		Bucket:       params.Bucket,
+		Logger:       *params.Logger,
+		LinodeClient: linodeClient,
+		PatchHelper:  patchHelper,
 	}, nil
 }
 
 // PatchObject persists the object storage bucket configuration and status.
 func (s *ObjectStorageBucketScope) PatchObject(ctx context.Context) error {
-	return s.BucketPatchHelper.Patch(ctx, s.Bucket)
+	return s.PatchHelper.Patch(ctx, s.Bucket)
 }
 
 // Close closes the current scope persisting the object storage bucket configuration and status.

@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -420,6 +421,32 @@ var _ = Describe("apply", Label("apply"), func() {
 		}
 	})
 
+	It("fails when a finalizer cannot be added", Label("current"), func(ctx SpecContext) {
+		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
+		prev := mockK8sClient.EXPECT().
+			Scheme().
+			Return(scheme.Scheme).
+			Times(1)
+		mockK8sClient.EXPECT().
+			Scheme().
+			After(prev).
+			Return(runtime.NewScheme()).
+			Times(2)
+
+		patchHelper, err := patch.NewHelper(&obj, mockK8sClient)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create a scope directly since only a subset of fields are needed.
+		bScope := scope.ObjectStorageBucketScope{
+			Client:      mockK8sClient,
+			Bucket:      &obj,
+			PatchHelper: patchHelper,
+		}
+
+		_, err = reconciler.reconcile(ctx, &bScope)
+		Expect(err.Error()).To(ContainSubstring("no kind is registered"))
+	})
+
 	It("fails when it can't ensure a bucket exists", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)
 		mockLinodeClient.EXPECT().
@@ -427,7 +454,6 @@ var _ = Describe("apply", Label("apply"), func() {
 			Return(nil, errors.New("non-404 error")).
 			Times(1)
 
-		// Create a scope directly since only a subset of fields are needed.
 		bScope := scope.ObjectStorageBucketScope{
 			LinodeClient: mockLinodeClient,
 			Bucket:       &obj,
