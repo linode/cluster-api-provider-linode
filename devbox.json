@@ -20,7 +20,9 @@
     "kyverno-chainsaw@latest"
   ],
   "shell": {
-    "init_hook": [],
+    "init_hook": [
+      "export \"GOROOT=$(go env GOROOT)\""
+    ],
     "scripts":   {}
   }
 }
