@@ -21,7 +21,7 @@
   ],
   "shell": {
     "init_hook": [
-      "export GOROOT=$(go env GOROOT)"
+      "export \"GOROOT=$(go env GOROOT)\""
     ],
     "scripts":   {}
   }
