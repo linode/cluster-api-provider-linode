@@ -103,6 +103,21 @@ func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageBucket(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucket", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageBucket), ctx, cluster, label)
 }
 
+// GetObjectStorageKey mocks base method.
+func (m *MockLinodeObjectStorageClient) GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetObjectStorageKey", ctx, keyID)
+	ret0, _ := ret[0].(*linodego.ObjectStorageKey)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetObjectStorageKey indicates an expected call of GetObjectStorageKey.
+func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageKey(ctx, keyID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageKey", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageKey), ctx, keyID)
+}
+
 // Mockk8sClient is a mock of k8sClient interface.
 type Mockk8sClient struct {
 	ctrl     *gomock.Controller
