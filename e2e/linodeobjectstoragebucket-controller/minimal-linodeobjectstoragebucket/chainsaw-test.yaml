@@ -52,10 +52,21 @@ spec:
     try:
     - delete:
         ref:
+          apiVersion: v1
+          kind: Secret
+          name: (join('-', [($namespace), 'backups-access-keys']))
+  - name: step-05
+    try:
+    - assert:
+        file: 05-assert.yaml
+  - name: step-06
+    try:
+    - delete:
+        ref:
           apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
           kind: LinodeObjectStorageBucket
           name: ($bucket)
-  - name: step-05
+  - name: step-07
     try:
     - error:
-        file: 05-errors.yaml
+        file: 07-errors.yaml

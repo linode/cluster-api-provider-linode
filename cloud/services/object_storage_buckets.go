@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -42,8 +43,8 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 	return bucket, nil
 }
 
-func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([scope.NumAccessKeys]linodego.ObjectStorageKey, error) {
-	var newKeys [scope.NumAccessKeys]linodego.ObjectStorageKey
+func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([scope.NumAccessKeys]*linodego.ObjectStorageKey, error) {
+	var newKeys [scope.NumAccessKeys]*linodego.ObjectStorageKey
 
 	for idx, permission := range []struct {
 		name   string
@@ -58,11 +59,11 @@ func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBuc
 			return newKeys, err
 		}
 
-		newKeys[idx] = *key
+		newKeys[idx] = key
 	}
 
 	// If key revocation fails here, just log the errors since new keys have been created
-	if bScope.Bucket.Status.LastKeyGeneration != nil && bScope.ShouldRotateKeys() {
+	if !bScope.ShouldInitKeys() && bScope.ShouldRotateKeys() {
 		if err := RevokeObjectStorageKeys(ctx, bScope); err != nil {
 			bScope.Logger.Error(err, "Failed to revoke access keys; keys must be manually revoked")
 		}
@@ -116,4 +117,26 @@ func revokeObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBuck
 	bScope.Logger.Info("Revoked access key", "id", keyID)
 
 	return nil
+}
+
+func GetObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([2]*linodego.ObjectStorageKey, error) {
+	var keys [2]*linodego.ObjectStorageKey
+
+	if len(bScope.Bucket.Status.AccessKeyRefs) != scope.NumAccessKeys {
+		return keys, errors.New("expected two object storage key IDs in .status.accessKeyRefs")
+	}
+
+	var errs []error
+	for idx, keyID := range bScope.Bucket.Status.AccessKeyRefs {
+		key, err := bScope.LinodeClient.GetObjectStorageKey(ctx, keyID)
+		if err != nil {
+			errs = append(errs, err)
+
+			continue
+		}
+
+		keys[idx] = key
+	}
+
+	return keys, utilerrors.NewAggregate(errs)
 }

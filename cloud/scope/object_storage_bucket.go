@@ -8,8 +8,10 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -23,11 +25,11 @@ type ObjectStorageBucketScopeParams struct {
 }
 
 type ObjectStorageBucketScope struct {
-	client            k8sClient
-	Bucket            *infrav1alpha1.LinodeObjectStorageBucket
-	Logger            logr.Logger
-	LinodeClient      LinodeObjectStorageClient
-	BucketPatchHelper *patch.Helper
+	Client       k8sClient
+	Bucket       *infrav1alpha1.LinodeObjectStorageBucket
+	Logger       logr.Logger
+	LinodeClient LinodeObjectStorageClient
+	PatchHelper  *patch.Helper
 }
 
 const AccessKeyNameTemplate = "%s-access-keys"
@@ -65,23 +67,23 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
-	bucketPatchHelper, err := patch.NewHelper(params.Bucket, params.Client)
+	patchHelper, err := patch.NewHelper(params.Bucket, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	return &ObjectStorageBucketScope{
-		client:            params.Client,
-		Bucket:            params.Bucket,
-		Logger:            *params.Logger,
-		LinodeClient:      linodeClient,
-		BucketPatchHelper: bucketPatchHelper,
+		Client:       params.Client,
+		Bucket:       params.Bucket,
+		Logger:       *params.Logger,
+		LinodeClient: linodeClient,
+		PatchHelper:  patchHelper,
 	}, nil
 }
 
 // PatchObject persists the object storage bucket configuration and status.
 func (s *ObjectStorageBucketScope) PatchObject(ctx context.Context) error {
-	return s.BucketPatchHelper.Patch(ctx, s.Bucket)
+	return s.PatchHelper.Patch(ctx, s.Bucket)
 }
 
 // Close closes the current scope persisting the object storage bucket configuration and status.
@@ -99,8 +101,17 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
-// ApplyAccessKeySecret applies a Secret containing keys created for accessing the bucket.
-func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, keys [NumAccessKeys]linodego.ObjectStorageKey, secretName string) error {
+// GenerateKeySecret returns a secret suitable for submission to the Kubernetes API.
+// The secret is expected to contain keys for accessing the bucket, as well as owner and controller references.
+func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [NumAccessKeys]*linodego.ObjectStorageKey) (*corev1.Secret, error) {
+	for _, key := range keys {
+		if key == nil {
+			return nil, errors.New("expected two non-nil object storage keys")
+		}
+	}
+
+	secretName := fmt.Sprintf(AccessKeyNameTemplate, s.Bucket.Name)
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -112,20 +123,34 @@ func (s *ObjectStorageBucketScope) ApplyAccessKeySecret(ctx context.Context, key
 		},
 	}
 
-	if err := controllerutil.SetOwnerReference(s.Bucket, secret, s.client.Scheme()); err != nil {
-		return fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
+	scheme := s.Client.Scheme()
+	if err := controllerutil.SetOwnerReference(s.Bucket, secret, scheme); err != nil {
+		return nil, fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
+	}
+	if err := controllerutil.SetControllerReference(s.Bucket, secret, scheme); err != nil {
+		return nil, fmt.Errorf("could not set controller ref on access key secret %s: %w", secretName, err)
 	}
 
-	result, err := controllerutil.CreateOrPatch(ctx, s.client, secret, func() error { return nil })
-	if err != nil {
-		return fmt.Errorf("could not create/patch access key secret %s: %w", secretName, err)
-	}
+	return secret, nil
+}
 
-	s.Logger.Info(fmt.Sprintf("Secret %s was %s with new access keys", secret.Name, result))
-
-	return nil
+func (s *ObjectStorageBucketScope) ShouldInitKeys() bool {
+	return s.Bucket.Status.LastKeyGeneration == nil
 }
 
 func (s *ObjectStorageBucketScope) ShouldRotateKeys() bool {
-	return *s.Bucket.Spec.KeyGeneration != *s.Bucket.Status.LastKeyGeneration
+	return s.Bucket.Status.LastKeyGeneration != nil &&
+		*s.Bucket.Spec.KeyGeneration != *s.Bucket.Status.LastKeyGeneration
+}
+
+func (s *ObjectStorageBucketScope) ShouldRestoreKeySecret(ctx context.Context) (bool, error) {
+	if s.Bucket.Status.KeySecretName == nil {
+		return false, nil
+	}
+
+	secret := &corev1.Secret{}
+	key := client.ObjectKey{Namespace: s.Bucket.Namespace, Name: *s.Bucket.Status.KeySecretName}
+	err := s.Client.Get(ctx, key, secret)
+
+	return apierrors.IsNotFound(err), client.IgnoreNotFound(err)
 }
