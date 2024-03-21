@@ -40,7 +40,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func mockClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.LinodeObjectStorageBucketBuilder {
+func mockClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.LinodeObjectStorageClientBuilder {
 	return func(_ string) (scope.LinodeObjectStorageClient, error) {
 		return m, nil
 	}
