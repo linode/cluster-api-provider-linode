@@ -10,7 +10,7 @@ import (
 // LinodeClient is an interface that defines the methods that a Linode client must have to interact with Linode.
 // It defines all the functions that are required to create, delete, and get resources
 // from Linode such as object storage buckets, node balancers, linodes, and VPCs.
-type MachineLinodeClient interface {
+type LinodeMachineClient interface {
 	LinodeNodeBalancerClient
 	LinodeInstanceClient
 	LinodeVPCClient
