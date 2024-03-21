@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/linode/linodego"
@@ -136,7 +139,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 	tests := []struct {
 		name          string
 		bScope        *scope.ObjectStorageBucketScope
-		want          [scope.NumAccessKeys]linodego.ObjectStorageKey
+		want          [scope.NumAccessKeys]*linodego.ObjectStorageKey
 		expectedError error
 		expects       func(*mock.MockLinodeObjectStorageClient)
 	}{
@@ -160,7 +163,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 					},
 				},
 			},
-			want: [scope.NumAccessKeys]linodego.ObjectStorageKey{
+			want: [scope.NumAccessKeys]*linodego.ObjectStorageKey{
 				{
 					ID:    1234,
 					Label: "test-bucket-rw",
@@ -203,7 +206,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 					},
 				},
 			},
-			want: [scope.NumAccessKeys]linodego.ObjectStorageKey{
+			want: [scope.NumAccessKeys]*linodego.ObjectStorageKey{
 				{
 					ID:    1234,
 					Label: "test-bucket-rw",
@@ -237,7 +240,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 					},
 				},
 			},
-			want:          [scope.NumAccessKeys]linodego.ObjectStorageKey{},
+			want:          [scope.NumAccessKeys]*linodego.ObjectStorageKey{},
 			expectedError: fmt.Errorf("failed to create access key:"),
 			expects: func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in creating access key"))
@@ -263,6 +266,99 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
 				assert.Equal(t, testcase.want, got)
+			}
+		})
+	}
+}
+
+func TestGetObjectStorageKeys(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		bScope  *scope.ObjectStorageBucketScope
+		expects func(*mock.MockLinodeObjectStorageClient)
+		want    [2]*linodego.ObjectStorageKey
+		wantErr string
+	}{
+		{
+			name: "happy path",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+					Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+						AccessKeyRefs: []int{0, 1},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				mockClient.EXPECT().
+					GetObjectStorageKey(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ any, keyID int) (*linodego.ObjectStorageKey, error) {
+						return &linodego.ObjectStorageKey{ID: keyID}, nil
+					}).
+					Times(2)
+			},
+			want: [2]*linodego.ObjectStorageKey{
+				{ID: 0},
+				{ID: 1},
+			},
+		},
+		{
+			name: "not two key refs in status",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+			},
+			wantErr: "expected two object storage key IDs in .status.accessKeyRefs",
+		},
+		{
+			name: "one client error",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+					Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+						AccessKeyRefs: []int{0, 1},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				mockClient.EXPECT().
+					GetObjectStorageKey(gomock.Any(), 0).
+					DoAndReturn(func(_ any, keyID int) (*linodego.ObjectStorageKey, error) {
+						return &linodego.ObjectStorageKey{ID: keyID}, nil
+					})
+				mockClient.EXPECT().
+					GetObjectStorageKey(gomock.Any(), 1).
+					DoAndReturn(func(_ any, keyID int) (*linodego.ObjectStorageKey, error) {
+						return nil, errors.New("some error")
+					})
+			},
+			want: [2]*linodego.ObjectStorageKey{
+				{ID: 0},
+				nil,
+			},
+			wantErr: "some error",
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			var mockClient *mock.MockLinodeObjectStorageClient
+			if testcase.expects != nil {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				mockClient = mock.NewMockLinodeObjectStorageClient(ctrl)
+				testcase.expects(mockClient)
+				testcase.bScope.LinodeClient = mockClient
+			}
+
+			got, err := GetObjectStorageKeys(context.TODO(), testcase.bScope)
+			if testcase.wantErr != "" && (err == nil || !strings.Contains(err.Error(), testcase.wantErr)) {
+				t.Errorf("GetObjectStorageKeys() error = %v, should contain %v", err, testcase.wantErr)
+			}
+			if !reflect.DeepEqual(got, testcase.want) {
+				t.Errorf("GetObjectStorageKeys() = %v, want %v", got, testcase.want)
 			}
 		})
 	}
