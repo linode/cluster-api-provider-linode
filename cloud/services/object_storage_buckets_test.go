@@ -46,7 +46,6 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 					Label: "test-bucket",
 				}, nil)
 			},
-			expectedError: nil,
 		},
 		{
 			name: "Error - Unable to get the OBJ bucket",
@@ -60,7 +59,6 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 					},
 				},
 			},
-			want: nil,
 			expects: func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in getting object storage bucket"))
 			},
@@ -87,7 +85,6 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 					Label: "test-bucket",
 				}, nil)
 			},
-			expectedError: nil,
 		},
 		{
 			name: "Error - unable to create the OBJ bucket",
@@ -101,7 +98,6 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 					},
 				},
 			},
-			want: nil,
 			expects: func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
 				c.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in creating object storage bucket"))
@@ -142,7 +138,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 		bScope        *scope.ObjectStorageBucketScope
 		want          [scope.NumAccessKeys]linodego.ObjectStorageKey
 		expectedError error
-		expects       func(c *mock.MockLinodeObjectStorageClient)
+		expects       func(*mock.MockLinodeObjectStorageClient)
 	}{
 		{
 			name: "Success - Create new access keys and revoke old access keys",
@@ -174,18 +170,17 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 					Label: "test-bucket-ro",
 				},
 			},
-			expectedError: nil,
-			expects: func(mock *mock.MockLinodeObjectStorageClient) {
-				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				mockClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-rw",
 					ID:    1234,
 				}, nil)
-				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+				mockClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-ro",
 					ID:    5678,
 				}, nil)
-				mock.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
-				mock.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
+				mockClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
+				mockClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		{
@@ -218,17 +213,16 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 					Label: "test-bucket-ro",
 				},
 			},
-			expectedError: nil,
-			expects: func(mock *mock.MockLinodeObjectStorageClient) {
-				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				mockClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-rw",
 					ID:    1234,
 				}, nil)
-				mock.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+				mockClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 					Label: "test-bucket-ro",
 					ID:    5678,
 				}, nil)
-				mock.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error in deleting access key")).Times(2)
+				mockClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error in deleting access key")).Times(2)
 			},
 		},
 		{
