@@ -24,7 +24,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 		bScope        *scope.ObjectStorageBucketScope
 		want          *linodego.ObjectStorageBucket
 		expectedError error
-		expects       func(mock *mock.MockLinodeObjectStorageClient)
+		expects       func(*mock.MockLinodeObjectStorageClient)
 	}{
 		{
 			name: "Success - Successfully get the OBJ bucket",
@@ -41,8 +41,8 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			want: &linodego.ObjectStorageBucket{
 				Label: "test-bucket",
 			},
-			expects: func(c *mock.MockLinodeObjectStorageClient) {
-				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				mockClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
 					Label: "test-bucket",
 				}, nil)
 			},
