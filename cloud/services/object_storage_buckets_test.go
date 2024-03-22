@@ -133,9 +133,9 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 	}
 }
 
-// TestRotateObjectStorageKeys tests the RotateObjectStorageKeys function along
+// TestRotateObjectStorageKeysEdgeCases tests the RotateObjectStorageKeys function along
 // with createObjectStorageKey(), RevokeObjectStorageKeys(), and revokeObjectStorageKey()
-func TestRotateObjectStorageKeys(t *testing.T) {
+func TestRotateObjectStorageKeysEdgeCases(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
@@ -187,7 +187,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "Error rotating OBJ keys",
+			name: "Error creating keys",
 			bScope: &scope.ObjectStorageBucketScope{
 				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
