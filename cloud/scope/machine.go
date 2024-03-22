@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -29,7 +28,7 @@ type MachineScope struct {
 	PatchHelper   *patch.Helper
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
-	LinodeClient  *linodego.Client
+	LinodeClient  LinodeMachineClient
 	LinodeCluster *infrav1alpha1.LinodeCluster
 	LinodeMachine *infrav1alpha1.LinodeMachine
 }
