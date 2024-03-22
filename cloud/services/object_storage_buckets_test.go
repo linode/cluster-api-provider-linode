@@ -10,6 +10,7 @@ import (
 
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -144,50 +145,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 		expects       func(*mock.MockLinodeObjectStorageClient)
 	}{
 		{
-			name: "Success - Create new access keys and revoke old access keys",
-			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-bucket",
-					},
-					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster:       "test-cluster",
-						KeyGeneration: ptr.To(1),
-					},
-					Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
-						LastKeyGeneration: ptr.To(0),
-						AccessKeyRefs: []int{
-							11,
-							22,
-						},
-					},
-				},
-			},
-			want: [scope.NumAccessKeys]*linodego.ObjectStorageKey{
-				{
-					ID:    1234,
-					Label: "test-bucket-rw",
-				},
-				{
-					ID:    5678,
-					Label: "test-bucket-ro",
-				},
-			},
-			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
-				mockClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
-					Label: "test-bucket-rw",
-					ID:    1234,
-				}, nil)
-				mockClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
-					Label: "test-bucket-ro",
-					ID:    5678,
-				}, nil)
-				mockClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
-				mockClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
-			},
-		},
-		{
-			name: "Success - Create new access keys but unable to revoke old access keys",
+			name: "Creates new access keys but unable to revoke old access keys",
 			bScope: &scope.ObjectStorageBucketScope{
 				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
@@ -229,7 +187,7 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - Rotated OBJ keys",
+			name: "Error rotating OBJ keys",
 			bScope: &scope.ObjectStorageBucketScope{
 				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
@@ -267,6 +225,92 @@ func TestRotateObjectStorageKeys(t *testing.T) {
 			} else {
 				assert.Equal(t, testcase.want, got)
 			}
+		})
+	}
+}
+
+func TestRotateObjectStorageKeysRevocation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		bucket  *infrav1alpha1.LinodeObjectStorageBucket
+		expects func(*mock.MockLinodeObjectStorageClient)
+	}{
+		{
+			name: "should revoke existing keys",
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bucket",
+				},
+				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					KeyGeneration: ptr.To(1),
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					LastKeyGeneration: ptr.To(0),
+					AccessKeyRefs:     []int{0, 1},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				for keyID := range 2 {
+					mockClient.EXPECT().
+						DeleteObjectStorageKey(gomock.Any(), keyID).
+						Return(nil).
+						Times(1)
+				}
+			},
+		},
+		{
+			name: "shouldInitKeys",
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bucket",
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					LastKeyGeneration: nil,
+				},
+			},
+		},
+		{
+			name: "not shouldRotateKeys",
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bucket",
+				},
+				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					KeyGeneration: ptr.To(1),
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					LastKeyGeneration: ptr.To(1),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mock.NewMockLinodeObjectStorageClient(ctrl)
+			mockClient.EXPECT().
+				CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+				Return(&linodego.ObjectStorageKey{ID: 3}, nil).
+				Times(2)
+			if testcase.expects != nil {
+				testcase.expects(mockClient)
+			}
+
+			bScope := &scope.ObjectStorageBucketScope{
+				LinodeClient: mockClient,
+				Bucket:       testcase.bucket,
+			}
+
+			_, err := RotateObjectStorageKeys(context.TODO(), bScope)
+			require.NoError(t, err)
 		})
 	}
 }
