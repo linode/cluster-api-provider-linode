@@ -133,9 +133,9 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 	}
 }
 
-// TestRotateObjectStorageKeysEdgeCases tests the RotateObjectStorageKeys function along
+// TestRotateObjectStorageKeysCreation tests the RotateObjectStorageKeys function along
 // with createObjectStorageKey(), RevokeObjectStorageKeys(), and revokeObjectStorageKey()
-func TestRotateObjectStorageKeysEdgeCases(t *testing.T) {
+func TestRotateObjectStorageKeysCreation(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
