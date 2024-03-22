@@ -133,8 +133,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 	}
 }
 
-// TestRotateObjectStorageKeysCreation tests the RotateObjectStorageKeys function along
-// with createObjectStorageKey(), RevokeObjectStorageKeys(), and revokeObjectStorageKey()
+// TestRotateObjectStorageKeysCreation tests the creation flow of object storage keys
 func TestRotateObjectStorageKeysCreation(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -145,7 +144,7 @@ func TestRotateObjectStorageKeysCreation(t *testing.T) {
 		expects       func(*mock.MockLinodeObjectStorageClient)
 	}{
 		{
-			name: "Creates new access keys but unable to revoke old access keys",
+			name: "Creates new access keys",
 			bScope: &scope.ObjectStorageBucketScope{
 				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
@@ -183,7 +182,7 @@ func TestRotateObjectStorageKeysCreation(t *testing.T) {
 					Label: "test-bucket-ro",
 					ID:    5678,
 				}, nil)
-				mockClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error in deleting access key")).Times(2)
+				mockClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil).Times(2)
 			},
 		},
 		{
@@ -285,8 +284,30 @@ func TestRotateObjectStorageKeysRevocation(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "unable to revoke keys",
+			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bucket",
+				},
+				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					KeyGeneration: ptr.To(1),
+				},
+				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					LastKeyGeneration: ptr.To(0),
+					AccessKeyRefs:     []int{0, 1},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeObjectStorageClient) {
+				for keyID := range 2 {
+					mockClient.EXPECT().
+						DeleteObjectStorageKey(gomock.Any(), keyID).
+						Return(fmt.Errorf("error in deleting access key")).
+						Times(1)
+				}
+			},
+		},
 	}
-
 	for _, tt := range tests {
 		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
