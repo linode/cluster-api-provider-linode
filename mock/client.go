@@ -73,6 +73,21 @@ func (mr *MockLinodeMachineClientMockRecorder) CreateInstance(ctx, opts any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstance", reflect.TypeOf((*MockLinodeMachineClient)(nil).CreateInstance), ctx, opts)
 }
 
+// CreateInstanceConfig mocks base method.
+func (m *MockLinodeMachineClient) CreateInstanceConfig(ctx context.Context, linodeID int, opts linodego.InstanceConfigCreateOptions) (*linodego.InstanceConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInstanceConfig", ctx, linodeID, opts)
+	ret0, _ := ret[0].(*linodego.InstanceConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateInstanceConfig indicates an expected call of CreateInstanceConfig.
+func (mr *MockLinodeMachineClientMockRecorder) CreateInstanceConfig(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstanceConfig", reflect.TypeOf((*MockLinodeMachineClient)(nil).CreateInstanceConfig), ctx, linodeID, opts)
+}
+
 // CreateInstanceDisk mocks base method.
 func (m *MockLinodeMachineClient) CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error) {
 	m.ctrl.T.Helper()
@@ -190,21 +205,6 @@ func (mr *MockLinodeMachineClientMockRecorder) GetInstance(ctx, linodeID any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstance", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetInstance), ctx, linodeID)
 }
 
-// GetInstanceDisk mocks base method.
-func (m *MockLinodeMachineClient) GetInstanceDisk(ctx context.Context, linodeID, diskID int) (*linodego.InstanceDisk, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInstanceDisk", ctx, linodeID, diskID)
-	ret0, _ := ret[0].(*linodego.InstanceDisk)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetInstanceDisk indicates an expected call of GetInstanceDisk.
-func (mr *MockLinodeMachineClientMockRecorder) GetInstanceDisk(ctx, linodeID, diskID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceDisk", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetInstanceDisk), ctx, linodeID, diskID)
-}
-
 // GetInstanceIPAddresses mocks base method.
 func (m *MockLinodeMachineClient) GetInstanceIPAddresses(ctx context.Context, linodeID int) (*linodego.InstanceIPAddressResponse, error) {
 	m.ctrl.T.Helper()
@@ -220,6 +220,21 @@ func (mr *MockLinodeMachineClientMockRecorder) GetInstanceIPAddresses(ctx, linod
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceIPAddresses", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetInstanceIPAddresses), ctx, linodeID)
 }
 
+// GetType mocks base method.
+func (m *MockLinodeMachineClient) GetType(ctx context.Context, instanceType string) (*linodego.LinodeType, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetType", ctx, instanceType)
+	ret0, _ := ret[0].(*linodego.LinodeType)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetType indicates an expected call of GetType.
+func (mr *MockLinodeMachineClientMockRecorder) GetType(ctx, instanceType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetType", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetType), ctx, instanceType)
+}
+
 // GetVPC mocks base method.
 func (m *MockLinodeMachineClient) GetVPC(ctx context.Context, vpcID int) (*linodego.VPC, error) {
 	m.ctrl.T.Helper()
@@ -233,21 +248,6 @@ func (m *MockLinodeMachineClient) GetVPC(ctx context.Context, vpcID int) (*linod
 func (mr *MockLinodeMachineClientMockRecorder) GetVPC(ctx, vpcID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVPC", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetVPC), ctx, vpcID)
-}
-
-// ListInstanceConfigs mocks base method.
-func (m *MockLinodeMachineClient) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListInstanceConfigs", ctx, linodeID, opts)
-	ret0, _ := ret[0].([]linodego.InstanceConfig)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListInstanceConfigs indicates an expected call of ListInstanceConfigs.
-func (mr *MockLinodeMachineClientMockRecorder) ListInstanceConfigs(ctx, linodeID, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceConfigs", reflect.TypeOf((*MockLinodeMachineClient)(nil).ListInstanceConfigs), ctx, linodeID, opts)
 }
 
 // ListInstances mocks base method.
@@ -278,20 +278,6 @@ func (m *MockLinodeMachineClient) ListNodeBalancers(ctx context.Context, opts *l
 func (mr *MockLinodeMachineClientMockRecorder) ListNodeBalancers(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodeBalancers", reflect.TypeOf((*MockLinodeMachineClient)(nil).ListNodeBalancers), ctx, opts)
-}
-
-// ResizeInstanceDisk mocks base method.
-func (m *MockLinodeMachineClient) ResizeInstanceDisk(ctx context.Context, linodeID, diskID, size int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResizeInstanceDisk", ctx, linodeID, diskID, size)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ResizeInstanceDisk indicates an expected call of ResizeInstanceDisk.
-func (mr *MockLinodeMachineClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeMachineClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
 }
 
 // MockLinodeInstanceClient is a mock of LinodeInstanceClient interface.
@@ -346,6 +332,21 @@ func (mr *MockLinodeInstanceClientMockRecorder) CreateInstance(ctx, opts any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).CreateInstance), ctx, opts)
 }
 
+// CreateInstanceConfig mocks base method.
+func (m *MockLinodeInstanceClient) CreateInstanceConfig(ctx context.Context, linodeID int, opts linodego.InstanceConfigCreateOptions) (*linodego.InstanceConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInstanceConfig", ctx, linodeID, opts)
+	ret0, _ := ret[0].(*linodego.InstanceConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateInstanceConfig indicates an expected call of CreateInstanceConfig.
+func (mr *MockLinodeInstanceClientMockRecorder) CreateInstanceConfig(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstanceConfig", reflect.TypeOf((*MockLinodeInstanceClient)(nil).CreateInstanceConfig), ctx, linodeID, opts)
+}
+
 // CreateInstanceDisk mocks base method.
 func (m *MockLinodeInstanceClient) CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error) {
 	m.ctrl.T.Helper()
@@ -390,21 +391,6 @@ func (mr *MockLinodeInstanceClientMockRecorder) GetInstance(ctx, linodeID any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetInstance), ctx, linodeID)
 }
 
-// GetInstanceDisk mocks base method.
-func (m *MockLinodeInstanceClient) GetInstanceDisk(ctx context.Context, linodeID, diskID int) (*linodego.InstanceDisk, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInstanceDisk", ctx, linodeID, diskID)
-	ret0, _ := ret[0].(*linodego.InstanceDisk)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetInstanceDisk indicates an expected call of GetInstanceDisk.
-func (mr *MockLinodeInstanceClientMockRecorder) GetInstanceDisk(ctx, linodeID, diskID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetInstanceDisk), ctx, linodeID, diskID)
-}
-
 // GetInstanceIPAddresses mocks base method.
 func (m *MockLinodeInstanceClient) GetInstanceIPAddresses(ctx context.Context, linodeID int) (*linodego.InstanceIPAddressResponse, error) {
 	m.ctrl.T.Helper()
@@ -420,19 +406,19 @@ func (mr *MockLinodeInstanceClientMockRecorder) GetInstanceIPAddresses(ctx, lino
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceIPAddresses", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetInstanceIPAddresses), ctx, linodeID)
 }
 
-// ListInstanceConfigs mocks base method.
-func (m *MockLinodeInstanceClient) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error) {
+// GetType mocks base method.
+func (m *MockLinodeInstanceClient) GetType(ctx context.Context, instanceType string) (*linodego.LinodeType, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListInstanceConfigs", ctx, linodeID, opts)
-	ret0, _ := ret[0].([]linodego.InstanceConfig)
+	ret := m.ctrl.Call(m, "GetType", ctx, instanceType)
+	ret0, _ := ret[0].(*linodego.LinodeType)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListInstanceConfigs indicates an expected call of ListInstanceConfigs.
-func (mr *MockLinodeInstanceClientMockRecorder) ListInstanceConfigs(ctx, linodeID, opts any) *gomock.Call {
+// GetType indicates an expected call of GetType.
+func (mr *MockLinodeInstanceClientMockRecorder) GetType(ctx, instanceType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceConfigs", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstanceConfigs), ctx, linodeID, opts)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetType", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetType), ctx, instanceType)
 }
 
 // ListInstances mocks base method.
@@ -448,20 +434,6 @@ func (m *MockLinodeInstanceClient) ListInstances(ctx context.Context, opts *lino
 func (mr *MockLinodeInstanceClientMockRecorder) ListInstances(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstances), ctx, opts)
-}
-
-// ResizeInstanceDisk mocks base method.
-func (m *MockLinodeInstanceClient) ResizeInstanceDisk(ctx context.Context, linodeID, diskID, size int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResizeInstanceDisk", ctx, linodeID, diskID, size)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ResizeInstanceDisk indicates an expected call of ResizeInstanceDisk.
-func (mr *MockLinodeInstanceClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
 }
 
 // MockLinodeVPCClient is a mock of LinodeVPCClient interface.

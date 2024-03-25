@@ -273,14 +273,21 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 			return nil, err
 		}
+
+		// Omit the configured image when creating the instance to configure disks and config manually
+		image := createOpts.Image
+		createOpts.Image = ""
+
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil || linodeInstance == nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
 			return nil, err
 		}
-		if err = r.configureDisksControlPlane(ctx, logger, machineScope, linodeInstance.ID); err != nil {
-			logger.Error(err, "Failed to configure instance disks")
+
+		createOpts.Image = image
+		if err = r.configureInstanceProfile(ctx, logger, machineScope, linodeInstance.ID, *createOpts); err != nil {
+			logger.Error(err, "Failed to configure instance profile")
 
 			return nil, err
 		}
@@ -310,41 +317,48 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	return linodeInstance, nil
 }
 
-func (r *LinodeMachineReconciler) configureDisksControlPlane(
+func (r *LinodeMachineReconciler) configureInstanceProfile(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
+	createOpts linodego.InstanceCreateOptions,
 ) error {
 	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
 		return nil
 	}
-	// get the default instance config
-	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
-	if err != nil || len(configs) == 0 {
-		logger.Error(err, "Failed to list instance configs")
 
-		return err
-	}
-	instanceConfig := &configs[0]
-
-	// carve out space for the etcd disk
-	rootDiskID := instanceConfig.Devices.SDA.DiskID
-	rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
+	instanceType, err := machineScope.LinodeClient.GetType(ctx, createOpts.Type)
 	if err != nil {
-		logger.Error(err, "Failed to get root disk for instance")
+		logger.Error(err, "Failed to retrieve type for instance")
 
 		return err
 	}
-	diskSize := rootDisk.Size - defaultEtcdDiskSize
-	if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-		logger.Error(err, "Failed to resize root disk")
+
+	// create the root disk
+	rootDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
+		ctx,
+		linodeInstanceID,
+		linodego.InstanceDiskCreateOptions{
+			Label:           "root",
+			Size:            instanceType.Disk - defaultEtcdDiskSize,
+			Image:           createOpts.Image,
+			RootPass:        createOpts.RootPass,
+			Filesystem:      string(linodego.FilesystemExt4),
+			AuthorizedKeys:  createOpts.AuthorizedKeys,
+			AuthorizedUsers: createOpts.AuthorizedUsers,
+			StackscriptID:   createOpts.StackScriptID,
+			StackscriptData: createOpts.StackScriptData,
+		},
+	)
+	if err != nil {
+		logger.Error(err, "Failed to create root disk")
 
 		return err
 	}
 
 	// create the etcd disk
-	_, err = machineScope.LinodeClient.CreateInstanceDisk(
+	etcdDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
 		ctx,
 		linodeInstanceID,
 		linodego.InstanceDiskCreateOptions{
@@ -359,7 +373,33 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 		return err
 	}
 
-	return nil
+	_, err = machineScope.LinodeClient.CreateInstanceConfig(
+		ctx,
+		linodeInstanceID,
+		linodego.InstanceConfigCreateOptions{
+			Label: fmt.Sprintf("%s disk profile", createOpts.Image),
+			Devices: linodego.InstanceConfigDeviceMap{
+				SDA: &linodego.InstanceConfigDevice{DiskID: rootDisk.ID},
+				SDB: &linodego.InstanceConfigDevice{DiskID: etcdDisk.ID},
+			},
+			Helpers: &linodego.InstanceConfigHelpers{
+				UpdateDBDisabled:  true,
+				Distro:            true,
+				ModulesDep:        true,
+				Network:           true,
+				DevTmpFsAutomount: true,
+			},
+			Interfaces: createOpts.Interfaces,
+			Kernel:     "linode/grub2",
+		},
+	)
+	if err != nil {
+		logger.Error(err, "Failed to create config profile for instance")
+
+		return err
+	}
+
+	return err
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(
