@@ -363,13 +363,6 @@ func (in *LinodeMachineSpec) DeepCopyInto(out *LinodeMachineSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.StackScriptData != nil {
-		in, out := &in.StackScriptData, &out.StackScriptData
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.Interfaces != nil {
 		in, out := &in.Interfaces, &out.Interfaces
 		*out = make([]InstanceConfigInterfaceCreateOptions, len(*in))
@@ -381,11 +374,6 @@ func (in *LinodeMachineSpec) DeepCopyInto(out *LinodeMachineSpec) {
 		in, out := &in.Tags, &out.Tags
 		*out = make([]string, len(*in))
 		copy(*out, *in)
-	}
-	if in.Metadata != nil {
-		in, out := &in.Metadata, &out.Metadata
-		*out = new(InstanceMetadataOptions)
-		**out = **in
 	}
 	if in.CredentialsRef != nil {
 		in, out := &in.CredentialsRef, &out.CredentialsRef

@@ -150,16 +150,6 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
-                      metadata:
-                        description: InstanceMetadataOptions defines metadata of instance
-                        properties:
-                          userData:
-                            description: UserData expects a Base64-encoded string
-                            type: string
-                        type: object
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
                       privateIp:
                         type: boolean
                         x-kubernetes-validations:
@@ -179,18 +169,6 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
-                      stackscriptData:
-                        additionalProperties:
-                          type: string
-                        type: object
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
-                      stackscriptId:
-                        type: integer
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
                       tags:
                         items:
                           type: string
@@ -203,6 +181,12 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
+                      useStackScriptBootstrap:
+                        description: |-
+                          UseStackScriptBootstrap will specify to use a StackScript shim for running cloud init
+                          instead of relying on the Akamai datasource if the Image/DC does not support it.
+                          in DCs that do not support metadata this defaults to true, otherwise it defaults to false
+                        type: boolean
                     required:
                     - region
                     - type

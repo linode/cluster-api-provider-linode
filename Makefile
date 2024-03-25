@@ -97,7 +97,7 @@ generate-flavors: $(KUSTOMIZE)
 
 .PHONY: check-gen-diff
 check-gen-diff:
-	git diff --no-ext-diff --quiet --exit-code
+	git diff --no-ext-diff --exit-code
 
 ## --------------------------------------
 ## Development

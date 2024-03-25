@@ -28,6 +28,7 @@ type LinodeInstanceClient interface {
 	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
 	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
 	DeleteInstance(ctx context.Context, linodeID int) error
+	GetRegion(ctx context.Context, regionID string) (*linodego.Region, error)
 }
 
 // LinodeVPCClient defines the methods that a Linode client must have to interact with Linode's VPC service.
