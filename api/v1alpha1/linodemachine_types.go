@@ -50,10 +50,10 @@ type LinodeMachineSpec struct {
 	AuthorizedKeys []string `json:"authorizedKeys,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	AuthorizedUsers []string `json:"authorizedUsers,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	StackScriptID int `json:"stackscriptId,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	StackScriptData map[string]string `json:"stackscriptData,omitempty"`
+	// UseStackScriptBootstrap will specify to use a StackScript shim for running cloud init
+	// instead of relying on the Akamai datasource if the Image/DC does not support it.
+	// in DCs that do not support metadata this defaults to true, otherwise it defaults to false
+	UseStackScriptBootstrap bool `json:"useStackScriptBootstrap,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	BackupID int `json:"backupId,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
@@ -66,9 +66,6 @@ type LinodeMachineSpec struct {
 	PrivateIP bool `json:"privateIp,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Tags []string `json:"tags,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	Metadata *InstanceMetadataOptions `json:"metadata,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallId,omitempty"`
 

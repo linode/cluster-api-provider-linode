@@ -220,6 +220,21 @@ func (mr *MockLinodeMachineClientMockRecorder) GetInstanceIPAddresses(ctx, linod
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceIPAddresses", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetInstanceIPAddresses), ctx, linodeID)
 }
 
+// GetRegion mocks base method.
+func (m *MockLinodeMachineClient) GetRegion(ctx context.Context, regionID string) (*linodego.Region, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRegion", ctx, regionID)
+	ret0, _ := ret[0].(*linodego.Region)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRegion indicates an expected call of GetRegion.
+func (mr *MockLinodeMachineClientMockRecorder) GetRegion(ctx, regionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetRegion), ctx, regionID)
+}
+
 // GetVPC mocks base method.
 func (m *MockLinodeMachineClient) GetVPC(ctx context.Context, vpcID int) (*linodego.VPC, error) {
 	m.ctrl.T.Helper()
@@ -433,6 +448,21 @@ func (m *MockLinodeInstanceClient) GetInstanceIPAddresses(ctx context.Context, l
 func (mr *MockLinodeInstanceClientMockRecorder) GetInstanceIPAddresses(ctx, linodeID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceIPAddresses", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetInstanceIPAddresses), ctx, linodeID)
+}
+
+// GetRegion mocks base method.
+func (m *MockLinodeInstanceClient) GetRegion(ctx context.Context, regionID string) (*linodego.Region, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRegion", ctx, regionID)
+	ret0, _ := ret[0].(*linodego.Region)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRegion indicates an expected call of GetRegion.
+func (mr *MockLinodeInstanceClientMockRecorder) GetRegion(ctx, regionID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetRegion), ctx, regionID)
 }
 
 // ListInstanceConfigs mocks base method.

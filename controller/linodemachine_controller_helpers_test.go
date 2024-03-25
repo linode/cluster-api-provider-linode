@@ -24,8 +24,6 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		RootPass:        "rootPass",
 		AuthorizedKeys:  []string{"key"},
 		AuthorizedUsers: []string{"user"},
-		StackScriptID:   1,
-		StackScriptData: map[string]string{"script": "data"},
 		BackupID:        1,
 		Image:           "image",
 		Interfaces: []infrav1alpha1.InstanceConfigInterfaceCreateOptions{
@@ -45,10 +43,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		BackupsEnabled: true,
 		PrivateIP:      true,
 		Tags:           []string{"tag"},
-		Metadata: &infrav1alpha1.InstanceMetadataOptions{
-			UserData: "userdata",
-		},
-		FirewallID: 1,
+		FirewallID:     1,
 	}
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineSpec)

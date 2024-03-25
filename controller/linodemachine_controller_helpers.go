@@ -23,6 +23,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/go-logr/logr"
@@ -45,6 +46,11 @@ import (
 // Size limit in bytes on the decoded metadata.user_data for cloud-init
 // The decoded user_data must not exceed 16384 bytes per the Linode API
 const maxBootstrapDataBytes = 16384
+
+// Hard code the stack script ID for our CAPI shim stackscript.
+// This is a very specific stackscript which requires exact inputs
+// from this code, so it is unlikely we will want to configure it without a code change.
+const capiStackScriptID = 1319647
 
 func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
@@ -74,8 +80,24 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 
 		return nil, err
 	}
-	createConfig.Metadata = &linodego.InstanceMetadataOptions{
-		UserData: b64.StdEncoding.EncodeToString(bootstrapData),
+
+	region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
+	if err != nil {
+		return nil, err
+	}
+
+	if machineScope.LinodeMachine.Spec.UseStackScriptBootstrap || !slices.Contains(region.Capabilities, "Metadata") {
+		logger.Info("metadata is not enabled in this region or 'useStackScriptBootstrap' is set to true, " +
+			"using StackScripts for bootstrapping")
+		createConfig.StackScriptID = capiStackScriptID
+		createConfig.StackScriptData = map[string]string{
+			"label":    machineScope.LinodeMachine.Name,
+			"userdata": b64.StdEncoding.EncodeToString(bootstrapData),
+		}
+	} else {
+		createConfig.Metadata = &linodego.InstanceMetadataOptions{
+			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
+		}
 	}
 
 	if createConfig.Tags == nil {

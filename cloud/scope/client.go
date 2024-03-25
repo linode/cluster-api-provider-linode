@@ -29,6 +29,7 @@ type LinodeInstanceClient interface {
 	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
 	DeleteInstance(ctx context.Context, linodeID int) error
 	WaitForInstanceDiskStatus(ctx context.Context, instanceID int, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error)
+	GetRegion(ctx context.Context, regionID string) (*linodego.Region, error)
 }
 
 // LinodeVPCClient defines the methods that a Linode client must have to interact with Linode's VPC service.
