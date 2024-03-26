@@ -147,6 +147,8 @@ jobs:
           *.quay.io:443
           api.snapcraft.io:443
           cloud.tilt.dev:443
+          kubernetes-sigs.github.io:443
+          charts.jetstack.io:443
 
     - uses: actions/checkout@v4
 
@@ -191,6 +193,8 @@ jobs:
           github.com:443
           proxy.golang.org:443
           sum.golang.org:443
+          go.dev:443
+          golang.org:443
           objects.githubusercontent.com:443
           registry-1.docker.io:443
           auth.docker.io:443
