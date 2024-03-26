@@ -85,10 +85,10 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 	if err != nil {
 		return nil, err
 	}
-
-	if machineScope.LinodeMachine.Spec.UseStackScriptBootstrap || !slices.Contains(region.Capabilities, "Metadata") {
-		logger.Info("metadata is not enabled in this region or 'useStackScriptBootstrap' is set to true, " +
-			"using StackScripts for bootstrapping")
+	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
+	if machineScope.LinodeMachine.Spec.UseStackScriptBootstrap || !regionMetadataSupport {
+		logger.Info(fmt.Sprintf("using StackScripts for bootstrapping. useStackScriptBootstrap: %b, regionMetadataSupport: %b",
+			&machineScope.LinodeMachine.Spec.UseStackScriptBootstrap, &regionMetadataSupport))
 		createConfig.StackScriptID = capiStackScriptID
 		createConfig.StackScriptData = map[string]string{
 			"label":    machineScope.LinodeMachine.Name,
