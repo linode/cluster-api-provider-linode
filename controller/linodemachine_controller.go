@@ -399,7 +399,7 @@ func (r *LinodeMachineReconciler) configureInstanceProfile(
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(
