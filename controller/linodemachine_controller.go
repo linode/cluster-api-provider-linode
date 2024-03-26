@@ -50,7 +50,10 @@ import (
 )
 
 // default etcd Disk size in MB
-const defaultEtcdDiskSize = 10240
+const (
+	defaultEtcdDiskSize         = 10240
+	defaultResizeTimeoutSeconds = 30
+)
 
 var skippedMachinePhases = map[string]bool{
 	string(clusterv1.MachinePhasePending): true,
@@ -339,6 +342,13 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 	diskSize := rootDisk.Size - defaultEtcdDiskSize
 	if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
 		logger.Error(err, "Failed to resize root disk")
+
+		return err
+	}
+	// wait for the disk to resize
+	_, err = machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeTimeoutSeconds)
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeTimeoutSeconds))
 
 		return err
 	}
