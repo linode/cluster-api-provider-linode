@@ -1,0 +1,27 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeObjectStorageBucket
+metadata:
+  labels:
+    app.kubernetes.io/name: linodeobjectstoragebucket
+    app.kubernetes.io/instance: ${CLUSTER_NAME}-etcd-backup
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+  name: ${CLUSTER_NAME}-etcd-backup
+spec:
+  cluster: ${OBJ_BUCKET_REGION}
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-etcd-backup-access-keys
+spec:
+  clusterSelector:
+    matchLabels:
+      etcd-backup: "true"
+      cluster: ${CLUSTER_NAME}
+  resources:
+  - kind: Secret
+    name: ${CLUSTER_NAME}-etcd-backup-access-keys
+  strategy: ApplyOnce
