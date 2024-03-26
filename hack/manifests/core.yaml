@@ -1,0 +1,11 @@
+---
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: CoreProvider
+metadata:
+  name: cluster-api
+  namespace: capi-system
+spec:
+  manager:
+    featureGates:
+      ClusterResourceSet: true
+      ClusterTopology: true
