@@ -25,6 +25,8 @@ type LinodeInstanceClient interface {
 	CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error)
 	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
 	CreateInstanceConfig(ctx context.Context, linodeID int, opts linodego.InstanceConfigCreateOptions) (*linodego.InstanceConfig, error)
+	ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error)
+	WaitForInstanceDiskStatus(ctx context.Context, instanceID int, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error)
 	BootInstance(ctx context.Context, linodeID int, configID int) error
 	DeleteInstance(ctx context.Context, linodeID int) error
 }

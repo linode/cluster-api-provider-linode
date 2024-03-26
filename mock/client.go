@@ -250,6 +250,21 @@ func (mr *MockLinodeMachineClientMockRecorder) GetVPC(ctx, vpcID any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVPC", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetVPC), ctx, vpcID)
 }
 
+// ListInstanceConfigs mocks base method.
+func (m *MockLinodeMachineClient) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInstanceConfigs", ctx, linodeID, opts)
+	ret0, _ := ret[0].([]linodego.InstanceConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInstanceConfigs indicates an expected call of ListInstanceConfigs.
+func (mr *MockLinodeMachineClientMockRecorder) ListInstanceConfigs(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceConfigs", reflect.TypeOf((*MockLinodeMachineClient)(nil).ListInstanceConfigs), ctx, linodeID, opts)
+}
+
 // ListInstances mocks base method.
 func (m *MockLinodeMachineClient) ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error) {
 	m.ctrl.T.Helper()
@@ -278,6 +293,21 @@ func (m *MockLinodeMachineClient) ListNodeBalancers(ctx context.Context, opts *l
 func (mr *MockLinodeMachineClientMockRecorder) ListNodeBalancers(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodeBalancers", reflect.TypeOf((*MockLinodeMachineClient)(nil).ListNodeBalancers), ctx, opts)
+}
+
+// WaitForInstanceDiskStatus mocks base method.
+func (m *MockLinodeMachineClient) WaitForInstanceDiskStatus(ctx context.Context, instanceID, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForInstanceDiskStatus", ctx, instanceID, diskID, status, timeoutSeconds)
+	ret0, _ := ret[0].(*linodego.InstanceDisk)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WaitForInstanceDiskStatus indicates an expected call of WaitForInstanceDiskStatus.
+func (mr *MockLinodeMachineClientMockRecorder) WaitForInstanceDiskStatus(ctx, instanceID, diskID, status, timeoutSeconds any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForInstanceDiskStatus", reflect.TypeOf((*MockLinodeMachineClient)(nil).WaitForInstanceDiskStatus), ctx, instanceID, diskID, status, timeoutSeconds)
 }
 
 // MockLinodeInstanceClient is a mock of LinodeInstanceClient interface.
@@ -421,6 +451,21 @@ func (mr *MockLinodeInstanceClientMockRecorder) GetType(ctx, instanceType any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetType", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetType), ctx, instanceType)
 }
 
+// ListInstanceConfigs mocks base method.
+func (m *MockLinodeInstanceClient) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInstanceConfigs", ctx, linodeID, opts)
+	ret0, _ := ret[0].([]linodego.InstanceConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInstanceConfigs indicates an expected call of ListInstanceConfigs.
+func (mr *MockLinodeInstanceClientMockRecorder) ListInstanceConfigs(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceConfigs", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstanceConfigs), ctx, linodeID, opts)
+}
+
 // ListInstances mocks base method.
 func (m *MockLinodeInstanceClient) ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error) {
 	m.ctrl.T.Helper()
@@ -434,6 +479,21 @@ func (m *MockLinodeInstanceClient) ListInstances(ctx context.Context, opts *lino
 func (mr *MockLinodeInstanceClientMockRecorder) ListInstances(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstances), ctx, opts)
+}
+
+// WaitForInstanceDiskStatus mocks base method.
+func (m *MockLinodeInstanceClient) WaitForInstanceDiskStatus(ctx context.Context, instanceID, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForInstanceDiskStatus", ctx, instanceID, diskID, status, timeoutSeconds)
+	ret0, _ := ret[0].(*linodego.InstanceDisk)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WaitForInstanceDiskStatus indicates an expected call of WaitForInstanceDiskStatus.
+func (mr *MockLinodeInstanceClientMockRecorder) WaitForInstanceDiskStatus(ctx, instanceID, diskID, status, timeoutSeconds any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForInstanceDiskStatus", reflect.TypeOf((*MockLinodeInstanceClient)(nil).WaitForInstanceDiskStatus), ctx, instanceID, diskID, status, timeoutSeconds)
 }
 
 // MockLinodeVPCClient is a mock of LinodeVPCClient interface.
