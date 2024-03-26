@@ -1,0 +1,135 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${CLUSTER_NAME}-etcd-backup-restore-addon
+data:
+  etcd-backup-restore-statefulset.yaml: |
+    ---
+    apiVersion: apps/v1
+    kind: StatefulSet
+    metadata:
+      name: etcd-backup
+      namespace: kube-system
+    spec:
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: etcd
+      updateStrategy:
+        type: RollingUpdate
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: etcd
+        spec:
+          initContainers:
+          - name: create-creds-file
+            image: busybox
+            command:
+            - ash
+            - -c
+            - |
+              cat << EOF > /data/credentials-file
+              {
+                "accessKeyID": "$${AWS_ACCESS_KEY_ID}",
+                "secretAccessKey": "$${AWS_SECRET_ACCESS_KEY}",
+                "region": "$${AWS_REGION}",
+                "endpoint": "$${AWS_REGION}.linodeobjects.com",
+                "sseCustomerKey": "$${AWS_SSE_CUSTOMER_KEY}"
+              }
+              EOF
+            volumeMounts:
+              - name: data-volume
+                mountPath: /data
+            env:
+            - name: "AWS_REGION"
+              value: ${OBJ_BUCKET_REGION}
+            - name: "AWS_ACCESS_KEY_ID"
+              valueFrom:
+                secretKeyRef:
+                  name: etcd-backup
+                  key: "access_key_rw"
+            - name: "AWS_SECRET_ACCESS_KEY"
+              valueFrom:
+                secretKeyRef:
+                  name: etcd-backup
+                  key: "secret_key_rw"
+            - name: "AWS_SSE_CUSTOMER_KEY"
+              valueFrom:
+                secretKeyRef:
+                  name: sse-key
+                  key: sse-key
+          containers:
+          - name: backup-restore
+            command:
+            - /etcdbrctl
+            - snapshot
+            - --schedule=${ETCD_BACKUP_SCHEDULE:=0 0 * * *}
+            - --garbage-collection-period=1m
+            - --storage-provider=S3
+            - --store-prefix=etcd-backup
+            - --insecure-transport=true
+            - --insecure-skip-tls-verify=true
+            - --endpoints=https://127.0.0.1:2379
+            - --defragmentation-schedule=0 0 */3 * *
+            - --etcd-connection-timeout=30s
+            - --delta-snapshot-period=60s
+            - --delta-snapshot-memory-limit=104857600
+            - --compress-snapshots=true        
+            - --compression-policy=gzip
+            - --cacert=/etc/kubernetes/pki/etcd/ca.crt
+            - --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt
+            - --key=/etc/kubernetes/pki/etcd/healthcheck-client.key
+            image: ${ETCDBR_IMAGE}
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsUser: 0
+            imagePullPolicy: Always
+            ports:
+            - containerPort: 8080
+              name: server
+              protocol: TCP
+            resources:
+              limits:
+                cpu: 100m
+                memory: 1Gi
+              requests:
+                cpu: 23m
+                memory: 128Mi
+            env:
+            - name: AWS_APPLICATION_CREDENTIALS_JSON
+              value: /home/.aws/credentials-file
+            - name: STORAGE_CONTAINER
+              value: ${CLUSTER_NAME}-etcd-backup
+            volumeMounts:
+            - mountPath: /etc/kubernetes/pki
+              name: k8s-certs
+              readOnly: true
+            - name: data-volume
+              mountPath: /home/.aws/
+              readOnly: true
+          hostNetwork: true
+          volumes:
+          - hostPath:
+              path: /etc/kubernetes/pki
+              type: DirectoryOrCreate
+            name: k8s-certs
+          - name: data-volume
+            emptyDir: {}
+          tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            effect: NoSchedule
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-etcd-backup-restore
+spec:
+  clusterSelector:
+    matchLabels:
+      etcd-backup: "true"
+      cluster: ${CLUSTER_NAME}
+  resources:
+  - kind: ConfigMap
+    name: ${CLUSTER_NAME}-etcd-backup-restore-addon
+  strategy: ApplyOnce

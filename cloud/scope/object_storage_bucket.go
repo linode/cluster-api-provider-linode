@@ -17,6 +17,18 @@ import (
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 )
 
+const bucketDataSecret = `kind: Secret
+apiVersion: v1
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+stringData:
+  bucket_name: %s
+  access_key_rw: %s
+  secret_key_rw: %s
+  access_key_ro: %s
+  secret_key_ro: %s`
+
 type ObjectStorageBucketScopeParams struct {
 	Client              k8sClient
 	LinodeClientBuilder LinodeObjectStorageClientBuilder
@@ -109,18 +121,35 @@ func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [
 			return nil, errors.New("expected two non-nil object storage keys")
 		}
 	}
-
+	var secretStringData map[string]string
 	secretName := fmt.Sprintf(AccessKeyNameTemplate, s.Bucket.Name)
-
+	// If the secret is of ClusterResourceSet type, encapsulate real data in the outer data
+	if s.Bucket.Spec.SecretType == "addons.cluster.x-k8s.io/resource-set" {
+		secretStringData = map[string]string{
+			"access-keys-secret.yaml": fmt.Sprintf(bucketDataSecret,
+				s.Bucket.Name,
+				keys[0].AccessKey,
+				keys[0].SecretKey,
+				keys[1].AccessKey,
+				keys[1].SecretKey,
+			),
+		}
+	} else {
+		secretStringData = map[string]string{
+			"bucket_name":   s.Bucket.Name,
+			"access_key_rw": keys[0].AccessKey,
+			"secret_key_rw": keys[0].SecretKey,
+			"access_key_ro": keys[1].AccessKey,
+			"secret_key_ro": keys[1].SecretKey,
+		}
+	}
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: s.Bucket.Namespace,
 		},
-		StringData: map[string]string{
-			"read_write": keys[0].AccessKey,
-			"read_only":  keys[1].AccessKey,
-		},
+		Type:       corev1.SecretType(s.Bucket.Spec.SecretType),
+		StringData: secretStringData,
 	}
 
 	scheme := s.Client.Scheme()

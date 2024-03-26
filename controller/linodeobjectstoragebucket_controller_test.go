@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/yaml"
 
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -46,6 +47,22 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+type AccessKeySecret struct {
+	APIVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+	Metadata   struct {
+		Name      string `yaml:"name"`
+		Namespace string `yaml:"namespace"`
+	} `yaml:"metadata"`
+	StringData struct {
+		Bucket_Name   string `yaml:"bucket_name"`
+		Access_Key_RW string `yaml:"access_key_rw"`
+		Secret_Key_RW string `yaml:"secret_key_rw"`
+		Access_Key_RO string `yaml:"access_key_ro"`
+		Secret_Key_RO string `yaml:"secret_key_ro"`
+	} `yaml:"stringData"`
+}
 
 func mockLinodeClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.LinodeObjectStorageClientBuilder {
 	return func(_ string) (scope.LinodeObjectStorageClient, error) {
@@ -157,9 +174,15 @@ var _ = Describe("lifecycle", Label("lifecycle"), func() {
 
 		By("creating a secret with access keys")
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&secret), &secret)).To(Succeed())
-		Expect(secret.Data).To(HaveLen(2))
-		Expect(string(secret.Data["read_write"])).To(Equal(string("key-0")))
-		Expect(string(secret.Data["read_only"])).To(Equal(string("key-1")))
+		Expect(secret.Data).To(HaveLen(1))
+		var key AccessKeySecret
+		unMarshallingErr := yaml.Unmarshal(secret.Data["access-keys-secret.yaml"], &key)
+		Expect(unMarshallingErr).NotTo(HaveOccurred())
+		Expect(key.StringData.Bucket_Name).To(Equal("lifecycle"))
+		Expect(key.StringData.Access_Key_RW).To(Equal("key-0"))
+		Expect(key.StringData.Secret_Key_RW).To(Equal(""))
+		Expect(key.StringData.Access_Key_RO).To(Equal("key-1"))
+		Expect(key.StringData.Secret_Key_RO).To(Equal(""))
 
 		By("recording the expected events")
 		Expect(<-recorder.Events).To(ContainSubstring("Object storage keys assigned"))
@@ -207,9 +230,15 @@ var _ = Describe("lifecycle", Label("lifecycle"), func() {
 
 		By("re-creating it when it is deleted")
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&secret), &secret)).To(Succeed())
-		Expect(secret.Data).To(HaveLen(2))
-		Expect(string(secret.Data["read_write"])).To(Equal("key-0"))
-		Expect(string(secret.Data["read_only"])).To(Equal("key-1"))
+		Expect(secret.Data).To(HaveLen(1))
+		var key AccessKeySecret
+		unMarshallingErr := yaml.Unmarshal(secret.Data["access-keys-secret.yaml"], &key)
+		Expect(unMarshallingErr).NotTo(HaveOccurred())
+		Expect(key.StringData.Bucket_Name).To(Equal("lifecycle"))
+		Expect(key.StringData.Access_Key_RW).To(Equal("key-0"))
+		Expect(key.StringData.Secret_Key_RW).To(Equal(""))
+		Expect(key.StringData.Access_Key_RO).To(Equal("key-1"))
+		Expect(key.StringData.Secret_Key_RO).To(Equal(""))
 
 		By("recording the expected events")
 		Expect(<-recorder.Events).To(ContainSubstring("Object storage keys retrieved"))

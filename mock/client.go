@@ -310,6 +310,21 @@ func (mr *MockLinodeMachineClientMockRecorder) WaitForInstanceDiskStatus(ctx, in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForInstanceDiskStatus", reflect.TypeOf((*MockLinodeMachineClient)(nil).WaitForInstanceDiskStatus), ctx, instanceID, diskID, status, timeoutSeconds)
 }
 
+// WaitForInstanceDiskStatus mocks base method.
+func (m *MockLinodeMachineClient) WaitForInstanceDiskStatus(ctx context.Context, instanceID, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForInstanceDiskStatus", ctx, instanceID, diskID, status, timeoutSeconds)
+	ret0, _ := ret[0].(*linodego.InstanceDisk)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WaitForInstanceDiskStatus indicates an expected call of WaitForInstanceDiskStatus.
+func (mr *MockLinodeMachineClientMockRecorder) WaitForInstanceDiskStatus(ctx, instanceID, diskID, status, timeoutSeconds any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForInstanceDiskStatus", reflect.TypeOf((*MockLinodeMachineClient)(nil).WaitForInstanceDiskStatus), ctx, instanceID, diskID, status, timeoutSeconds)
+}
+
 // MockLinodeInstanceClient is a mock of LinodeInstanceClient interface.
 type MockLinodeInstanceClient struct {
 	ctrl     *gomock.Controller
@@ -479,6 +494,21 @@ func (m *MockLinodeInstanceClient) ListInstances(ctx context.Context, opts *lino
 func (mr *MockLinodeInstanceClientMockRecorder) ListInstances(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstances), ctx, opts)
+}
+
+// WaitForInstanceDiskStatus mocks base method.
+func (m *MockLinodeInstanceClient) WaitForInstanceDiskStatus(ctx context.Context, instanceID, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForInstanceDiskStatus", ctx, instanceID, diskID, status, timeoutSeconds)
+	ret0, _ := ret[0].(*linodego.InstanceDisk)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WaitForInstanceDiskStatus indicates an expected call of WaitForInstanceDiskStatus.
+func (mr *MockLinodeInstanceClientMockRecorder) WaitForInstanceDiskStatus(ctx, instanceID, diskID, status, timeoutSeconds any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForInstanceDiskStatus", reflect.TypeOf((*MockLinodeInstanceClient)(nil).WaitForInstanceDiskStatus), ctx, instanceID, diskID, status, timeoutSeconds)
 }
 
 // WaitForInstanceDiskStatus mocks base method.

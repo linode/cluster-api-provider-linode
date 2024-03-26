@@ -29,6 +29,7 @@ type LinodeInstanceClient interface {
 	WaitForInstanceDiskStatus(ctx context.Context, instanceID int, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error)
 	BootInstance(ctx context.Context, linodeID int, configID int) error
 	DeleteInstance(ctx context.Context, linodeID int) error
+	WaitForInstanceDiskStatus(ctx context.Context, instanceID int, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error)
 }
 
 // LinodeVPCClient defines the methods that a Linode client must have to interact with Linode's VPC service.
