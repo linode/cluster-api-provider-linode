@@ -11,6 +11,7 @@ Make sure to create the token with at least the following read/write permissions
   - Volumes
   - VPCs
   - IPs
+  - Object Storage
 
 ```admonish question title=""
 For more information please see the
