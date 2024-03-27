@@ -56,11 +56,13 @@ type AccessKeySecret struct {
 		Namespace string `yaml:"namespace"`
 	} `yaml:"metadata"`
 	StringData struct {
-		Bucket_Name   string `yaml:"bucket_name"`
-		Access_Key_RW string `yaml:"access_key_rw"`
-		Secret_Key_RW string `yaml:"secret_key_rw"`
-		Access_Key_RO string `yaml:"access_key_ro"`
-		Secret_Key_RO string `yaml:"secret_key_ro"`
+		Bucket_Name     string `yaml:"bucket_name"`
+		Bucket_Region   string `yaml:"bucket_region"`
+		Bucket_Endpoint string `yaml:"bucket_endpoint"`
+		Access_Key_RW   string `yaml:"access_key_rw"`
+		Secret_Key_RW   string `yaml:"secret_key_rw"`
+		Access_Key_RO   string `yaml:"access_key_ro"`
+		Secret_Key_RO   string `yaml:"secret_key_ro"`
 	} `yaml:"stringData"`
 }
 
@@ -179,6 +181,8 @@ var _ = Describe("lifecycle", Label("lifecycle"), func() {
 		unMarshallingErr := yaml.Unmarshal(secret.Data["bucket-details-secret.yaml"], &key)
 		Expect(unMarshallingErr).NotTo(HaveOccurred())
 		Expect(key.StringData.Bucket_Name).To(Equal("lifecycle"))
+		Expect(key.StringData.Bucket_Region).To(Equal("cluster"))
+		Expect(key.StringData.Bucket_Endpoint).To(Equal("hostname"))
 		Expect(key.StringData.Access_Key_RW).To(Equal("key-0"))
 		Expect(key.StringData.Secret_Key_RW).To(Equal(""))
 		Expect(key.StringData.Access_Key_RO).To(Equal("key-1"))
@@ -235,6 +239,8 @@ var _ = Describe("lifecycle", Label("lifecycle"), func() {
 		unMarshallingErr := yaml.Unmarshal(secret.Data["bucket-details-secret.yaml"], &key)
 		Expect(unMarshallingErr).NotTo(HaveOccurred())
 		Expect(key.StringData.Bucket_Name).To(Equal("lifecycle"))
+		Expect(key.StringData.Bucket_Region).To(Equal("cluster"))
+		Expect(key.StringData.Bucket_Endpoint).To(Equal("hostname"))
 		Expect(key.StringData.Access_Key_RW).To(Equal("key-0"))
 		Expect(key.StringData.Secret_Key_RW).To(Equal(""))
 		Expect(key.StringData.Access_Key_RO).To(Equal("key-1"))
