@@ -284,14 +284,6 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 
 		linodeInstance = &linodeInstances[0]
 
-		if linodeInstance.Status == linodego.InstanceOffline {
-			if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
-				logger.Error(err, "Failed to boot instance")
-
-				return ctrl.Result{}, err
-			}
-		}
-
 	case 0:
 		// get the bootstrap data for the Linode instance and set it for create config
 		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
@@ -308,7 +300,7 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 			return ctrl.Result{}, err
 		}
 
-		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
 			return ctrl.Result{}, err
@@ -337,6 +329,7 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 	tags []string,
 ) (ctrl.Result, error) {
 	var linodeInstance *linodego.Instance
+	var instanceConfig *linodego.InstanceConfig
 
 	switch len(linodeInstances) {
 	case 1:
@@ -350,21 +343,7 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 
 			return ctrl.Result{}, err
 		}
-		instanceConfig := &configs[0]
-
-		if err := r.waitForControlPlaneDisks(ctx, machineScope, linodeInstance.ID, instanceConfig); err != nil {
-			logger.Error(err, "Waiting for control plane disks to be ready")
-
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, nil
-		}
-
-		if linodeInstance.Status == linodego.InstanceOffline {
-			if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
-				logger.Error(err, "Failed to boot instance")
-
-				return ctrl.Result{}, err
-			}
-		}
+		instanceConfig = &configs[0]
 
 	case 0:
 		// get the bootstrap data for the Linode instance and set it for create config
@@ -390,21 +369,9 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 
 		createOpts.Image = image
 		createOpts.Interfaces = interfaces
-		instanceConfig, err := r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, *createOpts)
+		instanceConfig, err = r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, *createOpts)
 		if err != nil {
 			logger.Error(err, "Failed to configure instance profile")
-
-			return ctrl.Result{}, err
-		}
-
-		if err := r.waitForControlPlaneDisks(ctx, machineScope, linodeInstance.ID, instanceConfig); err != nil {
-			logger.Error(err, "Waiting for control plane disks to be ready")
-
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, err
-		}
-
-		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
-			logger.Error(err, "Failed to boot instance")
 
 			return ctrl.Result{}, err
 		}
@@ -414,6 +381,20 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		logger.Error(err, "multiple instances found", "tags", tags)
 
 		return ctrl.Result{}, err
+	}
+
+	if err := r.waitForControlPlaneDisks(ctx, machineScope, linodeInstance.ID, instanceConfig); err != nil {
+		logger.Error(err, "Waiting for control plane disks to be ready")
+
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, err
+	}
+
+	if linodeInstance.Status == linodego.InstanceOffline {
+		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+			logger.Error(err, "Failed to boot instance")
+
+			return ctrl.Result{}, err
+		}
 	}
 
 	machineScope.LinodeMachine.Status.Ready = true

@@ -137,8 +137,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			})).
 			After(listInst).
 			Return(&linodego.Instance{
-				ID:   123,
-				IPv4: []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+				ID:     123,
+				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+				Status: linodego.InstanceOffline,
 			}, nil).
 			Times(1)
 		mockLinodeClient.EXPECT().
@@ -196,8 +197,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				})).
 				After(listInst).
 				Return(&linodego.Instance{
-					ID:   123,
-					IPv4: []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					ID:     123,
+					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					Status: linodego.InstanceOffline,
 				}, nil).
 				Times(1)
 			getType := mockLinodeClient.EXPECT().
@@ -335,8 +337,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				})).
 				After(listInst).
 				Return(&linodego.Instance{
-					ID:   123,
-					IPv4: []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					ID:     123,
+					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					Status: linodego.InstanceOffline,
 				}, nil).
 				Times(1)
 			getType := mockLinodeClient.EXPECT().
