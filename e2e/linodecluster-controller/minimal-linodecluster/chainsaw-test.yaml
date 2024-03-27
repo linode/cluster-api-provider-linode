@@ -14,7 +14,7 @@ spec:
     # TODO: This is over-truncated to account for the Linode NodeBalancer label
     value: (trim((truncate(($run), `21`)), '-'))
   - name: nodebalancer
-    value: (join('-', [($cluster), 'api-server']))
+    value: ($cluster)
   template: true
   steps:
   - name: step-00
