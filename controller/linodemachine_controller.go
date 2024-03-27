@@ -375,9 +375,11 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 			return ctrl.Result{}, err
 		}
 
-		// Omit the configured image when creating the instance to configure disks and config profile manually
+		// Omit image and interfaces when creating the instance to configure disks and config profile manually
 		image := createOpts.Image
 		createOpts.Image = ""
+		interfaces := createOpts.Interfaces
+		createOpts.Interfaces = nil
 
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil || linodeInstance == nil {
@@ -387,6 +389,7 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		}
 
 		createOpts.Image = image
+		createOpts.Interfaces = interfaces
 		instanceConfig, err := r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, *createOpts)
 		if err != nil {
 			logger.Error(err, "Failed to configure instance profile")
