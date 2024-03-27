@@ -86,17 +86,22 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 		return nil, err
 	}
 	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
-	if machineScope.LinodeMachine.Spec.UseStackScriptBootstrap || !regionMetadataSupport {
-		logger.Info(fmt.Sprintf("using StackScripts for bootstrapping. useStackScriptBootstrap: %b, regionMetadataSupport: %b",
-			&machineScope.LinodeMachine.Spec.UseStackScriptBootstrap, &regionMetadataSupport))
+	image, err := machineScope.LinodeClient.GetImage(ctx, machineScope.LinodeMachine.Spec.Image)
+	if err != nil {
+		return nil, err
+	}
+	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
+	if imageMetadataSupport && regionMetadataSupport {
+		createConfig.Metadata = &linodego.InstanceMetadataOptions{
+			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
+		}
+	} else {
+		logger.Info(fmt.Sprintf("using StackScripts for bootstrapping. imageMetadataSupport: %t, regionMetadataSupport: %t",
+			imageMetadataSupport, regionMetadataSupport))
 		createConfig.StackScriptID = capiStackScriptID
 		createConfig.StackScriptData = map[string]string{
 			"label":    machineScope.LinodeMachine.Name,
 			"userdata": b64.StdEncoding.EncodeToString(bootstrapData),
-		}
-	} else {
-		createConfig.Metadata = &linodego.InstanceMetadataOptions{
-			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
 		}
 	}
 
