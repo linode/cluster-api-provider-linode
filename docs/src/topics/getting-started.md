@@ -32,19 +32,10 @@ export LINODE_TOKEN=<your linode PAT>
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
 ```
-## Specifying the region and image
-
-### Image
-The default image is linode/ubuntu22.04 if nothing is specified. This can be overridden, but currently only ubuntu is 
-supported for our kubeadm based templates, any k3s/rke2 based chart should work with other images. If the 
-image does not support the Akamai datasource for cloud init (see supported images via the [Linode api](https://www.linode.com/docs/api/images/))
-you will have to set the `USE_STACKSCRIPT_BOOTSTRAP=true` environment variable before generating your cluster or set the
-`useStackScriptBootstrap: true` field on your machine resources
-
-### Region
-Region is a required field. If you deploy to a region without the metadata service available
-CAPL will automatically set `useStackScriptBootstrap: true` and cluster provisioning should still work. To look up a 
-list of regions and what capabilities they have, use the regions endpoint of the [Linode api](https://www.linode.com/docs/api/regions/).
+```admonish warning
+For Regions and Images that do not yet support Akamai's cloud-init datasource CAPL will automatically use a stackscript shim
+to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
+```
 
 ## Register linode locally as an infrastructure provider
 1. Generate local release files 

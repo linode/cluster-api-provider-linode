@@ -175,6 +175,21 @@ func (mr *MockLinodeMachineClientMockRecorder) DeleteNodeBalancerNode(ctx, nodeb
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNodeBalancerNode", reflect.TypeOf((*MockLinodeMachineClient)(nil).DeleteNodeBalancerNode), ctx, nodebalancerID, configID, nodeID)
 }
 
+// GetImage mocks base method.
+func (m *MockLinodeMachineClient) GetImage(ctx context.Context, imageID string) (*linodego.Image, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetImage", ctx, imageID)
+	ret0, _ := ret[0].(*linodego.Image)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetImage indicates an expected call of GetImage.
+func (mr *MockLinodeMachineClientMockRecorder) GetImage(ctx, imageID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImage", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetImage), ctx, imageID)
+}
+
 // GetInstance mocks base method.
 func (m *MockLinodeMachineClient) GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error) {
 	m.ctrl.T.Helper()
@@ -403,6 +418,21 @@ func (m *MockLinodeInstanceClient) DeleteInstance(ctx context.Context, linodeID 
 func (mr *MockLinodeInstanceClientMockRecorder) DeleteInstance(ctx, linodeID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).DeleteInstance), ctx, linodeID)
+}
+
+// GetImage mocks base method.
+func (m *MockLinodeInstanceClient) GetImage(ctx context.Context, imageID string) (*linodego.Image, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetImage", ctx, imageID)
+	ret0, _ := ret[0].(*linodego.Image)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetImage indicates an expected call of GetImage.
+func (mr *MockLinodeInstanceClientMockRecorder) GetImage(ctx, imageID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImage", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetImage), ctx, imageID)
 }
 
 // GetInstance mocks base method.
