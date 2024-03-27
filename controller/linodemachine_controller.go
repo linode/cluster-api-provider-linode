@@ -302,7 +302,12 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	machineScope.LinodeMachine.Status.Ready = true
 	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
-	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
+
+	addrs, err := r.buildInstanceAddrs(ctx, machineScope, linodeInstance.ID)
+	if err != nil {
+		return linodeInstance, err
+	}
+	machineScope.LinodeMachine.Status.Addresses = addrs
 
 	if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 		logger.Error(err, "Failed to add instance to Node Balancer backend")
