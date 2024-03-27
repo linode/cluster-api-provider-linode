@@ -48,8 +48,20 @@ patches:
     group: apiextensions.k8s.io
     version: v1
     kind: CustomResourceDefinition
+    name: linodeclustertemplates.infrastructure.cluster.x-k8s.io
+  path: patches/validation_in_linodeclustertemplates.yaml
+- target:
+    group: apiextensions.k8s.io
+    version: v1
+    kind: CustomResourceDefinition
     name: linodemachines.infrastructure.cluster.x-k8s.io
   path: patches/validation_in_linodemachines.yaml
+- target:
+    group: apiextensions.k8s.io
+    version: v1
+    kind: CustomResourceDefinition
+    name: linodemachinetemplates.infrastructure.cluster.x-k8s.io
+  path: patches/validation_in_linodemachinetemplates.yaml
 - target:
     group: apiextensions.k8s.io
     version: v1

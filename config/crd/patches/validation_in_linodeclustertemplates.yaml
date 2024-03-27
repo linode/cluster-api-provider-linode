@@ -1,0 +1,12 @@
+# The following patch adds additional constraints after the built-in name validation for the CRD
+- op: add
+  path: /spec/versions/0/schema/openAPIV3Schema/properties/metadata/properties
+  value:
+    name:
+      type: string
+      x-kubernetes-validations:
+      - rule: 3 <= size(self) && size(self) <= 26
+        message: >-
+          custom validation:
+          template: must be between 3..26 characters,
+          linode nodebalancer: labels must be between 3..32 characters
