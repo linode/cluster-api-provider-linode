@@ -49,21 +49,21 @@ import (
 )
 
 type AccessKeySecret struct {
-	APIVersion string `yaml:"apiVersion"`
-	Kind       string `yaml:"kind"`
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
 	Metadata   struct {
-		Name      string `yaml:"name"`
-		Namespace string `yaml:"namespace"`
-	} `yaml:"metadata"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"metadata"`
 	StringData struct {
-		Bucket_Name     string `yaml:"bucket_name"`
-		Bucket_Region   string `yaml:"bucket_region"`
-		Bucket_Endpoint string `yaml:"bucket_endpoint"`
-		Access_Key_RW   string `yaml:"access_key_rw"`
-		Secret_Key_RW   string `yaml:"secret_key_rw"`
-		Access_Key_RO   string `yaml:"access_key_ro"`
-		Secret_Key_RO   string `yaml:"secret_key_ro"`
-	} `yaml:"stringData"`
+		BucketName     string `json:"bucket_name"`
+		BucketRegion   string `json:"bucket_region"`
+		BucketEndpoint string `json:"bucket_endpoint"`
+		AccessKeyRW    string `json:"access_key_rw"`
+		SecretKeyRW    string `json:"secret_key_rw"`
+		AccessKeyRO    string `json:"access_key_ro"`
+		SecretKeyRO    string `json:"secret_key_ro"`
+	} `json:"stringData"`
 }
 
 func mockLinodeClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.LinodeObjectStorageClientBuilder {
@@ -180,13 +180,13 @@ var _ = Describe("lifecycle", Label("lifecycle"), func() {
 		var key AccessKeySecret
 		unMarshallingErr := yaml.Unmarshal(secret.Data["bucket-details-secret.yaml"], &key)
 		Expect(unMarshallingErr).NotTo(HaveOccurred())
-		Expect(key.StringData.Bucket_Name).To(Equal("lifecycle"))
-		Expect(key.StringData.Bucket_Region).To(Equal("cluster"))
-		Expect(key.StringData.Bucket_Endpoint).To(Equal("hostname"))
-		Expect(key.StringData.Access_Key_RW).To(Equal("key-0"))
-		Expect(key.StringData.Secret_Key_RW).To(Equal(""))
-		Expect(key.StringData.Access_Key_RO).To(Equal("key-1"))
-		Expect(key.StringData.Secret_Key_RO).To(Equal(""))
+		Expect(key.StringData.BucketName).To(Equal("lifecycle"))
+		Expect(key.StringData.BucketRegion).To(Equal("cluster"))
+		Expect(key.StringData.BucketEndpoint).To(Equal("hostname"))
+		Expect(key.StringData.AccessKeyRW).To(Equal("key-0"))
+		Expect(key.StringData.SecretKeyRW).To(Equal(""))
+		Expect(key.StringData.AccessKeyRO).To(Equal("key-1"))
+		Expect(key.StringData.SecretKeyRO).To(Equal(""))
 
 		By("recording the expected events")
 		Expect(<-recorder.Events).To(ContainSubstring("Object storage keys assigned"))
@@ -238,13 +238,13 @@ var _ = Describe("lifecycle", Label("lifecycle"), func() {
 		var key AccessKeySecret
 		unMarshallingErr := yaml.Unmarshal(secret.Data["bucket-details-secret.yaml"], &key)
 		Expect(unMarshallingErr).NotTo(HaveOccurred())
-		Expect(key.StringData.Bucket_Name).To(Equal("lifecycle"))
-		Expect(key.StringData.Bucket_Region).To(Equal("cluster"))
-		Expect(key.StringData.Bucket_Endpoint).To(Equal("hostname"))
-		Expect(key.StringData.Access_Key_RW).To(Equal("key-0"))
-		Expect(key.StringData.Secret_Key_RW).To(Equal(""))
-		Expect(key.StringData.Access_Key_RO).To(Equal("key-1"))
-		Expect(key.StringData.Secret_Key_RO).To(Equal(""))
+		Expect(key.StringData.BucketName).To(Equal("lifecycle"))
+		Expect(key.StringData.BucketRegion).To(Equal("cluster"))
+		Expect(key.StringData.BucketEndpoint).To(Equal("hostname"))
+		Expect(key.StringData.AccessKeyRW).To(Equal("key-0"))
+		Expect(key.StringData.SecretKeyRW).To(Equal(""))
+		Expect(key.StringData.AccessKeyRO).To(Equal("key-1"))
+		Expect(key.StringData.SecretKeyRO).To(Equal(""))
 
 		By("recording the expected events")
 		Expect(<-recorder.Events).To(ContainSubstring("Object storage keys retrieved"))
