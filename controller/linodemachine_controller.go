@@ -52,7 +52,7 @@ import (
 const (
 	// default etcd Disk size in MB
 	defaultEtcdDiskSize            = 10240
-	defaultDiskReadyTimeoutSeconds = 5
+	defaultDiskReadyTimeoutSeconds = 15
 )
 
 var skippedMachinePhases = map[string]bool{
