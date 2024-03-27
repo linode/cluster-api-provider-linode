@@ -24,6 +24,8 @@ metadata:
   namespace: kube-system
 stringData:
   bucket_name: %s
+  bucket_region: %s
+  bucket_endpoint: %s
   access_key_rw: %s
   secret_key_rw: %s
   access_key_ro: %s
@@ -44,7 +46,7 @@ type ObjectStorageBucketScope struct {
 	PatchHelper  *patch.Helper
 }
 
-const AccessKeyNameTemplate = "%s-access-keys"
+const AccessKeyNameTemplate = "%s-bucket-details"
 const NumAccessKeys = 2
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
@@ -115,7 +117,7 @@ func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
 
 // GenerateKeySecret returns a secret suitable for submission to the Kubernetes API.
 // The secret is expected to contain keys for accessing the bucket, as well as owner and controller references.
-func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [NumAccessKeys]*linodego.ObjectStorageKey) (*corev1.Secret, error) {
+func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [NumAccessKeys]*linodego.ObjectStorageKey, bucket *linodego.ObjectStorageBucket) (*corev1.Secret, error) {
 	for _, key := range keys {
 		if key == nil {
 			return nil, errors.New("expected two non-nil object storage keys")
@@ -126,8 +128,10 @@ func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [
 	// If the secret is of ClusterResourceSet type, encapsulate real data in the outer data
 	if s.Bucket.Spec.SecretType == "addons.cluster.x-k8s.io/resource-set" {
 		secretStringData = map[string]string{
-			"access-keys-secret.yaml": fmt.Sprintf(bucketDataSecret,
-				s.Bucket.Name,
+			"bucket-details-secret.yaml": fmt.Sprintf(bucketDataSecret,
+				bucket.Label,
+				bucket.Cluster,
+				bucket.Hostname,
 				keys[0].AccessKey,
 				keys[0].SecretKey,
 				keys[1].AccessKey,
@@ -136,11 +140,13 @@ func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [
 		}
 	} else {
 		secretStringData = map[string]string{
-			"bucket_name":   s.Bucket.Name,
-			"access_key_rw": keys[0].AccessKey,
-			"secret_key_rw": keys[0].SecretKey,
-			"access_key_ro": keys[1].AccessKey,
-			"secret_key_ro": keys[1].SecretKey,
+			"bucket_name":     bucket.Label,
+			"bucket_region":   bucket.Cluster,
+			"bucket_endpoint": bucket.Hostname,
+			"access_key_rw":   keys[0].AccessKey,
+			"secret_key_rw":   keys[0].SecretKey,
+			"access_key_ro":   keys[1].AccessKey,
+			"secret_key_ro":   keys[1].SecretKey,
 		}
 	}
 	secret := &corev1.Secret{
