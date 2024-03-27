@@ -72,7 +72,7 @@ func mockLinodeClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.Linode
 	}
 }
 
-var _ = Describe("lifecycle", Label("lifecycle"), func() {
+var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 	var mockCtrl *gomock.Controller
 	var reconciler *LinodeObjectStorageBucketReconciler
 	var testLogs *bytes.Buffer
@@ -341,7 +341,7 @@ var _ = Describe("lifecycle", Label("lifecycle"), func() {
 	})
 })
 
-var _ = Describe("pre-reconcile", Label("pre-reconcile"), func() {
+var _ = Describe("pre-reconcile", Label("bucket", "pre-reconcile"), func() {
 	var obj infrav1.LinodeObjectStorageBucket
 	var mockCtrl *gomock.Controller
 	var reconciler *LinodeObjectStorageBucketReconciler
@@ -413,7 +413,7 @@ var _ = Describe("pre-reconcile", Label("pre-reconcile"), func() {
 	})
 })
 
-var _ = Describe("apply", Label("apply"), func() {
+var _ = Describe("apply", Label("bucket", "apply"), func() {
 	var obj infrav1.LinodeObjectStorageBucket
 	var mockCtrl *gomock.Controller
 	var testLogs *bytes.Buffer
@@ -456,7 +456,7 @@ var _ = Describe("apply", Label("apply"), func() {
 		}
 	})
 
-	It("fails when a finalizer cannot be added", Label("current"), func(ctx SpecContext) {
+	It("fails when a finalizer cannot be added", func(ctx SpecContext) {
 		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
 		prev := mockK8sClient.EXPECT().
 			Scheme().
