@@ -49,19 +49,21 @@ import (
 )
 
 type AccessKeySecret struct {
-	APIVersion string `yaml:"apiVersion"`
-	Kind       string `yaml:"kind"`
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
 	Metadata   struct {
-		Name      string `yaml:"name"`
-		Namespace string `yaml:"namespace"`
-	} `yaml:"metadata"`
+		Name      string `json:"name"`
+		Namespace string `json:"namespace"`
+	} `json:"metadata"`
 	StringData struct {
-		Bucket_Name   string `yaml:"bucket_name"`
-		Access_Key_RW string `yaml:"access_key_rw"`
-		Secret_Key_RW string `yaml:"secret_key_rw"`
-		Access_Key_RO string `yaml:"access_key_ro"`
-		Secret_Key_RO string `yaml:"secret_key_ro"`
-	} `yaml:"stringData"`
+		BucketName     string `json:"bucket_name"`
+		BucketRegion   string `json:"bucket_region"`
+		BucketEndpoint string `json:"bucket_endpoint"`
+		AccessKeyRW    string `json:"access_key_rw"`
+		SecretKeyRW    string `json:"secret_key_rw"`
+		AccessKeyRO    string `json:"access_key_ro"`
+		SecretKeyRO    string `json:"secret_key_ro"`
+	} `json:"stringData"`
 }
 
 func mockLinodeClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.LinodeObjectStorageClientBuilder {
@@ -176,13 +178,15 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&secret), &secret)).To(Succeed())
 		Expect(secret.Data).To(HaveLen(1))
 		var key AccessKeySecret
-		unMarshallingErr := yaml.Unmarshal(secret.Data["access-keys-secret.yaml"], &key)
+		unMarshallingErr := yaml.Unmarshal(secret.Data["bucket-details-secret.yaml"], &key)
 		Expect(unMarshallingErr).NotTo(HaveOccurred())
-		Expect(key.StringData.Bucket_Name).To(Equal("lifecycle"))
-		Expect(key.StringData.Access_Key_RW).To(Equal("key-0"))
-		Expect(key.StringData.Secret_Key_RW).To(Equal(""))
-		Expect(key.StringData.Access_Key_RO).To(Equal("key-1"))
-		Expect(key.StringData.Secret_Key_RO).To(Equal(""))
+		Expect(key.StringData.BucketName).To(Equal("lifecycle"))
+		Expect(key.StringData.BucketRegion).To(Equal("cluster"))
+		Expect(key.StringData.BucketEndpoint).To(Equal("hostname"))
+		Expect(key.StringData.AccessKeyRW).To(Equal("key-0"))
+		Expect(key.StringData.SecretKeyRW).To(Equal(""))
+		Expect(key.StringData.AccessKeyRO).To(Equal("key-1"))
+		Expect(key.StringData.SecretKeyRO).To(Equal(""))
 
 		By("recording the expected events")
 		Expect(<-recorder.Events).To(ContainSubstring("Object storage keys assigned"))
@@ -192,7 +196,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		By("logging the expected messages")
 		logOutput := testLogs.String()
 		Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-		Expect(logOutput).To(ContainSubstring("Secret lifecycle-access-keys was applied with new access keys"))
+		Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 	})
 
 	It("should ensure the bucket's secret exists", func(ctx SpecContext) {
@@ -232,13 +236,15 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&secret), &secret)).To(Succeed())
 		Expect(secret.Data).To(HaveLen(1))
 		var key AccessKeySecret
-		unMarshallingErr := yaml.Unmarshal(secret.Data["access-keys-secret.yaml"], &key)
+		unMarshallingErr := yaml.Unmarshal(secret.Data["bucket-details-secret.yaml"], &key)
 		Expect(unMarshallingErr).NotTo(HaveOccurred())
-		Expect(key.StringData.Bucket_Name).To(Equal("lifecycle"))
-		Expect(key.StringData.Access_Key_RW).To(Equal("key-0"))
-		Expect(key.StringData.Secret_Key_RW).To(Equal(""))
-		Expect(key.StringData.Access_Key_RO).To(Equal("key-1"))
-		Expect(key.StringData.Secret_Key_RO).To(Equal(""))
+		Expect(key.StringData.BucketName).To(Equal("lifecycle"))
+		Expect(key.StringData.BucketRegion).To(Equal("cluster"))
+		Expect(key.StringData.BucketEndpoint).To(Equal("hostname"))
+		Expect(key.StringData.AccessKeyRW).To(Equal("key-0"))
+		Expect(key.StringData.SecretKeyRW).To(Equal(""))
+		Expect(key.StringData.AccessKeyRO).To(Equal("key-1"))
+		Expect(key.StringData.SecretKeyRO).To(Equal(""))
 
 		By("recording the expected events")
 		Expect(<-recorder.Events).To(ContainSubstring("Object storage keys retrieved"))
@@ -248,7 +254,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		By("logging the expected messages")
 		logOutput := testLogs.String()
 		Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-		Expect(logOutput).To(ContainSubstring("Secret lifecycle-access-keys was applied with new access keys"))
+		Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 	})
 
 	It("should rotate the bucket's keys", func(ctx SpecContext) {
@@ -301,7 +307,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		By("logging the expected messages")
 		logOutput := testLogs.String()
 		Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-		Expect(logOutput).To(ContainSubstring("Secret lifecycle-access-keys was applied with new access keys"))
+		Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 	})
 
 	It("should revoke the bucket's keys", func(ctx SpecContext) {
@@ -533,7 +539,7 @@ var _ = Describe("apply", Label("bucket", "apply"), func() {
 
 		obj.Spec.KeyGeneration = ptr.To(1)
 		obj.Status.LastKeyGeneration = obj.Spec.KeyGeneration
-		obj.Status.KeySecretName = ptr.To("mock-access-keys")
+		obj.Status.KeySecretName = ptr.To("mock-bucket-details")
 		obj.Status.AccessKeyRefs = []int{0, 1}
 
 		bScope := scope.ObjectStorageBucketScope{
@@ -563,12 +569,12 @@ var _ = Describe("apply", Label("bucket", "apply"), func() {
 		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
 		mockK8sClient.EXPECT().
 			Get(gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-access-keys")).
+			Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-bucket-details")).
 			Times(1)
 
 		obj.Spec.KeyGeneration = ptr.To(1)
 		obj.Status.LastKeyGeneration = obj.Spec.KeyGeneration
-		obj.Status.KeySecretName = ptr.To("mock-access-keys")
+		obj.Status.KeySecretName = ptr.To("mock-bucket-details")
 		obj.Status.AccessKeyRefs = []int{0, 1}
 
 		bScope := scope.ObjectStorageBucketScope{
@@ -600,7 +606,7 @@ var _ = Describe("apply", Label("bucket", "apply"), func() {
 		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
 		mockK8sClient.EXPECT().
 			Get(gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-access-keys")).
+			Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-bucket-details")).
 			Times(1)
 		mockK8sClient.EXPECT().
 			Scheme().
@@ -609,7 +615,7 @@ var _ = Describe("apply", Label("bucket", "apply"), func() {
 
 		obj.Spec.KeyGeneration = ptr.To(1)
 		obj.Status.LastKeyGeneration = obj.Spec.KeyGeneration
-		obj.Status.KeySecretName = ptr.To("mock-access-keys")
+		obj.Status.KeySecretName = ptr.To("mock-bucket-details")
 		obj.Status.AccessKeyRefs = []int{0, 1}
 
 		bScope := scope.ObjectStorageBucketScope{
@@ -646,7 +652,7 @@ var _ = Describe("apply", Label("bucket", "apply"), func() {
 			Times(1)
 		mockK8sClient.EXPECT().
 			Get(gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-access-keys")).
+			Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-bucket-details")).
 			Times(1)
 		mockK8sClient.EXPECT().
 			Create(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -654,7 +660,7 @@ var _ = Describe("apply", Label("bucket", "apply"), func() {
 
 		obj.Spec.KeyGeneration = ptr.To(1)
 		obj.Status.LastKeyGeneration = obj.Spec.KeyGeneration
-		obj.Status.KeySecretName = ptr.To("mock-access-keys")
+		obj.Status.KeySecretName = ptr.To("mock-bucket-details")
 		obj.Status.AccessKeyRefs = []int{0, 1}
 
 		bScope := scope.ObjectStorageBucketScope{
