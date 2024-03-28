@@ -15,7 +15,7 @@ spec:
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
 metadata:
-  name: ${CLUSTER_NAME}-etcd-backup-access-keys
+  name: ${CLUSTER_NAME}-etcd-backup-bucket-details
 spec:
   clusterSelector:
     matchLabels:
@@ -23,5 +23,5 @@ spec:
       cluster: ${CLUSTER_NAME}
   resources:
   - kind: Secret
-    name: ${CLUSTER_NAME}-etcd-backup-access-keys
+    name: ${CLUSTER_NAME}-etcd-backup-bucket-details
   strategy: ApplyOnce

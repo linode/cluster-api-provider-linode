@@ -34,7 +34,7 @@ data:
                 "accessKeyID": "$${AWS_ACCESS_KEY_ID}",
                 "secretAccessKey": "$${AWS_SECRET_ACCESS_KEY}",
                 "region": "$${AWS_REGION}",
-                "endpoint": "$${AWS_REGION}.linodeobjects.com",
+                "endpoint": "$${AWS_ENDPOINT#*$$BUCKET_NAME.}",
                 "sseCustomerKey": "$${AWS_SSE_CUSTOMER_KEY}"
               }
               EOF
@@ -43,7 +43,20 @@ data:
                 mountPath: /data
             env:
             - name: "AWS_REGION"
-              value: ${OBJ_BUCKET_REGION}
+              valueFrom:
+                secretKeyRef:
+                  name: etcd-backup
+                  key: "bucket_region"
+            - name: "BUCKET_NAME"
+              valueFrom:
+                secretKeyRef:
+                  name: etcd-backup
+                  key: "bucket_name"
+            - name: "AWS_ENDPOINT"
+              valueFrom:
+                secretKeyRef:
+                  name: etcd-backup
+                  key: "bucket_endpoint"
             - name: "AWS_ACCESS_KEY_ID"
               valueFrom:
                 secretKeyRef:
@@ -80,7 +93,7 @@ data:
             - --cacert=/etc/kubernetes/pki/etcd/ca.crt
             - --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt
             - --key=/etc/kubernetes/pki/etcd/healthcheck-client.key
-            image: ${ETCDBR_IMAGE}
+            image: ${ETCDBR_IMAGE:-europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl:v0.28.0}
             securityContext:
               allowPrivilegeEscalation: false
               runAsUser: 0
@@ -100,7 +113,10 @@ data:
             - name: AWS_APPLICATION_CREDENTIALS_JSON
               value: /home/.aws/credentials-file
             - name: STORAGE_CONTAINER
-              value: ${CLUSTER_NAME}-etcd-backup
+              valueFrom:
+                secretKeyRef:
+                  name: etcd-backup
+                  key: "bucket_name"
             volumeMounts:
             - mountPath: /etc/kubernetes/pki
               name: k8s-certs
