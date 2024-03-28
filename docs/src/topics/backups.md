@@ -8,7 +8,15 @@ Enabling this addon requires enabling Object Storage in the account where the re
 
 ## Enabling Backups
 
-TODO
+To enable backups, use the addon flag during provisioning to select the etcd-backup-restore addon
+```sh
+clusterctl generate cluster $CLUSTER_NAME \
+  --kubernetes-version v1.29.1 \
+  --infrastructure linode:0.0.0 \
+  --flavor etcd-backup-restore \
+  | kubectl apply -f -
+```
+For more fine-grain control and to know more about etcd backups, refere [backups.md](../topics/etcd.md)
 
 ## Object Storage
 
@@ -41,13 +49,13 @@ The bucket label must be unique within the region across all accounts. Otherwise
 
 ### Access Keys Creation
 
-CAPL will also create `read_write` and `read_only` access keys for the bucket and store credentials in a secret in the same namespace where the `LinodeObjectStorageBucket` was created:
+CAPL will also create `read_write` and `read_only` access keys for the bucket and store credentials in a secret in the same namespace where the `LinodeObjectStorageBucket` was created alongwith other details about the Linode OBJ Bucket:
 
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
-  name: <unique-bucket-label>-access-keys
+  name: <unique-bucket-label>-bucket-details
   namespace: <same-namespace-as-object-storage-bucket>
   ownerReferences:
     - apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
@@ -56,13 +64,15 @@ metadata:
       controller: true
 data:
   bucket_name: <unique-bucket-label>
+  bucket_region: <linode-obj-bucket-region>
+  bucket_endpoint: <hostname-to-access-bucket>
   access_key_rw: <base64-encoded-access-key>
   secret_key_rw: <base64-encoded-secret-key>
   access_key_ro: <base64-encoded-access-key>
   secret_key_ro: <base64-encoded-secret-key>
 ```
 
-The access key secret is owned and managed by CAPL during the life of the `LinodeObjectStorageBucket`.
+The bucket-details secret is owned and managed by CAPL during the life of the `LinodeObjectStorageBucket`.
 
 ### Access Keys Rotation
 
@@ -105,7 +115,7 @@ status:
   hostname: <hostname-for-bucket>
   creationTime: <bucket-creation-timestamp>
   lastKeyGeneration: 0
-  keySecretName: <unique-bucket-label>-access-keys
+  keySecretName: <unique-bucket-label>-bucket-details
   accessKeyRefs:
     - <access-key-rw-id>
     - <access-key-ro-id>
