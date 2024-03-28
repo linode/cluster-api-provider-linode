@@ -80,7 +80,7 @@ data:
             - --cacert=/etc/kubernetes/pki/etcd/ca.crt
             - --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt
             - --key=/etc/kubernetes/pki/etcd/healthcheck-client.key
-            image: ${ETCDBR_IMAGE:docker.io/amoldeodhar/etcdbrctl:withcredsfile}
+            image: ${ETCDBR_IMAGE}
             securityContext:
               allowPrivilegeEscalation: false
               runAsUser: 0
