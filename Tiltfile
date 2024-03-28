@@ -28,7 +28,8 @@ manager_yaml = decode_yaml_stream(kustomize("config/default"))
 for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":
         resource["stringData"]["apiToken"] = os.getenv('LINODE_TOKEN')
-    if resource["kind"] == "CustomResourceDefinition":    -- REMOVE this after the first release
+    -- REMOVE this if condition after the first release
+    if resource["kind"] == "CustomResourceDefinition":    
         resource["metadata"]["labels"]["clusterctl.cluster.x-k8s.io"] = ""
 k8s_yaml(encode_yaml_stream(manager_yaml))
 
