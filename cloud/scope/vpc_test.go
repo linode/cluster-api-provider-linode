@@ -75,7 +75,7 @@ func TestNewVPCScope(t *testing.T) {
 		args          args
 		want          *VPCScope
 		expectedError error
-		expects       func(m *mock.Mockk8sClient)
+		expects       func(m *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid VPCScope",
@@ -86,7 +86,7 @@ func TestNewVPCScope(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -110,7 +110,7 @@ func TestNewVPCScope(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -133,7 +133,7 @@ func TestNewVPCScope(t *testing.T) {
 				apiKey: "test-key",
 				params: VPCScopeParams{},
 			},
-			expects:       func(mock *mock.Mockk8sClient) {},
+			expects:       func(mock *mock.MockK8sClient) {},
 			expectedError: fmt.Errorf("linodeVPC is required when creating a VPCScope"),
 		},
 		{
@@ -151,7 +151,7 @@ func TestNewVPCScope(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
 			},
 			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
@@ -164,7 +164,7 @@ func TestNewVPCScope(t *testing.T) {
 					LinodeVPC: &infrav1alpha1.LinodeVPC{},
 				},
 			},
-			expects:       func(mock *mock.Mockk8sClient) {},
+			expects:       func(mock *mock.MockK8sClient) {},
 			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
 		},
 		{
@@ -176,7 +176,7 @@ func TestNewVPCScope(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("failed to init patch helper:"),
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
 		},
@@ -188,7 +188,7 @@ func TestNewVPCScope(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 			testcase.expects(mockK8sClient)
 
@@ -210,7 +210,7 @@ func TestVPCScopeMethods(t *testing.T) {
 	tests := []struct {
 		name      string
 		LinodeVPC *infrav1alpha1.LinodeVPC
-		expects   func(mock *mock.Mockk8sClient)
+		expects   func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode VPC object",
@@ -219,7 +219,7 @@ func TestVPCScopeMethods(t *testing.T) {
 					Name: "test-vpc",
 				},
 			},
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -236,7 +236,7 @@ func TestVPCScopeMethods(t *testing.T) {
 					Finalizers: []string{infrav1alpha1.GroupVersion.String()},
 				},
 			},
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -253,7 +253,7 @@ func TestVPCScopeMethods(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 			testcase.expects(mockK8sClient)
 

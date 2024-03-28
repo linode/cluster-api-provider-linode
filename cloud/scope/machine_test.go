@@ -115,7 +115,7 @@ func TestMachineScopeMethods(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		expects func(mock *mock.Mockk8sClient)
+		expects func(mock *mock.MockK8sClient)
 	}{
 		// TODO: Add test cases.
 		{
@@ -123,7 +123,7 @@ func TestMachineScopeMethods(t *testing.T) {
 			fields{
 				LinodeMachine: &infrav1alpha1.LinodeMachine{},
 			},
-			func(mock *mock.Mockk8sClient) {
+			func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -142,7 +142,7 @@ func TestMachineScopeMethods(t *testing.T) {
 					},
 				},
 			},
-			func(mock *mock.Mockk8sClient) {
+			func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -159,7 +159,7 @@ func TestMachineScopeMethods(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 			testcase.expects(mockK8sClient)
 
@@ -200,7 +200,7 @@ func TestNewMachineScope(t *testing.T) {
 		args        args
 		want        *MachineScope
 		expectedErr error
-		expects     func(mock *mock.Mockk8sClient)
+		expects     func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid MachineScope",
@@ -215,7 +215,7 @@ func TestNewMachineScope(t *testing.T) {
 				},
 			},
 			expectedErr: nil,
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -243,7 +243,7 @@ func TestNewMachineScope(t *testing.T) {
 				},
 			},
 			expectedErr: nil,
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -280,7 +280,7 @@ func TestNewMachineScope(t *testing.T) {
 				},
 			},
 			expectedErr: nil,
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -317,7 +317,7 @@ func TestNewMachineScope(t *testing.T) {
 				},
 			},
 			expectedErr: errors.New("credentials from cluster secret ref: get credentials secret test/example: Creds not found"),
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("Creds not found"))
 			},
 		},
@@ -334,7 +334,7 @@ func TestNewMachineScope(t *testing.T) {
 				},
 			},
 			expectedErr: errors.New("custer is required when creating a MachineScope"),
-			expects:     func(mock *mock.Mockk8sClient) {},
+			expects:     func(mock *mock.MockK8sClient) {},
 		},
 		{
 			name: "Error - Pass in valid args but couldn't get patch helper",
@@ -349,7 +349,7 @@ func TestNewMachineScope(t *testing.T) {
 				},
 			},
 			expectedErr: errors.New("failed to init patch helper:"),
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
 		},
@@ -366,7 +366,7 @@ func TestNewMachineScope(t *testing.T) {
 				},
 			},
 			expectedErr: errors.New("failed to create linode client: missing Linode API key"),
-			expects:     func(mock *mock.Mockk8sClient) {},
+			expects:     func(mock *mock.MockK8sClient) {},
 		},
 	}
 
@@ -378,7 +378,7 @@ func TestNewMachineScope(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 			testcase.expects(mockK8sClient)
 
@@ -409,7 +409,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 		fields      fields
 		want        []byte
 		expectedErr error
-		expects     func(mock *mock.Mockk8sClient)
+		expects     func(mock *mock.MockK8sClient)
 	}{
 		// TODO: Add test cases.
 		{
@@ -434,7 +434,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        []byte("test-data"),
 			expectedErr: nil,
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -468,7 +468,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("bootstrap data secret is nil for LinodeMachine test-namespace/test-linode-machine"),
-			expects:     func(mock *mock.Mockk8sClient) {},
+			expects:     func(mock *mock.MockK8sClient) {},
 		},
 		{
 			name: "Error - client.Get return an error while retrieving bootstrap data secret",
@@ -492,7 +492,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("failed to retrieve bootstrap data secret for LinodeMachine test-namespace/test-linode-machine"),
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test-error"))
 			},
 		},
@@ -518,7 +518,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			},
 			want:        nil,
 			expectedErr: errors.New("bootstrap data secret value key is missing for LinodeMachine test-namespace/test-linode-machine"),
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 						cred := corev1.Secret{
@@ -539,7 +539,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
 			testcase.expects(mockK8sClient)
 
 			mScope := &MachineScope{

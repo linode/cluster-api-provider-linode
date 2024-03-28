@@ -383,7 +383,7 @@ var _ = Describe("pre-reconcile", Label("pre-reconcile"), func() {
 	})
 
 	It("fails when the resource cannot be fetched", func(ctx SpecContext) {
-		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
+		mockK8sClient := mock.NewMockK8sClient(mockCtrl)
 		mockK8sClient.EXPECT().
 			Get(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(errors.New("non-404 error")).
@@ -451,7 +451,7 @@ var _ = Describe("apply", Label("apply"), func() {
 	})
 
 	It("fails when a finalizer cannot be added", Label("current"), func(ctx SpecContext) {
-		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
+		mockK8sClient := mock.NewMockK8sClient(mockCtrl)
 		prev := mockK8sClient.EXPECT().
 			Scheme().
 			Return(scheme.Scheme).
@@ -525,7 +525,7 @@ var _ = Describe("apply", Label("apply"), func() {
 			Return(&linodego.ObjectStorageBucket{Created: ptr.To(time.Now())}, nil).
 			Times(1)
 
-		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
+		mockK8sClient := mock.NewMockK8sClient(mockCtrl)
 		mockK8sClient.EXPECT().
 			Get(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(errors.New("api error")).
@@ -560,7 +560,7 @@ var _ = Describe("apply", Label("apply"), func() {
 			Return(nil, errors.New("key creation error")).
 			Times(2)
 
-		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
+		mockK8sClient := mock.NewMockK8sClient(mockCtrl)
 		mockK8sClient.EXPECT().
 			Get(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-access-keys")).
@@ -597,7 +597,7 @@ var _ = Describe("apply", Label("apply"), func() {
 				Times(1)
 		}
 
-		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
+		mockK8sClient := mock.NewMockK8sClient(mockCtrl)
 		mockK8sClient.EXPECT().
 			Get(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-access-keys")).
@@ -639,7 +639,7 @@ var _ = Describe("apply", Label("apply"), func() {
 				Times(1)
 		}
 
-		mockK8sClient := mock.NewMockk8sClient(mockCtrl)
+		mockK8sClient := mock.NewMockK8sClient(mockCtrl)
 		mockK8sClient.EXPECT().
 			Scheme().
 			Return(scheme.Scheme).

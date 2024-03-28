@@ -102,7 +102,7 @@ func TestClusterScopeMethods(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		expects func(mock *mock.Mockk8sClient)
+		expects func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode Cluster object",
@@ -114,7 +114,7 @@ func TestClusterScopeMethods(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -134,7 +134,7 @@ func TestClusterScopeMethods(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -151,7 +151,7 @@ func TestClusterScopeMethods(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 			testcase.expects(mockK8sClient)
 
@@ -188,7 +188,7 @@ func TestNewClusterScope(t *testing.T) {
 		name          string
 		args          args
 		expectedError error
-		expects       func(mock *mock.Mockk8sClient)
+		expects       func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid ClusterScope",
@@ -200,7 +200,7 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -226,7 +226,7 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: nil,
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
@@ -250,7 +250,7 @@ func TestNewClusterScope(t *testing.T) {
 				params: ClusterScopeParams{},
 			},
 			expectedError: fmt.Errorf("cluster is required when creating a ClusterScope"),
-			expects:       func(mock *mock.Mockk8sClient) {},
+			expects:       func(mock *mock.MockK8sClient) {},
 		},
 		{
 			name: "Error - patchHelper returns error. Checking error handle for when new patchHelper is invoked",
@@ -262,7 +262,7 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("failed to init patch helper:"),
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
 		},
@@ -284,7 +284,7 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: failed to get secret"),
-			expects: func(mock *mock.Mockk8sClient) {
+			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
 			},
 		},
@@ -298,7 +298,7 @@ func TestNewClusterScope(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
-			expects:       func(mock *mock.Mockk8sClient) {},
+			expects:       func(mock *mock.MockK8sClient) {},
 		},
 	}
 
@@ -310,7 +310,7 @@ func TestNewClusterScope(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 			testcase.expects(mockK8sClient)
 
