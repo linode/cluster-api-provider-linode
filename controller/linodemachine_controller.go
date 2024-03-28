@@ -49,11 +49,8 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-const (
-	// default etcd Disk size in MB
-	defaultEtcdDiskSize            = 10240
-	defaultDiskReadyTimeoutSeconds = 15
-)
+// default etcd Disk size in MB
+const defaultEtcdDiskSize = 10240
 
 var skippedMachinePhases = map[string]bool{
 	string(clusterv1.MachinePhasePending): true,
@@ -305,6 +302,7 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 
 			return ctrl.Result{}, err
 		}
+		logger.Info("Booting instance")
 
 	default:
 		err := errors.New("multiple instances")
@@ -383,11 +381,17 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		return ctrl.Result{}, err
 	}
 
-	if err := r.waitForControlPlaneDisks(ctx, machineScope, linodeInstance.ID, instanceConfig); err != nil {
-		logger.Error(err, "Waiting for control plane disks to be ready")
+	ok, err := r.checkControlPlaneDiskStatuses(ctx, machineScope, linodeInstance.ID, instanceConfig)
+	if err != nil {
+		logger.Error(err, "Failed to check instance disks statuses")
 
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, err
 	}
+	if !ok {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, nil
+	}
+
+	logger.Info("Control plane disks are ready")
 
 	if linodeInstance.Status == linodego.InstanceOffline {
 		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
@@ -396,6 +400,7 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 			return ctrl.Result{}, err
 		}
 	}
+	logger.Info("Booting instance")
 
 	machineScope.LinodeMachine.Status.Ready = true
 	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
@@ -492,23 +497,23 @@ func (r *LinodeMachineReconciler) configureControlPlane(
 	return instanceConfig, nil
 }
 
-func (r *LinodeMachineReconciler) waitForControlPlaneDisks(
+func (r *LinodeMachineReconciler) checkControlPlaneDiskStatuses(
 	ctx context.Context,
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
 	instanceConfig *linodego.InstanceConfig,
-) error {
-	_, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, instanceConfig.Devices.SDA.DiskID, linodego.DiskReady, defaultDiskReadyTimeoutSeconds)
+) (bool, error) {
+	rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, instanceConfig.Devices.SDA.DiskID)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	_, err = machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, instanceConfig.Devices.SDB.DiskID, linodego.DiskReady, defaultDiskReadyTimeoutSeconds)
+	etcdDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, instanceConfig.Devices.SDB.DiskID)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	return rootDisk.Status == linodego.DiskReady && etcdDisk.Status == linodego.DiskReady, nil
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(

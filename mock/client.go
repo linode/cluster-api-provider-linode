@@ -205,6 +205,21 @@ func (mr *MockLinodeMachineClientMockRecorder) GetInstance(ctx, linodeID any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstance", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetInstance), ctx, linodeID)
 }
 
+// GetInstanceDisk mocks base method.
+func (m *MockLinodeMachineClient) GetInstanceDisk(ctx context.Context, linodeID, diskID int) (*linodego.InstanceDisk, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstanceDisk", ctx, linodeID, diskID)
+	ret0, _ := ret[0].(*linodego.InstanceDisk)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstanceDisk indicates an expected call of GetInstanceDisk.
+func (mr *MockLinodeMachineClientMockRecorder) GetInstanceDisk(ctx, linodeID, diskID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceDisk", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetInstanceDisk), ctx, linodeID, diskID)
+}
+
 // GetInstanceIPAddresses mocks base method.
 func (m *MockLinodeMachineClient) GetInstanceIPAddresses(ctx context.Context, linodeID int) (*linodego.InstanceIPAddressResponse, error) {
 	m.ctrl.T.Helper()
@@ -419,6 +434,21 @@ func (m *MockLinodeInstanceClient) GetInstance(ctx context.Context, linodeID int
 func (mr *MockLinodeInstanceClientMockRecorder) GetInstance(ctx, linodeID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetInstance), ctx, linodeID)
+}
+
+// GetInstanceDisk mocks base method.
+func (m *MockLinodeInstanceClient) GetInstanceDisk(ctx context.Context, linodeID, diskID int) (*linodego.InstanceDisk, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstanceDisk", ctx, linodeID, diskID)
+	ret0, _ := ret[0].(*linodego.InstanceDisk)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstanceDisk indicates an expected call of GetInstanceDisk.
+func (mr *MockLinodeInstanceClientMockRecorder) GetInstanceDisk(ctx, linodeID, diskID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetInstanceDisk), ctx, linodeID, diskID)
 }
 
 // GetInstanceIPAddresses mocks base method.

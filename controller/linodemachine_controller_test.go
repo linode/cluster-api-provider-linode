@@ -253,19 +253,19 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					},
 				}, nil).
 				Times(1)
-			waitForRootDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskReadyTimeoutSeconds).
+			checkRootDisk := mockLinodeClient.EXPECT().
+				GetInstanceDisk(ctx, 123, 100).
 				After(createInstConf).
-				Return(nil, nil).
+				Return(&linodego.InstanceDisk{Status: linodego.DiskReady}, nil).
 				Times(1)
-			waitForEtcdDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 101, linodego.DiskReady, defaultDiskReadyTimeoutSeconds).
-				After(waitForRootDisk).
-				Return(nil, nil).
+			checkEtcdDisk := mockLinodeClient.EXPECT().
+				GetInstanceDisk(ctx, 123, 101).
+				After(checkRootDisk).
+				Return(&linodego.InstanceDisk{Status: linodego.DiskReady}, nil).
 				Times(1)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
-				After(waitForEtcdDisk).
+				After(checkEtcdDisk).
 				Return(nil).
 				Times(1)
 			getAddrs := mockLinodeClient.EXPECT().
@@ -394,7 +394,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				}, nil).
 				Times(1)
 			mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskReadyTimeoutSeconds).
+				GetInstanceDisk(ctx, 123, 100).
 				After(createInstConf).
 				Return(nil, errors.New("Waiting for Instance 123 Disk 100 status ready: not yet")).
 				Times(1)
@@ -430,19 +430,19 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					},
 				}}, nil).
 				Times(1)
-			waitForRootDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskReadyTimeoutSeconds).
+			checkRootDisk := mockLinodeClient.EXPECT().
+				GetInstanceDisk(ctx, 123, 100).
 				After(listInstConf).
-				Return(nil, nil).
+				Return(&linodego.InstanceDisk{Status: linodego.DiskReady}, nil).
 				Times(1)
-			waitForEtcdDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 101, linodego.DiskReady, defaultDiskReadyTimeoutSeconds).
-				After(waitForRootDisk).
-				Return(nil, nil).
+			checkEtcdDisk := mockLinodeClient.EXPECT().
+				GetInstanceDisk(ctx, 123, 101).
+				After(checkRootDisk).
+				Return(&linodego.InstanceDisk{Status: linodego.DiskReady}, nil).
 				Times(1)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
-				After(waitForEtcdDisk).
+				After(checkEtcdDisk).
 				Return(nil).
 				Times(1)
 			getAddrs := mockLinodeClient.EXPECT().
