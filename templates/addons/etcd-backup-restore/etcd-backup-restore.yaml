@@ -38,7 +38,6 @@ data:
                 "sseCustomerKey": "$${AWS_SSE_CUSTOMER_KEY}"
               }
               EOF
-              cat /data/credentials-file
             volumeMounts:
               - name: data-volume
                 mountPath: /data
@@ -94,7 +93,7 @@ data:
             - --cacert=/etc/kubernetes/pki/etcd/ca.crt
             - --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt
             - --key=/etc/kubernetes/pki/etcd/healthcheck-client.key
-            image: ${ETCDBR_IMAGE}
+            image: ${ETCDBR_IMAGE:-europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl:v0.28.0}
             securityContext:
               allowPrivilegeEscalation: false
               runAsUser: 0
@@ -114,7 +113,10 @@ data:
             - name: AWS_APPLICATION_CREDENTIALS_JSON
               value: /home/.aws/credentials-file
             - name: STORAGE_CONTAINER
-              value: ${CLUSTER_NAME}-etcd-backup
+              valueFrom:
+                secretKeyRef:
+                  name: etcd-backup
+                  key: "bucket_name"
             volumeMounts:
             - mountPath: /etc/kubernetes/pki
               name: k8s-certs
