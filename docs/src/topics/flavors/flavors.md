@@ -7,7 +7,7 @@ of cluster templates referred to as "flavors". You can use the `--flavor` flag
 to specify which flavor to use for a cluster, e.g:
 
 ```bash
-clusterctl generate cluster test-cluster --flavor clusterclass
+clusterctl generate cluster test-cluster --flavor clusterclass-kubeadm
 ```
 
 To use the default flavor, omit the `--flavor` flag.
