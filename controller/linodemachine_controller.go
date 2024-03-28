@@ -50,10 +50,7 @@ import (
 )
 
 // default etcd Disk size in MB
-const (
-	defaultEtcdDiskSize         = 10240
-	defaultResizeTimeoutSeconds = 30
-)
+const defaultEtcdDiskSize = 10240
 
 var skippedMachinePhases = map[string]bool{
 	string(clusterv1.MachinePhasePending): true,
@@ -232,7 +229,7 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		return
 	}
-	linodeInstance, err = r.reconcileCreate(ctx, logger, machineScope)
+	res, err = r.reconcileCreate(ctx, logger, machineScope)
 
 	return
 }
@@ -241,7 +238,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-) (*linodego.Instance, error) {
+) (ctrl.Result, error) {
 	logger.Info("creating machine")
 
 	tags := []string{machineScope.LinodeCluster.Name}
@@ -253,50 +250,65 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 	filter, err := listFilter.String()
 	if err != nil {
-		return nil, err
+		return ctrl.Result{}, err
 	}
 	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
 	if err != nil {
 		logger.Error(err, "Failed to list Linode machine instances")
 
-		return nil, err
+		return ctrl.Result{}, err
 	}
 
+	if kutil.IsControlPlaneMachine(machineScope.Machine) {
+		return r.reconcileCreateControlNode(ctx, logger, machineScope, linodeInstances, tags)
+	}
+
+	return r.reconcileCreateWorkerNode(ctx, logger, machineScope, linodeInstances, tags)
+}
+
+func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	linodeInstances []linodego.Instance,
+	tags []string,
+) (ctrl.Result, error) {
 	var linodeInstance *linodego.Instance
+
 	switch len(linodeInstances) {
 	case 1:
 		logger.Info("Linode instance already exists")
 
 		linodeInstance = &linodeInstances[0]
+
 	case 0:
 		// get the bootstrap data for the Linode instance and set it for create config
 		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
 
-			return nil, err
+			return ctrl.Result{}, err
 		}
+
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil || linodeInstance == nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
-			return nil, err
+			return ctrl.Result{}, err
 		}
-		if err = r.configureDisksControlPlane(ctx, logger, machineScope, linodeInstance.ID); err != nil {
-			logger.Error(err, "Failed to configure instance disks")
 
-			return nil, err
-		}
-		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
-			return nil, err
+			return ctrl.Result{}, err
 		}
+		logger.Info("Booting instance")
+
 	default:
-		err = errors.New("multiple instances")
+		err := errors.New("multiple instances")
 		logger.Error(err, "multiple instances found", "tags", tags)
 
-		return nil, err
+		return ctrl.Result{}, err
 	}
 
 	machineScope.LinodeMachine.Status.Ready = true
@@ -304,57 +316,144 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
 
-	if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
-		logger.Error(err, "Failed to add instance to Node Balancer backend")
-
-		return linodeInstance, err
-	}
-
-	return linodeInstance, nil
+	return ctrl.Result{}, nil
 }
 
-func (r *LinodeMachineReconciler) configureDisksControlPlane(
+func (r *LinodeMachineReconciler) reconcileCreateControlNode(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	linodeInstances []linodego.Instance,
+	tags []string,
+) (ctrl.Result, error) {
+	var linodeInstance *linodego.Instance
+	var instanceConfig *linodego.InstanceConfig
+
+	switch len(linodeInstances) {
+	case 1:
+		logger.Info("Linode instance already exists")
+
+		linodeInstance = &linodeInstances[0]
+
+		configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstance.ID, &linodego.ListOptions{})
+		if err != nil || len(configs) == 0 {
+			logger.Error(err, "Failed to list instance configs")
+
+			return ctrl.Result{}, err
+		}
+		instanceConfig = &configs[0]
+
+	case 0:
+		// get the bootstrap data for the Linode instance and set it for create config
+		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
+		if err != nil {
+			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
+
+			return ctrl.Result{}, err
+		}
+
+		// Omit image and interfaces when creating the instance to configure disks and config profile manually
+		image := createOpts.Image
+		createOpts.Image = ""
+		interfaces := createOpts.Interfaces
+		createOpts.Interfaces = nil
+
+		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
+		if err != nil || linodeInstance == nil {
+			logger.Error(err, "Failed to create Linode machine instance")
+
+			return ctrl.Result{}, err
+		}
+
+		createOpts.Image = image
+		createOpts.Interfaces = interfaces
+		instanceConfig, err = r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, *createOpts)
+		if err != nil {
+			logger.Error(err, "Failed to configure instance profile")
+
+			return ctrl.Result{}, err
+		}
+
+	default:
+		err := errors.New("multiple instances")
+		logger.Error(err, "multiple instances found", "tags", tags)
+
+		return ctrl.Result{}, err
+	}
+
+	ok, err := r.checkControlPlaneDiskStatuses(ctx, machineScope, linodeInstance.ID, instanceConfig)
+	if err != nil {
+		logger.Error(err, "Failed to check instance disks statuses")
+
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, err
+	}
+	if !ok {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, nil
+	}
+
+	logger.Info("Control plane disks are ready")
+
+	if linodeInstance.Status == linodego.InstanceOffline {
+		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+			logger.Error(err, "Failed to boot instance")
+
+			return ctrl.Result{}, err
+		}
+	}
+	logger.Info("Booting instance")
+
+	machineScope.LinodeMachine.Status.Ready = true
+	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
+	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
+	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
+
+	if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
+		logger.Error(err, "Failed to add instance to Node Balancer backend")
+
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) configureControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
-) error {
-	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
-		return nil
-	}
-	// get the default instance config
-	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
-	if err != nil || len(configs) == 0 {
-		logger.Error(err, "Failed to list instance configs")
-
-		return err
-	}
-	instanceConfig := &configs[0]
-
-	// carve out space for the etcd disk
-	rootDiskID := instanceConfig.Devices.SDA.DiskID
-	rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
+	createOpts linodego.InstanceCreateOptions,
+) (*linodego.InstanceConfig, error) {
+	instanceType, err := machineScope.LinodeClient.GetType(ctx, createOpts.Type)
 	if err != nil {
-		logger.Error(err, "Failed to get root disk for instance")
+		logger.Error(err, "Failed to retrieve type for instance")
 
-		return err
+		return nil, err
 	}
-	diskSize := rootDisk.Size - defaultEtcdDiskSize
-	if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-		logger.Error(err, "Failed to resize root disk")
 
-		return err
-	}
-	// wait for the disk to resize
-	_, err = machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeTimeoutSeconds)
+	// create the root disk
+	rootDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
+		ctx,
+		linodeInstanceID,
+		linodego.InstanceDiskCreateOptions{
+			Label:           "root",
+			Size:            instanceType.Disk - defaultEtcdDiskSize,
+			Image:           createOpts.Image,
+			RootPass:        createOpts.RootPass,
+			Filesystem:      string(linodego.FilesystemExt4),
+			AuthorizedKeys:  createOpts.AuthorizedKeys,
+			AuthorizedUsers: createOpts.AuthorizedUsers,
+			StackscriptID:   createOpts.StackScriptID,
+			StackscriptData: createOpts.StackScriptData,
+		},
+	)
 	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeTimeoutSeconds))
+		logger.Error(err, "Failed to create root disk")
 
-		return err
+		return nil, err
 	}
 
 	// create the etcd disk
-	_, err = machineScope.LinodeClient.CreateInstanceDisk(
+	etcdDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
 		ctx,
 		linodeInstanceID,
 		linodego.InstanceDiskCreateOptions{
@@ -366,10 +465,55 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 	if err != nil {
 		logger.Error(err, "Failed to create etcd disk")
 
-		return err
+		return nil, err
 	}
 
-	return nil
+	instanceConfig, err := machineScope.LinodeClient.CreateInstanceConfig(
+		ctx,
+		linodeInstanceID,
+		linodego.InstanceConfigCreateOptions{
+			Label: fmt.Sprintf("%s disk profile", createOpts.Image),
+			Devices: linodego.InstanceConfigDeviceMap{
+				SDA: &linodego.InstanceConfigDevice{DiskID: rootDisk.ID},
+				SDB: &linodego.InstanceConfigDevice{DiskID: etcdDisk.ID},
+			},
+			Helpers: &linodego.InstanceConfigHelpers{
+				UpdateDBDisabled:  true,
+				Distro:            true,
+				ModulesDep:        true,
+				Network:           true,
+				DevTmpFsAutomount: true,
+			},
+			Interfaces: createOpts.Interfaces,
+			Kernel:     "linode/grub2",
+		},
+	)
+	if err != nil {
+		logger.Error(err, "Failed to create config profile for instance")
+
+		return nil, err
+	}
+
+	return instanceConfig, nil
+}
+
+func (r *LinodeMachineReconciler) checkControlPlaneDiskStatuses(
+	ctx context.Context,
+	machineScope *scope.MachineScope,
+	linodeInstanceID int,
+	instanceConfig *linodego.InstanceConfig,
+) (bool, error) {
+	rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, instanceConfig.Devices.SDA.DiskID)
+	if err != nil {
+		return false, err
+	}
+
+	etcdDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, instanceConfig.Devices.SDB.DiskID)
+	if err != nil {
+		return false, err
+	}
+
+	return rootDisk.Status == linodego.DiskReady && etcdDisk.Status == linodego.DiskReady, nil
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(

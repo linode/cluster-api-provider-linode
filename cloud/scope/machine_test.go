@@ -543,7 +543,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			mScope := &MachineScope{
-				client:        mockK8sClient,
+				Client:        mockK8sClient,
 				PatchHelper:   &patch.Helper{}, // empty patch helper
 				Cluster:       testcase.fields.Cluster,
 				Machine:       testcase.fields.Machine,

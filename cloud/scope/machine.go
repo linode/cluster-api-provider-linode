@@ -23,7 +23,7 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	client k8sClient
+	Client k8sClient
 
 	PatchHelper   *patch.Helper
 	Cluster       *clusterv1.Cluster
@@ -93,7 +93,7 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 	}
 
 	return &MachineScope{
-		client:        params.Client,
+		Client:        params.Client,
 		PatchHelper:   helper,
 		Cluster:       params.Cluster,
 		Machine:       params.Machine,
@@ -135,7 +135,7 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 
 	secret := &corev1.Secret{}
 	key := types.NamespacedName{Namespace: m.LinodeMachine.Namespace, Name: *m.Machine.Spec.Bootstrap.DataSecretName}
-	if err := m.client.Get(ctx, key, secret); err != nil {
+	if err := m.Client.Get(ctx, key, secret); err != nil {
 		return []byte{}, fmt.Errorf(
 			"failed to retrieve bootstrap data secret for LinodeMachine %s/%s",
 			m.LinodeMachine.Namespace,
