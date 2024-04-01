@@ -33,6 +33,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -140,6 +141,13 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to create machine scope: %w", err)
 	}
 
+	if annotations.IsPaused(cluster, linodeMachine) {
+		log.Info("LinodeMachine of linked Cluster is marked as paused. Won't reconcile")
+		r.Recorder.Event(linodeMachine, corev1.EventTypeNormal, "ClusterPaused", "LinodeMachine of linked Cluster is marked as paused. Won't reconcile")
+		RemoveBlockMoveAnnotation(linodeMachine)
+		return ctrl.Result{}, nil
+	}
+
 	return r.reconcile(ctx, log, machineScope)
 }
 
@@ -181,6 +189,8 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		return
 	}
+
+	AddBlockMoveAnnotation(machineScope.LinodeMachine)
 
 	// Delete
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -487,9 +497,14 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
-	return controller.Watch(
+	err = controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(r.requeueLinodeMachinesForUnpausedCluster(mgr.GetLogger())),
+		handler.EnqueueRequestsFromMapFunc(kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha1.GroupVersion.WithKind("LinodeMachine"), mgr.GetClient(), &infrav1alpha1.LinodeMachine{})),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
+	if err != nil {
+		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
+	}
+
+	return nil
 }

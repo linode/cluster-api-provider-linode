@@ -84,11 +84,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		return ctrl.Result{}, nil
 	}
-	if annotations.IsPaused(cluster, linodeCluster) {
-		logger.Info("LinodeCluster of linked Cluster is marked as paused. Won't reconcile")
 
-		return ctrl.Result{}, nil
-	}
 	// Create the cluster scope.
 	clusterScope, err := scope.NewClusterScope(
 		ctx,
@@ -103,6 +99,14 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err != nil {
 		logger.Info("Failed to create cluster scope", "error", err.Error())
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
+	}
+
+	// check if the cluster is paused
+	if annotations.IsPaused(cluster, linodeCluster) {
+		logger.Info("LinodeCluster of linked Cluster is marked as paused. Won't reconcile")
+		r.Recorder.Event(linodeCluster, corev1.EventTypeNormal, "ClusterPaused", "LinodeCluster of linked Cluster is marked as paused. Won't reconcile")
+		RemoveBlockMoveAnnotation(linodeCluster)
+		return ctrl.Result{}, nil
 	}
 
 	return r.reconcile(ctx, clusterScope, logger)
@@ -128,14 +132,17 @@ func (r *LinodeClusterReconciler) reconcile(
 		}
 	}()
 
+	if err := clusterScope.AddFinalizer(ctx); err != nil {
+		return res, err
+	}
+
+	AddBlockMoveAnnotation(clusterScope.LinodeCluster)
+
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
 		return res, r.reconcileDelete(ctx, logger, clusterScope)
 	}
 
-	if err := clusterScope.AddFinalizer(ctx); err != nil {
-		return res, err
-	}
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
