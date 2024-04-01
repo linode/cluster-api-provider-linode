@@ -39,6 +39,7 @@ import (
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -46,11 +47,6 @@ import (
 // Size limit in bytes on the decoded metadata.user_data for cloud-init
 // The decoded user_data must not exceed 16384 bytes per the Linode API
 const maxBootstrapDataBytes = 16384
-
-// Hard code the stack script ID for our CAPI shim stackscript.
-// This is a very specific stackscript which requires exact inputs
-// from this code, so it is unlikely we will want to configure it without a code change.
-const capiStackScriptID = 1319647
 
 func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
@@ -98,10 +94,18 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 	} else {
 		logger.Info(fmt.Sprintf("using StackScripts for bootstrapping. imageMetadataSupport: %t, regionMetadataSupport: %t",
 			imageMetadataSupport, regionMetadataSupport))
+		capiStackScriptID, err := services.EnsureStackscript(ctx, machineScope)
+		if err != nil {
+			return nil, err
+		}
 		createConfig.StackScriptID = capiStackScriptID
+		// ###### WARNING, currently label, region and type are supported as cloud-init variables, any changes ######
+		// any changes to this could be potentially backwards incompatible and should be noted through a backwards incompatible version update #####
+		instanceData := fmt.Sprintf("label: %s\nregion: %s\ntype: %s", machineScope.LinodeMachine.Name, machineScope.LinodeMachine.Spec.Region, machineScope.LinodeMachine.Spec.Type)
+		// ###### WARNING ######
 		createConfig.StackScriptData = map[string]string{
-			"label":    machineScope.LinodeMachine.Name,
-			"userdata": b64.StdEncoding.EncodeToString(bootstrapData),
+			"instancedata": b64.StdEncoding.EncodeToString([]byte(instanceData)),
+			"userdata":     b64.StdEncoding.EncodeToString(bootstrapData),
 		}
 	}
 
