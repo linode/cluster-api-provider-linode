@@ -94,6 +94,7 @@ type LinodeObjectStorageBucketStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=linodeobjectstoragebuckets,scope=Namespaced,shortName=lobj
 // +kubebuilder:subresource:status
+// +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 // +kubebuilder:printcolumn:name="Label",type="string",JSONPath=".spec.label",description="The name of the bucket"
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".spec.cluster",description="The ID of the Object Storage cluster for the bucket"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Bucket and keys have been provisioned"

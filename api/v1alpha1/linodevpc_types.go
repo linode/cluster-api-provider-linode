@@ -105,6 +105,7 @@ type LinodeVPCStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 
 // LinodeVPC is the Schema for the linodemachines API
 type LinodeVPC struct {
