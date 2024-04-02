@@ -51,8 +51,11 @@ Tips for a faster merge:
      2. All code changes must be covered by unit tests and E2E tests.
      3. All new features should come with user documentation.
 3. Ensure that commit message(s) are be meaningful and commit history is readable.
-
-All changes must be code reviewed. Coding conventions and standards are explained in the official [developer docs](https://github.com/kubernetes/community/tree/master/contributors/devel). Expect reviewers to request that you avoid common [go style mistakes](https://github.com/golang/go/wiki/CodeReviewComments) in your PRs.
+5. All changes must be code reviewed. Refer to the following for code conventions and standards:
+    - The official [Kubernetes developer guide](https://github.com/kubernetes/community/tree/master/contributors/devel)
+    - [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments) identifies some common style mistakes when writing Go
+    - [Uber's Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md) promotes preferred code conventions
+    - This repo's [golangci-lint](https://golangci-lint.run) [configuration](https://github.com/linode/cluster-api-provider-linode/blob/main/.golangci.yml), which runs on all PRs
 
 In case you want to run our E2E tests locally, please refer to the [E2E Testing](https://linode.github.io/cluster-api-provider-linode/developers/development.html#e2e-testing) guide.
 
