@@ -489,7 +489,7 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	err = controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha1.GroupVersion.WithKind("LinodeMachine"), mgr.GetClient(), &infrav1alpha1.LinodeMachine{})),
+		handler.EnqueueRequestsFromMapFunc(r.requeueLinodeMachinesForUnpausedCluster(mgr.GetLogger())),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
 	if err != nil {
