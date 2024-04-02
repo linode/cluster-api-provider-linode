@@ -30,7 +30,6 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -101,14 +100,6 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 
-	// check if the cluster is paused
-	if annotations.IsPaused(cluster, linodeCluster) {
-		logger.Info("LinodeCluster of linked Cluster is marked as paused. Won't reconcile")
-		r.Recorder.Event(linodeCluster, corev1.EventTypeNormal, "ClusterPaused", "LinodeCluster of linked Cluster is marked as paused. Won't reconcile")
-		RemoveBlockMoveAnnotation(linodeCluster)
-		return ctrl.Result{}, nil
-	}
-
 	return r.reconcile(ctx, clusterScope, logger)
 }
 
@@ -135,8 +126,6 @@ func (r *LinodeClusterReconciler) reconcile(
 	if err := clusterScope.AddFinalizer(ctx); err != nil {
 		return res, err
 	}
-
-	AddBlockMoveAnnotation(clusterScope.LinodeCluster)
 
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
