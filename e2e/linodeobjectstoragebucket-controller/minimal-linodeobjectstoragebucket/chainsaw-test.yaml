@@ -66,6 +66,18 @@ spec:
           apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
           kind: LinodeObjectStorageBucket
           name: ($bucket)
+    - script:
+        env:
+        - name: BUCKET
+          value: ($bucket)
+        content: |
+          set -e
+          curl -s \
+            -H "Authorization: Bearer $LINODE_TOKEN" \
+            -X DELETE \
+            "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
+        check:
+          ($error): ~
   - name: step-07
     try:
     - error:
