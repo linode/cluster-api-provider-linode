@@ -10,9 +10,8 @@ spec:
   - name: run
     value: (join('-', ['e2e', 'lm-vpc', env('GIT_REF')]))
   - name: cluster
-    # Format the cluster name into a valid Linode label
-    # TODO: This is over-truncated to account for the Linode NodeBalancer label
-    value: (trim((truncate(($run), `21`)), '-'))
+    # Format the cluster name
+    value: (trim((truncate(($run), `32`)), '-'))
   - name: vpc
     # Format the VPC name into a valid Kubernetes object name
     value: (trim((truncate(($run), `63`)), '-'))

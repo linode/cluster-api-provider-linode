@@ -23,7 +23,7 @@ const (
 func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancer, error) {
 	var linodeNB *linodego.NodeBalancer
 
-	NBLabel := fmt.Sprintf("%s-api-server", clusterScope.LinodeCluster.Name)
+	NBLabel := clusterScope.LinodeCluster.Name
 	clusterUID := string(clusterScope.LinodeCluster.UID)
 	tags := []string{string(clusterScope.LinodeCluster.UID)}
 	listFilter := util.Filter{
@@ -53,9 +53,9 @@ func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 		return &linodeNBs[0], nil
 	}
 
-	logger.Info(fmt.Sprintf("Creating NodeBalancer %s-api-server", clusterScope.LinodeCluster.Name))
+	logger.Info(fmt.Sprintf("Creating NodeBalancer %s", clusterScope.LinodeCluster.Name))
 	createConfig := linodego.NodeBalancerCreateOptions{
-		Label:  util.Pointer(fmt.Sprintf("%s-api-server", clusterScope.LinodeCluster.Name)),
+		Label:  util.Pointer(clusterScope.LinodeCluster.Name),
 		Region: clusterScope.LinodeCluster.Spec.Region,
 		Tags:   tags,
 	}
