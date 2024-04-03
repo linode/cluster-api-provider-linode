@@ -4,7 +4,7 @@
 |-----------------------------|--------|--------------|-----------------------|
 | [k3s](https://docs.k3s.io/) | Cilium | Ubuntu 22.04 | No                    |
 ## Prerequisites
-* [Quickstart](../topics/getting-started.md) completed
+* [Quickstart](../getting-started.md) completed
 * Select a [k3s kubernetes version](https://github.com/k3s-io/k3s/releases) to set for the kubernetes version
   ```bash
   export K3S_KUBERNETES_VERSION=v1.29.1+k3s2
