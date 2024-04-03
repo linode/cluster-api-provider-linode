@@ -123,13 +123,13 @@ func (r *LinodeClusterReconciler) reconcile(
 		}
 	}()
 
-	if err := clusterScope.AddFinalizer(ctx); err != nil {
-		return res, err
-	}
-
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
 		return res, r.reconcileDelete(ctx, logger, clusterScope)
+	}
+
+	if err := clusterScope.AddFinalizer(ctx); err != nil {
+		return res, err
 	}
 
 	// Create
