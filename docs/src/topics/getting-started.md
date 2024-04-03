@@ -42,7 +42,7 @@ export LINODE_MACHINE_TYPE=g6-standard-2
     ```yaml
     providers:
        - name: linode
-         url: ~/cluster-api-provider-linode/infrastructure-linode/0.0.0/infrastructure-components.yaml
+         url: ${PWD}/infrastructure-linode/0.0.0/infrastructure-components.yaml
          type: InfrastructureProvider
     ```
 
