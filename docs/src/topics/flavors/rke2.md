@@ -4,7 +4,7 @@
 |-----------------------------|--------|--------------|-----------------------|
 | [rke2](https://docs.rke2.io/) | Cilium | Ubuntu 22.04 | No                    |
 ## Prerequisites
-* [Quickstart](../topics/getting-started.md) completed
+* [Quickstart](../getting-started.md) completed
 * Select an [rke2 kubernetes version](https://github.com/rancher/rke2/releases) to set for the kubernetes version
   ```bash
   export RKE2_KUBERNETES_VERSION=v1.29.1+rke2r1
