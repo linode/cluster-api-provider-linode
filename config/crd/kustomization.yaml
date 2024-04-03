@@ -36,6 +36,39 @@ patches:
 #- path: patches/cainjection_in_linodeobjectstoragebuckets.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
+# [VALIDATION]
+# patches here are for additional validation for each CRD
+- target:
+    group: apiextensions.k8s.io
+    version: v1
+    kind: CustomResourceDefinition
+    name: linodeclusters.infrastructure.cluster.x-k8s.io
+  path: patches/validation_in_linodeclusters.yaml
+- target:
+    group: apiextensions.k8s.io
+    version: v1
+    kind: CustomResourceDefinition
+    name: linodeclustertemplates.infrastructure.cluster.x-k8s.io
+  path: patches/validation_in_linodeclustertemplates.yaml
+- target:
+    group: apiextensions.k8s.io
+    version: v1
+    kind: CustomResourceDefinition
+    name: linodemachines.infrastructure.cluster.x-k8s.io
+  path: patches/validation_in_linodemachines.yaml
+- target:
+    group: apiextensions.k8s.io
+    version: v1
+    kind: CustomResourceDefinition
+    name: linodemachinetemplates.infrastructure.cluster.x-k8s.io
+  path: patches/validation_in_linodemachinetemplates.yaml
+- target:
+    group: apiextensions.k8s.io
+    version: v1
+    kind: CustomResourceDefinition
+    name: linodevpcs.infrastructure.cluster.x-k8s.io
+  path: patches/validation_in_linodevpcs.yaml
+
 # the following config is for teaching kustomize how to do kustomization for CRDs.
 configurations:
 - kustomizeconfig.yaml

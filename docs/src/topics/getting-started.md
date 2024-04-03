@@ -42,10 +42,10 @@ export LINODE_MACHINE_TYPE=g6-standard-2
     ```yaml
     providers:
        - name: linode
-         url: ~/cluster-api-provider-linode/infrastructure-linode/0.0.0/infrastructure-components.yaml
+         url: ${PWD}/infrastructure-linode/0.0.0/infrastructure-components.yaml
          type: InfrastructureProvider
     ```
 
 ## Deploying your first cluster
 
-Please refer to the [default flavor](../flavors/default.md) section for creating your first Kubernetes cluster on Linode using Cluster API. 
+Please refer to the [default flavor](../topics/flavors/default.md) section for creating your first Kubernetes cluster on Linode using Cluster API. 

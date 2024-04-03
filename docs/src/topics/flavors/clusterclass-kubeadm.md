@@ -4,7 +4,7 @@
 |---------------|--------|--------------|-----------------------|
 | Kubeadm       | Cilium | Ubuntu 22.04 | Yes                   | 
 ## Prerequisites
-[Quickstart](../topics/getting-started.md) completed
+[Quickstart](../getting-started.md) completed
 ## Usage
 ### Create clusterClass and first cluster
 1. Generate the ClusterClass and cluster manifests

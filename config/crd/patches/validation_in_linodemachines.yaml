@@ -1,0 +1,26 @@
+# The following patch adds additional constraints after the built-in name validation for the CRD
+- op: add
+  path: /spec/versions/0/schema/openAPIV3Schema/properties/metadata/properties
+  value:
+    name:
+      type: string
+      x-kubernetes-validations:
+      - rule: 3 <= size(self) && size(self) <= 64
+        message: >-
+          custom validation:
+          linode instance: labels must be between 3..64 characters
+      - rule: self.matches('^[[:alnum:]]([-_.[:alnum:]]+[[:alnum:]])*$')
+        message: >-
+          custom validation:
+          linode instance: labels:
+          must begin and end with an alphanumeric character,
+          may only consist of alphanumeric characters, hyphens (-), underscores (_) or periods (.),
+          cannot have two hyphens (--), underscores (__) or periods (..) in a row,
+          regex used for validation is: '^[[:alnum:]]([-_.[:alnum:]]+[[:alnum:]])*$',
+          see: https://www.linode.com/docs/api/linode-instances/#linode-create
+      # TODO: Consider combining this into the regex above to minimize time complexity
+      # See: https://github.com/google/cel-spec/blob/master/doc/langdef.md#time-complexity
+      - rule: "!(self.contains('--') || self.contains('__') || self.contains('..'))"
+        message: >-
+          custom validation:
+          linode instance: labels cannot have two hyphens (--), underscores (__) or periods (..) in a row

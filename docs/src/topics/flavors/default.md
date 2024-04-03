@@ -4,7 +4,7 @@
 |---------------|--------|--------------|-----------------------|
 | Kubeadm       | Cilium | Ubuntu 22.04 | No                    |
 ## Prerequisites
-[Quickstart](../topics/getting-started.md) completed
+[Quickstart](../getting-started.md) completed
 ## Usage
 1. Generate cluster yaml
     ```bash
