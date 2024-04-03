@@ -152,7 +152,7 @@ e2etest: generate local-deploy chainsaw
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
-	$(TILT) ci --timeout 240s -f Tiltfile
+	$(TILT) ci -f Tiltfile
 
 ## --------------------------------------
 ## Build
