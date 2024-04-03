@@ -30,7 +30,6 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -84,11 +83,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		return ctrl.Result{}, nil
 	}
-	if annotations.IsPaused(cluster, linodeCluster) {
-		logger.Info("LinodeCluster of linked Cluster is marked as paused. Won't reconcile")
 
-		return ctrl.Result{}, nil
-	}
 	// Create the cluster scope.
 	clusterScope, err := scope.NewClusterScope(
 		ctx,
@@ -136,6 +131,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	if err := clusterScope.AddFinalizer(ctx); err != nil {
 		return res, err
 	}
+
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
