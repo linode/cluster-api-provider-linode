@@ -119,7 +119,7 @@ gosec: ## Run gosec against code.
 
 .PHONY: lint
 lint: ## Run lint against code.
-	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:v1.56.1 golangci-lint run -c .golangci.yml
+	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:v1.57.2 golangci-lint run -c .golangci.yml
 
 .PHONY: nilcheck
 nilcheck: nilaway ## Run nil check against code.

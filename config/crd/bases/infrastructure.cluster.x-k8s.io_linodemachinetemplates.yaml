@@ -150,16 +150,6 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
-                      metadata:
-                        description: InstanceMetadataOptions defines metadata of instance
-                        properties:
-                          userData:
-                            description: UserData expects a Base64-encoded string
-                            type: string
-                        type: object
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
                       privateIp:
                         type: boolean
                         x-kubernetes-validations:
@@ -176,18 +166,6 @@ spec:
                           rule: self == oldSelf
                       rootPass:
                         type: string
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
-                      stackscriptData:
-                        additionalProperties:
-                          type: string
-                        type: object
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
-                      stackscriptId:
-                        type: integer
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf

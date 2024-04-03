@@ -32,6 +32,10 @@ export LINODE_TOKEN=<your linode PAT>
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
 ```
+```admonish warning
+For Regions and Images that do not yet support Akamai's cloud-init datasource CAPL will automatically use a stackscript shim
+to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
+```
 
 ## Register linode locally as an infrastructure provider
 1. Generate local release files 

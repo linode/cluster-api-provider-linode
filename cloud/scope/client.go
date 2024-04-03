@@ -28,6 +28,10 @@ type LinodeInstanceClient interface {
 	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
 	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
 	DeleteInstance(ctx context.Context, linodeID int) error
+	GetRegion(ctx context.Context, regionID string) (*linodego.Region, error)
+	GetImage(ctx context.Context, imageID string) (*linodego.Image, error)
+	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
+	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
 	WaitForInstanceDiskStatus(ctx context.Context, instanceID int, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error)
 }
 
