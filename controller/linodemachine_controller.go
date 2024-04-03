@@ -201,6 +201,7 @@ func (r *LinodeMachineReconciler) reconcile(
 		return
 	}
 
+	// Set the newest retrieved instance state once after all operations are done
 	var linodeInstance *linodego.Instance
 	defer func() {
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
@@ -210,7 +211,7 @@ func (r *LinodeMachineReconciler) reconcile(
 	}()
 
 	// Update
-	if machineScope.LinodeMachine.Spec.InstanceID != nil {
+	if machineScope.LinodeMachine.Status.PreflightState == infrav1alpha1.MachinePreflightReady {
 		failureReason = cerrs.UpdateMachineError
 
 		logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
@@ -229,7 +230,7 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		return
 	}
-	res, err = r.reconcileCreate(ctx, logger, machineScope)
+	res, linodeInstance, err = r.reconcileCreate(ctx, logger, machineScope)
 
 	return
 }
@@ -238,7 +239,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-) (ctrl.Result, error) {
+) (ctrl.Result, *linodego.Instance, error) {
 	logger.Info("creating machine")
 
 	tags := []string{machineScope.LinodeCluster.Name}
@@ -250,13 +251,14 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 	filter, err := listFilter.String()
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil, err
 	}
 	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
 	if err != nil {
 		logger.Error(err, "Failed to list Linode machine instances")
 
-		return ctrl.Result{}, err
+		// TODO: What transient errors returned from the API should we requeue on?
+		return ctrl.Result{}, nil, err
 	}
 
 	if kutil.IsControlPlaneMachine(machineScope.Machine) {
@@ -272,7 +274,7 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 	machineScope *scope.MachineScope,
 	linodeInstances []linodego.Instance,
 	tags []string,
-) (ctrl.Result, error) {
+) (ctrl.Result, *linodego.Instance, error) {
 	var linodeInstance *linodego.Instance
 
 	switch len(linodeInstances) {
@@ -287,36 +289,44 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
 
-			return ctrl.Result{}, err
+			return ctrl.Result{}, nil, err
 		}
 
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
+		// TODO: Investigate why there is an extra nil check on linodeInstance if err is already not nil
 		if err != nil || linodeInstance == nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
-			return ctrl.Result{}, err
+			// TODO: What transient errors returned from the API should we requeue on?
+			return ctrl.Result{}, nil, err
 		}
-
-		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
-			logger.Error(err, "Failed to boot instance")
-
-			return ctrl.Result{}, err
-		}
-		logger.Info("Booting instance")
+		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
+		machineScope.LinodeMachine.Status.PreflightState = infrav1alpha1.MachinePreflightCreated
 
 	default:
 		err := errors.New("multiple instances")
 		logger.Error(err, "multiple instances found", "tags", tags)
 
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil, err
+	}
+
+	if machineScope.LinodeMachine.Status.PreflightState < infrav1alpha1.MachinePreflightReady {
+		if linodeInstance.Status == linodego.InstanceRunning {
+			logger.Info("Linode instance already running")
+		} else if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+			logger.Error(err, "Failed to boot instance")
+
+			// TODO: What transient errors returned from the API should we requeue on?
+			return ctrl.Result{}, linodeInstance, err
+		}
+		machineScope.LinodeMachine.Status.PreflightState = infrav1alpha1.MachinePreflightReady
 	}
 
 	machineScope.LinodeMachine.Status.Ready = true
-	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, linodeInstance, nil
 }
 
 func (r *LinodeMachineReconciler) reconcileCreateControlNode(
@@ -325,9 +335,16 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 	machineScope *scope.MachineScope,
 	linodeInstances []linodego.Instance,
 	tags []string,
-) (ctrl.Result, error) {
+) (ctrl.Result, *linodego.Instance, error) {
+	// get the bootstrap data for the Linode instance and set it for create config
+	createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
+	if err != nil {
+		logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
+
+		return ctrl.Result{}, nil, err
+	}
+
 	var linodeInstance *linodego.Instance
-	var instanceConfig *linodego.InstanceConfig
 
 	switch len(linodeInstances) {
 	case 1:
@@ -335,23 +352,7 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 
 		linodeInstance = &linodeInstances[0]
 
-		configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstance.ID, &linodego.ListOptions{})
-		if err != nil || len(configs) == 0 {
-			logger.Error(err, "Failed to list instance configs")
-
-			return ctrl.Result{}, err
-		}
-		instanceConfig = &configs[0]
-
 	case 0:
-		// get the bootstrap data for the Linode instance and set it for create config
-		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
-		if err != nil {
-			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
-
-			return ctrl.Result{}, err
-		}
-
 		// Omit image and interfaces when creating the instance to configure disks and config profile manually
 		image := createOpts.Image
 		createOpts.Image = ""
@@ -362,58 +363,90 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		if err != nil || linodeInstance == nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
-			return ctrl.Result{}, err
+			// TODO: What transient errors returned from the API should we requeue on?
+			return ctrl.Result{}, nil, err
 		}
-
+		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
+		machineScope.LinodeMachine.Status.PreflightState = infrav1alpha1.MachinePreflightCreated
 		createOpts.Image = image
 		createOpts.Interfaces = interfaces
-		instanceConfig, err = r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, *createOpts)
-		if err != nil {
-			logger.Error(err, "Failed to configure instance profile")
-
-			return ctrl.Result{}, err
-		}
 
 	default:
 		err := errors.New("multiple instances")
 		logger.Error(err, "multiple instances found", "tags", tags)
 
-		return ctrl.Result{}, err
+		return ctrl.Result{}, linodeInstance, err
 	}
 
-	ok, err := r.checkControlPlaneDiskStatuses(ctx, machineScope, linodeInstance.ID, instanceConfig)
-	if err != nil {
-		logger.Error(err, "Failed to check instance disks statuses")
+	var instanceConfig *linodego.InstanceConfig
 
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, err
+	if machineScope.LinodeMachine.Status.PreflightState < infrav1alpha1.MachinePreflightConfigured {
+		instanceConfig, err = r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, *createOpts)
+		if err != nil {
+			logger.Error(err, "Failed to configure instance profile")
+
+			// TODO: What transient errors returned from the API should we requeue on?
+			return ctrl.Result{}, linodeInstance, err
+		}
+		machineScope.LinodeMachine.Status.PreflightState = infrav1alpha1.MachinePreflightConfigured
 	}
-	if !ok {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, nil
+
+	if machineScope.LinodeMachine.Status.PreflightState < infrav1alpha1.MachinePreflightDisksReady {
+		if instanceConfig == nil {
+			configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstance.ID, &linodego.ListOptions{})
+			if err != nil || len(configs) == 0 {
+				logger.Error(err, "Failed to list instance configs")
+
+				// TODO: What transient errors returned from the API should we requeue on?
+				return ctrl.Result{}, linodeInstance, err
+			}
+			instanceConfig = &configs[0]
+		}
+
+		ok, err := r.checkControlPlaneDiskStatuses(ctx, machineScope, linodeInstance.ID, instanceConfig)
+		if err != nil {
+			logger.Error(err, "Failed to check instance disks statuses")
+
+			// TODO: What terminal errors returned from the API should we NOT requeue on?
+			// For now, always requeue since we expect this to initially error
+			// and don't return an error so we don't trigger controller-manager's incremental backoff
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, nil, nil
+		}
+		if !ok {
+			logger.Info("Waiting for control plane disks to become ready")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, nil, nil
+		}
+		logger.Info("Control plane disks are ready")
+		machineScope.LinodeMachine.Status.PreflightState = infrav1alpha1.MachinePreflightDisksReady
 	}
 
-	logger.Info("Control plane disks are ready")
-
-	if linodeInstance.Status == linodego.InstanceOffline {
-		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+	if machineScope.LinodeMachine.Status.PreflightState < infrav1alpha1.MachinePreflightBooted {
+		if linodeInstance.Status == linodego.InstanceRunning {
+			logger.Info("Linode instance already running")
+		} else if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
-			return ctrl.Result{}, err
+			// TODO: What transient errors returned from the API should we requeue on?
+			return ctrl.Result{}, linodeInstance, err
 		}
+		machineScope.LinodeMachine.Status.PreflightState = infrav1alpha1.MachinePreflightBooted
 	}
-	logger.Info("Booting instance")
 
 	machineScope.LinodeMachine.Status.Ready = true
-	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
 
-	if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
-		logger.Error(err, "Failed to add instance to Node Balancer backend")
+	if machineScope.LinodeMachine.Status.PreflightState < infrav1alpha1.MachinePreflightReady {
+		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
+			logger.Error(err, "Failed to add instance to Node Balancer backend")
 
-		return ctrl.Result{}, err
+			// TODO: What transient errors returned from the API should we requeue on?
+			return ctrl.Result{}, linodeInstance, err
+		}
+		machineScope.LinodeMachine.Status.PreflightState = infrav1alpha1.MachinePreflightReady
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, linodeInstance, nil
 }
 
 func (r *LinodeMachineReconciler) configureControlPlane(

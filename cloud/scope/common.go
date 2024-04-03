@@ -28,6 +28,9 @@ func CreateLinodeClient(apiKey string) (*linodego.Client, error) {
 	}
 	linodeClient := linodego.NewClient(oauth2Client)
 
+	// Ideally it'd be possible to read the Retry-After response header
+	// and then requeue with the amount of seconds provided.
+	// linodeClient.SetRetryCount(0)
 	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
 	return &linodeClient, nil
