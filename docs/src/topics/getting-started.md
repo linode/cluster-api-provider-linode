@@ -48,4 +48,4 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 
 ## Deploying your first cluster
 
-Please refer to the [default flavor](../flavors/default.md) section for creating your first Kubernetes cluster on Linode using Cluster API. 
+Please refer to the [default flavor](../topics/flavors/default.md) section for creating your first Kubernetes cluster on Linode using Cluster API. 
