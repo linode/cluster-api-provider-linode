@@ -6,14 +6,10 @@ on:
     tags:
       - "*"
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Build and Test CI"]
-    types: [completed]
 
 jobs:
   build-push:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
         with:
