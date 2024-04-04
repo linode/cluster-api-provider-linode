@@ -7,7 +7,7 @@ on:
       - "*"
   workflow_dispatch:
   workflow_run:
-    workflows: [go-build-test]
+    workflows: ["Build and Test CI"]
     types: [completed]
 
 jobs:

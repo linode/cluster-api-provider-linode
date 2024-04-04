@@ -103,7 +103,7 @@ jobs:
     - name: Docker cache
       uses: ScribeMD/docker-cache@0.5.0
       with:
-        key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}}
+        key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
 
     - name: Lint
       run: make lint
@@ -163,7 +163,7 @@ jobs:
     - name: Docker cache
       uses: ScribeMD/docker-cache@0.5.0
       with:
-        key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}}
+        key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
 
     - name: E2E test
       run: make e2etest
