@@ -157,11 +157,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			LinodeMachine: &linodeMachine,
 		}
 
-		_, _, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+		_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(linodeMachine.Status.Ready).To(BeTrue())
-		Expect(linodeMachine.Status.PreflightState).To(Equal(infrav1alpha1.MachinePreflightReady))
+		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 		Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 		Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{{
@@ -297,11 +297,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeMachine: &linodeMachine,
 			}
 
-			_, _, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+			_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(linodeMachine.Status.Ready).To(BeTrue())
-			Expect(linodeMachine.Status.PreflightState).To(Equal(infrav1alpha1.MachinePreflightReady))
+			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{{
@@ -410,12 +410,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeMachine: &linodeMachine,
 			}
 
-			res, _, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForControlPlaneDisksDelay))
 			Expect(err).ToNot(HaveOccurred())
 
-			// fetch again?
-			Expect(linodeMachine.Status.PreflightState).To(Equal(infrav1alpha1.MachinePreflightConfigured))
+			Expect(*linodeMachine.Status.InstanceState).To(Equal(InstanceConfigured))
 
 			listInst = mockLinodeClient.EXPECT().
 				ListInstances(ctx, gomock.Any()).
@@ -469,11 +468,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Return(nil, nil).
 				Times(1)
 
-			_, _, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(linodeMachine.Status.Ready).To(BeTrue())
-			Expect(linodeMachine.Status.PreflightState).To(Equal(infrav1alpha1.MachinePreflightReady))
+			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{{

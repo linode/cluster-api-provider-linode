@@ -330,10 +330,6 @@ spec:
                 description: InstanceState is the state of the Linode instance for
                   this machine.
                 type: string
-              preflightState:
-                description: PreflightState is the state of the Linode instance prior
-                  to booting.
-                type: integer
               ready:
                 default: false
                 description: Ready is true when the provider resource is ready.

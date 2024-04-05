@@ -120,9 +120,6 @@ type LinodeMachineStatus struct {
 	// Addresses contains the Linode instance associated addresses.
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
-	// PreflightState is the state of the Linode instance prior to booting.
-	PreflightState MachinePreflightState `json:"preflightState,omitempty"`
-
 	// InstanceState is the state of the Linode instance for this machine.
 	// +optional
 	InstanceState *linodego.InstanceStatus `json:"instanceState,omitempty"`
@@ -169,19 +166,6 @@ type LinodeMachineStatus struct {
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
-
-// MachinePreflightState constants are used by the Machine controller to ensure all preflight checks pass
-type MachinePreflightState uint
-
-// MachinePreflightState constants reflect the current state of a machine prior to booting
-const (
-	MachinePreflightInit MachinePreflightState = iota
-	MachinePreflightCreated
-	MachinePreflightConfigured
-	MachinePreflightDisksReady
-	MachinePreflightBooted
-	MachinePreflightReady
-)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=linodemachines,scope=Namespaced,categories=cluster-api,shortName=lm
