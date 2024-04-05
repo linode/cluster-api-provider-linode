@@ -10,13 +10,22 @@ metadata:
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
+    categories:
+    - cluster-api
     kind: LinodeVPC
     listKind: LinodeVPCList
     plural: linodevpcs
+    shortNames:
+    - lvpc
     singular: linodevpc
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: VPC is ready
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: LinodeVPC is the Schema for the linodemachines API
