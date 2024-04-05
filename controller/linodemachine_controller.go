@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -54,10 +55,10 @@ const (
 	defaultEtcdDiskSize = 10240
 
 	// statuses to reflect the current state of a machine prior to boot
-	InstanceCreated      linodego.InstanceStatus = "created"
-	InstanceConfigured   linodego.InstanceStatus = "configured"
-	InstanceDisksCreated linodego.InstanceStatus = "diskscreated"
-	InstanceInitializing linodego.InstanceStatus = "initializing"
+	InstancePreflightCreated      linodego.InstanceStatus = "preflight-created"
+	InstancePreflightConfigured   linodego.InstanceStatus = "preflight-configured"
+	InstancePreflightDisksCreated linodego.InstanceStatus = "preflight-diskscreated"
+	InstancePreflightInitializing linodego.InstanceStatus = "preflight-initializing"
 )
 
 var skippedMachinePhases = map[string]bool{
@@ -209,24 +210,22 @@ func (r *LinodeMachineReconciler) reconcile(
 		return
 	}
 
-	// Set the newest retrieved instance state once after update operations are done.
-	// Note that this only applies to reconcileUpdate for tracking instance boot status.
-	var linodeInstance *linodego.Instance
-	defer func() {
-		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
-		if linodeInstance != nil {
-			machineScope.LinodeMachine.Status.InstanceState = &linodeInstance.Status
-		}
-	}()
-
 	// Update
-	if *machineScope.LinodeMachine.Status.InstanceState == linodego.InstanceOffline {
-		failureReason = cerrs.UpdateMachineError
+	if machineScope.LinodeMachine.Status.InstanceState != nil &&
+		!strings.HasPrefix(string(*machineScope.LinodeMachine.Status.InstanceState), "preflight") {
 
+		// Set the newest retrieved instance state once after update operations are done.
+		var linodeInstance *linodego.Instance
+		defer func() {
+			if linodeInstance != nil {
+				machineScope.LinodeMachine.Status.InstanceState = &linodeInstance.Status
+			}
+		}()
+
+		failureReason = cerrs.UpdateMachineError
 		logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
 
 		res, linodeInstance, err = r.reconcileUpdate(ctx, logger, machineScope)
-
 		return
 	}
 
@@ -309,7 +308,7 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
-		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceCreated)
+		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstancePreflightCreated)
 
 	default:
 		err := errors.New("multiple instances")
@@ -318,7 +317,7 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 		return ctrl.Result{}, err
 	}
 
-	if *machineScope.LinodeMachine.Status.InstanceState == InstanceCreated {
+	if *machineScope.LinodeMachine.Status.InstanceState == InstancePreflightCreated {
 		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
@@ -375,7 +374,7 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		createOpts.Image = image
 		createOpts.Interfaces = interfaces
 		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
-		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceCreated)
+		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstancePreflightCreated)
 
 	default:
 		err := errors.New("multiple instances")
@@ -386,7 +385,7 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 
 	var instanceConfig *linodego.InstanceConfig
 
-	if *machineScope.LinodeMachine.Status.InstanceState == InstanceCreated {
+	if *machineScope.LinodeMachine.Status.InstanceState == InstancePreflightCreated {
 		instanceConfig, err = r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, *createOpts)
 		if err != nil {
 			logger.Error(err, "Failed to configure instance profile")
@@ -394,10 +393,10 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 			// TODO: What terminal errors should we not requeue for, and just return an error?
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
-		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceConfigured)
+		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstancePreflightConfigured)
 	}
 
-	if *machineScope.LinodeMachine.Status.InstanceState == InstanceConfigured {
+	if *machineScope.LinodeMachine.Status.InstanceState == InstancePreflightConfigured {
 		if instanceConfig == nil {
 			configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstance.ID, &linodego.ListOptions{})
 			if err != nil || len(configs) == 0 {
@@ -421,20 +420,20 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		logger.Info("Control plane disks are ready")
-		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceDisksCreated)
+		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstancePreflightDisksCreated)
 	}
 
-	if *machineScope.LinodeMachine.Status.InstanceState == InstanceDisksCreated {
+	if *machineScope.LinodeMachine.Status.InstanceState == InstancePreflightDisksCreated {
 		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
 			// TODO: What terminal errors should we not requeue for, and just return an error?
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
-		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceInitializing)
+		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstancePreflightInitializing)
 	}
 
-	if *machineScope.LinodeMachine.Status.InstanceState == InstanceInitializing {
+	if *machineScope.LinodeMachine.Status.InstanceState == InstancePreflightInitializing {
 		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			logger.Error(err, "Failed to add instance to Node Balancer backend")
 
