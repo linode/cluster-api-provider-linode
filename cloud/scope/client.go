@@ -29,6 +29,10 @@ type LinodeInstanceClient interface {
 	GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (*linodego.InstanceDisk, error)
 	BootInstance(ctx context.Context, linodeID int, configID int) error
 	DeleteInstance(ctx context.Context, linodeID int) error
+	GetRegion(ctx context.Context, regionID string) (*linodego.Region, error)
+	GetImage(ctx context.Context, imageID string) (*linodego.Image, error)
+	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
+	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
 }
 
 // LinodeVPCClient defines the methods that a Linode client must have to interact with Linode's VPC service.

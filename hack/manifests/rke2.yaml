@@ -1,0 +1,12 @@
+---
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: BootstrapProvider
+metadata:
+  name: rke2
+  namespace: rke2-bootstrap-system
+---
+apiVersion: operator.cluster.x-k8s.io/v1alpha2
+kind: ControlPlaneProvider
+metadata:
+  name: rke2
+  namespace: rke2-control-plane-system

@@ -193,7 +193,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	}
 
 	if keys[0] != nil && keys[1] != nil {
-		secret, err := bScope.GenerateKeySecret(ctx, keys)
+		secret, err := bScope.GenerateKeySecret(ctx, keys, bucket)
 		if err != nil {
 			bScope.Logger.Error(err, "Failed to generate key secret")
 			r.setFailure(bScope, err)

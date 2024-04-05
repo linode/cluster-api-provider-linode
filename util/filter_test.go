@@ -33,6 +33,15 @@ func TestString(t *testing.T) {
 		},
 		expectErr: false,
 	}, {
+		name: "success additional info",
+		filter: Filter{
+			ID:                nil,
+			Label:             "",
+			Tags:              []string{"testtag"},
+			AdditionalFilters: map[string]string{"mine": "true"},
+		},
+		expectErr: false,
+	}, {
 		name: "failure unmarshal",
 		filter: Filter{
 			ID:    nil,

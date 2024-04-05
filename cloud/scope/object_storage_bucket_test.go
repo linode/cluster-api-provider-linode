@@ -329,7 +329,7 @@ func TestGenerateKeySecret(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
-					KeySecretName: ptr.To("test-bucket-access-keys"),
+					KeySecretName: ptr.To("test-bucket-bucket-details"),
 				},
 			},
 			keys: [NumAccessKeys]*linodego.ObjectStorageKey{
@@ -379,7 +379,7 @@ func TestGenerateKeySecret(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
-					KeySecretName: ptr.To("test-bucket-access-keys"),
+					KeySecretName: ptr.To("test-bucket-bucket-details"),
 				},
 			},
 			keys: [NumAccessKeys]*linodego.ObjectStorageKey{
@@ -463,7 +463,7 @@ func TestGenerateKeySecret(t *testing.T) {
 				Bucket: testcase.Bucket,
 			}
 
-			secret, err := objScope.GenerateKeySecret(context.Background(), testcase.keys)
+			secret, err := objScope.GenerateKeySecret(context.Background(), testcase.keys, &linodego.ObjectStorageBucket{})
 			if testcase.expectedErr != nil {
 				require.ErrorContains(t, err, testcase.expectedErr.Error())
 				return

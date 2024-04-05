@@ -135,8 +135,12 @@ This creates `infrastructure-linode/0.0.0/` with all the cluster templates:
 
 ```sh
 infrastructure-linode/0.0.0
-├── cluster-template-kubeadm-clusterclass.yaml
+├── cluster-template-clusterclass-kubeadm.yaml
+├── cluster-template-etcd-backup-restore.yaml
+├── cluster-template-k3s.yaml
+├── cluster-template-rke2.yaml
 ├── cluster-template.yaml
+├── clusterclass-kubeadm.yaml
 ├── infrastructure-components.yaml
 └── metadata.yaml
 ```
@@ -208,7 +212,7 @@ management cluster has the [ClusterTopology feature gate set](https://cluster-ap
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
   --infrastructure linode:0.0.0 \
-  --flavor kubeadm-clusterclass \
+  --flavor clusterclass-kubeadm \
   | kubectl apply -f -
 ```
 
