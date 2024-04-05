@@ -411,7 +411,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			}
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
-			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForControlPlaneDisksDelay))
+			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForInstanceInitDelay))
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(InstanceConfigured))

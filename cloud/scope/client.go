@@ -18,21 +18,23 @@ type LinodeMachineClient interface {
 
 // LinodeInstanceClient defines the methods that a Linode client must have to interact with Linode's Instance service.
 type LinodeInstanceClient interface {
-	ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error)
-	GetType(ctx context.Context, instanceType string) (*linodego.LinodeType, error)
-	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
 	GetInstanceIPAddresses(ctx context.Context, linodeID int) (*linodego.InstanceIPAddressResponse, error)
+	ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error)
 	CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error)
-	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
-	CreateInstanceConfig(ctx context.Context, linodeID int, opts linodego.InstanceConfigCreateOptions) (*linodego.InstanceConfig, error)
+	BootInstance(ctx context.Context, linodeID int, configID int) error
 	ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error)
 	GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (*linodego.InstanceDisk, error)
-	BootInstance(ctx context.Context, linodeID int, configID int) error
+	// ResizeInstanceDisk(ctx context.Context, linodeID int, diskID int, size int) error
+	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
+	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
 	DeleteInstance(ctx context.Context, linodeID int) error
 	GetRegion(ctx context.Context, regionID string) (*linodego.Region, error)
 	GetImage(ctx context.Context, imageID string) (*linodego.Image, error)
 	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
 	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
+	WaitForInstanceDiskStatus(ctx context.Context, instanceID int, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error)
+	CreateInstanceConfig(ctx context.Context, linodeID int, opts linodego.InstanceConfigCreateOptions) (*linodego.InstanceConfig, error)
+	GetType(ctx context.Context, instanceType string) (*linodego.LinodeType, error)
 }
 
 // LinodeVPCClient defines the methods that a Linode client must have to interact with Linode's VPC service.

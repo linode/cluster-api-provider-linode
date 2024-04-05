@@ -209,7 +209,8 @@ func (r *LinodeMachineReconciler) reconcile(
 		return
 	}
 
-	// Set the newest retrieved instance state once after update operations are done
+	// Set the newest retrieved instance state once after update operations are done.
+	// Note that this only applies to reconcileUpdate for tracking instance boot status.
 	var linodeInstance *linodego.Instance
 	defer func() {
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
@@ -265,8 +266,8 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	if err != nil {
 		logger.Error(err, "Failed to list Linode machine instances")
 
-		// TODO: What transient errors returned from the API should we requeue on?
-		return ctrl.Result{}, err
+		// TODO: What terminal errors should we not requeue for, and just return an error?
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 	}
 
 	if kutil.IsControlPlaneMachine(machineScope.Machine) {
@@ -301,12 +302,11 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 		}
 
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-		// TODO: Investigate why there is an extra nil check on linodeInstance if err is already not nil
-		if err != nil || linodeInstance == nil {
+		if err != nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
-			// TODO: What transient errors returned from the API should we requeue on?
-			return ctrl.Result{}, err
+			// TODO: What terminal errors should we not requeue for, and just return an error?
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceCreated)
@@ -319,13 +319,11 @@ func (r *LinodeMachineReconciler) reconcileCreateWorkerNode(
 	}
 
 	if *machineScope.LinodeMachine.Status.InstanceState == InstanceCreated {
-		if linodeInstance.Status == linodego.InstanceRunning {
-			logger.Info("Linode instance already running")
-		} else if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
-			// TODO: What transient errors returned from the API should we requeue on?
-			return ctrl.Result{}, err
+			// TODO: What terminal errors should we not requeue for, and just return an error?
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
 	}
@@ -371,8 +369,8 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		if err != nil || linodeInstance == nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
-			// TODO: What transient errors returned from the API should we requeue on?
-			return ctrl.Result{}, err
+			// TODO: What terminal errors should we not requeue for, and just return an error?
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		createOpts.Image = image
 		createOpts.Interfaces = interfaces
@@ -393,8 +391,8 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		if err != nil {
 			logger.Error(err, "Failed to configure instance profile")
 
-			// TODO: What transient errors returned from the API should we requeue on?
-			return ctrl.Result{}, err
+			// TODO: What terminal errors should we not requeue for, and just return an error?
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceConfigured)
 	}
@@ -405,8 +403,8 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 			if err != nil || len(configs) == 0 {
 				logger.Error(err, "Failed to list instance configs")
 
-				// TODO: What transient errors returned from the API should we requeue on?
-				return ctrl.Result{}, err
+				// TODO: What terminal errors should we not requeue for, and just return an error?
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 			}
 			instanceConfig = &configs[0]
 		}
@@ -415,27 +413,23 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		if err != nil {
 			logger.Error(err, "Failed to check instance disks statuses")
 
-			// TODO: What terminal errors returned from the API should we NOT requeue on?
-			// For now, always requeue since we expect this to initially error
-			// and don't return an error so we don't trigger controller-manager's incremental backoff
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, nil
+			// TODO: What terminal errors should we not requeue for, and just return an error?
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		if !ok {
 			logger.Info("Waiting for control plane disks to become ready")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForControlPlaneDisksDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		logger.Info("Control plane disks are ready")
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceDisksCreated)
 	}
 
 	if *machineScope.LinodeMachine.Status.InstanceState == InstanceDisksCreated {
-		if linodeInstance.Status == linodego.InstanceRunning {
-			logger.Info("Linode instance already running")
-		} else if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
-			// TODO: What transient errors returned from the API should we requeue on?
-			return ctrl.Result{}, err
+			// TODO: What terminal errors should we not requeue for, and just return an error?
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(InstanceInitializing)
 	}
@@ -444,8 +438,8 @@ func (r *LinodeMachineReconciler) reconcileCreateControlNode(
 		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			logger.Error(err, "Failed to add instance to Node Balancer backend")
 
-			// TODO: What transient errors returned from the API should we requeue on?
-			return ctrl.Result{}, err
+			// TODO: What terminal errors should we not requeue for, and just return an error?
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForInstanceInitDelay}, nil
 		}
 		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
 	}
