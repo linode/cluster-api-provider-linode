@@ -14,7 +14,7 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}
         labels:
-          ipv6: true
+          ipv6: "true"
       spec:
         clusterNetwork:
           pods:
