@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.6.0
-	github.com/linode/linodego v1.31.0
+	github.com/linode/linodego v1.32.0
 	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.32.0
 	github.com/stretchr/testify v1.9.0
@@ -18,6 +18,7 @@ require (
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/cluster-api v1.6.3
 	sigs.k8s.io/controller-runtime v0.17.2
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -79,5 +80,4 @@ require (
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )
