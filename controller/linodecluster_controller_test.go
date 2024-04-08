@@ -35,31 +35,39 @@ var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
 	var mockCtrl *gomock.Controller
 	var reconciler *LinodeClusterReconciler
 	nodebalancerID := 1
+	clusterName := "lifecycle"
+	clusterNameSpace := "default"
+	ownerRef := metav1.OwnerReference{
+		Name:       clusterName,
+		APIVersion: "cluster.x-k8s.io/v1beta1",
+		Kind:       "Cluster",
+		UID:        "00000000-000-0000-0000-000000000000",
+	}
+	ownerRefs := []metav1.OwnerReference{ownerRef}
+	metadata := metav1.ObjectMeta{
+		Name:            clusterName,
+		Namespace:       clusterNameSpace,
+		OwnerReferences: ownerRefs,
+	}
 
 	caplCluster := clusterv1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "lifecycle",
-			Namespace: "default",
-		},
+		ObjectMeta: metadata,
 		Spec: clusterv1.ClusterSpec{
 			InfrastructureRef: &corev1.ObjectReference{
 				Kind:      "LinodeCluster",
-				Name:      "lifecycle",
-				Namespace: "default",
+				Name:      clusterName,
+				Namespace: clusterNameSpace,
 			},
 			ControlPlaneRef: &corev1.ObjectReference{
 				Kind:      "KubeadmControlPlane",
 				Name:      "lifecycle-control-plane",
-				Namespace: "default",
+				Namespace: clusterNameSpace,
 			},
 		},
 	}
 
 	linodeCluster := infrav1.LinodeCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "lifecycle",
-			Namespace: "default",
-		},
+		ObjectMeta: metadata,
 		Spec: infrav1.LinodeClusterSpec{
 			Region: "us-ord",
 			Network: infrav1.NetworkSpec{
