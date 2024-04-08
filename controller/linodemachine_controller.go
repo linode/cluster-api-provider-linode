@@ -487,9 +487,14 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
+	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeMachineList{}, mgr.GetScheme())
+	if err != nil {
+		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
+	}
+
 	err = controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(r.requeueLinodeMachinesForUnpausedCluster(mgr.GetLogger())),
+		handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
 	if err != nil {

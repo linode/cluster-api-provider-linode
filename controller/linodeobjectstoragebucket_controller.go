@@ -30,6 +30,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -268,9 +269,14 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager)
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
+	linodeObjectStorageBucketMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeObjectStorageBucketList{}, mgr.GetScheme())
+	if err != nil {
+		return fmt.Errorf("failed to create mapper for LinodeObjectStorageBuckets: %w", err)
+	}
+	
 	err = controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(r.requeueLinodeObjectStorageBucketForUnpausedCluster(mgr.GetLogger())),
+		handler.EnqueueRequestsFromMapFunc(linodeObjectStorageBucketMapper),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
 	if err != nil {
