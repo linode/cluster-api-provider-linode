@@ -225,7 +225,9 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		failureReason = cerrs.UpdateMachineError
 
-		logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
+		if machineScope.LinodeMachine.Spec.InstanceID != nil {
+			logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
+		}
 
 		res, linodeInstance, err = r.reconcileUpdate(ctx, logger, machineScope)
 
@@ -493,6 +495,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 			// Create new machine
 			machineScope.LinodeMachine.Spec.ProviderID = nil
 			machineScope.LinodeMachine.Spec.InstanceID = nil
+			machineScope.LinodeMachine.Status.InstanceState = nil
 
 			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, "missing", clusterv1.ConditionSeverityWarning, "instance not found")
 		}
@@ -563,6 +566,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	machineScope.LinodeMachine.Spec.ProviderID = nil
 	machineScope.LinodeMachine.Spec.InstanceID = nil
+	machineScope.LinodeMachine.Status.InstanceState = nil
 	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
 
 	return nil
