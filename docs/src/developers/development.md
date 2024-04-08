@@ -104,6 +104,8 @@ The code in this repo is organized across the following packages:
 - `/cloud/scope` contains all Kubernetes client interactions scoped to each resource reconciliation loop. Each "scope" object is expected to store both a Kubernetes client and a Linode client.
 - `/cloud/services` contains all Linode client interactions. Functions defined in this package all expect a "scope" object which contains a Linode client to use.
 - `/mock` contains [gomock](https://github.com/uber-go/mock) clients generated from `/cloud/scope/client.go`.
+- `/util/` contains general-use helper functions used in other packages.
+- `/util/reconciler` contains helper functions and constants used within the `/controller` package.
 
 When adding a new controller, it is preferable that controller code only use the Kubernetes and Linode clients via functions defined in `/cloud/scope` and `/cloud/services`. This ensures each separate package can be tested in isolation using mock clients.
 
