@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -82,12 +81,11 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 		}
 		apiKey = string(data)
 	}
-	linodeClient, err := CreateLinodeClient(apiKey, func(linodeClient *linodego.Client) {
-		linodeClient.SetRetryCount(0)
-	})
+	linodeClient, err := CreateLinodeClient(apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
+	linodeClient.SetRetryCount(0)
 
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {

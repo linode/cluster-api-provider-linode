@@ -14,9 +14,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/version"
 )
 
-type clientOption func(*linodego.Client)
-
-func CreateLinodeClient(apiKey string, opts ...clientOption) (*linodego.Client, error) {
+func CreateLinodeClient(apiKey string) (*linodego.Client, error) {
 	if apiKey == "" {
 		return nil, errors.New("missing Linode API key")
 	}
@@ -29,10 +27,6 @@ func CreateLinodeClient(apiKey string, opts ...clientOption) (*linodego.Client, 
 		},
 	}
 	linodeClient := linodego.NewClient(oauth2Client)
-
-	for _, opt := range opts {
-		opt(&linodeClient)
-	}
 
 	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
