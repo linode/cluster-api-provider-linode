@@ -1,25 +1,30 @@
 package testmock
 
+import "fmt"
+
 type entry struct {
 	text       string
-	called     any
 	calledText string
-	result     any
 	resultText string
+	called     any
+	result     any
 }
 
 func If(text string, events ...Event) entry {
-	m := entry{text: text}
-	for _, add := range events {
-		add(&m)
+	ent := entry{text: text}
+	for _, apply := range events {
+		apply(&ent)
 	}
 
-	return m
+	return ent
 }
 
 type fork []entry
 
-func Either(entries ...entry) fork {
+func Either(text string, entries ...entry) fork {
+	for _, entry := range entries {
+		entry.text = fmt.Sprintf("%s %s", text, entry.text)
+	}
 	return entries
 }
 
@@ -32,10 +37,10 @@ func (fork) impl()  {}
 
 type Event func(m *entry)
 
-func Called(text string, called any) Event {
+func Mock(text string, called any) Event {
 	return func(m *entry) {
 		if m.called != nil {
-			panic("attempted If with multiple Called")
+			panic("attempted If with multiple Mock")
 		}
 		m.called = called
 		m.calledText = text

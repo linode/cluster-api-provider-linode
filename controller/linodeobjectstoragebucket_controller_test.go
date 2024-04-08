@@ -74,7 +74,7 @@ func mockLinodeClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.Linode
 	}
 }
 
-var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle", "current"), func() {
+var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 	var mockCtrl *gomock.Controller
 	var reconciler *LinodeObjectStorageBucketReconciler
 	var testLogs *bytes.Buffer
@@ -126,9 +126,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle", "current"), 
 	})
 
 	paths := Paths(
-		Either(
+		Either("",
 			If("bucket absent",
-				Called("creates bucket and keys", func(c *mock.MockLinodeObjectStorageClient) {
+				Mock("creates bucket and keys", func(c *mock.MockLinodeObjectStorageClient) {
 					getBucket := c.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
 					createBucket := c.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
 						Return(&linodego.ObjectStorageBucket{
@@ -194,7 +194,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle", "current"), 
 				}),
 			),
 			If("bucket present",
-				Called("gets bucket", func(c *mock.MockLinodeObjectStorageClient) {
+				Mock("gets bucket", func(c *mock.MockLinodeObjectStorageClient) {
 					c.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).
 						Return(&linodego.ObjectStorageBucket{
 							Label:    obj.Name,
@@ -205,9 +205,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle", "current"), 
 				}),
 			),
 		),
-		Either(
+		Either("keys",
 			If("secret is deleted",
-				Called("gets keys", func(c *mock.MockLinodeObjectStorageClient) {
+				Mock("gets keys", func(c *mock.MockLinodeObjectStorageClient) {
 					for idx := range 2 {
 						c.EXPECT().GetObjectStorageKey(gomock.Any(), idx).
 							Return(&linodego.ObjectStorageKey{
@@ -248,8 +248,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle", "current"), 
 					Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 				}),
 			),
-			If("keyGeneration changes",
-				Called("rotates keys", func(c *mock.MockLinodeObjectStorageClient) {
+			If("generation changes",
+				Mock("rotates keys", func(c *mock.MockLinodeObjectStorageClient) {
 					for idx := range 2 {
 						createCall := c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).
 							Return(&linodego.ObjectStorageKey{
@@ -285,7 +285,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle", "current"), 
 			),
 		),
 		If("resource is deleted",
-			Called("revokes keys", func(c *mock.MockLinodeObjectStorageClient) {
+			Mock("revokes keys", func(c *mock.MockLinodeObjectStorageClient) {
 				c.EXPECT().DeleteObjectStorageKey(gomock.Any(), 2).Return(nil)
 				c.EXPECT().DeleteObjectStorageKey(gomock.Any(), 3).Return(nil)
 			}),
@@ -387,7 +387,7 @@ var _ = Describe("pre-reconcile", Label("bucket", "pre-reconcile"), func() {
 	})
 })
 
-var _ = Describe("apply", Label("bucket", "apply"), func() {
+var _ = Describe("apply", Label("bucket", "apply", "current"), func() {
 	var obj infrav1.LinodeObjectStorageBucket
 	var mockCtrl *gomock.Controller
 	var testLogs *bytes.Buffer
@@ -430,31 +430,40 @@ var _ = Describe("apply", Label("bucket", "apply"), func() {
 		}
 	})
 
-	It("fails when a finalizer cannot be added", func(ctx SpecContext) {
-		mockK8sClient := mock.NewMockK8sClient(mockCtrl)
-		prev := mockK8sClient.EXPECT().
-			Scheme().
-			Return(scheme.Scheme).
-			Times(1)
-		mockK8sClient.EXPECT().
-			Scheme().
-			After(prev).
-			Return(runtime.NewScheme()).
-			Times(2)
+	paths := Paths(
+		If("scheme is misconfigured",
+			Mock("empty scheme", func(c *mock.MockK8sClient) {
+				prev := c.EXPECT().Scheme().Return(scheme.Scheme)
+				c.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(2)
+			}),
+			Then("finalizer cannot be added", func(ctx context.Context, c *mock.MockK8sClient) {
+				patchHelper, err := patch.NewHelper(&obj, c)
+				Expect(err).NotTo(HaveOccurred())
 
-		patchHelper, err := patch.NewHelper(&obj, mockK8sClient)
-		Expect(err).NotTo(HaveOccurred())
+				// Create a scope directly since only a subset of fields are needed.
+				bScope := scope.ObjectStorageBucketScope{
+					Client:      c,
+					Bucket:      &obj,
+					PatchHelper: patchHelper,
+				}
 
-		// Create a scope directly since only a subset of fields are needed.
-		bScope := scope.ObjectStorageBucketScope{
-			Client:      mockK8sClient,
-			Bucket:      &obj,
-			PatchHelper: patchHelper,
-		}
+				_, err = reconciler.reconcile(ctx, &bScope)
+				Expect(err.Error()).To(ContainSubstring("no kind is registered"))
+			}),
+		),
+		// Either(
+		// 	If("unsure if bucket exists",
+		// 		Mock("", func(c *mock.MockLinodeObjectStorageClient) {}),
 
-		_, err = reconciler.reconcile(ctx, &bScope)
-		Expect(err.Error()).To(ContainSubstring("no kind is registered"))
-	})
+		// 	),
+		// ),
+	)
+
+	for _, path := range paths {
+		It(path.Text, func(ctx SpecContext) {
+			path.Run(ctx, mock.NewMockK8sClient(mockCtrl))
+		})
+	}
 
 	It("fails when it can't ensure a bucket exists", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeObjectStorageClient(mockCtrl)

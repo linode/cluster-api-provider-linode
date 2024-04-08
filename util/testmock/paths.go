@@ -3,76 +3,106 @@ package testmock
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 type Path struct {
-	Text string
+	Text    string
+	allText string
 
-	calls   []any
-	results []any
+	linodeCalls   []any
+	linodeResults []any
+	k8sCalls      []func(*mock.MockK8sClient)
+	k8sResults    []func(context.Context, *mock.MockK8sClient)
 }
 
-func (p Path) Run(ctx context.Context, client any) {
-	switch c := client.(type) {
-	case *mock.MockLinodeMachineClient:
-		for _, call := range p.calls {
-			fn := call.(func(*mock.MockLinodeMachineClient))
-			fn(c)
+func mockResult[T any](ctx context.Context, result, lc any, kc ...*mock.MockK8sClient) {
+	if reflect.TypeOf(result).NumIn() > 2 {
+		if len(kc) == 0 {
+			panic("detected Then with mock Linode client and MockK8sClient, but no MockK8sClient passed to Run")
 		}
-		for _, a := range p.results {
-			fn := a.(func(context.Context, *mock.MockLinodeMachineClient))
-			fn(ctx, c)
+
+		mockFunc := result.(func(context.Context, T, *mock.MockK8sClient))
+		mockFunc(ctx, lc.(T), kc[0])
+		return
+	}
+
+	mockFunc := result.(func(context.Context, T))
+	mockFunc(ctx, lc.(T))
+}
+
+// TODO: Try to combine linodeCalls and k8sCalls into one to preserve ordering.
+// Ideally, try to group and trigger each Event in sequence regardless of type (i.e. [[If, Mock], [If, Mock, Then]])
+// Then it should be possible to log events using ginkgo.By or t.Log
+func (p Path) Run(ctx context.Context, lc any, kc ...*mock.MockK8sClient) {
+	if len(p.k8sCalls) > 0 {
+		switch lcType := lc.(type) {
+		case *mock.MockK8sClient:
+			for _, call := range p.k8sCalls {
+				call(lcType)
+			}
+			for _, result := range p.k8sResults {
+				mockResult[*mock.MockK8sClient](ctx, result, lc)
+			}
+		default:
+			// If lc is not MockK8sClient, assume MockK8sClient was passed as a 3rd arg
+			if len(kc) == 0 {
+				panic("detected Mock with MockK8sClient, but no MockK8sClient passed to Run")
+			}
+			for _, call := range p.k8sCalls {
+				call(kc[0])
+			}
+			for _, result := range p.k8sResults {
+				mockResult[*mock.MockK8sClient](ctx, result, lc, kc...)
+			}
+		}
+	}
+
+	switch lcType := lc.(type) {
+	case *mock.MockLinodeMachineClient:
+		for _, call := range p.linodeCalls {
+			mockCall := call.(func(*mock.MockLinodeMachineClient))
+			mockCall(lcType)
+		}
+		for _, result := range p.linodeResults {
+			mockResult[*mock.MockLinodeMachineClient](ctx, result, lc, kc...)
 		}
 	case *mock.MockLinodeInstanceClient:
-		for _, call := range p.calls {
-			fn := call.(func(*mock.MockLinodeInstanceClient))
-			fn(c)
+		for _, call := range p.linodeCalls {
+			mockCall := call.(func(*mock.MockLinodeInstanceClient))
+			mockCall(lcType)
 		}
-		for _, a := range p.results {
-			fn := a.(func(context.Context, *mock.MockLinodeInstanceClient))
-			fn(ctx, c)
+		for _, result := range p.linodeResults {
+			mockResult[*mock.MockLinodeInstanceClient](ctx, result, lc, kc...)
 		}
 	case *mock.MockLinodeVPCClient:
-		for _, call := range p.calls {
-			fn := call.(func(*mock.MockLinodeVPCClient))
-			fn(c)
+		for _, call := range p.linodeCalls {
+			mockCall := call.(func(*mock.MockLinodeVPCClient))
+			mockCall(lcType)
 		}
-		for _, a := range p.results {
-			fn := a.(func(context.Context, *mock.MockLinodeVPCClient))
-			fn(ctx, c)
+		for _, result := range p.linodeResults {
+			mockResult[*mock.MockLinodeVPCClient](ctx, result, lc, kc...)
 		}
 	case *mock.MockLinodeNodeBalancerClient:
-		for _, call := range p.calls {
-			fn := call.(func(*mock.MockLinodeNodeBalancerClient))
-			fn(c)
+		for _, call := range p.linodeCalls {
+			mockCall := call.(func(*mock.MockLinodeNodeBalancerClient))
+			mockCall(lcType)
 		}
-		for _, a := range p.results {
-			fn := a.(func(context.Context, *mock.MockLinodeNodeBalancerClient))
-			fn(ctx, c)
+		for _, result := range p.linodeResults {
+			mockResult[*mock.MockLinodeNodeBalancerClient](ctx, result, lc, kc...)
 		}
 	case *mock.MockLinodeObjectStorageClient:
-		for _, call := range p.calls {
-			fn := call.(func(*mock.MockLinodeObjectStorageClient))
-			fn(c)
+		for _, call := range p.linodeCalls {
+			mockCall := call.(func(*mock.MockLinodeObjectStorageClient))
+			mockCall(lcType)
 		}
-		for _, a := range p.results {
-			fn := a.(func(context.Context, *mock.MockLinodeObjectStorageClient))
-			fn(ctx, c)
-		}
-	case *mock.MockK8sClient:
-		for _, call := range p.calls {
-			fn := call.(func(*mock.MockK8sClient))
-			fn(c)
-		}
-		for _, a := range p.results {
-			fn := a.(func(context.Context, *mock.MockK8sClient))
-			fn(ctx, c)
+		for _, result := range p.linodeResults {
+			mockResult[*mock.MockLinodeObjectStorageClient](ctx, result, lc, kc...)
 		}
 	default:
-		panic("Path.Run invoked with unknown mock client")
 	}
 }
 
@@ -124,6 +154,7 @@ func paths(nodes []node) [][]entry {
 			var added, open bool
 			closed := map[int]struct{}{}
 			// Make new version of each unclosed path with each new entry
+
 			// TODO: invert this to loop through each first
 			for _, fe := range impl {
 				if fe.result == nil {
@@ -165,25 +196,34 @@ func createPath(nodes []entry) Path {
 	pth := Path{}
 
 	var text []string
+	var allText []string
+
 	for _, n := range nodes {
-		if n.text != "" {
-			text = append(text, n.text)
-		}
+		text = append(text, n.text)
+		nodeText := fmt.Sprintf("If(%s)", n.text)
 		if n.called != nil {
-			pth.calls = append(pth.calls, n.called)
-			if n.calledText != "" {
-				text = append(text, n.calledText)
+			switch mockCall := n.called.(type) {
+			case func(*mock.MockK8sClient):
+				pth.k8sCalls = append(pth.k8sCalls, mockCall)
+			default:
+				pth.linodeCalls = append(pth.linodeCalls, n.called)
 			}
+			nodeText += fmt.Sprintf(" > Mock(%s)", n.calledText)
 		}
 		if n.result != nil {
-			pth.results = append(pth.results, n.result)
-			if n.resultText != "" {
-				text = append(text, n.resultText)
+			switch mockResult := n.result.(type) {
+			case func(context.Context, *mock.MockK8sClient):
+				pth.k8sResults = append(pth.k8sResults, mockResult)
+			default:
+				pth.linodeResults = append(pth.linodeResults, n.result)
 			}
+			nodeText += fmt.Sprintf(" > Then(%s)", n.resultText)
 		}
+		allText = append(allText, nodeText)
 	}
 
 	pth.Text = strings.Join(text, " > ")
+	pth.allText = strings.Join(allText, "\n")
 
 	return pth
 }

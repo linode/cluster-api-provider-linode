@@ -6,12 +6,15 @@ import (
 	"testing"
 
 	"go.uber.org/mock/gomock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,26 +39,26 @@ var _ = Describe("mock", func() {
 	})
 
 	paths := Paths(
-		If("list",
-			Called("none returned", func(c *mock.MockLinodeMachineClient) {
-				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
+		If("reconcile",
+			Mock("fetch object", func(c *mock.MockK8sClient) {
+				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			}),
 		),
-		Either(
-			If("create",
-				Called("succeess", func(c *mock.MockLinodeMachineClient) {
+		Either("create",
+			If("success",
+				Mock("server 200", func(c *mock.MockLinodeMachineClient) {
 					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 				}),
-				Then("no error", func(ctx context.Context, client *mock.MockLinodeMachineClient) {
-					Expect(clientCalls(ctx, client)).To(Succeed())
+				Then("no error", func(ctx context.Context, client *mock.MockLinodeMachineClient, kClient *mock.MockK8sClient) {
+					Expect(contrivedCalls(ctx, client, kClient)).To(Succeed())
 				}),
 			),
-			If("create",
-				Called("failure", func(c *mock.MockLinodeMachineClient) {
+			If("error",
+				Mock("server 500", func(c *mock.MockLinodeMachineClient) {
 					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server error"))
 				}),
-				Then("error", func(ctx context.Context, client *mock.MockLinodeMachineClient) {
-					Expect(clientCalls(ctx, client)).NotTo(Succeed())
+				Then("error", func(ctx context.Context, client *mock.MockLinodeMachineClient, kClient *mock.MockK8sClient) {
+					Expect(contrivedCalls(ctx, client, kClient)).NotTo(Succeed())
 				}),
 			),
 		),
@@ -63,7 +66,7 @@ var _ = Describe("mock", func() {
 
 	for _, path := range paths {
 		It(path.Text, func(ctx SpecContext) {
-			path.Run(ctx, mock.NewMockLinodeMachineClient(mockCtrl))
+			path.Run(ctx, mock.NewMockLinodeMachineClient(mockCtrl), mock.NewMockK8sClient(mockCtrl))
 		})
 	}
 })
@@ -209,15 +212,15 @@ func TestPaths(t *testing.T) {
 	}
 }
 
-func clientCalls(ctx context.Context, client scope.LinodeMachineClient) error {
+func contrivedCalls(ctx context.Context, lc scope.LinodeMachineClient, kc scope.K8sClient) error {
 	GinkgoHelper()
 
-	_, err := client.ListInstances(ctx, &linodego.ListOptions{})
+	err := kc.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
 	if err != nil {
 		return err
 	}
 
-	_, err = client.CreateInstance(ctx, linodego.InstanceCreateOptions{})
+	_, err = lc.CreateInstance(ctx, linodego.InstanceCreateOptions{})
 	if err != nil {
 		return err
 	}
