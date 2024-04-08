@@ -30,6 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+
 	//+kubebuilder:scaffold:imports
 
 	. "github.com/onsi/ginkgo/v2"
@@ -76,6 +78,7 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	Expect(infrav1.AddToScheme(scheme.Scheme)).To(Succeed())
+	Expect(clusterv1.AddToScheme(scheme.Scheme)).To(Succeed())
 
 	//+kubebuilder:scaffold:scheme
 
