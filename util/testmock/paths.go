@@ -95,7 +95,7 @@ func paths(nodes []node) [][]entry {
 		return nil
 	}
 
-	each := [][]entry{{}}
+	var each [][]entry
 
 	for i, n := range nodes {
 		switch impl := n.(type) {
@@ -108,10 +108,12 @@ func paths(nodes []node) [][]entry {
 					added = true
 				}
 			}
-			// Panic if all paths are closed with nodes left
-			if !added || (impl.result != nil && i < len(nodes)-1) {
-				panic(fmt.Errorf("unreachable path beyond index %d", i))
+
+			// If all paths are closed, make a new one
+			if !added {
+				each = append(each, []entry{impl})
 			}
+
 			// Panic if any paths are open at the end
 			if impl.result == nil && i == len(nodes)-1 {
 				panic(fmt.Errorf("unresolved path at index %d", i))
@@ -122,27 +124,32 @@ func paths(nodes []node) [][]entry {
 			var added, open bool
 			closed := map[int]struct{}{}
 			// Make new version of each unclosed path with each new entry
-			for _, fe := range []entry{impl.left, impl.right} {
+			// TODO: invert this to loop through each first
+			for _, fe := range impl {
 				if fe.result == nil {
 					open = true
 				}
 				for j, pth := range each {
+					// Duplicate unclosed paths
 					if len(pth) == 0 || pth[len(pth)-1].result == nil {
 						newPth := append(pth, fe)
 						newEach = append(newEach, newPth)
 						added = true
 					} else if _, ok := closed[j]; !ok {
+						// Include closed paths
 						newEach = append(newEach, pth)
 						closed[j] = struct{}{}
 					}
-
-					fmt.Println("added", fe)
 				}
 			}
-			// Panic if all paths are closed with nodes left
-			if !added || (!open && i < len(nodes)-1) {
-				panic(fmt.Errorf("unreachable path beyond index %d", i))
+
+			// If all paths are closed, make new ones
+			if !added {
+				for _, fe := range impl {
+					newEach = append(newEach, []entry{fe})
+				}
 			}
+
 			// Panic if any paths are open at the end
 			if open && i == len(nodes)-1 {
 				panic(fmt.Errorf("unresolved path at index %d", i))
@@ -164,13 +171,19 @@ func createPath(nodes []entry) Path {
 		}
 		if n.called != nil {
 			pth.calls = append(pth.calls, n.called)
+			if n.calledText != "" {
+				text = append(text, n.calledText)
+			}
 		}
 		if n.result != nil {
 			pth.results = append(pth.results, n.result)
+			if n.resultText != "" {
+				text = append(text, n.resultText)
+			}
 		}
 	}
 
-	pth.Text = strings.Join(text, " ")
+	pth.Text = strings.Join(text, " > ")
 
 	return pth
 }

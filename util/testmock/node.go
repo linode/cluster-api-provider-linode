@@ -1,5 +1,13 @@
 package testmock
 
+type entry struct {
+	text       string
+	called     any
+	calledText string
+	result     any
+	resultText string
+}
+
 func If(text string, events ...Event) entry {
 	m := entry{text: text}
 	for _, add := range events {
@@ -9,36 +17,10 @@ func If(text string, events ...Event) entry {
 	return m
 }
 
-func Either(left, right entry) fork {
-	return fork{left, right}
-}
+type fork []entry
 
-type Event func(m *entry)
-
-func Called(called any) Event {
-	return func(m *entry) {
-		if m.called != nil {
-			panic("attempted If with multiple Called")
-		}
-		m.called = called
-	}
-}
-
-func Then(result any) Event {
-	return func(m *entry) {
-		m.result = result
-	}
-}
-
-type entry struct {
-	text   string
-	called any
-	result any
-}
-
-type fork struct {
-	left  entry
-	right entry
+func Either(entries ...entry) fork {
+	return entries
 }
 
 type node interface {
@@ -47,3 +29,22 @@ type node interface {
 
 func (entry) impl() {}
 func (fork) impl()  {}
+
+type Event func(m *entry)
+
+func Called(text string, called any) Event {
+	return func(m *entry) {
+		if m.called != nil {
+			panic("attempted If with multiple Called")
+		}
+		m.called = called
+		m.calledText = text
+	}
+}
+
+func Then(text string, result any) Event {
+	return func(m *entry) {
+		m.result = result
+		m.resultText = text
+	}
+}

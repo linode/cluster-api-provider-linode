@@ -24,7 +24,7 @@ func TestMock(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-var _ = Describe("seq", func() {
+var _ = Describe("mock", func() {
 	var mockCtrl *gomock.Controller
 
 	BeforeEach(func() {
@@ -36,64 +36,25 @@ var _ = Describe("seq", func() {
 	})
 
 	paths := Paths(
-		If("succeed",
-			Called(func(c *mock.MockLinodeMachineClient) {
-				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
-				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
-			}),
-			Then(func(ctx context.Context, client *mock.MockLinodeMachineClient) {
-				Expect(clientCalls(ctx, client)).To(Succeed())
-			}),
-		),
-		If("fail",
-			Called(func(c *mock.MockLinodeMachineClient) {
-				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
-				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server error"))
-			}),
-			Then(func(ctx context.Context, client *mock.MockLinodeMachineClient) {
-				Expect(clientCalls(ctx, client)).NotTo(Succeed())
-			}),
-		),
-	)
-
-	for _, path := range paths {
-		It(path.Text, func(ctx SpecContext) {
-			path.Run(ctx, mock.NewMockLinodeMachineClient(mockCtrl))
-		})
-	}
-})
-
-var _ = Describe("fork", func() {
-	var mockCtrl *gomock.Controller
-
-	BeforeEach(func() {
-		mockCtrl = gomock.NewController(GinkgoT())
-	})
-
-	AfterEach(func() {
-		mockCtrl.Finish()
-	})
-
-	paths := Paths(
-		If("list and create",
-			Called(func(c *mock.MockLinodeMachineClient) {
+		If("list",
+			Called("none returned", func(c *mock.MockLinodeMachineClient) {
 				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
 			}),
 		),
 		Either(
-			If("succeeds",
-				Called(func(c *mock.MockLinodeMachineClient) {
+			If("create",
+				Called("succeess", func(c *mock.MockLinodeMachineClient) {
 					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 				}),
-				Then(func(ctx context.Context, client *mock.MockLinodeMachineClient) {
+				Then("no error", func(ctx context.Context, client *mock.MockLinodeMachineClient) {
 					Expect(clientCalls(ctx, client)).To(Succeed())
 				}),
 			),
-			If("fails with server error",
-				Called(func(c *mock.MockLinodeMachineClient) {
+			If("create",
+				Called("failure", func(c *mock.MockLinodeMachineClient) {
 					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server error"))
 				}),
-				Then(func(ctx context.Context, client *mock.MockLinodeMachineClient) {
+				Then("error", func(ctx context.Context, client *mock.MockLinodeMachineClient) {
 					Expect(clientCalls(ctx, client)).NotTo(Succeed())
 				}),
 			),
@@ -131,22 +92,16 @@ func TestPaths(t *testing.T) {
 			panicErr: errors.New("unresolved path at index 0"),
 		},
 		{
-			name: "early closed entry",
-			input: []node{
-				entry{result: true},
-				entry{},
-			},
-			panicErr: errors.New("unreachable path beyond index 0"),
-		},
-		{
 			name: "fork",
 			input: []node{
 				fork{
 					entry{result: true},
 					entry{result: true},
+					entry{result: true},
 				},
 			},
 			output: [][]entry{
+				{entry{result: true}},
 				{entry{result: true}},
 				{entry{result: true}},
 			},
@@ -162,23 +117,13 @@ func TestPaths(t *testing.T) {
 			panicErr: errors.New("unresolved path at index 0"),
 		},
 		{
-			name: "early closed fork",
-			input: []node{
-				fork{
-					entry{result: true},
-					entry{result: true},
-				},
-				entry{},
-			},
-			panicErr: errors.New("unreachable path beyond index 0"),
-		},
-		{
 			name: "split",
 			input: []node{
 				entry{called: 0},
 				fork{
 					entry{called: 1},
 					entry{called: 2},
+					entry{called: 3},
 				},
 				entry{result: true},
 			},
@@ -191,6 +136,11 @@ func TestPaths(t *testing.T) {
 				{
 					entry{called: 0},
 					entry{called: 2},
+					entry{result: true},
+				},
+				{
+					entry{called: 0},
+					entry{called: 3},
 					entry{result: true},
 				},
 			},
@@ -221,25 +171,25 @@ func TestPaths(t *testing.T) {
 			name: "ordering",
 			input: []node{
 				fork{
-					entry{text: "bucket and keys do not exist", result: true},
-					entry{text: "bucket and keys do exist"},
+					entry{called: 0, result: true},
+					entry{called: 1},
 				},
 				fork{
-					entry{text: "the secret is deleted", result: true},
-					entry{text: "keyGeneration changes", result: true},
+					entry{called: 2, result: true},
+					entry{called: 3, result: true},
 				},
 			},
 			output: [][]entry{
 				{
-					{text: "bucket and keys do not exist", result: true},
+					{called: 0, result: true},
 				},
 				{
-					{text: "bucket and keys do exist"},
-					{text: "the secret is deleted", result: true},
+					{called: 1},
+					{called: 2, result: true},
 				},
 				{
-					{text: "bucket and keys do exist"},
-					{text: "keyGeneration changes", result: true},
+					{called: 1},
+					{called: 3, result: true},
 				},
 			},
 		},
