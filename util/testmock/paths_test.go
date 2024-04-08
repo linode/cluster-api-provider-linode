@@ -38,7 +38,7 @@ var _ = Describe("k8s client", func() {
 		mockCtrl.Finish()
 	})
 
-	paths := Paths(
+	for _, path := range Paths(
 		Case("reconcile",
 			Mock("fetch object", func(c *mock.MockK8sClient) {
 				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -47,11 +47,9 @@ var _ = Describe("k8s client", func() {
 				Expect(contrivedCalls(ctx, nil, c)).To(Succeed())
 			}),
 		),
-	)
-
-	for _, path := range paths {
+	) {
 		It(path.Text, func(ctx SpecContext) {
-			path.Run(GinkgoT(), ctx, mock.NewMockK8sClient(mockCtrl))
+			Run(path, GinkgoT(), ctx, mock.NewMockK8sClient(mockCtrl))
 		})
 	}
 })
@@ -67,7 +65,7 @@ var _ = Describe("multiple clients", func() {
 		mockCtrl.Finish()
 	})
 
-	paths := Paths(
+	for _, path := range Paths(
 		Case("reconcile",
 			Mock("fetch object", func(c *mock.MockK8sClient) {
 				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -91,11 +89,9 @@ var _ = Describe("multiple clients", func() {
 				}),
 			),
 		),
-	)
-
-	for _, path := range paths {
+	) {
 		It(path.Text, func(ctx SpecContext) {
-			path.Run(GinkgoT(), ctx, mock.NewMockLinodeMachineClient(mockCtrl), mock.NewMockK8sClient(mockCtrl))
+			Run(path, GinkgoT(), ctx, mock.NewMockLinodeMachineClient(mockCtrl), mock.NewMockK8sClient(mockCtrl))
 		})
 	}
 })
@@ -128,10 +124,10 @@ func TestDrawPaths(t *testing.T) {
 		{
 			name: "entry",
 			input: []node{
-				entry{result: entryCall{value: 0}},
+				entry{result: fn{value: 0}},
 			},
 			output: [][]entry{
-				{entry{result: entryCall{value: 0}}},
+				{entry{result: fn{value: 0}}},
 			},
 		},
 		{
@@ -146,16 +142,16 @@ func TestDrawPaths(t *testing.T) {
 			input: []node{
 				fork{
 					entries: []entry{
-						{result: entryCall{value: 0}},
-						{result: entryCall{value: 1}},
-						{result: entryCall{value: 2}},
+						{result: fn{value: 0}},
+						{result: fn{value: 1}},
+						{result: fn{value: 2}},
 					},
 				},
 			},
 			output: [][]entry{
-				{{result: entryCall{value: 0}}},
-				{{result: entryCall{value: 1}}},
-				{{result: entryCall{value: 2}}},
+				{{result: fn{value: 0}}},
+				{{result: fn{value: 1}}},
+				{{result: fn{value: 2}}},
 			},
 		},
 		{
@@ -163,8 +159,8 @@ func TestDrawPaths(t *testing.T) {
 			input: []node{
 				fork{
 					entries: []entry{
-						{result: entryCall{value: 0}},
-						{calls: []entryCall{{value: 1}}},
+						{result: fn{value: 0}},
+						{calls: []fn{{value: 1}}},
 					},
 				},
 			},
@@ -173,55 +169,55 @@ func TestDrawPaths(t *testing.T) {
 		{
 			name: "split",
 			input: []node{
-				entry{calls: []entryCall{{value: 0}}},
+				entry{calls: []fn{{value: 0}}},
 				fork{
 					entries: []entry{
-						{calls: []entryCall{{value: 1}}},
-						{calls: []entryCall{{value: 2}}},
-						{calls: []entryCall{{value: 3}}},
+						{calls: []fn{{value: 1}}},
+						{calls: []fn{{value: 2}}},
+						{calls: []fn{{value: 3}}},
 					},
 				},
-				entry{result: entryCall{value: 4}},
+				entry{result: fn{value: 4}},
 			},
 			output: [][]entry{
 				{
-					entry{calls: []entryCall{{value: 0}}},
-					entry{calls: []entryCall{{value: 1}}},
-					entry{result: entryCall{value: 4}},
+					entry{calls: []fn{{value: 0}}},
+					entry{calls: []fn{{value: 1}}},
+					entry{result: fn{value: 4}},
 				},
 				{
-					entry{calls: []entryCall{{value: 0}}},
-					entry{calls: []entryCall{{value: 2}}},
-					entry{result: entryCall{value: 4}},
+					entry{calls: []fn{{value: 0}}},
+					entry{calls: []fn{{value: 2}}},
+					entry{result: fn{value: 4}},
 				},
 				{
-					entry{calls: []entryCall{{value: 0}}},
-					entry{calls: []entryCall{{value: 3}}},
-					entry{result: entryCall{value: 4}},
+					entry{calls: []fn{{value: 0}}},
+					entry{calls: []fn{{value: 3}}},
+					entry{result: fn{value: 4}},
 				},
 			},
 		},
 		{
 			name: "partial early closed fork",
 			input: []node{
-				entry{calls: []entryCall{{value: 0}}},
+				entry{calls: []fn{{value: 0}}},
 				fork{
 					entries: []entry{
-						{calls: []entryCall{{value: 1}}},
-						{calls: []entryCall{{value: 2}}, result: entryCall{value: 2}},
+						{calls: []fn{{value: 1}}},
+						{calls: []fn{{value: 2}}, result: fn{value: 2}},
 					},
 				},
-				entry{result: entryCall{value: 3}},
+				entry{result: fn{value: 3}},
 			},
 			output: [][]entry{
 				{
-					{calls: []entryCall{{value: 0}}},
-					{calls: []entryCall{{value: 1}}},
-					{result: entryCall{value: 3}},
+					{calls: []fn{{value: 0}}},
+					{calls: []fn{{value: 1}}},
+					{result: fn{value: 3}},
 				},
 				{
-					{calls: []entryCall{{value: 0}}},
-					{calls: []entryCall{{value: 2}}, result: entryCall{value: 2}},
+					{calls: []fn{{value: 0}}},
+					{calls: []fn{{value: 2}}, result: fn{value: 2}},
 				},
 			},
 		},
@@ -230,28 +226,28 @@ func TestDrawPaths(t *testing.T) {
 			input: []node{
 				fork{
 					entries: []entry{
-						{calls: []entryCall{{value: 0}}, result: entryCall{value: 0}},
-						{calls: []entryCall{{value: 1}}},
+						{calls: []fn{{value: 0}}, result: fn{value: 0}},
+						{calls: []fn{{value: 1}}},
 					},
 				},
 				fork{
 					entries: []entry{
-						{calls: []entryCall{{value: 2}}, result: entryCall{value: 2}},
-						{calls: []entryCall{{value: 3}}, result: entryCall{value: 3}},
+						{calls: []fn{{value: 2}}, result: fn{value: 2}},
+						{calls: []fn{{value: 3}}, result: fn{value: 3}},
 					},
 				},
 			},
 			output: [][]entry{
 				{
-					{calls: []entryCall{{value: 0}}, result: entryCall{value: 0}},
+					{calls: []fn{{value: 0}}, result: fn{value: 0}},
 				},
 				{
-					{calls: []entryCall{{value: 1}}},
-					{calls: []entryCall{{value: 2}}, result: entryCall{value: 2}},
+					{calls: []fn{{value: 1}}},
+					{calls: []fn{{value: 2}}, result: fn{value: 2}},
 				},
 				{
-					{calls: []entryCall{{value: 1}}},
-					{calls: []entryCall{{value: 3}}, result: entryCall{value: 3}},
+					{calls: []fn{{value: 1}}},
+					{calls: []fn{{value: 3}}, result: fn{value: 3}},
 				},
 			},
 		},

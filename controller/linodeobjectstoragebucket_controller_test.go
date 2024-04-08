@@ -308,7 +308,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 
 	for _, path := range paths {
 		It(path.Text, func(ctx SpecContext) {
-			path.Run(GinkgoT(), ctx, mock.NewMockLinodeObjectStorageClient(mockCtrl))
+			Run(path, GinkgoT(), ctx, mock.NewMockLinodeObjectStorageClient(mockCtrl))
 		})
 	}
 })
@@ -607,7 +607,7 @@ var _ = Describe("apply", Label("bucket", "apply"), func() {
 
 	for _, path := range paths {
 		It(path.Text, func(ctx SpecContext) {
-			path.Run(GinkgoT(), ctx, mock.NewMockLinodeObjectStorageClient(mockCtrl), mock.NewMockK8sClient(mockCtrl))
+			Run(path, GinkgoT(), ctx, mock.NewMockLinodeObjectStorageClient(mockCtrl), mock.NewMockK8sClient(mockCtrl))
 		})
 	}
 })

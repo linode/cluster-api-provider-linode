@@ -5,26 +5,14 @@ import (
 	"strings"
 )
 
-type path struct {
-	Text   string
-	events []event
-}
-
-type event struct {
-	isResult bool
-	text     string
-	value    any
-}
-
-type paths []path
-
-func Paths(nodes ...node) paths {
+// Paths declares one or more code paths to test with mock clients.
+func Paths(nodes ...node) []entry {
 	if len(nodes) == 0 {
 		return nil
 	}
 
 	pths := drawPaths(nodes)
-	result := make(paths, len(pths))
+	result := make([]entry, len(pths))
 	for i, p := range pths {
 		result[i] = createPath(p)
 	}
@@ -32,6 +20,11 @@ func Paths(nodes ...node) paths {
 	return result
 }
 
+// Traverses each node and their children, returning a list of permutations,
+// each representing a different code path as specified and evaluated in order.
+// New permutations are defined by
+//  1. Terminal nodes i.e. entries that have a function for asserting results.
+//  2. Nodes belonging to a fork i.e. multiple entries non-occurring on the same path.
 func drawPaths(nodes []node) [][]entry {
 	if len(nodes) == 0 {
 		return nil
@@ -72,7 +65,7 @@ func drawPaths(nodes []node) [][]entry {
 
 				for _, fe := range impl.entries {
 					if impl.text != "" {
-						fe.text = strings.TrimSpace(fmt.Sprintf("%s: %s", impl.text, fe.text))
+						fe.Text = strings.TrimSpace(fmt.Sprintf("%s: %s", impl.text, fe.Text))
 					}
 
 					// If either new entry has no result, path will be open
@@ -97,7 +90,7 @@ func drawPaths(nodes []node) [][]entry {
 			if !added {
 				for _, fe := range impl.entries {
 					if impl.text != "" {
-						fe.text = strings.TrimSpace(fmt.Sprintf("%s: %s", impl.text, fe.text))
+						fe.Text = strings.TrimSpace(fmt.Sprintf("%s: %s", impl.text, fe.Text))
 					}
 					newPathGroup = append(newPathGroup, []entry{fe})
 				}
@@ -114,25 +107,25 @@ func drawPaths(nodes []node) [][]entry {
 	return pathGroup
 }
 
-func createPath(nodes []entry) path {
-	pth := path{}
+// Processes the list of entries into a single code path.
+func createPath(nodes []entry) entry {
+	pth := entry{}
 
 	var text []string
 
 	for _, n := range nodes {
-		text = append(text, n.text)
+		text = append(text, n.Text)
 		for _, call := range n.calls {
-			pth.events = append(pth.events, event{
-				text:  fmt.Sprintf("Case(%s) > Mock(%s)", n.text, call.text),
+			pth.calls = append(pth.calls, fn{
+				text:  fmt.Sprintf("Case(%s) > Mock(%s)", n.Text, call.text),
 				value: call.value,
 			})
 		}
 		if n.result.value != nil {
-			pth.events = append(pth.events, event{
-				isResult: true,
-				text:     fmt.Sprintf("Result(%s)", n.result.text),
-				value:    n.result.value,
-			})
+			pth.result = fn{
+				text:  fmt.Sprintf("Result(%s)", n.result.text),
+				value: n.result.value,
+			}
 		}
 	}
 
