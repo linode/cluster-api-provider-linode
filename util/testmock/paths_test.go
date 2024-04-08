@@ -20,14 +20,14 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMock(t *testing.T) {
+func TestPaths(t *testing.T) {
 	t.Parallel()
 
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Controller Suite")
 }
 
-var _ = Describe("mock", func() {
+var _ = Describe("k8s client", func() {
 	var mockCtrl *gomock.Controller
 
 	BeforeEach(func() {
@@ -39,26 +39,55 @@ var _ = Describe("mock", func() {
 	})
 
 	paths := Paths(
-		If("reconcile",
+		Case("reconcile",
+			Mock("fetch object", func(c *mock.MockK8sClient) {
+				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			}),
+			Result("no error", func(ctx context.Context, c *mock.MockK8sClient) {
+				Expect(contrivedCalls(ctx, nil, c)).To(Succeed())
+			}),
+		),
+	)
+
+	for _, path := range paths {
+		It(path.Text, func(ctx SpecContext) {
+			path.Run(GinkgoT(), ctx, mock.NewMockK8sClient(mockCtrl))
+		})
+	}
+})
+
+var _ = Describe("multiple clients", func() {
+	var mockCtrl *gomock.Controller
+
+	BeforeEach(func() {
+		mockCtrl = gomock.NewController(GinkgoT())
+	})
+
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
+	paths := Paths(
+		Case("reconcile",
 			Mock("fetch object", func(c *mock.MockK8sClient) {
 				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			}),
 		),
 		Either("create",
-			If("success",
+			Case("success",
 				Mock("server 200", func(c *mock.MockLinodeMachineClient) {
 					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 				}),
-				Then("no error", func(ctx context.Context, client *mock.MockLinodeMachineClient, kClient *mock.MockK8sClient) {
-					Expect(contrivedCalls(ctx, client, kClient)).To(Succeed())
+				Result("no error", func(ctx context.Context, lc *mock.MockLinodeMachineClient, kc *mock.MockK8sClient) {
+					Expect(contrivedCalls(ctx, lc, kc)).To(Succeed())
 				}),
 			),
-			If("error",
+			Case("error",
 				Mock("server 500", func(c *mock.MockLinodeMachineClient) {
 					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server error"))
 				}),
-				Then("error", func(ctx context.Context, client *mock.MockLinodeMachineClient, kClient *mock.MockK8sClient) {
-					Expect(contrivedCalls(ctx, client, kClient)).NotTo(Succeed())
+				Result("error", func(ctx context.Context, lc *mock.MockLinodeMachineClient, kc *mock.MockK8sClient) {
+					Expect(contrivedCalls(ctx, lc, kc)).NotTo(Succeed())
 				}),
 			),
 		),
@@ -66,12 +95,30 @@ var _ = Describe("mock", func() {
 
 	for _, path := range paths {
 		It(path.Text, func(ctx SpecContext) {
-			path.Run(ctx, mock.NewMockLinodeMachineClient(mockCtrl), mock.NewMockK8sClient(mockCtrl))
+			path.Run(GinkgoT(), ctx, mock.NewMockLinodeMachineClient(mockCtrl), mock.NewMockK8sClient(mockCtrl))
 		})
 	}
 })
 
-func TestPaths(t *testing.T) {
+func contrivedCalls(ctx context.Context, lc scope.LinodeMachineClient, kc scope.K8sClient) error {
+	GinkgoHelper()
+
+	err := kc.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
+	if err != nil {
+		return err
+	}
+
+	if lc != nil {
+		_, err = lc.CreateInstance(ctx, linodego.InstanceCreateOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func TestDrawPaths(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		input    []node
@@ -81,10 +128,10 @@ func TestPaths(t *testing.T) {
 		{
 			name: "entry",
 			input: []node{
-				entry{result: true},
+				entry{result: entryCall{value: 0}},
 			},
 			output: [][]entry{
-				{entry{result: true}},
+				{entry{result: entryCall{value: 0}}},
 			},
 		},
 		{
@@ -98,23 +145,27 @@ func TestPaths(t *testing.T) {
 			name: "fork",
 			input: []node{
 				fork{
-					entry{result: true},
-					entry{result: true},
-					entry{result: true},
+					entries: []entry{
+						{result: entryCall{value: 0}},
+						{result: entryCall{value: 1}},
+						{result: entryCall{value: 2}},
+					},
 				},
 			},
 			output: [][]entry{
-				{entry{result: true}},
-				{entry{result: true}},
-				{entry{result: true}},
+				{{result: entryCall{value: 0}}},
+				{{result: entryCall{value: 1}}},
+				{{result: entryCall{value: 2}}},
 			},
 		},
 		{
 			name: "open fork",
 			input: []node{
 				fork{
-					entry{result: true},
-					entry{},
+					entries: []entry{
+						{result: entryCall{value: 0}},
+						{calls: []entryCall{{value: 1}}},
+					},
 				},
 			},
 			panicErr: errors.New("unresolved path at index 0"),
@@ -122,51 +173,55 @@ func TestPaths(t *testing.T) {
 		{
 			name: "split",
 			input: []node{
-				entry{called: 0},
+				entry{calls: []entryCall{{value: 0}}},
 				fork{
-					entry{called: 1},
-					entry{called: 2},
-					entry{called: 3},
+					entries: []entry{
+						{calls: []entryCall{{value: 1}}},
+						{calls: []entryCall{{value: 2}}},
+						{calls: []entryCall{{value: 3}}},
+					},
 				},
-				entry{result: true},
+				entry{result: entryCall{value: 4}},
 			},
 			output: [][]entry{
 				{
-					entry{called: 0},
-					entry{called: 1},
-					entry{result: true},
+					entry{calls: []entryCall{{value: 0}}},
+					entry{calls: []entryCall{{value: 1}}},
+					entry{result: entryCall{value: 4}},
 				},
 				{
-					entry{called: 0},
-					entry{called: 2},
-					entry{result: true},
+					entry{calls: []entryCall{{value: 0}}},
+					entry{calls: []entryCall{{value: 2}}},
+					entry{result: entryCall{value: 4}},
 				},
 				{
-					entry{called: 0},
-					entry{called: 3},
-					entry{result: true},
+					entry{calls: []entryCall{{value: 0}}},
+					entry{calls: []entryCall{{value: 3}}},
+					entry{result: entryCall{value: 4}},
 				},
 			},
 		},
 		{
 			name: "partial early closed fork",
 			input: []node{
-				entry{called: 0},
+				entry{calls: []entryCall{{value: 0}}},
 				fork{
-					entry{called: 1},
-					entry{called: 2, result: true},
+					entries: []entry{
+						{calls: []entryCall{{value: 1}}},
+						{calls: []entryCall{{value: 2}}, result: entryCall{value: 2}},
+					},
 				},
-				entry{result: true},
+				entry{result: entryCall{value: 3}},
 			},
 			output: [][]entry{
 				{
-					entry{called: 0},
-					entry{called: 1},
-					entry{result: true},
+					{calls: []entryCall{{value: 0}}},
+					{calls: []entryCall{{value: 1}}},
+					{result: entryCall{value: 3}},
 				},
 				{
-					entry{called: 0},
-					entry{called: 2, result: true},
+					{calls: []entryCall{{value: 0}}},
+					{calls: []entryCall{{value: 2}}, result: entryCall{value: 2}},
 				},
 			},
 		},
@@ -174,25 +229,29 @@ func TestPaths(t *testing.T) {
 			name: "ordering",
 			input: []node{
 				fork{
-					entry{called: 0, result: true},
-					entry{called: 1},
+					entries: []entry{
+						{calls: []entryCall{{value: 0}}, result: entryCall{value: 0}},
+						{calls: []entryCall{{value: 1}}},
+					},
 				},
 				fork{
-					entry{called: 2, result: true},
-					entry{called: 3, result: true},
+					entries: []entry{
+						{calls: []entryCall{{value: 2}}, result: entryCall{value: 2}},
+						{calls: []entryCall{{value: 3}}, result: entryCall{value: 3}},
+					},
 				},
 			},
 			output: [][]entry{
 				{
-					{called: 0, result: true},
+					{calls: []entryCall{{value: 0}}, result: entryCall{value: 0}},
 				},
 				{
-					{called: 1},
-					{called: 2, result: true},
+					{calls: []entryCall{{value: 1}}},
+					{calls: []entryCall{{value: 2}}, result: entryCall{value: 2}},
 				},
 				{
-					{called: 1},
-					{called: 3, result: true},
+					{calls: []entryCall{{value: 1}}},
+					{calls: []entryCall{{value: 3}}, result: entryCall{value: 3}},
 				},
 			},
 		},
@@ -200,30 +259,14 @@ func TestPaths(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.panicErr != nil {
 				assert.PanicsWithError(t, tc.panicErr.Error(), func() {
-					paths(tc.input)
+					drawPaths(tc.input)
 				})
 				return
 			}
 
-			actual := paths(tc.input)
+			actual := drawPaths(tc.input)
 			require.Len(t, actual, len(tc.output))
 			assert.Equal(t, tc.output, actual)
 		})
 	}
-}
-
-func contrivedCalls(ctx context.Context, lc scope.LinodeMachineClient, kc scope.K8sClient) error {
-	GinkgoHelper()
-
-	err := kc.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
-	if err != nil {
-		return err
-	}
-
-	_, err = lc.CreateInstance(ctx, linodego.InstanceCreateOptions{})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

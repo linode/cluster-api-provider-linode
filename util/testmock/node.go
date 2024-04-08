@@ -1,31 +1,37 @@
 package testmock
 
-import "fmt"
-
 type entry struct {
-	text       string
-	calledText string
-	resultText string
-	called     any
-	result     any
+	text   string
+	calls  []entryCall
+	result entryCall
 }
 
-func If(text string, events ...Event) entry {
+type entryCall struct {
+	text  string
+	value any
+}
+
+type action func(m *entry)
+
+func Case(text string, actions ...action) entry {
 	ent := entry{text: text}
-	for _, apply := range events {
-		apply(&ent)
+	for _, do := range actions {
+		do(&ent)
 	}
 
 	return ent
 }
 
-type fork []entry
+type fork struct {
+	text    string
+	entries []entry
+}
 
 func Either(text string, entries ...entry) fork {
-	for _, entry := range entries {
-		entry.text = fmt.Sprintf("%s %s", text, entry.text)
+	return fork{
+		text:    text,
+		entries: entries,
 	}
-	return entries
 }
 
 type node interface {
@@ -35,21 +41,18 @@ type node interface {
 func (entry) impl() {}
 func (fork) impl()  {}
 
-type Event func(m *entry)
-
-func Mock(text string, called any) Event {
+func Mock(text string, call any) action {
 	return func(m *entry) {
-		if m.called != nil {
-			panic("attempted If with multiple Mock")
-		}
-		m.called = called
-		m.calledText = text
+		m.calls = append(m.calls, entryCall{text, call})
 	}
 }
 
-func Then(text string, result any) Event {
+func Result(text string, result any) action {
 	return func(m *entry) {
-		m.result = result
-		m.resultText = text
+		if m.result.value != nil {
+			panic("attempted Case with multiple Result")
+		}
+		m.result.text = text
+		m.result.value = result
 	}
 }
