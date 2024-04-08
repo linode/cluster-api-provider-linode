@@ -86,8 +86,9 @@ var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
 		// Create a new gomock controller for each test run
 		mockCtrl = gomock.NewController(GinkgoT())
 		reconciler = &LinodeClusterReconciler{
-			Client:   k8sClient,
-			Recorder: recorder,
+			Client:       k8sClient,
+			Recorder:     recorder,
+			LinodeApiKey: "test-key",
 		}
 	})
 
@@ -115,7 +116,6 @@ var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
 		Expect(linodeCluster.Status.Ready).To(BeTrue())
 		Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
 		Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
-		Expect(linodeCluster.Spec.Network.NodeBalancerID).To(HaveLen(1))
-		Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(1))
+		Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
 	})
 })
