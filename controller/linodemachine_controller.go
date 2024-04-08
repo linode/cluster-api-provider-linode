@@ -51,15 +51,16 @@ import (
 
 const (
 	// default etcd disk size in MB
-	defaultEtcdDiskSize         = 10240
-	defaultResizeTimeoutSeconds = 5
+	defaultEtcdDiskSize      = 10240
+	defaultResizeWaitSeconds = 5
 
 	// conditions for preflight instance creation
+	ConditionPreflightCreated          clusterv1.ConditionType = "PreflightCreated"
 	ConditionPreflightRootDiskResizing clusterv1.ConditionType = "PreflightRootDiskResizing"
 	ConditionPreflightRootDiskResized  clusterv1.ConditionType = "PreflightRootDiskResized"
 	ConditionPreflightEtcdDiskCreated  clusterv1.ConditionType = "PreflightEtcdDiskCreated"
 	ConditionPreflightConfigured       clusterv1.ConditionType = "PreflightConfigured"
-	ConditionPreflightBootStarted      clusterv1.ConditionType = "PreflightBootStarted"
+	ConditionPreflightBootTriggered    clusterv1.ConditionType = "PreflightBootTriggered"
 	ConditionPreflightReady            clusterv1.ConditionType = "PreflightReady"
 )
 
@@ -267,7 +268,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	if err != nil {
 		logger.Error(err, "Failed to list Linode machine instances")
 
-		// TODO: What terminal errors should we not requeue for, and just return an error?
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 
@@ -290,10 +290,16 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
-			// TODO: What terminal errors should we not requeue for, and just return an error?
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
 		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
 
 	default:
@@ -307,29 +313,44 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		if err = r.configureDisksControlPlane(ctx, logger, machineScope, linodeInstance.ID); err != nil {
 			logger.Error(err, "Failed to configure instance disks")
 
-			// TODO: What terminal errors should we not requeue for, and just return an error?
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightConfigured)
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootStarted) {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
 		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
-			// TODO: What terminal errors should we not requeue for, and just return an error?
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightBootTriggered, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootStarted)
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered)
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
 		if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			logger.Error(err, "Failed to add instance to Node Balancer backend")
 
-			// TODO: What terminal errors should we not requeue for, and just return an error?
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightReady, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
@@ -361,11 +382,15 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 		if err != nil || len(configs) == 0 {
 			logger.Error(err, "Failed to list instance configs")
 
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
 			return err
 		}
 		instanceConfig := configs[0]
 
 		if instanceConfig.Devices.SDA == nil {
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "root disk not yet ready")
+
 			return errors.New("root disk not yet ready")
 		}
 
@@ -377,11 +402,15 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 			if err != nil {
 				logger.Error(err, "Failed to get root disk for instance")
 
+				conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
 				return err
 			}
 			diskSize := rootDisk.Size - defaultEtcdDiskSize
 			if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
 				logger.Error(err, "Failed to resize root disk")
+
+				conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
 				return err
 			}
@@ -390,14 +419,16 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 		}
 
 		// wait for the disk to resize
-		if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeTimeoutSeconds); err != nil {
-			logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeTimeoutSeconds))
+		if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeWaitSeconds); err != nil {
+			logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeWaitSeconds))
+
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
 			return err
 		}
 
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
 		conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
@@ -412,6 +443,8 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 			},
 		); err != nil {
 			logger.Error(err, "Failed to create etcd disk")
+
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
 			return err
 		}
