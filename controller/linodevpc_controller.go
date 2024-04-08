@@ -36,8 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -264,7 +266,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	_, err := ctrl.NewControllerManagedBy(mgr).
+	controller, err := ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeVPC{}).
 		WithEventFilter(
 			predicate.And(
@@ -278,6 +280,15 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			)).Build(r)
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
+	}
+
+	err = controller.Watch(
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+		handler.EnqueueRequestsFromMapFunc(r.requeueLinodeVPCsForUnpausedCluster(mgr.GetLogger())),
+		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
 	}
 
 	return nil

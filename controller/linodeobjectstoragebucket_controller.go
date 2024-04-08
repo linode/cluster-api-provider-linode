@@ -35,7 +35,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -253,12 +255,27 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	
+	controller, err := ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeObjectStorageBucket{}).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(
 			predicates.ResourceHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
 		)).
-		Complete(r)
+		Build(r)
+	if err != nil {
+		return fmt.Errorf("failed to build controller: %w", err)
+	}
+
+	err = controller.Watch(
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+		handler.EnqueueRequestsFromMapFunc(r.requeueLinodeObjectStorageBucketForUnpausedCluster(mgr.GetLogger())),
+		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
+	}
+	
+	return nil
 }
