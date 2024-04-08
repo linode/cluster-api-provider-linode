@@ -1,8 +1,8 @@
 package mocktest
 
-func Mock(opts ...MockerOption) mocker {
+func Mock(options ...Option) mocker {
 	m := mocker{}
-	for _, apply := range opts {
+	for _, apply := range options {
 		apply(&m)
 	}
 
@@ -17,15 +17,15 @@ func Fork(pass, fail mocker) fork {
 	return fork{pass, fail}
 }
 
-type MockerOption func(m *mocker)
+type Option func(m *mocker)
 
-func Message(msg string) MockerOption {
+func Message(message string) Option {
 	return func(m *mocker) {
-		m.msg = msg
+		m.message = message
 	}
 }
 
-func Calls(calls any) MockerOption {
+func Calls(calls any) Option {
 	return func(m *mocker) {
 		if m.call != nil {
 			panic("attempted Mock with multiple Calls")
@@ -34,17 +34,17 @@ func Calls(calls any) MockerOption {
 	}
 }
 
-func End() MockerOption {
+func Asserts(asserts any) Option {
 	return func(m *mocker) {
-		m.end = true
+		m.asserts = asserts
 	}
 }
 
 type mocker struct {
-	msg  string
-	call any
-	fail bool
-	end  bool
+	message string
+	call    any
+	fail    bool
+	asserts any
 }
 
 type fork struct {

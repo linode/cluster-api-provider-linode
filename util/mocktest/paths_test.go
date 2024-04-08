@@ -31,12 +31,22 @@ var _ = Describe("fork", func() {
 			}),
 		),
 		Fork(
-			Mock(Message("succeeds"), Calls(func(c *mock.MockLinodeMachineClient) {
-				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
-			})),
-			Mock(Message("fails with server error"), Calls(func(c *mock.MockLinodeMachineClient) {
-				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server error"))
-			})),
+			Mock(Message("succeeds"),
+				Calls(func(c *mock.MockLinodeMachineClient) {
+					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
+				}),
+				Asserts(func(ctx context.Context, path *Path, client *mock.MockLinodeMachineClient) {
+					Expect(clientCalls(ctx, client)).To(Succeed())
+				}),
+			),
+			Mock(Message("fails with server error"),
+				Calls(func(c *mock.MockLinodeMachineClient) {
+					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server error"))
+				}),
+				Asserts(func(ctx context.Context, path *Path, client *mock.MockLinodeMachineClient) {
+					Expect(clientCalls(ctx, client)).NotTo(Succeed())
+				}),
+			),
 		),
 	)
 
@@ -52,38 +62,14 @@ var _ = Describe("fork", func() {
 	for _, path := range paths {
 		It(path.Message, func(ctx SpecContext) {
 			client := mock.NewMockLinodeMachineClient(mockCtrl)
-			path.Run(client)
-
-			err := helper(ctx, client)
-			if path.Fail {
-				Expect(err).To(HaveOccurred())
-			} else {
-				Expect(err).NotTo(HaveOccurred())
-			}
+			path.Run(ctx, client)
 		})
 	}
 })
 
 var _ = Describe("end", func() {
-	paths := Paths(
-		Mock(
-			Message("one"),
-			Calls(func(c *mock.MockLinodeMachineClient) {
-				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
-				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
-			}),
-			End(),
-		),
-		Mock(
-			Message("two"),
-			Calls(func(c *mock.MockLinodeMachineClient) {
-				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
-				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
-			}),
-		),
-	)
-
 	var mockCtrl *gomock.Controller
+
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 	})
@@ -92,22 +78,38 @@ var _ = Describe("end", func() {
 		mockCtrl.Finish()
 	})
 
+	paths := Paths(
+		Mock(
+			Message("succeed"),
+			Calls(func(c *mock.MockLinodeMachineClient) {
+				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
+				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
+			}),
+			Asserts(func(ctx context.Context, path *Path, client *mock.MockLinodeMachineClient) {
+				Expect(clientCalls(ctx, client)).To(Succeed())
+			}),
+		),
+		Mock(
+			Message("fail"),
+			Calls(func(c *mock.MockLinodeMachineClient) {
+				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
+				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server error"))
+			}),
+			Asserts(func(ctx context.Context, path *Path, client *mock.MockLinodeMachineClient) {
+				Expect(clientCalls(ctx, client)).NotTo(Succeed())
+			}),
+		),
+	)
+
 	for _, path := range paths {
 		It(path.Message, func(ctx SpecContext) {
 			client := mock.NewMockLinodeMachineClient(mockCtrl)
-			path.Run(client)
-
-			err := helper(ctx, client)
-			if path.Fail {
-				Expect(err).To(HaveOccurred())
-			} else {
-				Expect(err).NotTo(HaveOccurred())
-			}
+			path.Run(ctx, client)
 		})
 	}
 })
 
-func helper(ctx context.Context, client scope.LinodeMachineClient) error {
+func clientCalls(ctx context.Context, client scope.LinodeMachineClient) error {
 	GinkgoHelper()
 
 	_, err := client.ListInstances(ctx, &linodego.ListOptions{})

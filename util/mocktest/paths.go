@@ -1,6 +1,7 @@
 package mocktest
 
 import (
+	"context"
 	"strings"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -8,46 +9,71 @@ import (
 
 type Path struct {
 	Message string
-	Fail    bool
 
-	calls []mocker
+	calls   []mocker
+	asserts []any
 }
 
-func (p Path) Run(client any) {
+func (p Path) Run(ctx context.Context, client any) {
 	switch c := client.(type) {
 	case *mock.MockLinodeMachineClient:
 		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeMachineClient))
 			fn(c)
 		}
+		for _, a := range p.asserts {
+			fn := a.(func(context.Context, *Path, *mock.MockLinodeMachineClient))
+			fn(ctx, &p, c)
+		}
 	case *mock.MockLinodeInstanceClient:
 		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeInstanceClient))
 			fn(c)
+		}
+		for _, a := range p.asserts {
+			fn := a.(func(context.Context, *Path, *mock.MockLinodeInstanceClient))
+			fn(ctx, &p, c)
 		}
 	case *mock.MockLinodeVPCClient:
 		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeVPCClient))
 			fn(c)
 		}
+		for _, a := range p.asserts {
+			fn := a.(func(context.Context, *Path, *mock.MockLinodeVPCClient))
+			fn(ctx, &p, c)
+		}
 	case *mock.MockLinodeNodeBalancerClient:
 		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeNodeBalancerClient))
 			fn(c)
+		}
+		for _, a := range p.asserts {
+			fn := a.(func(context.Context, *Path, *mock.MockLinodeNodeBalancerClient))
+			fn(ctx, &p, c)
 		}
 	case *mock.MockLinodeObjectStorageClient:
 		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeObjectStorageClient))
 			fn(c)
 		}
+		for _, a := range p.asserts {
+			fn := a.(func(context.Context, *Path, *mock.MockLinodeObjectStorageClient))
+			fn(ctx, &p, c)
+		}
 	case *mock.MockK8sClient:
 		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockK8sClient))
 			fn(c)
 		}
+		for _, a := range p.asserts {
+			fn := a.(func(context.Context, *Path, *mock.MockK8sClient))
+			fn(ctx, &p, c)
+		}
 	default:
 		panic("Path.Run invoked with unknown mock client")
 	}
+
 }
 
 func Paths(nodes ...node) []Path {
@@ -65,19 +91,19 @@ func Paths(nodes ...node) []Path {
 }
 
 func createPath(nodes []mocker) Path {
+	pth := Path{calls: nodes}
+
 	var desc []string
 	for _, n := range nodes {
-		if n.msg != "" {
-			desc = append(desc, n.msg)
+		if n.message != "" {
+			desc = append(desc, n.message)
+		}
+		if n.asserts != nil {
+			pth.asserts = append(pth.asserts, n.asserts)
 		}
 	}
 
-	pth := Path{calls: nodes}
 	pth.Message = strings.Join(desc, " ")
-
-	if nodes[len(nodes)-1].fail {
-		pth.Fail = true
-	}
 
 	return pth
 }
@@ -95,7 +121,7 @@ func paths(nodes []node) [][]mocker {
 		switch impl := n.(type) {
 		case mocker:
 			each[currPath] = append(each[currPath], impl)
-			if impl.end && i < len(nodes)-1 {
+			if impl.asserts != nil && i < len(nodes)-1 {
 				each = append(each, []mocker{})
 				currPath = len(each) - 1
 			}
