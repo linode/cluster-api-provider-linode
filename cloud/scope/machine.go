@@ -15,7 +15,7 @@ import (
 )
 
 type MachineScopeParams struct {
-	Client        k8sClient
+	Client        K8sClient
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
 	LinodeCluster *infrav1alpha1.LinodeCluster
@@ -23,7 +23,7 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	client k8sClient
+	client K8sClient
 
 	PatchHelper   *patch.Helper
 	Cluster       *clusterv1.Cluster

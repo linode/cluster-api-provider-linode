@@ -30,7 +30,7 @@ import (
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	Client        k8sClient
+	Client        K8sClient
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
 }
@@ -82,7 +82,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	client        k8sClient
+	client        K8sClient
 	PatchHelper   *patch.Helper
 	LinodeClient  LinodeNodeBalancerClient
 	Cluster       *clusterv1.Cluster

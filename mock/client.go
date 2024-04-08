@@ -860,31 +860,31 @@ func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageKey(ctx, ke
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageKey", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageKey), ctx, keyID)
 }
 
-// Mockk8sClient is a mock of k8sClient interface.
-type Mockk8sClient struct {
+// MockK8sClient is a mock of K8sClient interface.
+type MockK8sClient struct {
 	ctrl     *gomock.Controller
-	recorder *Mockk8sClientMockRecorder
+	recorder *MockK8sClientMockRecorder
 }
 
-// Mockk8sClientMockRecorder is the mock recorder for Mockk8sClient.
-type Mockk8sClientMockRecorder struct {
-	mock *Mockk8sClient
+// MockK8sClientMockRecorder is the mock recorder for MockK8sClient.
+type MockK8sClientMockRecorder struct {
+	mock *MockK8sClient
 }
 
-// NewMockk8sClient creates a new mock instance.
-func NewMockk8sClient(ctrl *gomock.Controller) *Mockk8sClient {
-	mock := &Mockk8sClient{ctrl: ctrl}
-	mock.recorder = &Mockk8sClientMockRecorder{mock}
+// NewMockK8sClient creates a new mock instance.
+func NewMockK8sClient(ctrl *gomock.Controller) *MockK8sClient {
+	mock := &MockK8sClient{ctrl: ctrl}
+	mock.recorder = &MockK8sClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mockk8sClient) EXPECT() *Mockk8sClientMockRecorder {
+func (m *MockK8sClient) EXPECT() *MockK8sClientMockRecorder {
 	return m.recorder
 }
 
 // Create mocks base method.
-func (m *Mockk8sClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+func (m *MockK8sClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, obj}
 	for _, a := range opts {
@@ -896,14 +896,14 @@ func (m *Mockk8sClient) Create(ctx context.Context, obj client.Object, opts ...c
 }
 
 // Create indicates an expected call of Create.
-func (mr *Mockk8sClientMockRecorder) Create(ctx, obj any, opts ...any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) Create(ctx, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*Mockk8sClient)(nil).Create), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockK8sClient)(nil).Create), varargs...)
 }
 
 // Delete mocks base method.
-func (m *Mockk8sClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
+func (m *MockK8sClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, obj}
 	for _, a := range opts {
@@ -915,14 +915,14 @@ func (m *Mockk8sClient) Delete(ctx context.Context, obj client.Object, opts ...c
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *Mockk8sClientMockRecorder) Delete(ctx, obj any, opts ...any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) Delete(ctx, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*Mockk8sClient)(nil).Delete), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockK8sClient)(nil).Delete), varargs...)
 }
 
 // DeleteAllOf mocks base method.
-func (m *Mockk8sClient) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) error {
+func (m *MockK8sClient) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, obj}
 	for _, a := range opts {
@@ -934,14 +934,14 @@ func (m *Mockk8sClient) DeleteAllOf(ctx context.Context, obj client.Object, opts
 }
 
 // DeleteAllOf indicates an expected call of DeleteAllOf.
-func (mr *Mockk8sClientMockRecorder) DeleteAllOf(ctx, obj any, opts ...any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) DeleteAllOf(ctx, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllOf", reflect.TypeOf((*Mockk8sClient)(nil).DeleteAllOf), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllOf", reflect.TypeOf((*MockK8sClient)(nil).DeleteAllOf), varargs...)
 }
 
 // Get mocks base method.
-func (m *Mockk8sClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+func (m *MockK8sClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, key, obj}
 	for _, a := range opts {
@@ -953,14 +953,14 @@ func (m *Mockk8sClient) Get(ctx context.Context, key client.ObjectKey, obj clien
 }
 
 // Get indicates an expected call of Get.
-func (mr *Mockk8sClientMockRecorder) Get(ctx, key, obj any, opts ...any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) Get(ctx, key, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, key, obj}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*Mockk8sClient)(nil).Get), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockK8sClient)(nil).Get), varargs...)
 }
 
 // GroupVersionKindFor mocks base method.
-func (m *Mockk8sClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
+func (m *MockK8sClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GroupVersionKindFor", obj)
 	ret0, _ := ret[0].(schema.GroupVersionKind)
@@ -969,13 +969,13 @@ func (m *Mockk8sClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVer
 }
 
 // GroupVersionKindFor indicates an expected call of GroupVersionKindFor.
-func (mr *Mockk8sClientMockRecorder) GroupVersionKindFor(obj any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) GroupVersionKindFor(obj any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupVersionKindFor", reflect.TypeOf((*Mockk8sClient)(nil).GroupVersionKindFor), obj)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupVersionKindFor", reflect.TypeOf((*MockK8sClient)(nil).GroupVersionKindFor), obj)
 }
 
 // IsObjectNamespaced mocks base method.
-func (m *Mockk8sClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
+func (m *MockK8sClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsObjectNamespaced", obj)
 	ret0, _ := ret[0].(bool)
@@ -984,13 +984,13 @@ func (m *Mockk8sClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
 }
 
 // IsObjectNamespaced indicates an expected call of IsObjectNamespaced.
-func (mr *Mockk8sClientMockRecorder) IsObjectNamespaced(obj any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) IsObjectNamespaced(obj any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsObjectNamespaced", reflect.TypeOf((*Mockk8sClient)(nil).IsObjectNamespaced), obj)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsObjectNamespaced", reflect.TypeOf((*MockK8sClient)(nil).IsObjectNamespaced), obj)
 }
 
 // List mocks base method.
-func (m *Mockk8sClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+func (m *MockK8sClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, list}
 	for _, a := range opts {
@@ -1002,14 +1002,14 @@ func (m *Mockk8sClient) List(ctx context.Context, list client.ObjectList, opts .
 }
 
 // List indicates an expected call of List.
-func (mr *Mockk8sClientMockRecorder) List(ctx, list any, opts ...any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) List(ctx, list any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, list}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*Mockk8sClient)(nil).List), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockK8sClient)(nil).List), varargs...)
 }
 
 // Patch mocks base method.
-func (m *Mockk8sClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+func (m *MockK8sClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, obj, patch}
 	for _, a := range opts {
@@ -1021,14 +1021,14 @@ func (m *Mockk8sClient) Patch(ctx context.Context, obj client.Object, patch clie
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *Mockk8sClientMockRecorder) Patch(ctx, obj, patch any, opts ...any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) Patch(ctx, obj, patch any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj, patch}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*Mockk8sClient)(nil).Patch), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockK8sClient)(nil).Patch), varargs...)
 }
 
 // RESTMapper mocks base method.
-func (m *Mockk8sClient) RESTMapper() meta.RESTMapper {
+func (m *MockK8sClient) RESTMapper() meta.RESTMapper {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RESTMapper")
 	ret0, _ := ret[0].(meta.RESTMapper)
@@ -1036,13 +1036,13 @@ func (m *Mockk8sClient) RESTMapper() meta.RESTMapper {
 }
 
 // RESTMapper indicates an expected call of RESTMapper.
-func (mr *Mockk8sClientMockRecorder) RESTMapper() *gomock.Call {
+func (mr *MockK8sClientMockRecorder) RESTMapper() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTMapper", reflect.TypeOf((*Mockk8sClient)(nil).RESTMapper))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTMapper", reflect.TypeOf((*MockK8sClient)(nil).RESTMapper))
 }
 
 // Scheme mocks base method.
-func (m *Mockk8sClient) Scheme() *runtime.Scheme {
+func (m *MockK8sClient) Scheme() *runtime.Scheme {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Scheme")
 	ret0, _ := ret[0].(*runtime.Scheme)
@@ -1050,13 +1050,13 @@ func (m *Mockk8sClient) Scheme() *runtime.Scheme {
 }
 
 // Scheme indicates an expected call of Scheme.
-func (mr *Mockk8sClientMockRecorder) Scheme() *gomock.Call {
+func (mr *MockK8sClientMockRecorder) Scheme() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Scheme", reflect.TypeOf((*Mockk8sClient)(nil).Scheme))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Scheme", reflect.TypeOf((*MockK8sClient)(nil).Scheme))
 }
 
 // Status mocks base method.
-func (m *Mockk8sClient) Status() client.SubResourceWriter {
+func (m *MockK8sClient) Status() client.SubResourceWriter {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Status")
 	ret0, _ := ret[0].(client.SubResourceWriter)
@@ -1064,13 +1064,13 @@ func (m *Mockk8sClient) Status() client.SubResourceWriter {
 }
 
 // Status indicates an expected call of Status.
-func (mr *Mockk8sClientMockRecorder) Status() *gomock.Call {
+func (mr *MockK8sClientMockRecorder) Status() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*Mockk8sClient)(nil).Status))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockK8sClient)(nil).Status))
 }
 
 // SubResource mocks base method.
-func (m *Mockk8sClient) SubResource(subResource string) client.SubResourceClient {
+func (m *MockK8sClient) SubResource(subResource string) client.SubResourceClient {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubResource", subResource)
 	ret0, _ := ret[0].(client.SubResourceClient)
@@ -1078,13 +1078,13 @@ func (m *Mockk8sClient) SubResource(subResource string) client.SubResourceClient
 }
 
 // SubResource indicates an expected call of SubResource.
-func (mr *Mockk8sClientMockRecorder) SubResource(subResource any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) SubResource(subResource any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubResource", reflect.TypeOf((*Mockk8sClient)(nil).SubResource), subResource)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubResource", reflect.TypeOf((*MockK8sClient)(nil).SubResource), subResource)
 }
 
 // Update mocks base method.
-func (m *Mockk8sClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+func (m *MockK8sClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, obj}
 	for _, a := range opts {
@@ -1096,8 +1096,8 @@ func (m *Mockk8sClient) Update(ctx context.Context, obj client.Object, opts ...c
 }
 
 // Update indicates an expected call of Update.
-func (mr *Mockk8sClientMockRecorder) Update(ctx, obj any, opts ...any) *gomock.Call {
+func (mr *MockK8sClientMockRecorder) Update(ctx, obj any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*Mockk8sClient)(nil).Update), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockK8sClient)(nil).Update), varargs...)
 }

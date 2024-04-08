@@ -32,14 +32,14 @@ stringData:
   secret_key_ro: %s`
 
 type ObjectStorageBucketScopeParams struct {
-	Client              k8sClient
+	Client              K8sClient
 	LinodeClientBuilder LinodeObjectStorageClientBuilder
 	Bucket              *infrav1alpha1.LinodeObjectStorageBucket
 	Logger              *logr.Logger
 }
 
 type ObjectStorageBucketScope struct {
-	Client       k8sClient
+	Client       K8sClient
 	Bucket       *infrav1alpha1.LinodeObjectStorageBucket
 	Logger       logr.Logger
 	LinodeClient LinodeObjectStorageClient

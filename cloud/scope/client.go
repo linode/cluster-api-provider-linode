@@ -65,6 +65,6 @@ func CreateLinodeObjectStorageClient(apiKey string) (LinodeObjectStorageClient, 
 	return CreateLinodeClient(apiKey)
 }
 
-type k8sClient interface {
+type K8sClient interface {
 	client.Client
 }
