@@ -14,9 +14,9 @@ import (
 	"github.com/linode/cluster-api-provider-linode/version"
 )
 
-type ClientOpt func(*linodego.Client)
+type clientOption func(*linodego.Client)
 
-func CreateLinodeClient(apiKey string, opts ...ClientOpt) (*linodego.Client, error) {
+func CreateLinodeClient(apiKey string, opts ...clientOption) (*linodego.Client, error) {
 	if apiKey == "" {
 		return nil, errors.New("missing Linode API key")
 	}
