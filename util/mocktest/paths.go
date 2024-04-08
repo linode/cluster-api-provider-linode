@@ -9,38 +9,39 @@ import (
 type Path struct {
 	Message string
 	Fail    bool
-	Calls   []mocker
+
+	calls []mocker
 }
 
 func (p Path) Run(client any) {
 	switch c := client.(type) {
 	case *mock.MockLinodeMachineClient:
-		for _, m := range p.Calls {
+		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeMachineClient))
 			fn(c)
 		}
 	case *mock.MockLinodeInstanceClient:
-		for _, m := range p.Calls {
+		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeInstanceClient))
 			fn(c)
 		}
 	case *mock.MockLinodeVPCClient:
-		for _, m := range p.Calls {
+		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeVPCClient))
 			fn(c)
 		}
 	case *mock.MockLinodeNodeBalancerClient:
-		for _, m := range p.Calls {
+		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeNodeBalancerClient))
 			fn(c)
 		}
 	case *mock.MockLinodeObjectStorageClient:
-		for _, m := range p.Calls {
+		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockLinodeObjectStorageClient))
 			fn(c)
 		}
 	case *mock.MockK8sClient:
-		for _, m := range p.Calls {
+		for _, m := range p.calls {
 			fn := m.call.(func(*mock.MockK8sClient))
 			fn(c)
 		}
@@ -49,14 +50,13 @@ func (p Path) Run(client any) {
 	}
 }
 
-func Paths(name string, nodes ...node) []Path {
+func Paths(nodes ...node) []Path {
 	if len(nodes) == 0 {
 		return nil
 	}
 
 	pths := paths(nodes)
 	each := make([]Path, len(pths))
-
 	for i, p := range pths {
 		each[i] = createPath(p)
 	}
@@ -72,7 +72,7 @@ func createPath(nodes []mocker) Path {
 		}
 	}
 
-	pth := Path{Calls: nodes}
+	pth := Path{calls: nodes}
 	pth.Message = strings.Join(desc, " ")
 
 	if nodes[len(nodes)-1].fail {
@@ -89,10 +89,16 @@ func paths(nodes []node) [][]mocker {
 
 	each := [][]mocker{{}}
 
-	for _, n := range nodes {
+	var currPath int
+
+	for i, n := range nodes {
 		switch impl := n.(type) {
 		case mocker:
-			each[0] = append(each[0], impl)
+			each[currPath] = append(each[currPath], impl)
+			if impl.end && i < len(nodes)-1 {
+				each = append(each, []mocker{})
+				currPath = len(each) - 1
+			}
 
 		case fork:
 			impl.fail.fail = true

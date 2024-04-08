@@ -34,10 +34,17 @@ func Calls(calls any) MockerOption {
 	}
 }
 
+func End() MockerOption {
+	return func(m *mocker) {
+		m.end = true
+	}
+}
+
 type mocker struct {
 	msg  string
 	call any
 	fail bool
+	end  bool
 }
 
 type fork struct {

@@ -22,21 +22,64 @@ func TestMocktest(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-var _ = Describe("uses each client per path", func() {
-	paths := Paths("myFunc",
+var _ = Describe("fork", func() {
+	paths := Paths(
 		Mock(
-			Message("creates if needed"),
+			Message("list and create"),
 			Calls(func(c *mock.MockLinodeMachineClient) {
 				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
 			}),
 		),
 		Fork(
-			Mock(Calls(func(c *mock.MockLinodeMachineClient) {
+			Mock(Message("succeeds"), Calls(func(c *mock.MockLinodeMachineClient) {
 				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 			})),
-			Mock(Message("fails if server unavailable"), Calls(func(c *mock.MockLinodeMachineClient) {
-				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server unavailable"))
+			Mock(Message("fails with server error"), Calls(func(c *mock.MockLinodeMachineClient) {
+				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("server error"))
 			})),
+		),
+	)
+
+	var mockCtrl *gomock.Controller
+	BeforeEach(func() {
+		mockCtrl = gomock.NewController(GinkgoT())
+	})
+
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
+	for _, path := range paths {
+		It(path.Message, func(ctx SpecContext) {
+			client := mock.NewMockLinodeMachineClient(mockCtrl)
+			path.Run(client)
+
+			err := helper(ctx, client)
+			if path.Fail {
+				Expect(err).To(HaveOccurred())
+			} else {
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+	}
+})
+
+var _ = Describe("end", func() {
+	paths := Paths(
+		Mock(
+			Message("one"),
+			Calls(func(c *mock.MockLinodeMachineClient) {
+				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
+				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
+			}),
+			End(),
+		),
+		Mock(
+			Message("two"),
+			Calls(func(c *mock.MockLinodeMachineClient) {
+				c.EXPECT().ListInstances(gomock.Any(), gomock.Any()).Return([]linodego.Instance{}, nil)
+				c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
+			}),
 		),
 	)
 
