@@ -256,7 +256,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	
+
 	controller, err := ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeObjectStorageBucket{}).
 		Owns(&corev1.Secret{}).
@@ -273,7 +273,7 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager)
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeObjectStorageBuckets: %w", err)
 	}
-	
+
 	err = controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
 		handler.EnqueueRequestsFromMapFunc(linodeObjectStorageBucketMapper),
@@ -282,6 +282,6 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager)
 	if err != nil {
 		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
 	}
-	
+
 	return nil
 }
