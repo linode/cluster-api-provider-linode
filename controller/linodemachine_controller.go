@@ -376,59 +376,8 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 		return nil
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized) {
-		// get the default instance config
-		configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
-		if err != nil || len(configs) == 0 {
-			logger.Error(err, "Failed to list instance configs")
-
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
-			return err
-		}
-		instanceConfig := configs[0]
-
-		if instanceConfig.Devices.SDA == nil {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "root disk not yet ready")
-
-			return errors.New("root disk not yet ready")
-		}
-
-		rootDiskID := instanceConfig.Devices.SDA.DiskID
-
-		// carve out space for the etcd disk
-		if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing) {
-			rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
-			if err != nil {
-				logger.Error(err, "Failed to get root disk for instance")
-
-				conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
-				return err
-			}
-			diskSize := rootDisk.Size - defaultEtcdDiskSize
-			if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-				logger.Error(err, "Failed to resize root disk")
-
-				conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
-				return err
-			}
-
-			conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
-		}
-
-		// wait for the disk to resize
-		if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeWaitSeconds); err != nil {
-			logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeWaitSeconds))
-
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
-			return err
-		}
-
-		conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
+	if err := r.resizeRootDisk(ctx, logger, machineScope, linodeInstanceID); err != nil {
+		return err
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
@@ -451,6 +400,72 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated)
 	}
+
+	return nil
+}
+
+func (r *LinodeMachineReconciler) resizeRootDisk(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	linodeInstanceID int,
+) error {
+	if reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized) {
+		return nil
+	}
+
+	// get the default instance config
+	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
+	if err != nil || len(configs) == 0 {
+		logger.Error(err, "Failed to list instance configs")
+
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
+		return err
+	}
+	instanceConfig := configs[0]
+
+	if instanceConfig.Devices.SDA == nil {
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "root disk not yet ready")
+
+		return errors.New("root disk not yet ready")
+	}
+
+	rootDiskID := instanceConfig.Devices.SDA.DiskID
+
+	// carve out space for the etcd disk
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing) {
+		rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
+		if err != nil {
+			logger.Error(err, "Failed to get root disk for instance")
+
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
+			return err
+		}
+		diskSize := rootDisk.Size - defaultEtcdDiskSize
+		if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
+			logger.Error(err, "Failed to resize root disk")
+
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
+			return err
+		}
+
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
+	}
+
+	// wait for the disk to resize
+	if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeWaitSeconds); err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeWaitSeconds))
+
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
+		return err
+	}
+
+	conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
 
 	return nil
 }
