@@ -35,6 +35,7 @@ var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
 	var mockCtrl *gomock.Controller
 	var reconciler *LinodeClusterReconciler
 	nodebalancerID := 1
+	controlPlaneEndpointHost := "10.0.0.1"
 	clusterName := "lifecycle"
 	clusterNameSpace := "default"
 	ownerRef := metav1.OwnerReference{
@@ -74,7 +75,7 @@ var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
 				NodeBalancerID: &nodebalancerID,
 			},
 			ControlPlaneEndpoint: clusterv1.APIEndpoint{
-				Host: "10.0.0.1",
+				Host: controlPlaneEndpointHost,
 			},
 		},
 	}
@@ -111,11 +112,16 @@ var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		By("checking nb id")
+		By("checking ready conditions")
 		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 		Expect(linodeCluster.Status.Ready).To(BeTrue())
 		Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
 		Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+
+		By("checking nb id")
 		Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
+
+		By("checking controlPlaneEndpoint host")
+		Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
 	})
 })

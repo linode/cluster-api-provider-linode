@@ -18,8 +18,12 @@ package controller
 
 import (
 	"fmt"
+	"go/build"
+	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -45,6 +49,7 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var clusterAPIVersionRegex = regexp.MustCompile(`^(\W)sigs\.k8s\.io/cluster-api v(.+)`)
 
 func TestControllers(t *testing.T) {
 	t.Parallel()
@@ -54,12 +59,49 @@ func TestControllers(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
+func getFilePathToCAPICRDs() string {
+	modBits, err := os.ReadFile(filepath.Join("..", "go.mod"))
+	if err != nil {
+		return ""
+	}
+
+	var clusterAPIVersion string
+	for _, line := range strings.Split(string(modBits), "\n") {
+		matches := clusterAPIVersionRegex.FindStringSubmatch(line)
+		if len(matches) == 3 {
+			clusterAPIVersion = matches[2]
+		}
+	}
+
+	if clusterAPIVersion == "" {
+		return ""
+	}
+
+	gopath := envOr("GOPATH", build.Default.GOPATH)
+	return filepath.Join(gopath, "pkg", "mod", "sigs.k8s.io", fmt.Sprintf("cluster-api@v%s", clusterAPIVersion), "config", "crd", "bases")
+}
+
+func envOr(envKey, defaultValue string) string {
+	if value, ok := os.LookupEnv(envKey); ok {
+		return value
+	}
+	return defaultValue
+}
+
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
+	crdPaths := []string{
+		filepath.Join("..", "config", "crd", "bases"),
+	}
+
+	if capiPath := getFilePathToCAPICRDs(); capiPath != "" {
+		crdPaths = append(crdPaths, capiPath)
+	}
+
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     crdPaths,
 		ErrorIfCRDPathMissing: true,
 
 		// The BinaryAssetsDirectory is only required if you want to run the tests directly
