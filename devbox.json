@@ -17,12 +17,14 @@
     "mdbook@latest",
     "mdbook-admonish@latest",
     "mockgen@latest",
-    "kyverno-chainsaw@latest"
+    "kyverno-chainsaw@latest",
+    "kubernetes-helm@latest",
+    "kubectl@latest"
   ],
   "shell": {
     "init_hook": [
       "export \"GOROOT=$(go env GOROOT)\""
     ],
-    "scripts":   {}
+    "scripts": {}
   }
 }
