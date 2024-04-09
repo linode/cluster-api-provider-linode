@@ -288,14 +288,9 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed to create mapper for LinodeVPCs: %w", err)
 	}
 
-	err = controller.Watch(
+	return controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
 		handler.EnqueueRequestsFromMapFunc(linodeVPCMapper),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
-	if err != nil {
-		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
-	}
-
-	return nil
 }

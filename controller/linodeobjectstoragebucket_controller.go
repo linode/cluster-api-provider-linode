@@ -273,14 +273,9 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager)
 		return fmt.Errorf("failed to create mapper for LinodeObjectStorageBuckets: %w", err)
 	}
 
-	err = controller.Watch(
+	return controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
 		handler.EnqueueRequestsFromMapFunc(linodeObjectStorageBucketMapper),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
-	if err != nil {
-		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
-	}
-
-	return nil
 }

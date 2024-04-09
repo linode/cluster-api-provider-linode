@@ -492,14 +492,9 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
 	}
 
-	err = controller.Watch(
+	return controller.Watch(
 		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
 		handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
 		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
 	)
-	if err != nil {
-		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
-	}
-
-	return nil
 }
