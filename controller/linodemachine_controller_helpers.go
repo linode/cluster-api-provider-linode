@@ -215,37 +215,6 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 	}
 }
 
-func (r *LinodeMachineReconciler) requeueLinodeMachinesForUnpausedCluster(logger logr.Logger) handler.MapFunc {
-	logger = logger.WithName("LinodeMachineReconciler").WithName("requeueLinodeMachinesForUnpausedCluster")
-
-	return func(ctx context.Context, o client.Object) []ctrl.Request {
-		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
-		defer cancel()
-
-		cluster, ok := o.(*clusterv1.Cluster)
-		if !ok {
-			logger.Info("Failed to cast object to Cluster")
-
-			return nil
-		}
-
-		if !cluster.ObjectMeta.DeletionTimestamp.IsZero() {
-			logger.Info("Cluster has a deletion timestamp, skipping mapping")
-
-			return nil
-		}
-
-		requests, err := r.requestsForCluster(ctx, cluster.Namespace, cluster.Name)
-		if err != nil {
-			logger.Error(err, "Failed to create request for cluster")
-
-			return nil
-		}
-
-		return requests
-	}
-}
-
 func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namespace, name string) ([]ctrl.Request, error) {
 	labels := map[string]string{clusterv1.ClusterNameLabel: name}
 
