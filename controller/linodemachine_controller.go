@@ -322,7 +322,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		return ctrl.Result{}, err
 	}
 
-	if !reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
+	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
 		if createOpts == nil {
 			createOpts, err = r.newCreateConfig(ctx, machineScope, tags, logger)
 			if err != nil {
@@ -353,7 +353,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightConfigured)
 	}
 
-	if !reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
+	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
 		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
@@ -369,7 +369,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered)
 	}
 
-	if !reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
+	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
 		if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			logger.Error(err, "Failed to add instance to Node Balancer backend")
 
@@ -446,7 +446,7 @@ func (r *LinodeMachineReconciler) createRootDisk(
 	linodeInstanceID int,
 	createOpts linodego.InstanceCreateOptions,
 ) (*linodego.InstanceDisk, error) {
-	if reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated) {
+	if conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated) {
 		listFilter := util.Filter{
 			Label: "root",
 		}
@@ -510,7 +510,7 @@ func (r *LinodeMachineReconciler) createEtcdDisk(
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
 ) (*linodego.InstanceDisk, error) {
-	if reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
+	if conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
 		listFilter := util.Filter{
 			Label: "etcd-data",
 		}

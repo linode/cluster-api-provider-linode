@@ -7,16 +7,6 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
-func OneOfConditionsTrue(from conditions.Getter, typs ...clusterv1.ConditionType) bool {
-	for _, typ := range typs {
-		if conditions.IsTrue(from, typ) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func RecordDecayingCondition(to conditions.Setter, typ clusterv1.ConditionType, reason, message string, timeout time.Duration) bool {
 	conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityWarning, message)
 

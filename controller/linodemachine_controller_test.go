@@ -164,10 +164,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-		Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-		Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-		Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+		Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+		Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+		Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+		Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
 		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 		Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
@@ -225,7 +225,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("time is up"))
 
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
 			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Severity).To(Equal(clusterv1.ConditionSeverityError))
 			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Message).To(ContainSubstring("time is up"))
 		})
@@ -304,10 +304,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
@@ -374,8 +374,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
 
 			listInst = mockLinodeClient.EXPECT().
 				ListInstances(ctx, gomock.Any()).
@@ -432,10 +432,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
