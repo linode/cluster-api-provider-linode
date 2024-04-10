@@ -22,9 +22,7 @@ type LinodeInstanceClient interface {
 	ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error)
 	CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error)
 	BootInstance(ctx context.Context, linodeID int, configID int) error
-	ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error)
-	GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (*linodego.InstanceDisk, error)
-	// ResizeInstanceDisk(ctx context.Context, linodeID int, diskID int, size int) error
+	ListInstanceDisks(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceDisk, error)
 	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
 	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
 	DeleteInstance(ctx context.Context, linodeID int) error

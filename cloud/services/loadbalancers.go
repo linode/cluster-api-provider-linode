@@ -110,6 +110,11 @@ func AddNodeToNB(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) error {
+	// Update the NB backend with the new instance if it's a control plane node
+	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
+		return nil
+	}
+
 	// Get the private IP that was assigned
 	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
 	if err != nil {

@@ -8,8 +8,14 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 )
 
-func ConditionTrue(from conditions.Getter, typ clusterv1.ConditionType) bool {
-	return HasConditionStatus(from, typ, "True")
+func OneOfConditionsTrue(from conditions.Getter, typs ...clusterv1.ConditionType) bool {
+	for _, typ := range typs {
+		if conditions.IsTrue(from, typ) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func HasConditionStatus(from conditions.Getter, typ clusterv1.ConditionType, status corev1.ConditionStatus) bool {
