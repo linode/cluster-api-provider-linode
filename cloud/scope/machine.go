@@ -23,8 +23,7 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client k8sClient
-
+	Client        k8sClient
 	PatchHelper   *patch.Helper
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
@@ -86,6 +85,7 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
+	linodeClient.SetRetryCount(0)
 
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {

@@ -1,8 +1,8 @@
 # K3s
 ## Specification
-| Control Plane               | CNI    | Default OS   | Installs ClusterClass |
-|-----------------------------|--------|--------------|-----------------------|
-| [k3s](https://docs.k3s.io/) | Cilium | Ubuntu 22.04 | No                    |
+| Control Plane               | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|-----------------------------|--------|--------------|-----------------------|------|------|
+| [k3s](https://docs.k3s.io/) | Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
 ## Prerequisites
 * [Quickstart](../getting-started.md) completed
 * Select a [k3s kubernetes version](https://github.com/k3s-io/k3s/releases) to set for the kubernetes version
@@ -28,7 +28,9 @@
 ## Usage
 1. Generate cluster yaml
     ```bash
-    clusterctl generate cluster test-cluster --infrastructure linode:0.0.0 --flavor k3s > test-k3s-cluster.yaml
+    clusterctl generate cluster test-cluster \
+        --infrastructure linode:0.0.0 \
+        --flavor k3s > test-k3s-cluster.yaml
     ```
 2. Apply cluster yaml
     ```bash

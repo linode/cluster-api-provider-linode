@@ -62,51 +62,14 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 
 	createConfig.Booted = util.Pointer(false)
 
-	createConfig.PrivateIP = true
-
-	bootstrapData, err := machineScope.GetBootstrapData(ctx)
-	if err != nil {
-		logger.Info("Failed to get bootstrap data", "error", err.Error())
-
-		return nil, err
-	}
-	if len(bootstrapData) > maxBootstrapDataBytes {
-		err = errors.New("bootstrap data too large")
-		logger.Info(fmt.Sprintf("decoded bootstrap data exceeds size limit of %d bytes", maxBootstrapDataBytes), "error", err.Error())
-
+	if err := setUserData(ctx, machineScope, createConfig, logger); err != nil {
 		return nil, err
 	}
 
-	region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
-	if err != nil {
-		return nil, err
-	}
-	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
-	image, err := machineScope.LinodeClient.GetImage(ctx, machineScope.LinodeMachine.Spec.Image)
-	if err != nil {
-		return nil, err
-	}
-	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
-	if imageMetadataSupport && regionMetadataSupport {
-		createConfig.Metadata = &linodego.InstanceMetadataOptions{
-			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
-		}
+	if machineScope.LinodeMachine.Spec.PrivateIP != nil {
+		createConfig.PrivateIP = *machineScope.LinodeMachine.Spec.PrivateIP
 	} else {
-		logger.Info(fmt.Sprintf("using StackScripts for bootstrapping. imageMetadataSupport: %t, regionMetadataSupport: %t",
-			imageMetadataSupport, regionMetadataSupport))
-		capiStackScriptID, err := services.EnsureStackscript(ctx, machineScope)
-		if err != nil {
-			return nil, err
-		}
-		createConfig.StackScriptID = capiStackScriptID
-		// ###### WARNING, currently label, region and type are supported as cloud-init variables, any changes ######
-		// any changes to this could be potentially backwards incompatible and should be noted through a backwards incompatible version update #####
-		instanceData := fmt.Sprintf("label: %s\nregion: %s\ntype: %s", machineScope.LinodeMachine.Name, machineScope.LinodeMachine.Spec.Region, machineScope.LinodeMachine.Spec.Type)
-		// ###### WARNING ######
-		createConfig.StackScriptData = map[string]string{
-			"instancedata": b64.StdEncoding.EncodeToString([]byte(instanceData)),
-			"userdata":     b64.StdEncoding.EncodeToString(bootstrapData),
-		}
+		createConfig.PrivateIP = true
 	}
 
 	if createConfig.Tags == nil {
@@ -252,37 +215,6 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 	}
 }
 
-func (r *LinodeMachineReconciler) requeueLinodeMachinesForUnpausedCluster(logger logr.Logger) handler.MapFunc {
-	logger = logger.WithName("LinodeMachineReconciler").WithName("requeueLinodeMachinesForUnpausedCluster")
-
-	return func(ctx context.Context, o client.Object) []ctrl.Request {
-		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
-		defer cancel()
-
-		cluster, ok := o.(*clusterv1.Cluster)
-		if !ok {
-			logger.Info("Failed to cast object to Cluster")
-
-			return nil
-		}
-
-		if !cluster.ObjectMeta.DeletionTimestamp.IsZero() {
-			logger.Info("Cluster has a deletion timestamp, skipping mapping")
-
-			return nil
-		}
-
-		requests, err := r.requestsForCluster(ctx, cluster.Namespace, cluster.Name)
-		if err != nil {
-			logger.Error(err, "Failed to create request for cluster")
-
-			return nil
-		}
-
-		return requests
-	}
-}
-
 func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namespace, name string) ([]ctrl.Request, error) {
 	labels := map[string]string{clusterv1.ClusterNameLabel: name}
 
@@ -393,4 +325,55 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha1.LinodeMac
 	}
 
 	return &createConfig
+}
+
+func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	bootstrapData, err := machineScope.GetBootstrapData(ctx)
+	if err != nil {
+		logger.Error(err, "Failed to get bootstrap data")
+
+		return err
+	}
+	if len(bootstrapData) > maxBootstrapDataBytes {
+		err = errors.New("bootstrap data too large")
+		logger.Error(err, "decoded bootstrap data exceeds size limit",
+			"limit", maxBootstrapDataBytes,
+		)
+
+		return err
+	}
+
+	region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
+	if err != nil {
+		return fmt.Errorf("get region: %w", err)
+	}
+	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
+	image, err := machineScope.LinodeClient.GetImage(ctx, machineScope.LinodeMachine.Spec.Image)
+	if err != nil {
+		return fmt.Errorf("get image: %w", err)
+	}
+	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
+	if imageMetadataSupport && regionMetadataSupport {
+		createConfig.Metadata = &linodego.InstanceMetadataOptions{
+			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
+		}
+	} else {
+		logger.Info("using StackScripts for bootstrapping",
+			"imageMetadataSupport", imageMetadataSupport,
+			"regionMetadataSupport", regionMetadataSupport,
+		)
+		capiStackScriptID, err := services.EnsureStackscript(ctx, machineScope)
+		if err != nil {
+			return fmt.Errorf("ensure stackscript: %w", err)
+		}
+		createConfig.StackScriptID = capiStackScriptID
+		// WARNING: label, region and type are currently supported as cloud-init variables,
+		// any changes to this could be potentially backwards incompatible and should be noted through a backwards incompatible version update
+		instanceData := fmt.Sprintf("label: %s\nregion: %s\ntype: %s", machineScope.LinodeMachine.Name, machineScope.LinodeMachine.Spec.Region, machineScope.LinodeMachine.Spec.Type)
+		createConfig.StackScriptData = map[string]string{
+			"instancedata": b64.StdEncoding.EncodeToString([]byte(instanceData)),
+			"userdata":     b64.StdEncoding.EncodeToString(bootstrapData),
+		}
+	}
+	return nil
 }

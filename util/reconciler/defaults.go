@@ -34,6 +34,8 @@ const (
 	DefaultMachineControllerLinodeImage = "linode/ubuntu22.04"
 	// DefaultMachineControllerWaitForRunningDelay is the default requeue delay if instance is not running.
 	DefaultMachineControllerWaitForRunningDelay = 5 * time.Second
+	// DefaultMachineControllerWaitForPreflightTimeout is the default timeout during the preflight phase.
+	DefaultMachineControllerWaitForPreflightTimeout = 5 * time.Minute
 	// DefaultMachineControllerWaitForRunningTimeout is the default timeout if instance is not running.
 	DefaultMachineControllerWaitForRunningTimeout = 20 * time.Minute
 
@@ -47,6 +49,15 @@ const (
 func DefaultedLoopTimeout(timeout time.Duration) time.Duration {
 	if timeout <= 0 {
 		return DefaultLoopTimeout
+	}
+
+	return timeout
+}
+
+// DefaultMachineControllerPreflightTimeout will default the preflight machine timeout if it is zero-valued.
+func DefaultMachineControllerPreflightTimeout(timeout time.Duration) time.Duration {
+	if timeout <= 0 {
+		return DefaultMachineControllerWaitForPreflightTimeout
 	}
 
 	return timeout

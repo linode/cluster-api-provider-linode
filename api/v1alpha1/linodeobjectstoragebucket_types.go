@@ -92,7 +92,7 @@ type LinodeObjectStorageBucketStatus struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=linodeobjectstoragebuckets,scope=Namespaced,shortName=lobj
+// +kubebuilder:resource:path=linodeobjectstoragebuckets,scope=Namespaced,categories=cluster-api,shortName=lobj
 // +kubebuilder:subresource:status
 // +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 // +kubebuilder:printcolumn:name="Label",type="string",JSONPath=".spec.label",description="The name of the bucket"
@@ -116,7 +116,7 @@ func (b *LinodeObjectStorageBucket) SetConditions(conditions clusterv1.Condition
 	b.Status.Conditions = conditions
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // LinodeObjectStorageBucketList contains a list of LinodeObjectStorageBucket
 type LinodeObjectStorageBucketList struct {

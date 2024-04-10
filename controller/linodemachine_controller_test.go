@@ -19,8 +19,8 @@ package controller
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"net"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -45,6 +46,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	var machine clusterv1.Machine
 	var linodeMachine infrav1alpha1.LinodeMachine
 	var secret corev1.Secret
+	var reconciler *LinodeMachineReconciler
 
 	var mockCtrl *gomock.Controller
 	var testLogs *bytes.Buffer
@@ -67,9 +69,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	}
 
 	recorder := record.NewFakeRecorder(10)
-	reconciler := &LinodeMachineReconciler{
-		Recorder: recorder,
-	}
 
 	BeforeEach(func(ctx SpecContext) {
 		secret = corev1.Secret{
@@ -106,6 +105,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Image:      rutil.DefaultMachineControllerLinodeImage,
 			},
 		}
+		reconciler = &LinodeMachineReconciler{
+			Recorder: recorder,
+		}
 		mockCtrl = gomock.NewController(GinkgoT())
 		testLogs = &bytes.Buffer{}
 		logger = zap.New(
@@ -138,10 +140,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(getRegion).
 			Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 		createInst := mockLinodeClient.EXPECT().
-			CreateInstance(ctx, gomock.Cond(func(opts any) bool {
-				_, ok := opts.(linodego.InstanceCreateOptions)
-				return ok
-			})).
+			CreateInstance(ctx, gomock.Any()).
 			After(getImage).
 			Return(&linodego.Instance{
 				ID:     123,
@@ -165,7 +164,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(linodeMachine.Status.Ready).To(BeTrue())
+		Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+		Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+		Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+		Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+
 		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 		Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
@@ -182,6 +185,50 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to boot instance"))
 		Expect(testLogs.String()).NotTo(ContainSubstring("multiple instances found"))
 		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to add instance to Node Balancer backend"))
+	})
+
+	Context("fails when a preflight condition is stale", func() {
+		It("can't create an instance in time", func(ctx SpecContext) {
+			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
+			listInst := mockLinodeClient.EXPECT().
+				ListInstances(ctx, gomock.Any()).
+				Return([]linodego.Instance{}, nil)
+			getRegion := mockLinodeClient.EXPECT().
+				GetRegion(ctx, gomock.Any()).
+				After(listInst).
+				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+			getImage := mockLinodeClient.EXPECT().
+				GetImage(ctx, gomock.Any()).
+				After(getRegion).
+				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+			mockLinodeClient.EXPECT().
+				CreateInstance(ctx, gomock.Any()).
+				After(getImage).
+				DoAndReturn(func(_, _ any) (*linodego.Instance, error) {
+					time.Sleep(time.Microsecond)
+					return nil, errors.New("time is up")
+				})
+
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+
+			reconciler.ReconcileTimeout = time.Nanosecond
+
+			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(res).NotTo(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("time is up"))
+
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
+			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Severity).To(Equal(clusterv1.ConditionSeverityError))
+			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Message).To(ContainSubstring("time is up"))
+		})
 	})
 
 	Context("creates a control plane instance", func() {
@@ -201,13 +248,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(getRegion).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 			createInst := mockLinodeClient.EXPECT().
-				CreateInstance(ctx, gomock.Cond(func(opts any) bool {
-					createOpts, ok := opts.(linodego.InstanceCreateOptions)
-					if !ok {
-						return false
-					}
-					return createOpts.Image == ""
-				})).
+				CreateInstance(ctx, gomock.Any()).
 				After(getImage).
 				Return(&linodego.Instance{
 					ID:     123,
@@ -215,63 +256,32 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					Status: linodego.InstanceOffline,
 				}, nil)
 			getType := mockLinodeClient.EXPECT().
-				GetType(ctx, linodeMachine.Spec.Type).
+				GetType(ctx, gomock.Any()).
 				After(createInst).
-				Return(&linodego.LinodeType{Disk: 25600}, nil)
+				Return(&linodego.LinodeType{Disk: 20000}, nil)
 			createRootDisk := mockLinodeClient.EXPECT().
-				CreateInstanceDisk(ctx, 123, gomock.Cond(func(opts any) bool {
-					createOpts, ok := opts.(linodego.InstanceDiskCreateOptions)
-					if !ok {
-						return false
-					}
-					return createOpts.Label == "root" && createOpts.Size == 25600-defaultEtcdDiskSize
-				})).
+				CreateInstanceDisk(ctx, 123, gomock.Any()).
 				After(getType).
 				Return(&linodego.InstanceDisk{ID: 100}, nil)
-			createEtcdDisk := mockLinodeClient.EXPECT().
-				CreateInstanceDisk(ctx, 123, gomock.Cond(func(opts any) bool {
-					createOpts, ok := opts.(linodego.InstanceDiskCreateOptions)
-					if !ok {
-						return false
-					}
-					return createOpts.Label == "etcd-data"
-				})).
+			waitForRootDisk := mockLinodeClient.EXPECT().
+				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskWaitSeconds).
 				After(createRootDisk).
+				Return(nil, nil)
+			createEtcdDisk := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, gomock.Any()).
+				After(waitForRootDisk).
 				Return(&linodego.InstanceDisk{ID: 101}, nil)
-			createInstConf := mockLinodeClient.EXPECT().
-				CreateInstanceConfig(ctx, 123, linodego.InstanceConfigCreateOptions{
-					Label: fmt.Sprintf("%s disk profile", linodeMachine.Spec.Image),
-					Devices: linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
-					},
-					Helpers: &linodego.InstanceConfigHelpers{
-						UpdateDBDisabled:  true,
-						Distro:            true,
-						ModulesDep:        true,
-						Network:           true,
-						DevTmpFsAutomount: true,
-					},
-					Kernel: "linode/grub2",
-				}).
+			waitForEtcdDisk := mockLinodeClient.EXPECT().
+				WaitForInstanceDiskStatus(ctx, 123, 101, linodego.DiskReady, defaultDiskWaitSeconds).
 				After(createEtcdDisk).
-				Return(&linodego.InstanceConfig{
-					Devices: &linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
-					},
-				}, nil)
-			checkRootDisk := mockLinodeClient.EXPECT().
-				GetInstanceDisk(ctx, 123, 100).
-				After(createInstConf).
-				Return(&linodego.InstanceDisk{Status: linodego.DiskReady}, nil)
-			checkEtcdDisk := mockLinodeClient.EXPECT().
-				GetInstanceDisk(ctx, 123, 101).
-				After(checkRootDisk).
-				Return(&linodego.InstanceDisk{Status: linodego.DiskReady}, nil)
+				Return(nil, nil)
+			createInstConfig := mockLinodeClient.EXPECT().
+				CreateInstanceConfig(ctx, 123, gomock.Any()).
+				After(waitForEtcdDisk).
+				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
-				After(checkEtcdDisk).
+				After(createInstConfig).
 				Return(nil)
 			getAddrs := mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
@@ -302,7 +312,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(linodeMachine.Status.Ready).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
@@ -339,13 +353,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(getRegion).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 			createInst := mockLinodeClient.EXPECT().
-				CreateInstance(ctx, gomock.Cond(func(opts any) bool {
-					createOpts, ok := opts.(linodego.InstanceCreateOptions)
-					if !ok {
-						return false
-					}
-					return createOpts.Image == ""
-				})).
+				CreateInstance(ctx, gomock.Any()).
 				After(getImage).
 				Return(&linodego.Instance{
 					ID:     123,
@@ -353,55 +361,16 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					Status: linodego.InstanceOffline,
 				}, nil)
 			getType := mockLinodeClient.EXPECT().
-				GetType(ctx, linodeMachine.Spec.Type).
+				GetType(ctx, gomock.Any()).
 				After(createInst).
-				Return(&linodego.LinodeType{Disk: 25600}, nil)
+				Return(&linodego.LinodeType{Disk: 20000}, nil)
 			createRootDisk := mockLinodeClient.EXPECT().
-				CreateInstanceDisk(ctx, 123, gomock.Cond(func(opts any) bool {
-					createOpts, ok := opts.(linodego.InstanceDiskCreateOptions)
-					if !ok {
-						return false
-					}
-					return createOpts.Label == "root" && createOpts.Size == 25600-defaultEtcdDiskSize
-				})).
+				CreateInstanceDisk(ctx, 123, gomock.Any()).
 				After(getType).
 				Return(&linodego.InstanceDisk{ID: 100}, nil)
-			createEtcdDisk := mockLinodeClient.EXPECT().
-				CreateInstanceDisk(ctx, 123, gomock.Cond(func(opts any) bool {
-					createOpts, ok := opts.(linodego.InstanceDiskCreateOptions)
-					if !ok {
-						return false
-					}
-					return createOpts.Label == "etcd-data"
-				})).
-				After(createRootDisk).
-				Return(&linodego.InstanceDisk{ID: 101}, nil)
-			createInstConf := mockLinodeClient.EXPECT().
-				CreateInstanceConfig(ctx, 123, linodego.InstanceConfigCreateOptions{
-					Label: fmt.Sprintf("%s disk profile", linodeMachine.Spec.Image),
-					Devices: linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
-					},
-					Helpers: &linodego.InstanceConfigHelpers{
-						UpdateDBDisabled:  true,
-						Distro:            true,
-						ModulesDep:        true,
-						Network:           true,
-						DevTmpFsAutomount: true,
-					},
-					Kernel: "linode/grub2",
-				}).
-				After(createEtcdDisk).
-				Return(&linodego.InstanceConfig{
-					Devices: &linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
-					},
-				}, nil)
 			mockLinodeClient.EXPECT().
-				GetInstanceDisk(ctx, 123, 100).
-				After(createInstConf).
+				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskWaitSeconds).
+				After(createRootDisk).
 				Return(nil, errors.New("Waiting for Instance 123 Disk 100 status ready: not yet"))
 
 			mScope := scope.MachineScope{
@@ -414,10 +383,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			}
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
-			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForInstanceInitDelay))
+			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(*linodeMachine.Status.InstanceState).To(Equal(InstancePreflightConfigured))
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
 
 			listInst = mockLinodeClient.EXPECT().
 				ListInstances(ctx, gomock.Any()).
@@ -434,26 +404,29 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-			listInstConf := mockLinodeClient.EXPECT().
-				ListInstanceConfigs(ctx, 123, gomock.Any()).
+			listInstDisks := mockLinodeClient.EXPECT().
+				ListInstanceDisks(ctx, 123, gomock.Any()).
 				After(getImage).
-				Return([]linodego.InstanceConfig{{
-					Devices: &linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
-					},
-				}}, nil)
-			checkRootDisk := mockLinodeClient.EXPECT().
-				GetInstanceDisk(ctx, 123, 100).
-				After(listInstConf).
-				Return(&linodego.InstanceDisk{Status: linodego.DiskReady}, nil)
-			checkEtcdDisk := mockLinodeClient.EXPECT().
-				GetInstanceDisk(ctx, 123, 101).
-				After(checkRootDisk).
-				Return(&linodego.InstanceDisk{Status: linodego.DiskReady}, nil)
+				Return([]linodego.InstanceDisk{{ID: 100}}, nil)
+			waitForRootDisk := mockLinodeClient.EXPECT().
+				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskWaitSeconds).
+				After(listInstDisks).
+				Return(nil, nil)
+			createEtcdDisk := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, gomock.Any()).
+				After(waitForRootDisk).
+				Return(&linodego.InstanceDisk{ID: 101}, nil)
+			waitForEtcdDisk := mockLinodeClient.EXPECT().
+				WaitForInstanceDiskStatus(ctx, 123, 101, linodego.DiskReady, defaultDiskWaitSeconds).
+				After(createEtcdDisk).
+				Return(nil, nil)
+			createInstConfig := mockLinodeClient.EXPECT().
+				CreateInstanceConfig(ctx, 123, gomock.Any()).
+				After(waitForEtcdDisk).
+				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
-				After(checkEtcdDisk).
+				After(createInstConfig).
 				Return(nil)
 			getAddrs := mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
@@ -475,7 +448,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(linodeMachine.Status.Ready).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+			Expect(rutil.OneOfConditionsTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
