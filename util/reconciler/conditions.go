@@ -3,7 +3,6 @@ package reconciler
 import (
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 )
@@ -16,15 +15,6 @@ func OneOfConditionsTrue(from conditions.Getter, typs ...clusterv1.ConditionType
 	}
 
 	return false
-}
-
-func HasConditionStatus(from conditions.Getter, typ clusterv1.ConditionType, status corev1.ConditionStatus) bool {
-	cond := conditions.Get(from, typ)
-	if cond == nil {
-		return false
-	}
-
-	return cond.Status == status
 }
 
 func RecordDecayingCondition(to conditions.Setter, typ clusterv1.ConditionType, reason, message string, timeout time.Duration) bool {

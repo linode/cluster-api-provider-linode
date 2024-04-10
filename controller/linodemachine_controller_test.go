@@ -232,7 +232,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	})
 
 	Context("creates a control plane instance", func() {
-		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
+		It("in a single call when everything succeeds", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
@@ -263,21 +263,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				CreateInstanceDisk(ctx, 123, gomock.Any()).
 				After(getType).
 				Return(&linodego.InstanceDisk{ID: 100}, nil)
-			waitForRootDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskWaitSeconds).
-				After(createRootDisk).
-				Return(nil, nil)
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, gomock.Any()).
-				After(waitForRootDisk).
+				After(createRootDisk).
 				Return(&linodego.InstanceDisk{ID: 101}, nil)
-			waitForEtcdDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 101, linodego.DiskReady, defaultDiskWaitSeconds).
-				After(createEtcdDisk).
-				Return(nil, nil)
 			createInstConfig := mockLinodeClient.EXPECT().
 				CreateInstanceConfig(ctx, 123, gomock.Any()).
-				After(waitForEtcdDisk).
+				After(createEtcdDisk).
 				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
@@ -337,7 +329,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(testLogs.String()).NotTo(ContainSubstring("Failed to add instance to Node Balancer backend"))
 		})
 
-		It("in multiple calls when disks are delayed", func(ctx SpecContext) {
+		It("in multiple calls when something fails", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
@@ -364,14 +356,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				GetType(ctx, gomock.Any()).
 				After(createInst).
 				Return(&linodego.LinodeType{Disk: 20000}, nil)
-			createRootDisk := mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, gomock.Any()).
 				After(getType).
-				Return(&linodego.InstanceDisk{ID: 100}, nil)
-			mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskWaitSeconds).
-				After(createRootDisk).
-				Return(nil, errors.New("Waiting for Instance 123 Disk 100 status ready: not yet"))
+				Return(nil, errors.New("failed to create"))
 
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -404,25 +392,21 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-			listInstDisks := mockLinodeClient.EXPECT().
-				ListInstanceDisks(ctx, 123, gomock.Any()).
+			getType = mockLinodeClient.EXPECT().
+				GetType(ctx, gomock.Any()).
 				After(getImage).
-				Return([]linodego.InstanceDisk{{ID: 100}}, nil)
-			waitForRootDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultDiskWaitSeconds).
-				After(listInstDisks).
-				Return(nil, nil)
+				Return(&linodego.LinodeType{Disk: 20000}, nil)
+			createRootDisk := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, gomock.Any()).
+				After(getType).
+				Return(&linodego.InstanceDisk{ID: 100}, nil)
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, gomock.Any()).
-				After(waitForRootDisk).
+				After(createRootDisk).
 				Return(&linodego.InstanceDisk{ID: 101}, nil)
-			waitForEtcdDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 101, linodego.DiskReady, defaultDiskWaitSeconds).
-				After(createEtcdDisk).
-				Return(nil, nil)
 			createInstConfig := mockLinodeClient.EXPECT().
 				CreateInstanceConfig(ctx, 123, gomock.Any()).
-				After(waitForEtcdDisk).
+				After(createEtcdDisk).
 				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).

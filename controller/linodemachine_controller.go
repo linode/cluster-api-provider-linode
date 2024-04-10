@@ -51,18 +51,15 @@ import (
 
 const (
 	// default etcd disk size in MB
-	defaultEtcdDiskSize    = 10240
-	defaultDiskWaitSeconds = 5
+	defaultEtcdDiskSize = 10240
 
 	// conditions for preflight instance creation
-	ConditionPreflightCreated          clusterv1.ConditionType = "PreflightCreated"
-	ConditionPreflightRootDiskCreating clusterv1.ConditionType = "PreflightRootDiskCreating"
-	ConditionPreflightRootDiskCreated  clusterv1.ConditionType = "PreflightRootDiskCreated"
-	ConditionPreflightEtcdDiskCreating clusterv1.ConditionType = "PreflightEtcdDiskCreating"
-	ConditionPreflightEtcdDiskCreated  clusterv1.ConditionType = "PreflightEtcdDiskCreated"
-	ConditionPreflightConfigured       clusterv1.ConditionType = "PreflightConfigured"
-	ConditionPreflightBootTriggered    clusterv1.ConditionType = "PreflightBootTriggered"
-	ConditionPreflightReady            clusterv1.ConditionType = "PreflightReady"
+	ConditionPreflightCreated         clusterv1.ConditionType = "PreflightCreated"
+	ConditionPreflightRootDiskCreated clusterv1.ConditionType = "PreflightRootDiskCreated"
+	ConditionPreflightEtcdDiskCreated clusterv1.ConditionType = "PreflightEtcdDiskCreated"
+	ConditionPreflightConfigured      clusterv1.ConditionType = "PreflightConfigured"
+	ConditionPreflightBootTriggered   clusterv1.ConditionType = "PreflightBootTriggered"
+	ConditionPreflightReady           clusterv1.ConditionType = "PreflightReady"
 )
 
 var skippedMachinePhases = map[string]bool{
@@ -413,33 +410,9 @@ func (r *LinodeMachineReconciler) configureControlPlane(
 		return err
 	}
 
-	// TODO: Do we have to wait?
-	if !reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated) {
-		if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDisk.ID, linodego.DiskReady, defaultDiskWaitSeconds); err != nil {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
-			return err
-		}
-
-		conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskCreating)
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated)
-	}
-
 	etcdDisk, err := r.createEtcdDisk(ctx, logger, machineScope, linodeInstanceID)
 	if err != nil {
 		return err
-	}
-
-	// TODO: Do we have to wait?
-	if !reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
-		if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, etcdDisk.ID, linodego.DiskReady, defaultDiskWaitSeconds); err != nil {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
-			return err
-		}
-
-		conditions.Delete(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreating)
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated)
 	}
 
 	_, err = machineScope.LinodeClient.CreateInstanceConfig(
@@ -473,7 +446,7 @@ func (r *LinodeMachineReconciler) createRootDisk(
 	linodeInstanceID int,
 	createOpts linodego.InstanceCreateOptions,
 ) (*linodego.InstanceDisk, error) {
-	if reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated, ConditionPreflightRootDiskCreating) {
+	if reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated) {
 		listFilter := util.Filter{
 			Label: "root",
 		}
@@ -498,7 +471,7 @@ func (r *LinodeMachineReconciler) createRootDisk(
 	if err != nil {
 		logger.Error(err, "Failed to retrieve type for instance")
 
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskCreating, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
 		return nil, err
 	}
@@ -521,12 +494,12 @@ func (r *LinodeMachineReconciler) createRootDisk(
 	if err != nil {
 		logger.Error(err, "Failed to create root disk")
 
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskCreating, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
 		return nil, err
 	}
 
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreating)
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated)
 
 	return rootDisk, nil
 }
@@ -537,7 +510,7 @@ func (r *LinodeMachineReconciler) createEtcdDisk(
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
 ) (*linodego.InstanceDisk, error) {
-	if reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated, ConditionPreflightEtcdDiskCreating) {
+	if reconciler.OneOfConditionsTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
 		listFilter := util.Filter{
 			Label: "etcd-data",
 		}
@@ -570,12 +543,12 @@ func (r *LinodeMachineReconciler) createEtcdDisk(
 	if err != nil {
 		logger.Error(err, "Failed to create etcd disk")
 
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreating, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
 		return nil, err
 	}
 
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreating)
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated)
 
 	return etcdDisk, nil
 }
