@@ -323,22 +323,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
-		if createOpts == nil {
-			createOpts, err = r.newCreateConfig(ctx, machineScope, tags, logger)
-			if err != nil {
-				logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
-
-				if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-					ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
-					reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
-					return ctrl.Result{}, err
-				}
-
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
-			}
-		}
-
-		if err = r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, *createOpts); err != nil {
+		if err = r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, createOpts, tags); err != nil {
 			logger.Error(err, "Failed to configure control plane")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
@@ -399,13 +384,22 @@ func (r *LinodeMachineReconciler) configureControlPlane(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
-	createOpts linodego.InstanceCreateOptions,
+	createOpts *linodego.InstanceCreateOptions,
+	tags []string,
 ) error {
 	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
 		return nil
 	}
 
-	rootDisk, err := r.createRootDisk(ctx, logger, machineScope, linodeInstanceID, createOpts)
+	if createOpts == nil {
+		var err error
+		createOpts, err = r.newCreateConfig(ctx, machineScope, tags, logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	rootDisk, err := r.createRootDisk(ctx, logger, machineScope, linodeInstanceID, *createOpts)
 	if err != nil {
 		return err
 	}
