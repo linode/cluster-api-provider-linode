@@ -28,9 +28,6 @@ func CreateLinodeClient(apiKey string) (*linodego.Client, error) {
 	}
 	linodeClient := linodego.NewClient(oauth2Client)
 
-	// Disable client retries to rely on controller requeues and unblock the loop.
-	linodeClient.SetRetryCount(0)
-
 	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
 	return &linodeClient, nil

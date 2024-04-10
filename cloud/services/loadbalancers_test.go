@@ -458,7 +458,25 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 		expects       func(*mock.MockLinodeMachineClient)
 	}{
 		{
-			name: "Success - Add the node to the NodeBalancer",
+			name: "If the machine is not a control plane node, do nothing",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+			},
+			expects: func(*mock.MockLinodeMachineClient) {},
+		},
+		{
+			name: "Success - If the machine is a control plane node, add the node to the NodeBalancer",
 			machineScope: &scope.MachineScope{
 				Machine: &clusterv1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
