@@ -295,21 +295,6 @@ func (mr *MockLinodeMachineClientMockRecorder) GetVPC(ctx, vpcID any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVPC", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetVPC), ctx, vpcID)
 }
 
-// ListInstances mocks base method.
-func (m *MockLinodeMachineClient) ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListInstances", ctx, opts)
-	ret0, _ := ret[0].([]linodego.Instance)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListInstances indicates an expected call of ListInstances.
-func (mr *MockLinodeMachineClientMockRecorder) ListInstances(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeMachineClient)(nil).ListInstances), ctx, opts)
-}
-
 // ListNodeBalancers mocks base method.
 func (m *MockLinodeMachineClient) ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) ([]linodego.NodeBalancer, error) {
 	m.ctrl.T.Helper()
@@ -524,21 +509,6 @@ func (m *MockLinodeInstanceClient) GetType(ctx context.Context, instanceType str
 func (mr *MockLinodeInstanceClientMockRecorder) GetType(ctx, instanceType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetType", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetType), ctx, instanceType)
-}
-
-// ListInstances mocks base method.
-func (m *MockLinodeInstanceClient) ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListInstances", ctx, opts)
-	ret0, _ := ret[0].([]linodego.Instance)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListInstances indicates an expected call of ListInstances.
-func (mr *MockLinodeInstanceClientMockRecorder) ListInstances(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstances), ctx, opts)
 }
 
 // ListStackscripts mocks base method.

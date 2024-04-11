@@ -253,35 +253,17 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) (ctrl.Result, error) {
-	logger.Info("creating machine")
-
-	tags := []string{machineScope.LinodeCluster.Name}
-
-	listFilter := util.Filter{
-		ID:    machineScope.LinodeMachine.Spec.InstanceID,
-		Label: machineScope.LinodeMachine.Name,
-		Tags:  tags,
-	}
-	filter, err := listFilter.String()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
-	if err != nil {
-		logger.Error(err, "Failed to list Linode machine instances")
-
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
-	}
+	logger.Info("create/init machine")
 
 	var linodeInstance *linodego.Instance
 	var createOpts *linodego.InstanceCreateOptions
+	var err error
 
-	switch len(linodeInstances) {
-	case 1:
-		logger.Info("Linode instance already exists")
+	tags := []string{machineScope.LinodeCluster.Name}
 
-		linodeInstance = &linodeInstances[0]
-	case 0:
+	if machineScope.LinodeMachine.Spec.InstanceID != nil {
+		linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
+	} else {
 		// get the bootstrap data for the Linode instance and set it for create config
 		createOpts, err = r.newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
@@ -290,37 +272,18 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
-		// Omit image, interfaces, and stackscript configuration when first creating a control plane node
-		if kutil.IsControlPlaneMachine(machineScope.Machine) {
-			createOptsSubset := *createOpts
-			createOptsSubset.Image = ""
-			createOptsSubset.Interfaces = nil
-			createOptsSubset.StackScriptID = 0
-			createOptsSubset.StackScriptData = nil
-			linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, createOptsSubset)
-		} else {
-			linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-		}
-		if err != nil {
-			logger.Error(err, "Failed to create Linode machine instance")
+		linodeInstance, err = r.createLinodeInstance(ctx, machineScope, createOpts)
+	}
+	if err != nil {
+		logger.Error(err, "Failed to get/create Linode machine instance")
 
-			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-				ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+			ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
+			reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+			return ctrl.Result{}, err
 		}
 
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
-		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
-
-	default:
-		err = errors.New("multiple instances")
-		logger.Error(err, "multiple instances found", "tags", tags)
-
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 
 	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
@@ -380,6 +343,31 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	return ctrl.Result{}, nil
 }
 
+func (r *LinodeMachineReconciler) createLinodeInstance(
+	ctx context.Context,
+	machineScope *scope.MachineScope,
+	createOpts *linodego.InstanceCreateOptions,
+) (inst *linodego.Instance, err error) {
+	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
+		inst, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
+	} else {
+		// Omit image, interfaces, and stackscript configuration when first creating a control plane node
+		createOptsSubset := *createOpts
+		createOptsSubset.Image = ""
+		createOptsSubset.Interfaces = nil
+		createOptsSubset.StackScriptID = 0
+		createOptsSubset.StackScriptData = nil
+		inst, err = machineScope.LinodeClient.CreateInstance(ctx, createOptsSubset)
+	}
+
+	if inst != nil {
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
+		machineScope.LinodeMachine.Spec.InstanceID = &inst.ID
+	}
+
+	return
+}
+
 func (r *LinodeMachineReconciler) configureControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
@@ -393,11 +381,12 @@ func (r *LinodeMachineReconciler) configureControlPlane(
 	}
 
 	if createOpts == nil {
-		var err error
-		createOpts, err = r.newCreateConfig(ctx, machineScope, tags, logger)
+		cOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
 			return err
 		}
+
+		createOpts = cOpts
 	}
 
 	etcdDiskID, err := r.createEtcdDisk(ctx, logger, machineScope, linodeInstanceID)

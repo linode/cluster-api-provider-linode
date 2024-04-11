@@ -101,9 +101,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Annotations: make(map[string]string),
 			},
 			Spec: infrav1alpha1.LinodeMachineSpec{
-				InstanceID: ptr.To(0),
-				Type:       "g6-nanode-1",
-				Image:      rutil.DefaultMachineControllerLinodeImage,
+				Type:  "g6-nanode-1",
+				Image: rutil.DefaultMachineControllerLinodeImage,
 			},
 		}
 		reconciler = &LinodeMachineReconciler{
@@ -129,12 +128,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 	It("creates a worker instance", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
-		listInst := mockLinodeClient.EXPECT().
-			ListInstances(ctx, gomock.Any()).
-			Return([]linodego.Instance{}, nil)
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
-			After(listInst).
 			Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
 		getImage := mockLinodeClient.EXPECT().
 			GetImage(ctx, gomock.Any()).
@@ -178,25 +173,20 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Address: "192.168.0.2",
 		}}))
 
-		Expect(testLogs.String()).To(ContainSubstring("creating machine"))
-		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to list Linode machine instance"))
-		Expect(testLogs.String()).NotTo(ContainSubstring("Linode instance already exists"))
-		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to create Linode machine InstanceCreateOptions"))
-		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to create Linode machine instance"))
-		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to boot instance"))
-		Expect(testLogs.String()).NotTo(ContainSubstring("multiple instances found"))
-		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to add instance to Node Balancer backend"))
+		logOutput := testLogs.String()
+		Expect(logOutput).To(ContainSubstring("create/init machine"))
+		Expect(logOutput).NotTo(ContainSubstring("Failed to create Linode machine InstanceCreateOptions"))
+		Expect(logOutput).NotTo(ContainSubstring("Failed to get/create Linode machine instance"))
+		Expect(logOutput).NotTo(ContainSubstring("Failed to configure control plane"))
+		Expect(logOutput).NotTo(ContainSubstring("Failed to boot instance"))
+		Expect(logOutput).NotTo(ContainSubstring("Failed to add instance to Node Balancer backend"))
 	})
 
 	Context("fails when a preflight condition is stale", func() {
 		It("can't create an instance in time", func(ctx SpecContext) {
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
-			listInst := mockLinodeClient.EXPECT().
-				ListInstances(ctx, gomock.Any()).
-				Return([]linodego.Instance{}, nil)
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				After(listInst).
 				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
@@ -237,12 +227,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
-			listInst := mockLinodeClient.EXPECT().
-				ListInstances(ctx, gomock.Any()).
-				Return([]linodego.Instance{}, nil)
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				After(listInst).
 				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
@@ -318,28 +304,21 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Address: "192.168.0.2",
 			}}))
 
-			Expect(testLogs.String()).To(ContainSubstring("creating machine"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Failed to list Linode machine instance"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Linode instance already exists"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Failed to create Linode machine InstanceCreateOptions"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Failed to create Linode machine instance"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Failed to configure instance profile"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Waiting for control plane disks to be ready"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Failed to boot instance"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("multiple instances found"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Failed to add instance to Node Balancer backend"))
+			logOutput := testLogs.String()
+			Expect(logOutput).To(ContainSubstring("create/init machine"))
+			Expect(logOutput).NotTo(ContainSubstring("Failed to create Linode machine InstanceCreateOptions"))
+			Expect(logOutput).NotTo(ContainSubstring("Failed to get/create Linode machine instance"))
+			Expect(logOutput).NotTo(ContainSubstring("Failed to configure control plane"))
+			Expect(logOutput).NotTo(ContainSubstring("Failed to boot instance"))
+			Expect(logOutput).NotTo(ContainSubstring("Failed to add instance to Node Balancer backend"))
 		})
 
 		It("in multiple calls when something fails", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
-			listInst := mockLinodeClient.EXPECT().
-				ListInstances(ctx, gomock.Any()).
-				Return([]linodego.Instance{}, nil)
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				After(listInst).
 				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
@@ -374,16 +353,16 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
 
-			listInst = mockLinodeClient.EXPECT().
-				ListInstances(ctx, gomock.Any()).
-				Return([]linodego.Instance{{
+			getInst := mockLinodeClient.EXPECT().
+				GetInstance(ctx, gomock.Any()).
+				Return(&linodego.Instance{
 					ID:     123,
 					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 					Status: linodego.InstanceOffline,
-				}}, nil)
+				}, nil)
 			getRegion = mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				After(listInst).
+				After(getInst).
 				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
 			getImage = mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
@@ -442,8 +421,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Address: "192.168.0.2",
 			}}))
 
-			Expect(testLogs.String()).To(ContainSubstring("creating machine"))
-			Expect(testLogs.String()).To(ContainSubstring("Linode instance already exists"))
+			Expect(testLogs.String()).To(ContainSubstring("create/init machine"))
 		})
 	})
 })

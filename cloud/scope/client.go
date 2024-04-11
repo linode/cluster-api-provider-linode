@@ -19,7 +19,6 @@ type LinodeMachineClient interface {
 // LinodeInstanceClient defines the methods that a Linode client must have to interact with Linode's Instance service.
 type LinodeInstanceClient interface {
 	GetInstanceIPAddresses(ctx context.Context, linodeID int) (*linodego.InstanceIPAddressResponse, error)
-	ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error)
 	CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error)
 	BootInstance(ctx context.Context, linodeID int, configID int) error
 	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
