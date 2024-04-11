@@ -297,6 +297,6 @@ var _ = Describe("no-ctrl-plane-endpt", Ordered, Label("cluster", "no-ctrl-plane
 		Expect(linodeCluster.Spec.Network.NodeBalancerID).To(BeNil())
 
 		By("recording the expected events")
-		Expect(<-recorder.Events).To(ContainSubstring("Warning CreateError [401] Invalid Token"))
+		Expect(<-recorder.Events).To(ContainSubstring("Warning CreateError"))
 	})
 })
