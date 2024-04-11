@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -399,12 +400,12 @@ func (r *LinodeMachineReconciler) configureControlPlane(
 		}
 	}
 
-	rootDisk, err := r.createRootDisk(ctx, logger, machineScope, linodeInstanceID, *createOpts)
+	etcdDiskID, err := r.createEtcdDisk(ctx, logger, machineScope, linodeInstanceID)
 	if err != nil {
 		return err
 	}
 
-	etcdDisk, err := r.createEtcdDisk(ctx, logger, machineScope, linodeInstanceID)
+	rootDiskID, err := r.createRootDisk(ctx, logger, machineScope, linodeInstanceID, *createOpts)
 	if err != nil {
 		return err
 	}
@@ -415,8 +416,8 @@ func (r *LinodeMachineReconciler) configureControlPlane(
 		linodego.InstanceConfigCreateOptions{
 			Label: fmt.Sprintf("%s disk profile", createOpts.Image),
 			Devices: linodego.InstanceConfigDeviceMap{
-				SDA: &linodego.InstanceConfigDevice{DiskID: rootDisk.ID},
-				SDB: &linodego.InstanceConfigDevice{DiskID: etcdDisk.ID},
+				SDA: &linodego.InstanceConfigDevice{DiskID: *rootDiskID},
+				SDB: &linodego.InstanceConfigDevice{DiskID: *etcdDiskID},
 			},
 			Helpers: &linodego.InstanceConfigHelpers{
 				UpdateDBDisabled:  true,
@@ -430,6 +431,9 @@ func (r *LinodeMachineReconciler) configureControlPlane(
 		},
 	)
 
+	delete(machineScope.LinodeMachine.Annotations, "root-disk-id")
+	delete(machineScope.LinodeMachine.Annotations, "etcd-disk-id")
+
 	return err
 }
 
@@ -439,26 +443,19 @@ func (r *LinodeMachineReconciler) createRootDisk(
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
 	createOpts linodego.InstanceCreateOptions,
-) (*linodego.InstanceDisk, error) {
+) (*int, error) {
 	if conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated) {
-		listFilter := util.Filter{
-			Label: "root",
+		diskIDStr, ok := machineScope.LinodeMachine.ObjectMeta.Annotations["root-disk-id"]
+		if !ok {
+			return nil, errors.New("unable to find expected disk ID")
 		}
-		filter, err := listFilter.String()
+
+		diskID, err := strconv.Atoi(diskIDStr)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse root-disk-id annotation: %w", err)
 		}
 
-		disks, err := machineScope.LinodeClient.ListInstanceDisks(ctx, linodeInstanceID, linodego.NewListOptions(1, filter))
-		if err != nil {
-			return nil, err
-		}
-
-		if len(disks) != 1 {
-			return nil, fmt.Errorf("unable to find expected root disk for instance %d", linodeInstanceID)
-		}
-
-		return &disks[0], nil
+		return &diskID, nil
 	}
 
 	instanceType, err := machineScope.LinodeClient.GetType(ctx, createOpts.Type)
@@ -493,9 +490,11 @@ func (r *LinodeMachineReconciler) createRootDisk(
 		return nil, err
 	}
 
+	machineScope.LinodeMachine.Annotations["root-disk-id"] = fmt.Sprintf("%d", rootDisk.ID)
+
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated)
 
-	return rootDisk, nil
+	return &rootDisk.ID, nil
 }
 
 func (r *LinodeMachineReconciler) createEtcdDisk(
@@ -503,26 +502,19 @@ func (r *LinodeMachineReconciler) createEtcdDisk(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
-) (*linodego.InstanceDisk, error) {
+) (*int, error) {
 	if conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
-		listFilter := util.Filter{
-			Label: "etcd-data",
+		diskIDStr, ok := machineScope.LinodeMachine.ObjectMeta.Annotations["etcd-disk-id"]
+		if !ok {
+			return nil, errors.New("unable to find expected disk ID")
 		}
-		filter, err := listFilter.String()
+
+		diskID, err := strconv.Atoi(diskIDStr)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse etcd-disk-id annotation: %w", err)
 		}
 
-		disks, err := machineScope.LinodeClient.ListInstanceDisks(ctx, linodeInstanceID, linodego.NewListOptions(1, filter))
-		if err != nil {
-			return nil, err
-		}
-
-		if len(disks) != 1 {
-			return nil, fmt.Errorf("unable to find expected etcd disk for instance %d", linodeInstanceID)
-		}
-
-		return &disks[0], nil
+		return &diskID, nil
 	}
 
 	etcdDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
@@ -542,9 +534,11 @@ func (r *LinodeMachineReconciler) createEtcdDisk(
 		return nil, err
 	}
 
+	machineScope.LinodeMachine.Annotations["etcd-disk-id"] = fmt.Sprintf("%d", etcdDisk.ID)
+
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated)
 
-	return etcdDisk, nil
+	return &etcdDisk.ID, nil
 }
 
 func (r *LinodeMachineReconciler) reconcileUpdate(
