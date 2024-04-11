@@ -21,7 +21,6 @@ import (
 	"go/build"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"testing"
 
@@ -48,7 +47,6 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
-var clusterAPIVersionRegex = regexp.MustCompile(`^(\W)sigs\.k8s\.io/cluster-api v(.+)`)
 
 func TestControllers(t *testing.T) {
 	t.Parallel()
@@ -59,7 +57,6 @@ func TestControllers(t *testing.T) {
 }
 
 func getFilePathToCAPICRDs() string {
-
 	gopath := envOr("GOPATH", build.Default.GOPATH)
 	return filepath.Join(gopath, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.6.3", "config", "crd", "bases")
 }
