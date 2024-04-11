@@ -17,7 +17,6 @@
 package controller
 
 import (
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
@@ -32,7 +31,6 @@ import (
 )
 
 var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
-	var mockCtrl *gomock.Controller
 	var reconciler *LinodeClusterReconciler
 	nodebalancerID := 1
 	controlPlaneEndpointHost := "10.0.0.1"
@@ -80,26 +78,10 @@ var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
 		},
 	}
 
-	// Create a recorder with a buffered channel for consuming event strings.
-	recorder := record.NewFakeRecorder(10)
-
 	BeforeEach(func() {
-		// Create a new gomock controller for each test run
-		mockCtrl = gomock.NewController(GinkgoT())
 		reconciler = &LinodeClusterReconciler{
 			Client:       k8sClient,
-			Recorder:     recorder,
 			LinodeApiKey: "test-key",
-		}
-	})
-
-	AfterEach(func() {
-		// At the end of each test run, tell the gomock controller it's done
-		// so it can check configured expectations and validate the methods called
-		mockCtrl.Finish()
-		// Flush the channel if any events were not consumed.
-		for len(recorder.Events) > 0 {
-			<-recorder.Events
 		}
 	})
 
@@ -127,7 +109,6 @@ var _ = Describe("lifecycle", Ordered, Label("cluster", "lifecycle"), func() {
 })
 
 var _ = Describe("no-capl-cluster", Ordered, Label("cluster", "no-capl-cluster"), func() {
-	var mockCtrl *gomock.Controller
 	var reconciler *LinodeClusterReconciler
 	nodebalancerID := 1
 	controlPlaneEndpointHost := "10.0.0.1"
@@ -151,26 +132,10 @@ var _ = Describe("no-capl-cluster", Ordered, Label("cluster", "no-capl-cluster")
 		},
 	}
 
-	// Create a recorder with a buffered channel for consuming event strings.
-	recorder := record.NewFakeRecorder(10)
-
 	BeforeEach(func() {
-		// Create a new gomock controller for each test run
-		mockCtrl = gomock.NewController(GinkgoT())
 		reconciler = &LinodeClusterReconciler{
 			Client:       k8sClient,
-			Recorder:     recorder,
 			LinodeApiKey: "test-key",
-		}
-	})
-
-	AfterEach(func() {
-		// At the end of each test run, tell the gomock controller it's done
-		// so it can check configured expectations and validate the methods called
-		mockCtrl.Finish()
-		// Flush the channel if any events were not consumed.
-		for len(recorder.Events) > 0 {
-			<-recorder.Events
 		}
 	})
 
@@ -189,7 +154,6 @@ var _ = Describe("no-capl-cluster", Ordered, Label("cluster", "no-capl-cluster")
 })
 
 var _ = Describe("no-owner-ref", Ordered, Label("cluster", "no-owner-ref"), func() {
-	var mockCtrl *gomock.Controller
 	var reconciler *LinodeClusterReconciler
 	nodebalancerID := 1
 	controlPlaneEndpointHost := "10.0.0.1"
@@ -229,26 +193,10 @@ var _ = Describe("no-owner-ref", Ordered, Label("cluster", "no-owner-ref"), func
 		},
 	}
 
-	// Create a recorder with a buffered channel for consuming event strings.
-	recorder := record.NewFakeRecorder(10)
-
 	BeforeEach(func() {
-		// Create a new gomock controller for each test run
-		mockCtrl = gomock.NewController(GinkgoT())
 		reconciler = &LinodeClusterReconciler{
 			Client:       k8sClient,
-			Recorder:     recorder,
 			LinodeApiKey: "test-key",
-		}
-	})
-
-	AfterEach(func() {
-		// At the end of each test run, tell the gomock controller it's done
-		// so it can check configured expectations and validate the methods called
-		mockCtrl.Finish()
-		// Flush the channel if any events were not consumed.
-		for len(recorder.Events) > 0 {
-			<-recorder.Events
 		}
 	})
 
@@ -270,7 +218,6 @@ var _ = Describe("no-owner-ref", Ordered, Label("cluster", "no-owner-ref"), func
 })
 
 var _ = Describe("no-ctrl-plane-endpt", Ordered, Label("cluster", "no-ctrl-plane-endpt"), func() {
-	var mockCtrl *gomock.Controller
 	var reconciler *LinodeClusterReconciler
 	clusterName := "no-ctrl-plane-endpt"
 	clusterNameSpace := "default"
@@ -314,8 +261,6 @@ var _ = Describe("no-ctrl-plane-endpt", Ordered, Label("cluster", "no-ctrl-plane
 	recorder := record.NewFakeRecorder(10)
 
 	BeforeEach(func() {
-		// Create a new gomock controller for each test run
-		mockCtrl = gomock.NewController(GinkgoT())
 		reconciler = &LinodeClusterReconciler{
 			Client:       k8sClient,
 			Recorder:     recorder,
@@ -324,9 +269,6 @@ var _ = Describe("no-ctrl-plane-endpt", Ordered, Label("cluster", "no-ctrl-plane
 	})
 
 	AfterEach(func() {
-		// At the end of each test run, tell the gomock controller it's done
-		// so it can check configured expectations and validate the methods called
-		mockCtrl.Finish()
 		// Flush the channel if any events were not consumed.
 		for len(recorder.Events) > 0 {
 			<-recorder.Events
@@ -353,5 +295,8 @@ var _ = Describe("no-ctrl-plane-endpt", Ordered, Label("cluster", "no-ctrl-plane
 
 		By("checking nb id to be nil")
 		Expect(linodeCluster.Spec.Network.NodeBalancerID).To(BeNil())
+
+		By("recording the expected events")
+		Expect(<-recorder.Events).To(ContainSubstring("Warning CreateError [401] Invalid Token"))
 	})
 })

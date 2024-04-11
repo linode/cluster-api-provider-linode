@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strings"
 	"testing"
 
 	"k8s.io/client-go/kubernetes/scheme"
@@ -60,25 +59,9 @@ func TestControllers(t *testing.T) {
 }
 
 func getFilePathToCAPICRDs() string {
-	modBits, err := os.ReadFile(filepath.Join("..", "go.mod"))
-	if err != nil {
-		return ""
-	}
-
-	var clusterAPIVersion string
-	for _, line := range strings.Split(string(modBits), "\n") {
-		matches := clusterAPIVersionRegex.FindStringSubmatch(line)
-		if len(matches) == 3 {
-			clusterAPIVersion = matches[2]
-		}
-	}
-
-	if clusterAPIVersion == "" {
-		return ""
-	}
 
 	gopath := envOr("GOPATH", build.Default.GOPATH)
-	return filepath.Join(gopath, "pkg", "mod", "sigs.k8s.io", fmt.Sprintf("cluster-api@v%s", clusterAPIVersion), "config", "crd", "bases")
+	return filepath.Join(gopath, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.6.3", "config", "crd", "bases")
 }
 
 func envOr(envKey, defaultValue string) string {
