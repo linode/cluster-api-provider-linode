@@ -247,7 +247,6 @@ func (r *LinodeMachineReconciler) reconcile(
 	return
 }
 
-//nolint:cyclop // keep top-level preflight condition checks in the same function for readability
 func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
