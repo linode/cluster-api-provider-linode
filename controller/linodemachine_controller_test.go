@@ -353,16 +353,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 			Expect(conditions.IsTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
 
-			getInst := mockLinodeClient.EXPECT().
-				GetInstance(ctx, gomock.Any()).
-				Return(&linodego.Instance{
-					ID:     123,
-					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
-					Status: linodego.InstanceOffline,
-				}, nil)
 			getRegion = mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				After(getInst).
 				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
 			getImage = mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
