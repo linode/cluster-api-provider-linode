@@ -254,15 +254,12 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 ) (ctrl.Result, error) {
 	logger.Info("create/init machine")
 
-	var linodeInstance *linodego.Instance
 	var createOpts *linodego.InstanceCreateOptions
 	var err error
 
 	tags := []string{machineScope.LinodeCluster.Name}
 
-	if machineScope.LinodeMachine.Spec.InstanceID != nil {
-		linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
-	} else {
+	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightCreated) {
 		// get the bootstrap data for the Linode instance and set it for create config
 		createOpts, err = r.newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
@@ -271,22 +268,31 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
-		linodeInstance, err = r.createLinodeInstance(ctx, machineScope, createOpts)
-	}
-	if err != nil {
-		logger.Error(err, "Failed to get/create Linode machine instance")
+		linodeInstance, err := r.createLinodeInstance(ctx, machineScope, createOpts)
+		if err != nil {
+			logger.Error(err, "Failed to get/create Linode machine instance")
 
-		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-			ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
-			reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
-			return ctrl.Result{}, err
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
+		machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
+		machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
 	}
 
 	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
-		if err = r.configureControlPlane(ctx, logger, machineScope, linodeInstance.ID, createOpts, tags); err != nil {
+		if err = r.configureControlPlane(
+			ctx, logger, machineScope,
+			*machineScope.LinodeMachine.Spec.InstanceID,
+			createOpts, tags,
+		); err != nil {
 			logger.Error(err, "Failed to configure control plane")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
@@ -302,7 +308,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
-		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+		if err = machineScope.LinodeClient.BootInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
@@ -333,9 +339,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightReady)
 	}
 
-	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
-	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
-
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
 
@@ -357,11 +360,6 @@ func (r *LinodeMachineReconciler) createLinodeInstance(
 		createOptsSubset.StackScriptID = 0
 		createOptsSubset.StackScriptData = nil
 		inst, err = machineScope.LinodeClient.CreateInstance(ctx, createOptsSubset)
-	}
-
-	if inst != nil {
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
-		machineScope.LinodeMachine.Spec.InstanceID = &inst.ID
 	}
 
 	return
