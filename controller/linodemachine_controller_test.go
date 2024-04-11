@@ -95,9 +95,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		}
 		linodeMachine = infrav1alpha1.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "mock",
-				Namespace: "default",
-				UID:       "12345",
+				Name:        "mock",
+				Namespace:   "default",
+				UID:         "12345",
+				Annotations: make(map[string]string),
 			},
 			Spec: infrav1alpha1.LinodeMachineSpec{
 				InstanceID: ptr.To(0),
@@ -255,21 +256,21 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 					Status: linodego.InstanceOffline,
 				}, nil)
+			createEtcdDisk := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, gomock.Any()).
+				After(createInst).
+				Return(&linodego.InstanceDisk{ID: 101}, nil)
 			getType := mockLinodeClient.EXPECT().
 				GetType(ctx, gomock.Any()).
-				After(createInst).
+				After(createEtcdDisk).
 				Return(&linodego.LinodeType{Disk: 20000}, nil)
 			createRootDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, gomock.Any()).
 				After(getType).
 				Return(&linodego.InstanceDisk{ID: 100}, nil)
-			createEtcdDisk := mockLinodeClient.EXPECT().
-				CreateInstanceDisk(ctx, 123, gomock.Any()).
-				After(createRootDisk).
-				Return(&linodego.InstanceDisk{ID: 101}, nil)
 			createInstConfig := mockLinodeClient.EXPECT().
 				CreateInstanceConfig(ctx, 123, gomock.Any()).
-				After(createEtcdDisk).
+				After(createRootDisk).
 				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
@@ -352,13 +353,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 					Status: linodego.InstanceOffline,
 				}, nil)
-			getType := mockLinodeClient.EXPECT().
-				GetType(ctx, gomock.Any()).
-				After(createInst).
-				Return(&linodego.LinodeType{Disk: 20000}, nil)
 			mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, gomock.Any()).
-				After(getType).
+				After(createInst).
 				Return(nil, errors.New("failed to create"))
 
 			mScope := scope.MachineScope{
@@ -392,21 +389,21 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-			getType = mockLinodeClient.EXPECT().
-				GetType(ctx, gomock.Any()).
+			createEtcdDisk := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, gomock.Any()).
 				After(getImage).
+				Return(&linodego.InstanceDisk{ID: 101}, nil)
+			getType := mockLinodeClient.EXPECT().
+				GetType(ctx, gomock.Any()).
+				After(createEtcdDisk).
 				Return(&linodego.LinodeType{Disk: 20000}, nil)
 			createRootDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, gomock.Any()).
 				After(getType).
 				Return(&linodego.InstanceDisk{ID: 100}, nil)
-			createEtcdDisk := mockLinodeClient.EXPECT().
-				CreateInstanceDisk(ctx, 123, gomock.Any()).
-				After(createRootDisk).
-				Return(&linodego.InstanceDisk{ID: 101}, nil)
 			createInstConfig := mockLinodeClient.EXPECT().
 				CreateInstanceConfig(ctx, 123, gomock.Any()).
-				After(createEtcdDisk).
+				After(createRootDisk).
 				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).

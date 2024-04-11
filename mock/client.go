@@ -295,21 +295,6 @@ func (mr *MockLinodeMachineClientMockRecorder) GetVPC(ctx, vpcID any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVPC", reflect.TypeOf((*MockLinodeMachineClient)(nil).GetVPC), ctx, vpcID)
 }
 
-// ListInstanceDisks mocks base method.
-func (m *MockLinodeMachineClient) ListInstanceDisks(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceDisk, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListInstanceDisks", ctx, linodeID, opts)
-	ret0, _ := ret[0].([]linodego.InstanceDisk)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListInstanceDisks indicates an expected call of ListInstanceDisks.
-func (mr *MockLinodeMachineClientMockRecorder) ListInstanceDisks(ctx, linodeID, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceDisks", reflect.TypeOf((*MockLinodeMachineClient)(nil).ListInstanceDisks), ctx, linodeID, opts)
-}
-
 // ListInstances mocks base method.
 func (m *MockLinodeMachineClient) ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error) {
 	m.ctrl.T.Helper()
@@ -539,21 +524,6 @@ func (m *MockLinodeInstanceClient) GetType(ctx context.Context, instanceType str
 func (mr *MockLinodeInstanceClientMockRecorder) GetType(ctx, instanceType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetType", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetType), ctx, instanceType)
-}
-
-// ListInstanceDisks mocks base method.
-func (m *MockLinodeInstanceClient) ListInstanceDisks(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceDisk, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListInstanceDisks", ctx, linodeID, opts)
-	ret0, _ := ret[0].([]linodego.InstanceDisk)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListInstanceDisks indicates an expected call of ListInstanceDisks.
-func (mr *MockLinodeInstanceClientMockRecorder) ListInstanceDisks(ctx, linodeID, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceDisks", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstanceDisks), ctx, linodeID, opts)
 }
 
 // ListInstances mocks base method.
