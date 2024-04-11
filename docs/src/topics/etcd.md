@@ -19,7 +19,9 @@ The pod will need the bucket details like the name, region, endpoints and access
 bucket-details secret that is created when the OBJ bucket gets created.
 
 ### Enabling SSE
-Users can also enable SSE(Server_side encryption) by passing a SSE AES-256 Key as an env var. All env vars [here](../../../templates/addons/etcd-backup-restore/etcd-backup-restore.yaml) on the pod can be controlled during the provisioning process.
+Users can also enable SSE (Server-side encryption) by passing a SSE AES-256 Key as an env var. All env vars
+[here](https://github.com/linode/cluster-api-provider-linode/blob/main/templates/addons/etcd-backup-restore/etcd-backup-restore.yaml)
+on the pod can be controlled during the provisioning process.
 
 > [!WARNING]  
 > This is currently under development and will be available for use once the upstream [PR](https://github.com/gardener/etcd-backup-restore/pull/719) is merged and an official image is made available
