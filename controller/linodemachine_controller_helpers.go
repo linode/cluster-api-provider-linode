@@ -377,3 +377,31 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 	}
 	return nil
 }
+
+func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha1.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {
+	for deviceName, disk := range instanceDisks {
+		dev := linodego.InstanceConfigDevice{
+			DiskID: disk.DiskID,
+		}
+		switch deviceName {
+		case "sdb":
+			instanceConfig.SDB = &dev
+		case "sdc":
+			instanceConfig.SDC = &dev
+		case "sdd":
+			instanceConfig.SDD = &dev
+		case "sde":
+			instanceConfig.SDE = &dev
+		case "sdf":
+			instanceConfig.SDF = &dev
+		case "sdg":
+			instanceConfig.SDG = &dev
+		case "sdh":
+			instanceConfig.SDH = &dev
+		default:
+			return fmt.Errorf("unknown device name: %q", deviceName)
+		}
+	}
+
+	return nil
+}

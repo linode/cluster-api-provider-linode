@@ -51,6 +51,7 @@ import (
 
 const (
 	linodeBusyCode           = 400
+	sizeToMB                 = 1024
 	defaultResizeWaitSeconds = 5
 
 	// conditions for preflight instance creation
@@ -394,7 +395,7 @@ func (r *LinodeMachineReconciler) configureDisks(
 				linodeInstanceID,
 				linodego.InstanceDiskCreateOptions{
 					Label:      label,
-					Size:       disk.SizeGB * 1024,
+					Size:       disk.SizeGB * sizeToMB,
 					Filesystem: string(linodego.FilesystemExt4),
 				},
 			)
@@ -463,11 +464,11 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 		// dynamically calculate root disk size unless an explcit OS disk is being set
 		additionalDiskSize := 0
 		for _, disk := range machineScope.LinodeMachine.Spec.DataDisks {
-			additionalDiskSize += disk.SizeGB * 1024
+			additionalDiskSize += disk.SizeGB * sizeToMB
 		}
 		diskSize := rootDisk.Size - additionalDiskSize
 		if machineScope.LinodeMachine.Spec.OSDisk != nil {
-			diskSize = machineScope.LinodeMachine.Spec.OSDisk.SizeGB * 1024
+			diskSize = machineScope.LinodeMachine.Spec.OSDisk.SizeGB * sizeToMB
 		}
 
 		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil && !linodego.ErrHasStatus(err, linodeBusyCode) {
@@ -514,40 +515,12 @@ func (r *LinodeMachineReconciler) UpdateInstanceConfigProfile(
 	instanceConfig := configs[0]
 
 	if machineScope.LinodeMachine.Spec.DataDisks != nil {
-		if err := r.createInstanceConfigDeviceMap(machineScope.LinodeMachine.Spec.DataDisks, instanceConfig.Devices); err != nil {
+		if err := createInstanceConfigDeviceMap(machineScope.LinodeMachine.Spec.DataDisks, instanceConfig.Devices); err != nil {
 			return err
 		}
 	}
 	if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, linodeInstanceID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Devices: instanceConfig.Devices}); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (r LinodeMachineReconciler) createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha1.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {
-	for deviceName, disk := range instanceDisks {
-		dev := linodego.InstanceConfigDevice{
-			DiskID: disk.DiskID,
-		}
-		switch deviceName {
-		case "sdb":
-			instanceConfig.SDB = &dev
-		case "sdc":
-			instanceConfig.SDC = &dev
-		case "sdd":
-			instanceConfig.SDD = &dev
-		case "sde":
-			instanceConfig.SDE = &dev
-		case "sdf":
-			instanceConfig.SDF = &dev
-		case "sdg":
-			instanceConfig.SDG = &dev
-		case "sdh":
-			instanceConfig.SDH = &dev
-		default:
-			return fmt.Errorf("unknown device name: %q", deviceName)
-		}
 	}
 
 	return nil

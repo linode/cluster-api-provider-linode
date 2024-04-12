@@ -367,3 +367,101 @@ func TestSetUserData(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateInstanceConfigDeviceMap(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		instanceDisks   map[string]*infrav1alpha1.InstanceDisk
+		expectedDiskMap linodego.InstanceConfigDeviceMap
+		expectedError   error
+	}{
+		{
+			name: "Success - single disk gets added to config",
+			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdb": {
+				DiskID: 101,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}},
+			expectedDiskMap: linodego.InstanceConfigDeviceMap{SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+				SDB: &linodego.InstanceConfigDevice{DiskID: 101},
+			},
+		},
+		{
+			name: "Success - multiple disks gets added to config",
+			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdb": {
+				DiskID: 101,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}, "sdc": {
+				DiskID: 102,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}, "sdd": {
+				DiskID: 103,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}, "sde": {
+				DiskID: 104,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}, "sdf": {
+				DiskID: 105,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}, "sdg": {
+				DiskID: 106,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}, "sdh": {
+				DiskID: 107,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}},
+			expectedDiskMap: linodego.InstanceConfigDeviceMap{
+				SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+				SDB: &linodego.InstanceConfigDevice{DiskID: 101},
+				SDC: &linodego.InstanceConfigDevice{DiskID: 102},
+				SDD: &linodego.InstanceConfigDevice{DiskID: 103},
+				SDE: &linodego.InstanceConfigDevice{DiskID: 104},
+				SDF: &linodego.InstanceConfigDevice{DiskID: 105},
+				SDG: &linodego.InstanceConfigDevice{DiskID: 106},
+				SDH: &linodego.InstanceConfigDevice{DiskID: 107},
+			},
+		},
+		{
+			name: "Error - single disk with invalid name",
+			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdx": {
+				DiskID: 101,
+				SizeGB: 1024,
+				Label:  "disk1",
+			}},
+			expectedError: fmt.Errorf("unknown device name: \"sdx\""),
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			actualConfig := linodego.InstanceConfig{
+				ID:    0,
+				Label: "root disk",
+				Devices: &linodego.InstanceConfigDeviceMap{
+					SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+				},
+			}
+			err := createInstanceConfigDeviceMap(testcase.instanceDisks, actualConfig.Devices)
+			if testcase.expectedError != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
+			} else {
+				assert.Equal(t, actualConfig.Devices.SDA, testcase.expectedDiskMap.SDA)
+				assert.Equal(t, actualConfig.Devices.SDB, testcase.expectedDiskMap.SDB)
+				assert.Equal(t, actualConfig.Devices.SDC, testcase.expectedDiskMap.SDC)
+				assert.Equal(t, actualConfig.Devices.SDD, testcase.expectedDiskMap.SDD)
+				assert.Equal(t, actualConfig.Devices.SDE, testcase.expectedDiskMap.SDE)
+				assert.Equal(t, actualConfig.Devices.SDF, testcase.expectedDiskMap.SDF)
+				assert.Equal(t, actualConfig.Devices.SDG, testcase.expectedDiskMap.SDG)
+			}
+		})
+	}
+}
