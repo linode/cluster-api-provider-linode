@@ -372,7 +372,7 @@ func (r *LinodeMachineReconciler) configureDisks(
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
 ) error {
-	if machineScope.LinodeMachine.Spec.DataDisks == nil && machineScope.LinodeMachine.Spec.OSDisk != nil {
+	if machineScope.LinodeMachine.Spec.DataDisks == nil && machineScope.LinodeMachine.Spec.OSDisk == nil {
 		return nil
 	}
 
@@ -470,7 +470,7 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 			diskSize = machineScope.LinodeMachine.Spec.OSDisk.SizeGB * 1024
 		}
 
-		if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil && !linodego.ErrHasStatus(err, linodeBusyCode) {
+		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil && !linodego.ErrHasStatus(err, linodeBusyCode) {
 			logger.Error(err, "Failed to resize root disk")
 
 			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
