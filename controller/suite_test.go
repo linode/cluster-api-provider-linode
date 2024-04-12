@@ -22,8 +22,10 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
+	"golang.org/x/mod/modfile"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,9 +46,16 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
-var k8sClient client.Client
-var testEnv *envtest.Environment
+var (
+	cfg               *rest.Config
+	k8sClient         client.Client
+	testEnv           *envtest.Environment
+	clusterAPIVersion string
+	data              []byte
+	err               error
+	_, b, _, _        = runtime.Caller(0)
+	basepath          = filepath.Dir(b)
+)
 
 func TestControllers(t *testing.T) {
 	t.Parallel()
@@ -57,8 +66,33 @@ func TestControllers(t *testing.T) {
 }
 
 func getFilePathToCAPICRDs() string {
+	goModFilePath := filepath.Join(basepath, "..", "go.mod")
+
+	// Read the go.mod file
+	data, err = os.ReadFile(goModFilePath)
+	if err != nil {
+		panic(err)
+	}
+
+	// Parse the file
+	parsedFile, err := modfile.Parse(goModFilePath, data, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// Get the cluster-api version
+	for _, goMod := range parsedFile.Require {
+		if strings.Contains(goMod.Mod.Path, "cluster-api") {
+			clusterAPIVersion = goMod.Mod.Version
+		}
+	}
+
+	if clusterAPIVersion == "" {
+		panic("Could not find cluster-api version in the go.mod file")
+	}
+
 	gopath := envOr("GOPATH", build.Default.GOPATH)
-	return filepath.Join(gopath, "pkg", "mod", "sigs.k8s.io", "cluster-api@v1.6.3", "config", "crd", "bases")
+	return filepath.Join(gopath, "pkg", "mod", "sigs.k8s.io", fmt.Sprintf("cluster-api@%s", clusterAPIVersion), "config", "crd", "bases")
 }
 
 func envOr(envKey, defaultValue string) string {
