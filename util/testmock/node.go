@@ -1,61 +1,47 @@
 package testmock
 
-// Case declares a single node belonging to one or more code paths.
-func Case(text string, actions ...action) entry {
-	ent := entry{Text: text}
-	for _, do := range actions {
-		do(&ent)
-	}
-
-	return ent
-}
-
-// Either declares multiple nodes forking out into different code paths.
-func Either(text string, entries ...entry) fork {
-	return fork{
-		text:    text,
-		entries: entries,
-	}
-}
+import "fmt"
 
 // Mock declares a function for mocking method calls on a single mock client.
-func Mock(text string, call any) action {
-	return func(m *entry) {
-		m.calls = append(m.calls, fn{text, call})
+func Mock(text string, value any) call {
+	return call{
+		text:  fmt.Sprintf("Mock(%s)", text),
+		value: value,
 	}
 }
 
 // Result terminates a code path with a function that tests the effects of mocked method calls.
-func Result(text string, result any) action {
-	return func(m *entry) {
-		if m.result.value != nil {
-			panic("attempted Case with multiple Result")
-		}
-		m.result.text = text
-		m.result.value = result
+func Result(text string, value any) result {
+	return result{
+		text:  fmt.Sprintf("Result(%s)", text),
+		value: value,
 	}
+}
+
+// Once declares a function that runs one time when executing all code paths.
+// It is triggered at the beginning of the leftmost code path where it is inserted.
+func Once(text string, value any) once {
+	return once{
+		fn: fn{
+			text:  fmt.Sprintf("Once(%s)", text),
+			value: value,
+		},
+	}
+}
+
+// Case declares both a Mock and a Result for terminating a code path.
+func Case(c call, r result) leaf {
+	return leaf{c, r}
+}
+
+// Either declares multiple nodes that fork out into unique code paths.
+func Either(nodes ...prong) fork {
+	return nodes
 }
 
 // Common interface for defining permutations of code paths as a tree.
 type node interface {
-	impl()
-}
-
-func (fork) impl()  {}
-func (entry) impl() {}
-
-// A container for defining nodes that fork out to new code paths.
-type fork struct {
-	text    string
-	entries []entry
-}
-
-// A node that includes functions for mocking.
-// The node is considered terminal if result's value is non-nil.
-type entry struct {
-	Text   string
-	calls  []fn
-	result fn
+	node()
 }
 
 // A container for describing and holding a function.
@@ -64,5 +50,38 @@ type fn struct {
 	value any
 }
 
-// An abstraction for populating code paths.
-type action func(n *entry)
+// Contains a function for mocking method calls on a single mock client.
+type call fn
+
+// Contains a function that tests the effects of mocked method calls.
+type result fn
+
+// Contains a function for an event trigger that runs once.
+type once struct {
+	fn
+	described bool
+	ran       bool
+}
+
+type leaf struct {
+	call
+	result
+}
+
+// A container for defining nodes that fork out into new code paths.
+type fork []prong
+
+// Common interface for nodes that fork out into new code paths.
+type prong interface {
+	prong()
+}
+
+func (call) node()   {}
+func (result) node() {}
+func (once) node()   {}
+func (leaf) node()   {}
+func (fork) node()   {}
+
+func (call) prong() {}
+func (leaf) prong() {}
+func (once) prong() {}
