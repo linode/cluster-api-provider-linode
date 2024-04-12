@@ -64,7 +64,7 @@ type LinodeMachineSpec struct {
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallID,omitempty"`
-	// OSDisk is configuration for the root disk the includes the OS,
+	// OSDisk is configuration for the root disk that includes the OS,
 	// if not specified this defaults to whatever space is not taken up by the DataDisks
 	OSDisk *InstanceDisk `json:"osDisk,omitempty"`
 	// DataDisks is a map of any additional disks to add to an instance,
@@ -81,13 +81,13 @@ type LinodeMachineSpec struct {
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 
-// InstanceDisk InstanceDisks defines a list of disks to use for an instance
+// InstanceDisk defines a list of disks to use for an instance
 type InstanceDisk struct {
 	// DiskID is the linode assigned ID of the disk
 	DiskID int `json:"diskID,omitempty"`
-	// SizeMB is the size in MB of the disk
+	// SizeGB is the size in GB of the disk
 	// +kubebuilder:validation:Required
-	SizeMB int `json:"sizeMB"`
+	SizeGB int `json:"sizeMB"`
 	// Label is the label for the instance disk, if nothing is provided it will match the device name
 	Label string `json:"label,omitempty"`
 }

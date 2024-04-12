@@ -96,8 +96,8 @@ spec:
                         x-kubernetes-map-type: atomic
                       dataDisks:
                         additionalProperties:
-                          description: InstanceDisk InstanceDisks defines a list of
-                            disks to use for an instance
+                          description: InstanceDisk defines a list of disks to use
+                            for an instance
                           properties:
                             diskID:
                               description: DiskID is the linode assigned ID of the
@@ -108,7 +108,7 @@ spec:
                                 if nothing is provided it will match the device name
                               type: string
                             sizeMB:
-                              description: SizeMB is the size in MB of the disk
+                              description: SizeGB is the size in GB of the disk
                               type: integer
                           required:
                           - sizeMB
@@ -175,7 +175,7 @@ spec:
                           rule: self == oldSelf
                       osDisk:
                         description: |-
-                          OSDisk is configuration for the root disk the includes the OS,
+                          OSDisk is configuration for the root disk that includes the OS,
                           if not specified this defaults to whatever space is not taken up by the DataDisks
                         properties:
                           diskID:
@@ -186,7 +186,7 @@ spec:
                               if nothing is provided it will match the device name
                             type: string
                           sizeMB:
-                            description: SizeMB is the size in MB of the disk
+                            description: SizeGB is the size in GB of the disk
                             type: integer
                         required:
                         - sizeMB

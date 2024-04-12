@@ -394,7 +394,7 @@ func (r *LinodeMachineReconciler) configureDisks(
 				linodeInstanceID,
 				linodego.InstanceDiskCreateOptions{
 					Label:      label,
-					Size:       disk.SizeMB,
+					Size:       disk.SizeGB * 1024,
 					Filesystem: string(linodego.FilesystemExt4),
 				},
 			)
@@ -463,11 +463,11 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 		// dynamically calculate root disk size unless an explcit OS disk is being set
 		additionalDiskSize := 0
 		for _, disk := range machineScope.LinodeMachine.Spec.DataDisks {
-			additionalDiskSize += disk.SizeMB
+			additionalDiskSize += disk.SizeGB * 1024
 		}
 		diskSize := rootDisk.Size - additionalDiskSize
 		if machineScope.LinodeMachine.Spec.OSDisk != nil {
-			diskSize = machineScope.LinodeMachine.Spec.OSDisk.SizeMB
+			diskSize = machineScope.LinodeMachine.Spec.OSDisk.SizeGB * 1024
 		}
 
 		if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil && !linodego.ErrHasStatus(err, linodeBusyCode) {
