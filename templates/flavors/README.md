@@ -1,6 +1,6 @@
 # Flavors
 
-## [Flavor usage documentation](https://linode.github.io/cluster-api-provider-linode/flavors/flavors.html)
+## [Flavor usage documentation](https://linode.github.io/cluster-api-provider-linode/topics/flavors/flavors.html)
 
 ## Development
 
