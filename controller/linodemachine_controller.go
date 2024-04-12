@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
@@ -50,18 +51,17 @@ import (
 )
 
 const (
-	// default etcd disk size in MB
-	defaultEtcdDiskSize      = 10240
+	linodeBusyCode           = 400
 	defaultResizeWaitSeconds = 5
 
 	// conditions for preflight instance creation
-	ConditionPreflightCreated          clusterv1.ConditionType = "PreflightCreated"
-	ConditionPreflightRootDiskResizing clusterv1.ConditionType = "PreflightRootDiskResizing"
-	ConditionPreflightRootDiskResized  clusterv1.ConditionType = "PreflightRootDiskResized"
-	ConditionPreflightEtcdDiskCreated  clusterv1.ConditionType = "PreflightEtcdDiskCreated"
-	ConditionPreflightConfigured       clusterv1.ConditionType = "PreflightConfigured"
-	ConditionPreflightBootTriggered    clusterv1.ConditionType = "PreflightBootTriggered"
-	ConditionPreflightReady            clusterv1.ConditionType = "PreflightReady"
+	ConditionPreflightCreated                clusterv1.ConditionType = "PreflightCreated"
+	ConditionPreflightRootDiskResizing       clusterv1.ConditionType = "PreflightRootDiskResizing"
+	ConditionPreflightRootDiskResized        clusterv1.ConditionType = "PreflightRootDiskResized"
+	ConditionPreflightAdditionalDisksCreated clusterv1.ConditionType = "PreflightAdditionalDisksCreated"
+	ConditionPreflightConfigured             clusterv1.ConditionType = "PreflightConfigured"
+	ConditionPreflightBootTriggered          clusterv1.ConditionType = "PreflightBootTriggered"
+	ConditionPreflightReady                  clusterv1.ConditionType = "PreflightReady"
 )
 
 var skippedMachinePhases = map[string]bool{
@@ -313,9 +313,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
-		if err = r.configureDisksControlPlane(ctx, logger, machineScope, linodeInstance.ID); err != nil {
-			logger.Error(err, "Failed to configure instance disks")
-
+		if err = r.configureDisks(ctx, logger, machineScope, linodeInstance.ID); err != nil {
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
 				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
@@ -369,41 +367,55 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	return ctrl.Result{}, nil
 }
 
-func (r *LinodeMachineReconciler) configureDisksControlPlane(
+func (r *LinodeMachineReconciler) configureDisks(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 	linodeInstanceID int,
 ) error {
-	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
+	if machineScope.LinodeMachine.Spec.DataDisks == nil && machineScope.LinodeMachine.Spec.OSDisk != nil {
 		return nil
 	}
 
-	if err := r.resizeRootDisk(ctx, logger, machineScope, linodeInstanceID); err != nil {
+	err := r.resizeRootDisk(ctx, logger, machineScope, linodeInstanceID)
+	if err != nil {
 		return err
 	}
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated) {
+		for deviceName, disk := range machineScope.LinodeMachine.Spec.DataDisks {
+			if disk.DiskID != 0 {
+				continue
+			}
+			label := disk.Label
+			if label == "" {
+				label = deviceName
+			}
+			// create the disk
+			linodeDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
+				ctx,
+				linodeInstanceID,
+				linodego.InstanceDiskCreateOptions{
+					Label:      label,
+					Size:       disk.SizeMB,
+					Filesystem: string(linodego.FilesystemExt4),
+				},
+			)
+			if err != nil {
+				logger.Error(err, "Failed to create disk", "DiskLabel", label)
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
-		// create the etcd disk
-		if _, err := machineScope.LinodeClient.CreateInstanceDisk(
-			ctx,
-			linodeInstanceID,
-			linodego.InstanceDiskCreateOptions{
-				Label:      "etcd-data",
-				Size:       defaultEtcdDiskSize,
-				Filesystem: string(linodego.FilesystemExt4),
-			},
-		); err != nil {
-			logger.Error(err, "Failed to create etcd disk")
+				conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
+				return err
+			}
+			disk.DiskID = linodeDisk.ID
+			machineScope.LinodeMachine.Spec.DataDisks[deviceName] = disk
+		}
+		err = r.UpdateInstanceConfigProfile(ctx, logger, machineScope, linodeInstanceID)
+		if err != nil {
 			return err
 		}
-
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated)
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated)
 	}
-
 	return nil
 }
 
@@ -416,7 +428,6 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 	if reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized) {
 		return nil
 	}
-
 	// get the default instance config
 	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
 	if err != nil || len(configs) == 0 {
@@ -446,8 +457,17 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 
 			return err
 		}
-		diskSize := rootDisk.Size - defaultEtcdDiskSize
-		if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
+		// dynamically calculate root disk size unless an explcit OS disk is being set
+		additionalDiskSize := 0
+		for _, disk := range machineScope.LinodeMachine.Spec.DataDisks {
+			additionalDiskSize += disk.SizeMB
+		}
+		diskSize := rootDisk.Size - additionalDiskSize
+		if machineScope.LinodeMachine.Spec.OSDisk != nil {
+			diskSize = machineScope.LinodeMachine.Spec.OSDisk.SizeMB
+		}
+
+		if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil && !linodego.ErrHasStatus(err, linodeBusyCode) {
 			logger.Error(err, "Failed to resize root disk")
 
 			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
@@ -460,7 +480,7 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 
 	// wait for the disk to resize
 	if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeWaitSeconds); err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeWaitSeconds))
+		logger.Info(fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds, requeuing", defaultResizeWaitSeconds))
 
 		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
@@ -469,6 +489,59 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 
 	conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
+
+	return nil
+}
+
+func (r *LinodeMachineReconciler) UpdateInstanceConfigProfile(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	linodeInstanceID int,
+) error {
+	// get the default instance config
+	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
+	if err != nil || len(configs) == 0 {
+		logger.Error(err, "Failed to list instance configs")
+
+		return err
+	}
+	instanceConfig := configs[0]
+
+	if machineScope.LinodeMachine.Spec.DataDisks != nil {
+		if err := r.createInstanceConfigDeviceMap(machineScope.LinodeMachine.Spec.DataDisks, instanceConfig.Devices); err != nil {
+			return err
+		}
+	}
+	if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, linodeInstanceID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Devices: instanceConfig.Devices}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r LinodeMachineReconciler) createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha1.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {
+	for deviceName, disk := range instanceDisks {
+		switch deviceName {
+		case "sdb":
+			instanceConfig.SDB = ptr.To(linodego.InstanceConfigDevice{DiskID: disk.DiskID})
+		case "sdc":
+			instanceConfig.SDC = ptr.To(linodego.InstanceConfigDevice{DiskID: disk.DiskID})
+		case "sdd":
+			instanceConfig.SDD = ptr.To(linodego.InstanceConfigDevice{DiskID: disk.DiskID})
+		case "sde":
+			instanceConfig.SDE = ptr.To(linodego.InstanceConfigDevice{DiskID: disk.DiskID})
+		case "sdf":
+			instanceConfig.SDF = ptr.To(linodego.InstanceConfigDevice{DiskID: disk.DiskID})
+		case "sdg":
+			instanceConfig.SDG = ptr.To(linodego.InstanceConfigDevice{DiskID: disk.DiskID})
+		case "sdh":
+			instanceConfig.SDH = ptr.To(linodego.InstanceConfigDevice{DiskID: disk.DiskID})
+		default:
+			err := fmt.Errorf("unknown device name %s", deviceName)
+			return err
+		}
+	}
 
 	return nil
 }
@@ -526,8 +599,6 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 	machineScope.LinodeMachine.Status.Ready = true
 
 	conditions.MarkTrue(machineScope.LinodeMachine, clusterv1.ReadyCondition)
-
-	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "instance is running")
 
 	return res, linodeInstance, nil
 }

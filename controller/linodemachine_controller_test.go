@@ -268,7 +268,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
 			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 15000-defaultEtcdDiskSize).
+				ResizeInstanceDisk(ctx, 123, 100, 15000).
 				After(getInstDisk).
 				Return(nil)
 			waitForInstDisk := mockLinodeClient.EXPECT().
@@ -278,7 +278,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
 					Label:      "etcd-data",
-					Size:       defaultEtcdDiskSize,
+					Size:       0,
 					Filesystem: string(linodego.FilesystemExt4),
 				}).
 				After(waitForInstDisk).
@@ -377,7 +377,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
 			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 15000-defaultEtcdDiskSize).
+				ResizeInstanceDisk(ctx, 123, 100, 15000).
 				After(getInstDisk).
 				Return(nil)
 			mockLinodeClient.EXPECT().
