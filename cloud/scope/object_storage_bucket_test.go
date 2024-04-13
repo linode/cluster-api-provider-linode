@@ -36,18 +36,16 @@ func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
 		{
 			name: "Success - Valid ObjectStorageBucketScopeParams",
 			params: ObjectStorageBucketScopeParams{
-				LinodeClientBuilder: CreateLinodeObjectStorageClient,
-				Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
-				Logger:              &logr.Logger{},
+				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+				Logger: &logr.Logger{},
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "Failure - Invalid ObjectStorageBucketScopeParams. Logger is nil",
 			params: ObjectStorageBucketScopeParams{
-				LinodeClientBuilder: CreateLinodeObjectStorageClient,
-				Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
-				Logger:              nil,
+				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+				Logger: nil,
 			},
 			expectedErr: fmt.Errorf("logger is required when creating an ObjectStorageBucketScope"),
 		},
@@ -55,20 +53,10 @@ func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
 		{
 			name: "Failure - Invalid ObjectStorageBucketScopeParams. Bucket is nil",
 			params: ObjectStorageBucketScopeParams{
-				LinodeClientBuilder: CreateLinodeObjectStorageClient,
-				Bucket:              nil,
-				Logger:              &logr.Logger{},
+				Bucket: nil,
+				Logger: &logr.Logger{},
 			},
 			expectedErr: fmt.Errorf("object storage bucket is required when creating an ObjectStorageBucketScope"),
-		},
-		{
-			name: "Failure - Invalid ObjectStorageBucketScopeParams. LinodeClientBuilder is nil",
-			params: ObjectStorageBucketScopeParams{
-				LinodeClientBuilder: nil,
-				Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
-				Logger:              &logr.Logger{},
-			},
-			expectedErr: fmt.Errorf("LinodeClientBuilder is required when creating an ObjectStorageBucketScope"),
 		},
 	}
 	for _, tt := range tests {
@@ -102,10 +90,9 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageClient,
-					Client:              nil,
-					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
-					Logger:              &logr.Logger{},
+					Client: nil,
+					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+					Logger: &logr.Logger{},
 				},
 			},
 			expectedErr: nil,
@@ -122,8 +109,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageClient,
-					Client:              nil,
+					Client: nil,
 					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 						Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
 							CredentialsRef: &corev1.SecretReference{
@@ -167,10 +153,9 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageClient,
-					Client:              nil,
-					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
-					Logger:              &logr.Logger{},
+					Client: nil,
+					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+					Logger: &logr.Logger{},
 				},
 			},
 			expectedErr: fmt.Errorf("failed to init patch helper:"),
@@ -183,8 +168,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageClient,
-					Client:              nil,
+					Client: nil,
 					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 						Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
 							CredentialsRef: &corev1.SecretReference{
@@ -206,10 +190,9 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			args: args{
 				apiKey: "",
 				params: ObjectStorageBucketScopeParams{
-					LinodeClientBuilder: CreateLinodeObjectStorageClient,
-					Client:              nil,
-					Bucket:              &infrav1alpha1.LinodeObjectStorageBucket{},
-					Logger:              &logr.Logger{},
+					Client: nil,
+					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+					Logger: &logr.Logger{},
 				},
 			},
 			expectedErr: fmt.Errorf("failed to create linode client: missing Linode API key"),
@@ -292,10 +275,9 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 				context.Background(),
 				"test-key",
 				ObjectStorageBucketScopeParams{
-					Client:              mockK8sClient,
-					Bucket:              testcase.Bucket,
-					Logger:              &logr.Logger{},
-					LinodeClientBuilder: CreateLinodeObjectStorageClient,
+					Client: mockK8sClient,
+					Bucket: testcase.Bucket,
+					Logger: &logr.Logger{},
 				})
 			if err != nil {
 				t.Errorf("NewObjectStorageBucketScope() error = %v", err)

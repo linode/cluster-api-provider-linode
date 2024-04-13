@@ -59,12 +59,6 @@ type LinodeObjectStorageClient interface {
 	DeleteObjectStorageKey(ctx context.Context, keyID int) error
 }
 
-type LinodeObjectStorageClientBuilder func(apiKey string) (LinodeObjectStorageClient, error)
-
-func CreateLinodeObjectStorageClient(apiKey string) (LinodeObjectStorageClient, error) {
-	return CreateLinodeClient(apiKey)
-}
-
 type K8sClient interface {
 	client.Client
 }

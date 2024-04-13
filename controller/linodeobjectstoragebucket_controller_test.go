@@ -35,8 +35,6 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
-
-	// "sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -70,16 +68,12 @@ type accessKeySecret struct {
 	} `json:"stringData"`
 }
 
-func mockLinodeClientBuilder(m *mock.MockLinodeObjectStorageClient) scope.LinodeObjectStorageClientBuilder {
-	return func(_ string) (scope.LinodeObjectStorageClient, error) {
-		return m, nil
-	}
-}
-
 var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 	var mockCtrl *gomock.Controller
+	var testLogs bytes.Buffer
+	var bucketScope scope.ObjectStorageBucketScope
+	var recorder *record.FakeRecorder
 	var reconciler *LinodeObjectStorageBucketReconciler
-	var testLogs *bytes.Buffer
 
 	obj := infrav1.LinodeObjectStorageBucket{
 		ObjectMeta: metav1.ObjectMeta{
@@ -93,34 +87,46 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf(scope.AccessKeyNameTemplate, obj.Name),
+			Name:      fmt.Sprintf(scope.AccessKeyNameTemplate, "lifecycle"),
 			Namespace: "default",
 		},
 	}
 
-	// Create a recorder with a buffered channel for consuming event strings.
-	recorder := record.NewFakeRecorder(10)
+	BeforeAll(func(ctx SpecContext) {
+		Expect(k8sClient.Create(ctx, &obj)).To(Succeed())
 
-	BeforeEach(func() {
+		bucketScope = scope.ObjectStorageBucketScope{
+			Client: k8sClient,
+			Bucket: &obj,
+		}
+	})
+
+	BeforeEach(func(ctx SpecContext) {
 		// Create a new gomock controller for each test run
 		mockCtrl = gomock.NewController(GinkgoT())
+
+		objectKey := client.ObjectKey{Name: "lifecycle", Namespace: "default"}
+		Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
+
+		// Create patch helper with latest state of obj
+		patchHelper, err := patch.NewHelper(&obj, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		bucketScope.PatchHelper = patchHelper
+
 		// Inject io.Writer as log sink for consuming logs
-		testLogs = &bytes.Buffer{}
-		reconciler = &LinodeObjectStorageBucketReconciler{
-			Client:   k8sClient,
-			Recorder: recorder,
-			Logger: zap.New(
-				zap.WriteTo(GinkgoWriter),
-				zap.WriteTo(testLogs),
-				zap.UseDevMode(true),
-			),
-		}
+		testLogs.Reset()
+		bucketScope.Logger = zap.New(zap.WriteTo(GinkgoWriter), zap.WriteTo(&testLogs))
+
+		// Create a recorder with a buffered channel for consuming event strings.
+		recorder = record.NewFakeRecorder(10)
+		reconciler = &LinodeObjectStorageBucketReconciler{Recorder: recorder}
 	})
 
 	AfterEach(func() {
 		// At the end of each test run, tell the gomock controller it's done
 		// so it can check configured expectations and validate the methods called
 		mockCtrl.Finish()
+
 		// Flush the channel if any events were not consumed.
 		for len(recorder.Events) > 0 {
 			<-recorder.Events
@@ -128,9 +134,6 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 	})
 
 	for _, path := range Paths(
-		Once("resource is created", func(ctx context.Context) {
-			Expect(k8sClient.Create(ctx, &obj)).To(Succeed())
-		}),
 		Either(
 			Mock("bucket is created", func(c *mock.MockLinodeObjectStorageClient) {
 				getBucket := c.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
@@ -149,10 +152,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					c.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).After(getBucket).Return(nil, errors.New("create bucket error"))
 				}),
 				Result("error", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(c)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: client.ObjectKeyFromObject(&obj),
-					})
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("create bucket error"))
 				}),
 			),
@@ -173,20 +174,16 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("create key error"))
 				}),
 				Result("error", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(c)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: client.ObjectKeyFromObject(&obj),
-					})
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("create key error"))
 				}),
 			),
 		),
-		Result("resource status is updated and key secret is created", func(ctx context.Context, mockLinodeClient *mock.MockLinodeObjectStorageClient) {
+		Result("resource status is updated and key secret is created", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
 			objectKey := client.ObjectKeyFromObject(&obj)
-			reconciler.LinodeClientBuilder = mockLinodeClientBuilder(mockLinodeClient)
-			_, err := reconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: objectKey,
-			})
+			bucketScope.LinodeClient = c
+			_, err := reconciler.reconcile(ctx, &bucketScope)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("status")
@@ -238,10 +235,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					c.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, errors.New("get bucket error"))
 				}),
 				Result("error", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(c)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: client.ObjectKeyFromObject(&obj),
-					})
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("get bucket error"))
 				}),
 			),
@@ -260,10 +255,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					c.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("create key error"))
 				}),
 				Result("error", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(c)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: client.ObjectKeyFromObject(&obj),
-					})
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("create key error"))
 				}),
 			),
@@ -279,12 +272,10 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 						c.EXPECT().DeleteObjectStorageKey(gomock.Any(), idx).After(createCall).Return(nil)
 					}
 				}),
-				Result("resource lastKeyGeneration is updated", func(ctx context.Context, mockLinodeClient *mock.MockLinodeObjectStorageClient) {
+				Result("resource lastKeyGeneration is updated", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
 					objectKey := client.ObjectKeyFromObject(&obj)
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(mockLinodeClient)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: objectKey,
-					})
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 					Expect(*obj.Status.LastKeyGeneration).To(Equal(1))
@@ -306,10 +297,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					c.EXPECT().GetObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(nil, errors.New("get key error"))
 				}),
 				Result("error", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(c)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: client.ObjectKeyFromObject(&obj),
-					})
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("get key error"))
 				}),
 			),
@@ -325,10 +314,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					}
 				}),
 				Result("secret is restored", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(c)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: client.ObjectKeyFromObject(&obj),
-					})
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&secret), &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(1))
@@ -354,7 +341,10 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			),
 		),
 		Once("resource is deleted", func(ctx context.Context) {
+			// nb: client.Delete does not set DeletionTimestamp on the object, so re-fetch from the apiserver.
+			objectKey := client.ObjectKeyFromObject(&obj)
 			Expect(k8sClient.Delete(ctx, &obj)).To(Succeed())
+			Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 		}),
 		Either(
 			Case(
@@ -362,10 +352,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					c.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(errors.New("revoke error"))
 				}),
 				Result("error", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(c)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: client.ObjectKeyFromObject(&obj),
-					})
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("revoke error"))
 				}),
 			),
@@ -374,12 +362,11 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					c.EXPECT().DeleteObjectStorageKey(gomock.Any(), 2).Return(nil)
 					c.EXPECT().DeleteObjectStorageKey(gomock.Any(), 3).Return(nil)
 				}),
-				Result("finalizer is removed", func(ctx context.Context, mockLinodeClient *mock.MockLinodeObjectStorageClient) {
-					reconciler.LinodeClientBuilder = mockLinodeClientBuilder(mockLinodeClient)
+				Result("finalizer is removed", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient) {
 					objectKey := client.ObjectKeyFromObject(&obj)
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: objectKey,
-					})
+					k8sClient.Get(ctx, objectKey, &obj)
+					bucketScope.LinodeClient = c
+					_, err := reconciler.reconcile(ctx, &bucketScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &obj))).To(BeTrue())
 
@@ -522,13 +509,13 @@ var _ = Describe("corners", Label("bucket", "corners"), func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create a scope directly since only a subset of fields are needed.
-			bScope := scope.ObjectStorageBucketScope{
+			bucketScope := scope.ObjectStorageBucketScope{
 				Client:      c,
 				Bucket:      &obj,
 				PatchHelper: patchHelper,
 			}
 
-			_, err = reconciler.reconcile(ctx, &bScope)
+			_, err = reconciler.reconcile(ctx, &bucketScope)
 			Expect(err.Error()).To(ContainSubstring("no kind is registered"))
 		}),
 		Mock("get bucket", func(c *mock.MockLinodeObjectStorageClient) {
@@ -545,14 +532,14 @@ var _ = Describe("corners", Label("bucket", "corners"), func() {
 					obj.Status.KeySecretName = ptr.To("mock-bucket-details")
 					obj.Status.AccessKeyRefs = []int{0, 1}
 
-					bScope := scope.ObjectStorageBucketScope{
+					bucketScope := scope.ObjectStorageBucketScope{
 						Client:       kc,
 						LinodeClient: c,
 						Bucket:       &obj,
 						Logger:       reconciler.Logger,
 					}
 
-					err := reconciler.reconcileApply(ctx, &bScope)
+					err := reconciler.reconcileApply(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("api error"))
 					Expect(<-recorder.Events).To(ContainSubstring("api error"))
 					Expect(testLogs.String()).To(ContainSubstring("Failed to ensure access key secret exists"))
@@ -579,14 +566,14 @@ var _ = Describe("corners", Label("bucket", "corners"), func() {
 					obj.Status.KeySecretName = ptr.To("mock-bucket-details")
 					obj.Status.AccessKeyRefs = []int{0, 1}
 
-					bScope := scope.ObjectStorageBucketScope{
+					bucketScope := scope.ObjectStorageBucketScope{
 						Client:       kc,
 						LinodeClient: c,
 						Bucket:       &obj,
 						Logger:       reconciler.Logger,
 					}
 
-					err := reconciler.reconcileApply(ctx, &bScope)
+					err := reconciler.reconcileApply(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("secret creation error"))
 					Expect(<-recorder.Events).To(ContainSubstring("keys retrieved"))
 					Expect(<-recorder.Events).To(ContainSubstring("secret creation error"))
@@ -603,14 +590,14 @@ var _ = Describe("corners", Label("bucket", "corners"), func() {
 					obj.Status.KeySecretName = ptr.To("mock-bucket-details")
 					obj.Status.AccessKeyRefs = []int{0, 1}
 
-					bScope := scope.ObjectStorageBucketScope{
+					bucketScope := scope.ObjectStorageBucketScope{
 						Client:       kc,
 						LinodeClient: c,
 						Bucket:       &obj,
 						Logger:       reconciler.Logger,
 					}
 
-					err := reconciler.reconcileApply(ctx, &bScope)
+					err := reconciler.reconcileApply(ctx, &bucketScope)
 					Expect(err.Error()).To(ContainSubstring("no kind is registered"))
 					Expect(<-recorder.Events).To(ContainSubstring("keys retrieved"))
 					Expect(<-recorder.Events).To(ContainSubstring("no kind is registered"))
@@ -626,14 +613,14 @@ var _ = Describe("corners", Label("bucket", "corners"), func() {
 			c.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(nil)
 		}),
 		Result("error", func(ctx context.Context, c *mock.MockLinodeObjectStorageClient, kc *mock.MockK8sClient) {
-			bScope := scope.ObjectStorageBucketScope{
+			bucketScope := scope.ObjectStorageBucketScope{
 				Client:       kc,
 				LinodeClient: c,
 				Bucket:       &obj,
 				Logger:       reconciler.Logger,
 			}
 
-			err := reconciler.reconcileDelete(ctx, &bScope)
+			err := reconciler.reconcileDelete(ctx, &bucketScope)
 			Expect(err.Error()).To(ContainSubstring("failed to remove finalizer from bucket"))
 			Expect(<-recorder.Events).To(ContainSubstring("failed to remove finalizer from bucket"))
 		}),
