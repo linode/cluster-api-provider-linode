@@ -35,7 +35,7 @@ type MachineScope struct {
 
 func validateMachineScopeParams(params MachineScopeParams) error {
 	if params.Cluster == nil {
-		return errors.New("custer is required when creating a MachineScope")
+		return errors.New("cluster is required when creating a MachineScope")
 	}
 	if params.Machine == nil {
 		return errors.New("machine is required when creating a MachineScope")
@@ -78,7 +78,7 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 	if credentialRef != nil {
 		data, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace)
 		if err != nil {
-			return nil, fmt.Errorf("credentials from cluster secret ref: %w", err)
+			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
 		apiKey = string(data)
 	}

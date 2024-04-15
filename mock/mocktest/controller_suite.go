@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-type ctrlTest struct {
+type ctlrSuite struct {
 	clients  []mock.MockClient
 	recorder *record.FakeRecorder
 	logger   logr.Logger
@@ -21,12 +21,12 @@ type ctrlTest struct {
 
 // NewControllerTestSuite creates a test suite for a controller.
 // It generates new mock clients for each test path it runs.
-func NewControllerTestSuite(clients ...mock.MockClient) *ctrlTest {
+func NewControllerTestSuite(clients ...mock.MockClient) *ctlrSuite {
 	if len(clients) == 0 {
 		panic(errors.New("unable to run tests without clients"))
 	}
 
-	c := ctrlTest{
+	c := ctlrSuite{
 		clients: clients,
 		// Create a recorder with a buffered channel for consuming event strings.
 		recorder: record.NewFakeRecorder(50),
@@ -41,42 +41,24 @@ func NewControllerTestSuite(clients ...mock.MockClient) *ctrlTest {
 
 // Recorder returns a *FakeRecorder for recording events published in a reconcile loop.
 // Events can be consumed within test paths by receiving from a MockContext.Events() channel.
-func (c *ctrlTest) Recorder() *record.FakeRecorder {
+func (c *ctlrSuite) Recorder() *record.FakeRecorder {
 	return c.recorder
 }
 
 // Logger returns a logr.Logger for capturing logs written during a reconcile loop.
 // Log output can be read within test paths by calling MockContext.Logs().
-func (c *ctrlTest) Logger() logr.Logger {
+func (c *ctlrSuite) Logger() logr.Logger {
 	return c.logger
 }
 
 // Run executes Ginkgo test specs for each computed test path.
 // It manages mock client instantiation, events, and logging.
-func (c *ctrlTest) Run(paths []path) {
-	var mockCtrl *gomock.Controller
-
-	ginkgo.BeforeEach(func(ctx ginkgo.SpecContext) {
-		// Create a new gomock controller for each test run
-		mockCtrl = gomock.NewController(ginkgo.GinkgoT())
-	})
-
-	ginkgo.AfterEach(func(ctx ginkgo.SpecContext) {
-		// At the end of each test run, tell the gomock controller it's done
-		// so it can check configured expectations and validate the methods called
-		mockCtrl.Finish()
-
-		// Flush the channel if any events were not consumed.
-		for len(c.recorder.Events) > 0 {
-			<-c.recorder.Events
-		}
-
-		// Flush the logs buffer for each test run
-		c.logs.Reset()
-	})
-
+func (c *ctlrSuite) Run(paths []path) {
 	for _, path := range paths {
 		ginkgo.It(path.Describe(), func(ctx ginkgo.SpecContext) {
+			mockCtrl := gomock.NewController(ginkgo.GinkgoT())
+			defer mockCtrl.Finish()
+
 			mockCtx := MockContext{
 				Context:      ctx,
 				TestReporter: mockCtrl.T,
@@ -88,7 +70,15 @@ func (c *ctrlTest) Run(paths []path) {
 				mockCtx.MockClients.Build(client, mockCtrl)
 			}
 
-			Run(mockCtx, path)
+			path.Run(mockCtx)
+
+			// Flush the channel if any events were not consumed.
+			for len(c.recorder.Events) > 0 {
+				<-c.recorder.Events
+			}
+
+			// Flush the logs buffer for each test run
+			c.logs.Reset()
 		})
 	}
 }

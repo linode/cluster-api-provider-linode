@@ -76,13 +76,13 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		},
 	}
 
-	ct := NewControllerTestSuite(mock.MockLinodeObjectStorageClient{})
+	ctlrSuite := NewControllerTestSuite(mock.MockLinodeObjectStorageClient{})
 	reconciler := LinodeObjectStorageBucketReconciler{
-		Recorder: ct.Recorder(),
+		Recorder: ctlrSuite.Recorder(),
 	}
 	bScope := scope.ObjectStorageBucketScope{
 		Bucket: &obj,
-		Logger: ct.Logger(),
+		Logger: ctlrSuite.Logger(),
 	}
 
 	BeforeAll(func(ctx SpecContext) {
@@ -101,7 +101,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		bScope.PatchHelper = patchHelper
 	})
 
-	ct.Run(Paths(
+	ctlrSuite.Run(Paths(
 		Either(
 			Mock("bucket is created", func(ctx MockContext) {
 				getBucket := ctx.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
@@ -357,13 +357,13 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 })
 
 var _ = Describe("errors", Label("bucket", "errors"), func() {
-	ct := NewControllerTestSuite(
+	ctlrSuite := NewControllerTestSuite(
 		mock.MockLinodeObjectStorageClient{},
 		mock.MockK8sClient{},
 	)
 
-	reconciler := LinodeObjectStorageBucketReconciler{Recorder: ct.Recorder()}
-	bScope := scope.ObjectStorageBucketScope{Logger: ct.Logger()}
+	reconciler := LinodeObjectStorageBucketReconciler{Recorder: ctlrSuite.Recorder()}
+	bScope := scope.ObjectStorageBucketScope{Logger: ctlrSuite.Logger()}
 
 	BeforeEach(func() {
 		// Reset obj to base state to be modified in each test path.
@@ -380,7 +380,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 		}
 	})
 
-	ct.Run(Paths(
+	ctlrSuite.Run(Paths(
 		Either(
 			Mock("resource can be fetched", func(ctx MockContext) {
 				ctx.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)

@@ -40,36 +40,21 @@ func Paths(nodes ...node) []path {
 		return nil
 	}
 
-	tmp := []path{{}}
+	tmp := []path{}
 	final := []path{}
 
 	for i, n := range nodes {
+		// If all paths are closed, make a new path
+		if len(tmp) == 0 {
+			tmp = append(tmp, path{})
+		}
+
 		switch impl := n.(type) {
 
 		// A once node should only be added to the first path.
 		// It will only invoked once in the first path evaluated.
 		case once:
-			if len(tmp) > 0 {
-				tmp[0].once = append(tmp[0].once, &impl)
-			} else {
-				// If there are no open paths, make a new one
-				tmp = append(tmp, path{once: []*once{&impl}})
-			}
-
-		// A result node should terminate all open paths.
-		case result:
-			for j, pth := range tmp {
-				if len(pth.calls) == 0 {
-					panic(fmt.Errorf("closed path with no mock calls at index %d", i))
-				}
-
-				// Close all open paths
-				tmp[j].result = impl
-			}
-
-			// Commit all closed paths
-			final = append(final, tmp...)
-			tmp = []path{{}}
+			tmp[0].once = append(tmp[0].once, &impl)
 
 		// A call node should be appended to all open paths.
 		case call:
@@ -78,15 +63,21 @@ func Paths(nodes ...node) []path {
 				tmp[j].calls = append(pth.calls, impl)
 			}
 
-			// If all paths are closed, make a new path
-			if len(tmp) == 0 {
-				tmp = append(tmp, path{calls: []call{impl}})
-			}
-
 			// Panic if any paths are open at the end
 			if i == len(nodes)-1 {
 				panic(fmt.Errorf("unresolved path at index %d", i))
 			}
+
+			// A result node should terminate all open paths.
+		case result:
+			// Close all open paths
+			for j := range tmp {
+				tmp[j].result = impl
+			}
+
+			// Commit all closed paths
+			final = append(final, tmp...)
+			tmp = nil
 
 		// A leaf node contains both a call node and a result node.
 		// The call is appended to all open paths, and then immediately closed with the result.
@@ -97,41 +88,14 @@ func Paths(nodes ...node) []path {
 				tmp[j].result = impl.result
 			}
 
-			// If all paths are closed, make a new path and close it
-			if len(tmp) == 0 {
-				final = append(final, path{
-					calls:  []call{impl.call},
-					result: impl.result,
-				})
-			}
-
 			// Commit all closed paths
 			final = append(final, tmp...)
-			tmp = []path{{}}
+			tmp = nil
 
 		// A fork node is a list of call or leaf nodes that should not occur on the same path.
 		case fork:
 			var newTmp []path
 			var open bool
-
-			// If all paths are closed, make new paths with each new entry
-			if len(tmp) == 0 {
-				for _, fi := range impl {
-					switch forkImpl := fi.(type) {
-					case once:
-						open = true
-						tmp = append(tmp, path{once: []*once{&forkImpl}})
-					case call:
-						open = true
-						tmp = append(tmp, path{calls: []call{forkImpl}})
-					case leaf:
-						final = append(final, path{
-							calls:  []call{forkImpl.call},
-							result: forkImpl.result,
-						})
-					}
-				}
-			}
 
 			// Make new version of each open path with each new entry
 			for _, pth := range tmp {
@@ -150,6 +114,13 @@ func Paths(nodes ...node) []path {
 						newTmp = append(newTmp, path{
 							once:  pth.once,
 							calls: append(pth.calls, forkImpl),
+						})
+
+					case result:
+						final = append(final, path{
+							once:   pth.once,
+							calls:  pth.calls,
+							result: forkImpl,
 						})
 
 					// A leaf in a fork is terminal

@@ -109,6 +109,7 @@ func (once) node()   {}
 func (leaf) node()   {}
 func (fork) node()   {}
 
-func (call) prong() {}
-func (leaf) prong() {}
-func (once) prong() {}
+func (call) prong()   {}
+func (result) prong() {}
+func (once) prong()   {}
+func (leaf) prong()   {}

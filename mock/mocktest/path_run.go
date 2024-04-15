@@ -8,7 +8,7 @@ import (
 )
 
 // Run evaluates all declared mock client methods and assertions for the given test path.
-func Run(ctx MockContext, p path) {
+func (p path) Run(ctx MockContext) {
 	if ctx.Context == nil {
 		panic("MockContext requires Context")
 	}

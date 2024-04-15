@@ -44,14 +44,13 @@ var _ = Describe("k8s client", Label("k8sclient"), func() {
 		}),
 	) {
 		It(path.Describe(), func(ctx SpecContext) {
-			mockCtx := MockContext{
+			path.Run(MockContext{
 				Context:      ctx,
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
 					K8sClient: mock.NewMockK8sClient(mockCtrl),
 				},
-			}
-			Run(mockCtx, path)
+			})
 		})
 	}
 })
@@ -91,15 +90,14 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 		),
 	) {
 		It(path.Describe(), func(ctx SpecContext) {
-			mockCtx := MockContext{
+			path.Run(MockContext{
 				Context:      ctx,
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
 					MachineClient: mock.NewMockLinodeMachineClient(mockCtrl),
 					K8sClient:     mock.NewMockK8sClient(mockCtrl),
 				},
-			}
-			Run(mockCtx, path)
+			})
 		})
 	}
 })
@@ -193,7 +191,7 @@ func TestPaths(t *testing.T) {
 				call{text: "0"},
 				fork{
 					call{text: "1"},
-					leaf{call{text: "2"}, result{text: "4"}},
+					result{text: "2"},
 				},
 				result{text: "3"},
 			},
@@ -201,9 +199,8 @@ func TestPaths(t *testing.T) {
 				{
 					calls: []call{
 						{text: "0"},
-						{text: "2"},
 					},
-					result: result{text: "4"},
+					result: result{text: "2"},
 				},
 				{
 					calls: []call{
