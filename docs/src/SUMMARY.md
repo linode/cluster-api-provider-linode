@@ -14,6 +14,7 @@
     - [Etcd](./topics/etcd.md)
     - [Backups](./topics/backups.md)
     - [Multi-Tenancy](./topics/multi-tenancy.md)
+    - [Machine Health Checks](./topics/health-checking.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
 - [Reference](./reference/reference.md)
