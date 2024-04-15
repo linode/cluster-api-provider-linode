@@ -8,9 +8,9 @@ up to 90 seconds. This will be resolved when the disk creation refactor is finis
 ```
 ## Specify a data disk
 A LinodeMachine can be configured with additional data disks with the key being the device to be mounted as and including an optional label and sizeGB.
-* `sizeGB` Required field. The size in GB to use for a data disk. The sum of all data disks must not be more than allowed by the linode plan. 
+* `sizeGB` Required field. The size in GB to use for a data disk. The sum of all data disks must not be more than allowed by the [linode plan](https://www.linode.com/pricing/#compute-shared). 
 * `label`  Optional field. The label for the disk, defaults to the device name
-* `DeviceID` Optional field used by the controller to track drive IDs, this should not be set unless a drive is created outside of CAPL
+* `DeviceID` Optional field used by the controller to track disk IDs, this should not be set unless a disk is created outside CAPL
 
 ```yaml
 ---
@@ -66,5 +66,3 @@ spec:
       - - LABEL=etcd_data
         - /var/lib/etcd_data
 ```
-
-## 
