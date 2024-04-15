@@ -348,7 +348,11 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		return fmt.Errorf("get region: %w", err)
 	}
 	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
-	image, err := machineScope.LinodeClient.GetImage(ctx, machineScope.LinodeMachine.Spec.Image)
+	imageName := reconciler.DefaultMachineControllerLinodeImage
+	if machineScope.LinodeMachine.Spec.Image != "" {
+		imageName = machineScope.LinodeMachine.Spec.Image
+	}
+	image, err := machineScope.LinodeClient.GetImage(ctx, imageName)
 	if err != nil {
 		return fmt.Errorf("get image: %w", err)
 	}

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -85,9 +86,9 @@ type LinodeMachineSpec struct {
 type InstanceDisk struct {
 	// DiskID is the linode assigned ID of the disk
 	DiskID int `json:"diskID,omitempty"`
-	// SizeGB is the size in GB of the disk
+	// Size is the disk size in resource.Quantity notation
 	// +kubebuilder:validation:Required
-	SizeGB int `json:"sizeGB"`
+	Size resource.Quantity `json:"size"`
 	// Label is the label for the instance disk, if nothing is provided it will match the device name
 	Label string `json:"label,omitempty"`
 }

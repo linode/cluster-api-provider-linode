@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"net/http"
 	"time"
 
@@ -51,7 +52,6 @@ import (
 
 const (
 	linodeBusyCode           = 400
-	sizeToMB                 = 1000
 	defaultResizeWaitSeconds = 5
 
 	// conditions for preflight instance creation
@@ -395,7 +395,7 @@ func (r *LinodeMachineReconciler) configureDisks(
 				linodeInstanceID,
 				linodego.InstanceDiskCreateOptions{
 					Label:      label,
-					Size:       disk.SizeGB * sizeToMB,
+					Size:       int(disk.Size.ScaledValue(resource.Mega)),
 					Filesystem: string(linodego.FilesystemExt4),
 				},
 			)
@@ -461,18 +461,20 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 
 			return err
 		}
-		// dynamically calculate root disk size unless an explcit OS disk is being set
+		// dynamically calculate root disk size unless an explicit OS disk is being set
 		additionalDiskSize := 0
 		for _, disk := range machineScope.LinodeMachine.Spec.DataDisks {
-			additionalDiskSize += disk.SizeGB * sizeToMB
+			additionalDiskSize += int(disk.Size.ScaledValue(resource.Mega))
 		}
 		diskSize := rootDisk.Size - additionalDiskSize
 		if machineScope.LinodeMachine.Spec.OSDisk != nil {
-			diskSize = machineScope.LinodeMachine.Spec.OSDisk.SizeGB * sizeToMB
+			diskSize = int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))
 		}
 
-		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil && !linodego.ErrHasStatus(err, linodeBusyCode) {
-			logger.Error(err, "Failed to resize root disk")
+		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
+			if !linodego.ErrHasStatus(err, linodeBusyCode) {
+				logger.Error(err, "Failed to resize root disk")
+			}
 
 			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 

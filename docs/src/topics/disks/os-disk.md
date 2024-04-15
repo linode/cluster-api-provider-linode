@@ -19,7 +19,7 @@ spec:
       region: us-ord
       type: g6-standard-4
       osDisk:
-        sizeGB: 10
+        size: 100Gi
 
 
 
@@ -27,7 +27,7 @@ spec:
 
 ## Setting OS Disk Label
 The default label on the root OS disk can be overridden by specifying a label in the `osDisk` field. The label can only
-be set if an explicit size is being set as `sizeGB` is a required field
+be set if an explicit size is being set as `size` is a required field
 
 ```yaml
 ---
@@ -45,6 +45,6 @@ spec:
       type: g6-standard-4
       osDisk:
         label: root-disk
-        sizeGB: 10
+        size: 10Gi
 ```
 

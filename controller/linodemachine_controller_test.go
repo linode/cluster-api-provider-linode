@@ -19,6 +19,7 @@ package controller
 import (
 	"bytes"
 	"errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"net"
 	"time"
 
@@ -234,7 +235,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	Context("creates a instance with disks", func() {
 		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", SizeGB: 10})}
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
@@ -269,7 +270,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
 			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 5000).
+				ResizeInstanceDisk(ctx, 123, 100, 4262).
 				After(getInstDisk).
 				Return(nil)
 			waitForInstDisk := mockLinodeClient.EXPECT().
@@ -279,7 +280,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
 					Label:      "etcd-data",
-					Size:       10000,
+					Size:       10738,
 					Filesystem: string(linodego.FilesystemExt4),
 				}).
 				After(waitForInstDisk).
@@ -359,7 +360,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		It("in multiple calls when disks are delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", SizeGB: 10})}
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
@@ -394,7 +395,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
 			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 5000).
+				ResizeInstanceDisk(ctx, 123, 100, 4262).
 				After(getInstDisk).
 				Return(nil)
 			mockLinodeClient.EXPECT().
@@ -440,7 +441,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
 					Label:      "etcd-data",
-					Size:       10000,
+					Size:       10738,
 					Filesystem: string(linodego.FilesystemExt4),
 				}).
 				After(waitForInstDisk).

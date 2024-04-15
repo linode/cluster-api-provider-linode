@@ -6,6 +6,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/gob"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -380,7 +381,7 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 			name: "Success - single disk gets added to config",
 			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdb": {
 				DiskID: 101,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}},
 			expectedDiskMap: linodego.InstanceConfigDeviceMap{SDA: &linodego.InstanceConfigDevice{DiskID: 100},
@@ -391,31 +392,31 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 			name: "Success - multiple disks gets added to config",
 			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdb": {
 				DiskID: 101,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}, "sdc": {
 				DiskID: 102,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}, "sdd": {
 				DiskID: 103,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}, "sde": {
 				DiskID: 104,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}, "sdf": {
 				DiskID: 105,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}, "sdg": {
 				DiskID: 106,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}, "sdh": {
 				DiskID: 107,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}},
 			expectedDiskMap: linodego.InstanceConfigDeviceMap{
@@ -433,7 +434,7 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 			name: "Error - single disk with invalid name",
 			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdx": {
 				DiskID: 101,
-				SizeGB: 1024,
+				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
 			}},
 			expectedError: fmt.Errorf("unknown device name: \"sdx\""),

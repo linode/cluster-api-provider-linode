@@ -119,11 +119,15 @@ spec:
                       description: Label is the label for the instance disk, if nothing
                         is provided it will match the device name
                       type: string
-                    sizeGB:
-                      description: SizeGB is the size in GB of the disk
-                      type: integer
+                    size:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Size is the disk size in resource.Quantity notation
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
                   required:
-                  - sizeGB
+                  - size
                   type: object
                 description: |-
                   DataDisks is a map of any additional disks to add to an instance,
@@ -195,11 +199,15 @@ spec:
                     description: Label is the label for the instance disk, if nothing
                       is provided it will match the device name
                     type: string
-                  sizeGB:
-                    description: SizeGB is the size in GB of the disk
-                    type: integer
+                  size:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: Size is the disk size in resource.Quantity notation
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                 required:
-                - sizeGB
+                - size
                 type: object
               privateIP:
                 type: boolean

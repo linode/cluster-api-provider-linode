@@ -7,8 +7,8 @@ Currently SDB is being used by a swap disk, replacing this disk with a data disk
 up to 90 seconds. This will be resolved when the disk creation refactor is finished in https://github.com/linode/cluster-api-provider-linode/pull/216
 ```
 ## Specify a data disk
-A LinodeMachine can be configured with additional data disks with the key being the device to be mounted as and including an optional label and sizeGB.
-* `sizeGB` Required field. The size in GB to use for a data disk. The sum of all data disks must not be more than allowed by the [linode plan](https://www.linode.com/pricing/#compute-shared). 
+A LinodeMachine can be configured with additional data disks with the key being the device to be mounted as and including an optional label and size.
+* `size` Required field. [resource.Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/) for the size if a disk. The sum of all data disks must not be more than allowed by the [linode plan](https://www.linode.com/pricing/#compute-shared). 
 * `label`  Optional field. The label for the disk, defaults to the device name
 * `DeviceID` Optional field used by the controller to track disk IDs, this should not be set unless a disk is created outside CAPL
 
@@ -26,10 +26,10 @@ spec:
       dataDisks:
         sdc:
           label: etcd_disk
-          sizeGB: 16
+          size: 16Gi
         sdd:
           label: data_disk
-          sizeGB: 10
+          size: 10Gi
 ```
 
 ## Use a data disk for an explicit etcd data disk
@@ -48,7 +48,7 @@ spec:
       dataDisks:
         sdc:
           label: etcd_disk
-          sizeGB: 16
+          size: 16Gi
 
 ---
 kind: KubeadmControlPlane
@@ -56,7 +56,6 @@ apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
   name: "${CLUSTER_NAME}-control-plane"
 spec:
-    [...]
     diskSetup:
       filesystems:
         - label: etcd_data
