@@ -355,16 +355,24 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
+		addrs, err := r.buildInstanceAddrs(ctx, machineScope, linodeInstance.ID)
+		if err != nil {
+			logger.Error(err, "Failed to get instance ip addresses")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightReady, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+		machineScope.LinodeMachine.Status.Addresses = addrs
+
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightReady)
 	}
 
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
-
-	addrs, err := r.buildInstanceAddrs(ctx, machineScope, linodeInstance.ID)
-	if err != nil {
-		return linodeInstance, err
-	}
-	machineScope.LinodeMachine.Status.Addresses = addrs
 
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
