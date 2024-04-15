@@ -107,11 +107,11 @@ spec:
                               description: Label is the label for the instance disk,
                                 if nothing is provided it will match the device name
                               type: string
-                            sizeMB:
+                            sizeGB:
                               description: SizeGB is the size in GB of the disk
                               type: integer
                           required:
-                          - sizeMB
+                          - sizeGB
                           type: object
                         description: |-
                           DataDisks is a map of any additional disks to add to an instance,
@@ -185,11 +185,11 @@ spec:
                             description: Label is the label for the instance disk,
                               if nothing is provided it will match the device name
                             type: string
-                          sizeMB:
+                          sizeGB:
                             description: SizeGB is the size in GB of the disk
                             type: integer
                         required:
-                        - sizeMB
+                        - sizeGB
                         type: object
                       privateIP:
                         type: boolean

@@ -87,7 +87,7 @@ type InstanceDisk struct {
 	DiskID int `json:"diskID,omitempty"`
 	// SizeGB is the size in GB of the disk
 	// +kubebuilder:validation:Required
-	SizeGB int `json:"sizeMB"`
+	SizeGB int `json:"sizeGB"`
 	// Label is the label for the instance disk, if nothing is provided it will match the device name
 	Label string `json:"label,omitempty"`
 }
