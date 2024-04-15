@@ -1,7 +1,6 @@
-package testmock
+package mocktest
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -26,7 +24,7 @@ func TestUsage(t *testing.T) {
 	RunSpecs(t, "Controller Suite")
 }
 
-var _ = Describe("k8s client", func() {
+var _ = Describe("k8s client", Label("k8sclient"), func() {
 	var mockCtrl *gomock.Controller
 
 	BeforeEach(func() {
@@ -38,20 +36,25 @@ var _ = Describe("k8s client", func() {
 	})
 
 	for _, path := range Paths(
-		Mock("fetch object", func(c *mock.MockK8sClient) {
-			c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		Mock("fetch object", func(ctx MockContext) {
+			ctx.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
-		Result("no error", func(ctx context.Context, c *mock.MockK8sClient) {
-			Expect(contrivedCalls(ctx, nil, c)).To(Succeed())
+		Result("no error", func(ctx MockContext) {
+			Expect(contrivedCalls(ctx)).To(Succeed())
 		}),
 	) {
 		It(path.Describe(), func(ctx SpecContext) {
-			Run(path, GinkgoT(), ctx, mock.NewMockK8sClient(mockCtrl))
+			mockCtx := MockContext{
+				Context:      ctx,
+				TestReporter: GinkgoT(),
+				K8sClient:    mock.NewMockK8sClient(mockCtrl),
+			}
+			Run(mockCtx, path)
 		})
 	}
 })
 
-var _ = Describe("multiple clients", func() {
+var _ = Describe("multiple clients", Label("multiple"), func() {
 	var mockCtrl *gomock.Controller
 
 	BeforeEach(func() {
@@ -63,44 +66,50 @@ var _ = Describe("multiple clients", func() {
 	})
 
 	for _, path := range Paths(
-		Mock("read object", func(c *mock.MockK8sClient) {
-			c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		Mock("read object", func(ctx MockContext) {
+			ctx.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
 		Either(
 			Case(
-				Mock("underlying exists", func(c *mock.MockLinodeMachineClient) {
-					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
+				Mock("underlying exists", func(ctx MockContext) {
+					ctx.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 				}),
-				Result("no error", func(ctx context.Context, lc *mock.MockLinodeMachineClient, kc *mock.MockK8sClient) {
-					Expect(contrivedCalls(ctx, lc, kc)).To(Succeed())
+				Result("no error", func(ctx MockContext) {
+					Expect(contrivedCalls(ctx)).To(Succeed())
 				}),
 			),
 			Case(
-				Mock("underlying does not exist", func(c *mock.MockLinodeMachineClient) {
-					c.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
+				Mock("underlying does not exist", func(ctx MockContext) {
+					ctx.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
 				}),
-				Result("error", func(ctx context.Context, lc *mock.MockLinodeMachineClient, kc *mock.MockK8sClient) {
-					Expect(contrivedCalls(ctx, lc, kc)).NotTo(Succeed())
+				Result("error", func(ctx MockContext) {
+					Expect(contrivedCalls(ctx)).NotTo(Succeed())
 				}),
 			),
 		),
 	) {
 		It(path.Describe(), func(ctx SpecContext) {
-			Run(path, GinkgoT(), ctx, mock.NewMockLinodeMachineClient(mockCtrl), mock.NewMockK8sClient(mockCtrl))
+			mockCtx := MockContext{
+				Context:       ctx,
+				TestReporter:  GinkgoT(),
+				MachineClient: mock.NewMockLinodeMachineClient(mockCtrl),
+				K8sClient:     mock.NewMockK8sClient(mockCtrl),
+			}
+			Run(mockCtx, path)
 		})
 	}
 })
 
-func contrivedCalls(ctx context.Context, lc scope.LinodeMachineClient, kc scope.K8sClient) error {
+func contrivedCalls(ctx MockContext) error {
 	GinkgoHelper()
 
-	err := kc.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
+	err := ctx.K8sClient.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
 	if err != nil {
 		return err
 	}
 
-	if lc != nil {
-		_, err = lc.CreateInstance(ctx, linodego.InstanceCreateOptions{})
+	if ctx.MachineClient != nil {
+		_, err = ctx.MachineClient.CreateInstance(ctx, linodego.InstanceCreateOptions{})
 		if err != nil {
 			return err
 		}

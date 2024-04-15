@@ -1,4 +1,4 @@
-package testmock
+package mocktest
 
 import (
 	"fmt"
@@ -7,12 +7,13 @@ import (
 
 // A container for mock calls and a function for asserting results.
 type path struct {
-	// store as pointers so each path can check if it was invoked
+	// Store as pointers so each path can check if it was invoked
 	once  []*once
 	calls []call
 	result
 }
 
+// Describe generates a string of all nodes belonging to a test path.
 func (p path) Describe() string {
 	var text []string
 	for _, o := range p.once {
@@ -28,12 +29,12 @@ func (p path) Describe() string {
 	return strings.Join(text, " > ")
 }
 
-// Paths declares one or more code paths to test with mock clients.
+// Paths declares one or more test paths with mock clients.
 // It traverses each node and their children, returning a list of permutations,
-// each representing a different code path as specified and evaluated in order.
+// each representing a different test path as specified and evaluated in order.
 // New permutations are defined by
-//  1. Terminal nodes i.e. entries that have a function for asserting results.
-//  2. Nodes belonging to a fork i.e. multiple entries non-occurring on the same path.
+// 1. Terminal nodes i.e. entries that have a function for asserting results.
+// 2. Nodes belonging to a fork i.e. multiple entries non-occurring on the same path.
 func Paths(nodes ...node) []path {
 	if len(nodes) == 0 {
 		return nil
