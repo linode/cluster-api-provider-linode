@@ -1,15 +1,17 @@
 # Kubeadm ClusterClass
 ## Specification
-| Control Plane | CNI    | Default OS   | Installs ClusterClass |
-|---------------|--------|--------------|-----------------------|
-| Kubeadm       | Cilium | Ubuntu 22.04 | Yes                   | 
+| Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|---------------|--------|--------------|-----------------------|------|------|
+| Kubeadm       | Cilium | Ubuntu 22.04 | Yes                   | Yes  | No   |
 ## Prerequisites
 [Quickstart](../getting-started.md) completed
 ## Usage
 ### Create clusterClass and first cluster
 1. Generate the ClusterClass and cluster manifests
     ```bash
-    clusterctl generate cluster test-cluster --infrastructure linode:0.0.0  --flavor clusterclass-kubeadm > test-cluster.yaml
+    clusterctl generate cluster test-cluster \
+        --infrastructure linode:0.0.0 \
+        --flavor clusterclass-kubeadm > test-cluster.yaml
     ```
 2. Apply cluster manifests
     ```bash
@@ -18,7 +20,8 @@
 ### (Optional) Create a second cluster using the existing ClusterClass
 1.  Generate cluster manifests
       ```bash
-      clusterctl generate cluster test-cluster-2 --flavor clusterclass-kubeadm > test-cluster-2.yaml
+      clusterctl generate cluster test-cluster-2 \
+          --flavor clusterclass-kubeadm > test-cluster-2.yaml
       ```
       ```yaml
       apiVersion: cluster.x-k8s.io/v1beta1

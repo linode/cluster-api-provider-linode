@@ -51,7 +51,7 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	AuthorizedUsers []string `json:"authorizedUsers,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	BackupID int `json:"backupId,omitempty"`
+	BackupID int `json:"backupID,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Image string `json:"image,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
@@ -59,11 +59,11 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	BackupsEnabled bool `json:"backupsEnabled,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	PrivateIP bool `json:"privateIp,omitempty"`
+	PrivateIP *bool `json:"privateIP,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	FirewallID int `json:"firewallId,omitempty"`
+	FirewallID int `json:"firewallID,omitempty"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials
 	// to use for provisioning this machine. If not supplied then these

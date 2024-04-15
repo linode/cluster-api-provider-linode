@@ -329,7 +329,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 		}),
 		Result("success", func(ctx MockContext) {
 			mScope := MachineScope{
-				client: ctx.K8sClient,
+				Client: ctx.K8sClient,
 				Machine: &clusterv1.Machine{
 					Spec: clusterv1.MachineSpec{
 						Bootstrap: clusterv1.Bootstrap{
@@ -358,7 +358,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			}),
 			Result("secret ref missing", func(ctx MockContext) {
 				mScope := MachineScope{
-					client:        ctx.K8sClient,
+					Client:        ctx.K8sClient,
 					Machine:       &clusterv1.Machine{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				}
@@ -370,7 +370,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 		),
 		Result("error", func(ctx MockContext) {
 			mScope := MachineScope{
-				client: ctx.K8sClient,
+				Client: ctx.K8sClient,
 				Machine: &clusterv1.Machine{
 					Spec: clusterv1.MachineSpec{
 						Bootstrap: clusterv1.Bootstrap{

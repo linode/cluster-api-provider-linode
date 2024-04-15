@@ -49,10 +49,19 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-// default etcd Disk size in MB
 const (
-	defaultEtcdDiskSize         = 10240
-	defaultResizeTimeoutSeconds = 30
+	// default etcd disk size in MB
+	defaultEtcdDiskSize      = 10240
+	defaultResizeWaitSeconds = 5
+
+	// conditions for preflight instance creation
+	ConditionPreflightCreated          clusterv1.ConditionType = "PreflightCreated"
+	ConditionPreflightRootDiskResizing clusterv1.ConditionType = "PreflightRootDiskResizing"
+	ConditionPreflightRootDiskResized  clusterv1.ConditionType = "PreflightRootDiskResized"
+	ConditionPreflightEtcdDiskCreated  clusterv1.ConditionType = "PreflightEtcdDiskCreated"
+	ConditionPreflightConfigured       clusterv1.ConditionType = "PreflightConfigured"
+	ConditionPreflightBootTriggered    clusterv1.ConditionType = "PreflightBootTriggered"
+	ConditionPreflightReady            clusterv1.ConditionType = "PreflightReady"
 )
 
 var skippedMachinePhases = map[string]bool{
@@ -61,6 +70,7 @@ var skippedMachinePhases = map[string]bool{
 	string(clusterv1.MachinePhaseUnknown): true,
 }
 
+// statuses to keep requeueing on while an instance is booting
 var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
 	linodego.InstanceOffline:      true,
 	linodego.InstanceBooting:      true,
@@ -204,19 +214,20 @@ func (r *LinodeMachineReconciler) reconcile(
 		return
 	}
 
-	var linodeInstance *linodego.Instance
-	defer func() {
-		machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
-		if linodeInstance != nil {
-			machineScope.LinodeMachine.Status.InstanceState = &linodeInstance.Status
-		}
-	}()
-
 	// Update
-	if machineScope.LinodeMachine.Spec.InstanceID != nil {
+	if machineScope.LinodeMachine.Status.InstanceState != nil {
+		var linodeInstance *linodego.Instance
+		defer func() {
+			if linodeInstance != nil {
+				machineScope.LinodeMachine.Status.InstanceState = &linodeInstance.Status
+			}
+		}()
+
 		failureReason = cerrs.UpdateMachineError
 
-		logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
+		if machineScope.LinodeMachine.Spec.InstanceID != nil {
+			logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
+		}
 
 		res, linodeInstance, err = r.reconcileUpdate(ctx, logger, machineScope)
 
@@ -232,16 +243,17 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		return
 	}
-	linodeInstance, err = r.reconcileCreate(ctx, logger, machineScope)
+	res, err = r.reconcileCreate(ctx, logger, machineScope)
 
 	return
 }
 
+//nolint:cyclop // keep top-level preflight condition checks in the same function for readability
 func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-) (*linodego.Instance, error) {
+) (ctrl.Result, error) {
 	logger.Info("creating machine")
 
 	tags := []string{machineScope.LinodeCluster.Name}
@@ -253,13 +265,13 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 	filter, err := listFilter.String()
 	if err != nil {
-		return nil, err
+		return ctrl.Result{}, err
 	}
 	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
 	if err != nil {
 		logger.Error(err, "Failed to list Linode machine instances")
 
-		return nil, err
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 
 	var linodeInstance *linodego.Instance
@@ -274,43 +286,87 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
 
-			return nil, err
+			return ctrl.Result{}, err
 		}
+
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-		if err != nil || linodeInstance == nil {
+		if err != nil {
 			logger.Error(err, "Failed to create Linode machine instance")
 
-			return nil, err
-		}
-		if err = r.configureDisksControlPlane(ctx, logger, machineScope, linodeInstance.ID); err != nil {
-			logger.Error(err, "Failed to configure instance disks")
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
 
-			return nil, err
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
-		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
-			logger.Error(err, "Failed to boot instance")
 
-			return nil, err
-		}
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
+		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
+
 	default:
 		err = errors.New("multiple instances")
 		logger.Error(err, "multiple instances found", "tags", tags)
 
-		return nil, err
+		return ctrl.Result{}, err
 	}
 
-	machineScope.LinodeMachine.Status.Ready = true
-	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
+		if err = r.configureDisksControlPlane(ctx, logger, machineScope, linodeInstance.ID); err != nil {
+			logger.Error(err, "Failed to configure instance disks")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightConfigured)
+	}
+
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
+		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+			logger.Error(err, "Failed to boot instance")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightBootTriggered, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered)
+	}
+
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
+		if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
+			logger.Error(err, "Failed to add instance to Node Balancer backend")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightReady, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightReady)
+	}
+
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
 
-	if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
-		logger.Error(err, "Failed to add instance to Node Balancer backend")
+	// Set the instance state to signal preflight process is done
+	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
 
-		return linodeInstance, err
-	}
-
-	return linodeInstance, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *LinodeMachineReconciler) configureDisksControlPlane(
@@ -322,52 +378,97 @@ func (r *LinodeMachineReconciler) configureDisksControlPlane(
 	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
 		return nil
 	}
+
+	if err := r.resizeRootDisk(ctx, logger, machineScope, linodeInstanceID); err != nil {
+		return err
+	}
+
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated) {
+		// create the etcd disk
+		if _, err := machineScope.LinodeClient.CreateInstanceDisk(
+			ctx,
+			linodeInstanceID,
+			linodego.InstanceDiskCreateOptions{
+				Label:      "etcd-data",
+				Size:       defaultEtcdDiskSize,
+				Filesystem: string(linodego.FilesystemExt4),
+			},
+		); err != nil {
+			logger.Error(err, "Failed to create etcd disk")
+
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
+			return err
+		}
+
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightEtcdDiskCreated)
+	}
+
+	return nil
+}
+
+func (r *LinodeMachineReconciler) resizeRootDisk(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	linodeInstanceID int,
+) error {
+	if reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized) {
+		return nil
+	}
+
 	// get the default instance config
 	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
 	if err != nil || len(configs) == 0 {
 		logger.Error(err, "Failed to list instance configs")
 
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
 		return err
 	}
-	instanceConfig := &configs[0]
+	instanceConfig := configs[0]
+
+	if instanceConfig.Devices.SDA == nil {
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "root disk not yet ready")
+
+		return errors.New("root disk not yet ready")
+	}
+
+	rootDiskID := instanceConfig.Devices.SDA.DiskID
 
 	// carve out space for the etcd disk
-	rootDiskID := instanceConfig.Devices.SDA.DiskID
-	rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
-	if err != nil {
-		logger.Error(err, "Failed to get root disk for instance")
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing) {
+		rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
+		if err != nil {
+			logger.Error(err, "Failed to get root disk for instance")
 
-		return err
-	}
-	diskSize := rootDisk.Size - defaultEtcdDiskSize
-	if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-		logger.Error(err, "Failed to resize root disk")
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
-		return err
+			return err
+		}
+		diskSize := rootDisk.Size - defaultEtcdDiskSize
+		if err = machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
+			logger.Error(err, "Failed to resize root disk")
+
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
+			return err
+		}
+
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
 	}
+
 	// wait for the disk to resize
-	_, err = machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeTimeoutSeconds)
-	if err != nil {
-		logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeTimeoutSeconds))
+	if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeWaitSeconds); err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to resize root disk within resize timeout of %d seconds", defaultResizeWaitSeconds))
+
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
 
 		return err
 	}
 
-	// create the etcd disk
-	_, err = machineScope.LinodeClient.CreateInstanceDisk(
-		ctx,
-		linodeInstanceID,
-		linodego.InstanceDiskCreateOptions{
-			Label:      "etcd-data",
-			Size:       defaultEtcdDiskSize,
-			Filesystem: string(linodego.FilesystemExt4),
-		},
-	)
-	if err != nil {
-		logger.Error(err, "Failed to create etcd disk")
-
-		return err
-	}
+	conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
 
 	return nil
 }
@@ -394,6 +495,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 			// Create new machine
 			machineScope.LinodeMachine.Spec.ProviderID = nil
 			machineScope.LinodeMachine.Spec.InstanceID = nil
+			machineScope.LinodeMachine.Status.InstanceState = nil
 
 			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, "missing", clusterv1.ConditionSeverityWarning, "instance not found")
 		}
@@ -464,6 +566,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	machineScope.LinodeMachine.Spec.ProviderID = nil
 	machineScope.LinodeMachine.Spec.InstanceID = nil
+	machineScope.LinodeMachine.Status.InstanceState = nil
 	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
 
 	return nil
@@ -487,14 +590,14 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
-	err = controller.Watch(
-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(r.requeueLinodeMachinesForUnpausedCluster(mgr.GetLogger())),
-		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
-	)
+	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeMachineList{}, mgr.GetScheme())
 	if err != nil {
-		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
+		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
 	}
 
-	return nil
+	return controller.Watch(
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+		handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
+		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
+	)
 }

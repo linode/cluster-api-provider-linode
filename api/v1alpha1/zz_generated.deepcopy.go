@@ -370,6 +370,11 @@ func (in *LinodeMachineSpec) DeepCopyInto(out *LinodeMachineSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.PrivateIP != nil {
+		in, out := &in.PrivateIP, &out.PrivateIP
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
 		*out = make([]string, len(*in))

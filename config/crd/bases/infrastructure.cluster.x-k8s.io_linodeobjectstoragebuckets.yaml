@@ -10,6 +10,8 @@ metadata:
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
+    categories:
+    - cluster-api
     kind: LinodeObjectStorageBucket
     listKind: LinodeObjectStorageBucketList
     plural: linodeobjectstoragebuckets

@@ -104,7 +104,9 @@ type LinodeVPCStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:path=linodevpcs,scope=Namespaced,categories=cluster-api,shortName=lvpc
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="VPC is ready"
 // +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 
 // LinodeVPC is the Schema for the linodemachines API

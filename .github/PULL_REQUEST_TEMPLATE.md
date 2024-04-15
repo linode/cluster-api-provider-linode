@@ -12,6 +12,7 @@ Add one of the following kinds:
 /kind deprecation
 /kind design
 /kind documentation
+/kind testing
 -->
 
 **What this PR does / why we need it**:

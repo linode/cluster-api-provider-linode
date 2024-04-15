@@ -78,7 +78,7 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              backupId:
+              backupID:
                 type: integer
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -107,7 +107,7 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
-              firewallId:
+              firewallID:
                 type: integer
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -161,7 +161,7 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              privateIp:
+              privateIP:
                 type: boolean
                 x-kubernetes-validations:
                 - message: Value is immutable

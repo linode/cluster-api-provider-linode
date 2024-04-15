@@ -1,8 +1,8 @@
 # RKE2
 ## Specification
-| Control Plane               | CNI    | Default OS   | Installs ClusterClass |
-|-----------------------------|--------|--------------|-----------------------|
-| [rke2](https://docs.rke2.io/) | Cilium | Ubuntu 22.04 | No                    |
+| Control Plane                 | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|-------------------------------|--------|--------------|-----------------------|------|------|
+| [rke2](https://docs.rke2.io/) | Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
 ## Prerequisites
 * [Quickstart](../getting-started.md) completed
 * Select an [rke2 kubernetes version](https://github.com/rancher/rke2/releases) to set for the kubernetes version
@@ -16,7 +16,9 @@
 ## Usage
 1. Generate cluster yaml
     ```bash
-    clusterctl generate cluster test-cluster --infrastructure linode:0.0.0 --flavor rke2 > test-rke2-cluster.yaml
+    clusterctl generate cluster test-cluster \
+        --infrastructure linode:0.0.0 \
+        --flavor rke2 > test-rke2-cluster.yaml
     ```
 2. Apply cluster yaml
     ```bash
