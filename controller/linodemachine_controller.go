@@ -52,7 +52,7 @@ import (
 const (
 	// default etcd disk size in MB
 	defaultEtcdDiskSize      = 10240
-	defaultResizeWaitSeconds = 5
+	defaultResizeWaitSeconds = 30
 
 	// conditions for preflight instance creation
 	ConditionPreflightCreated          clusterv1.ConditionType = "PreflightCreated"
