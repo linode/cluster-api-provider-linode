@@ -123,7 +123,7 @@ lint: ## Run lint against code.
 
 .PHONY: nilcheck
 nilcheck: nilaway ## Run nil check against code.
-	go list ./... | xargs -I {} -d '\n' nilaway -include-pkgs {} ./...
+	nilaway  ./...
 
 .PHONY: vulncheck
 vulncheck: govulncheck ## Run vulnerability check against code.
