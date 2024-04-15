@@ -1,8 +1,6 @@
 package mocktest
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -27,6 +25,19 @@ func Run(ctx MockContext, p path) {
 	evalFn(ctx, fn(p.result))
 }
 
+func evalFn(ctx MockContext, f fn) {
+	switch tt := ctx.TestReporter.(type) {
+	case *testing.T:
+		tt.Log(f.text)
+	case ginkgo.GinkgoTInterface:
+		ginkgo.By(f.text)
+	default:
+		fmt.Println(f.text)
+	}
+
+	f.do(ctx)
+}
+
 func evalOnce(ctx MockContext, f *once) {
 	if f.ran {
 		return
@@ -41,25 +52,6 @@ func evalOnce(ctx MockContext, f *once) {
 		fmt.Println(f.text)
 	}
 
-	resultFn := f.value.(func(context.Context))
-	resultFn(ctx)
+	f.do(ctx)
 	f.ran = true
-}
-
-func evalFn(ctx MockContext, f fn) {
-	switch tt := ctx.TestReporter.(type) {
-	case *testing.T:
-		tt.Log(f.text)
-	case ginkgo.GinkgoTInterface:
-		ginkgo.By(f.text)
-	default:
-		fmt.Println(f.text)
-	}
-
-	switch mockFunc := f.value.(type) {
-	case func(MockContext):
-		mockFunc(ctx)
-	default:
-		panic(errors.New("invalid function signature passed to Mock/Result"))
-	}
 }

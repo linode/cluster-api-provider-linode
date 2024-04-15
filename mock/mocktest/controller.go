@@ -3,7 +3,6 @@ package mocktest
 import (
 	"bytes"
 	"errors"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -14,7 +13,7 @@ import (
 )
 
 type ctrlTest struct {
-	clients  []any
+	clients  []mock.MockClient
 	recorder *record.FakeRecorder
 	logger   logr.Logger
 	logs     *bytes.Buffer
@@ -22,7 +21,7 @@ type ctrlTest struct {
 
 // NewControllerTestSuite creates a test suite for a controller.
 // It generates new mock clients for each test path it runs.
-func NewControllerTestSuite(clients ...any) *ctrlTest {
+func NewControllerTestSuite(clients ...mock.MockClient) *ctrlTest {
 	if len(clients) == 0 {
 		panic(errors.New("unable to run tests without clients"))
 	}
@@ -86,20 +85,7 @@ func (c *ctrlTest) Run(paths []path) {
 			}
 
 			for _, client := range c.clients {
-				switch client.(type) {
-				case mock.MockLinodeMachineClient, *mock.MockLinodeMachineClient:
-					mockCtx.MachineClient = mock.NewMockLinodeMachineClient(mockCtrl)
-				case mock.MockLinodeVPCClient, *mock.MockLinodeVPCClient:
-					mockCtx.VPCClient = mock.NewMockLinodeVPCClient(mockCtrl)
-				case mock.MockLinodeNodeBalancerClient, *mock.MockLinodeNodeBalancerClient:
-					mockCtx.NodeBalancerClient = mock.NewMockLinodeNodeBalancerClient(mockCtrl)
-				case mock.MockLinodeObjectStorageClient, *mock.MockLinodeObjectStorageClient:
-					mockCtx.ObjectStorageClient = mock.NewMockLinodeObjectStorageClient(mockCtrl)
-				case mock.MockK8sClient, *mock.MockK8sClient:
-					mockCtx.K8sClient = mock.NewMockK8sClient(mockCtrl)
-				default:
-					panic(fmt.Errorf("unknown client type %s", client))
-				}
+				mockCtx.MockClients.Build(client, mockCtrl)
 			}
 
 			Run(mockCtx, path)

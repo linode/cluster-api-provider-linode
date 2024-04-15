@@ -47,7 +47,9 @@ var _ = Describe("k8s client", Label("k8sclient"), func() {
 			mockCtx := MockContext{
 				Context:      ctx,
 				TestReporter: GinkgoT(),
-				K8sClient:    mock.NewMockK8sClient(mockCtrl),
+				MockClients: mock.MockClients{
+					K8sClient: mock.NewMockK8sClient(mockCtrl),
+				},
 			}
 			Run(mockCtx, path)
 		})
@@ -90,10 +92,12 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 	) {
 		It(path.Describe(), func(ctx SpecContext) {
 			mockCtx := MockContext{
-				Context:       ctx,
-				TestReporter:  GinkgoT(),
-				MachineClient: mock.NewMockLinodeMachineClient(mockCtrl),
-				K8sClient:     mock.NewMockK8sClient(mockCtrl),
+				Context:      ctx,
+				TestReporter: GinkgoT(),
+				MockClients: mock.MockClients{
+					MachineClient: mock.NewMockLinodeMachineClient(mockCtrl),
+					K8sClient:     mock.NewMockK8sClient(mockCtrl),
+				},
 			}
 			Run(mockCtx, path)
 		})
@@ -128,13 +132,13 @@ func TestPaths(t *testing.T) {
 		{
 			name: "basic",
 			input: []node{
-				call{value: 0},
-				result{value: 0},
+				call{text: "0"},
+				result{text: "0"},
 			},
 			output: []path{
 				{
-					calls:  []call{{value: 0}},
-					result: result{value: 0},
+					calls:  []call{{text: "0"}},
+					result: result{text: "0"},
 				},
 			},
 		},
@@ -148,10 +152,10 @@ func TestPaths(t *testing.T) {
 		{
 			name: "open fork",
 			input: []node{
-				call{value: 0},
+				call{text: "0"},
 				fork{
-					call{value: 1},
-					leaf{call{value: 1}, result{value: 1}},
+					call{text: "1"},
+					leaf{call{text: "1"}, result{text: "1"}},
 				},
 			},
 			panicErr: errors.New("unresolved path at index 1"),
@@ -159,54 +163,54 @@ func TestPaths(t *testing.T) {
 		{
 			name: "split",
 			input: []node{
-				call{value: 0},
+				call{text: "0"},
 				fork{
-					call{value: 1},
-					call{value: 2},
+					call{text: "1"},
+					call{text: "2"},
 				},
-				result{value: 4},
+				result{text: "4"},
 			},
 			output: []path{
 				{
 					calls: []call{
-						{value: 0},
-						{value: 1},
+						{text: "0"},
+						{text: "1"},
 					},
-					result: result{value: 4},
+					result: result{text: "4"},
 				},
 				{
 					calls: []call{
-						{value: 0},
-						{value: 2},
+						{text: "0"},
+						{text: "2"},
 					},
-					result: result{value: 4},
+					result: result{text: "4"},
 				},
 			},
 		},
 		{
 			name: "close order",
 			input: []node{
-				call{value: 0},
+				call{text: "0"},
 				fork{
-					call{value: 1},
-					leaf{call{value: 2}, result{value: 4}},
+					call{text: "1"},
+					leaf{call{text: "2"}, result{text: "4"}},
 				},
-				result{value: 3},
+				result{text: "3"},
 			},
 			output: []path{
 				{
 					calls: []call{
-						{value: 0},
-						{value: 2},
+						{text: "0"},
+						{text: "2"},
 					},
-					result: result{value: 4},
+					result: result{text: "4"},
 				},
 				{
 					calls: []call{
-						{value: 0},
-						{value: 1},
+						{text: "0"},
+						{text: "1"},
 					},
-					result: result{value: 3},
+					result: result{text: "3"},
 				},
 			},
 		},
@@ -214,100 +218,100 @@ func TestPaths(t *testing.T) {
 			name: "path order",
 			input: []node{
 				fork{
-					leaf{call{value: 0}, result{value: 0}},
-					call{value: 1},
+					leaf{call{text: "0"}, result{text: "0"}},
+					call{text: "1"},
 				},
 				fork{
-					leaf{call{value: 2}, result{value: 2}},
-					leaf{call{value: 3}, result{value: 3}},
+					leaf{call{text: "2"}, result{text: "2"}},
+					leaf{call{text: "3"}, result{text: "3"}},
 				},
 			},
 			output: []path{
 				{
-					calls:  []call{{value: 0}},
-					result: result{value: 0},
+					calls:  []call{{text: "0"}},
+					result: result{text: "0"},
 				},
 				{
 					calls: []call{
-						{value: 1},
-						{value: 2},
+						{text: "1"},
+						{text: "2"},
 					},
-					result: result{value: 2},
+					result: result{text: "2"},
 				},
 				{
 					calls: []call{
-						{value: 1},
-						{value: 3},
+						{text: "1"},
+						{text: "3"},
 					},
-					result: result{value: 3},
+					result: result{text: "3"},
 				},
 			},
 		},
 		{
 			name: "once",
 			input: []node{
-				once{fn: fn{value: 0}},
+				once{text: "0"},
 				fork{
-					leaf{call{value: 1}, result{value: 1}},
-					call{value: 1},
+					leaf{call{text: "1"}, result{text: "1"}},
+					call{text: "1"},
 				},
 				fork{
-					leaf{call{value: 2}, result{value: 2}},
-					call{value: 2},
+					leaf{call{text: "2"}, result{text: "2"}},
+					call{text: "2"},
 				},
-				result{value: 3},
-				once{fn: fn{value: 4}},
+				result{text: "3"},
+				once{text: "4"},
 				fork{
-					leaf{call{value: 5}, result{value: 5}},
-					call{value: 5},
+					leaf{call{text: "5"}, result{text: "5"}},
+					call{text: "5"},
 				},
 				fork{
-					leaf{call{value: 6}, result{value: 6}},
-					leaf{call{value: 7}, result{value: 7}},
+					leaf{call{text: "6"}, result{text: "6"}},
+					leaf{call{text: "7"}, result{text: "7"}},
 				},
 			},
 			output: []path{
 				{
-					once:   []*once{{fn: fn{value: 0}}},
-					calls:  []call{{value: 1}},
-					result: result{value: 1},
+					once:   []*once{{text: "0"}},
+					calls:  []call{{text: "1"}},
+					result: result{text: "1"},
 				},
 				{
-					once: []*once{{fn: fn{value: 0}}},
+					once: []*once{{text: "0"}},
 					calls: []call{
-						{value: 1},
-						{value: 2},
+						{text: "1"},
+						{text: "2"},
 					},
-					result: result{value: 2},
+					result: result{text: "2"},
 				},
 				{
-					once: []*once{{fn: fn{value: 0}}},
+					once: []*once{{text: "0"}},
 					calls: []call{
-						{value: 1},
-						{value: 2},
+						{text: "1"},
+						{text: "2"},
 					},
-					result: result{value: 3},
+					result: result{text: "3"},
 				},
 				{
-					once:   []*once{{fn: fn{value: 4}}},
-					calls:  []call{{value: 5}},
-					result: result{value: 5},
+					once:   []*once{{text: "4"}},
+					calls:  []call{{text: "5"}},
+					result: result{text: "5"},
 				},
 				{
-					once: []*once{{fn: fn{value: 4}}},
+					once: []*once{{text: "4"}},
 					calls: []call{
-						{value: 5},
-						{value: 6},
+						{text: "5"},
+						{text: "6"},
 					},
-					result: result{value: 6},
+					result: result{text: "6"},
 				},
 				{
-					once: []*once{{fn: fn{value: 4}}},
+					once: []*once{{text: "4"}},
 					calls: []call{
-						{value: 5},
-						{value: 7},
+						{text: "5"},
+						{text: "7"},
 					},
-					result: result{value: 7},
+					result: result{text: "7"},
 				},
 			},
 		},

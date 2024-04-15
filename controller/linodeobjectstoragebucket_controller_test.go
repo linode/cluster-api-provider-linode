@@ -42,7 +42,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
 
-	. "github.com/linode/cluster-api-provider-linode/util/mocktest"
+	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -76,13 +76,6 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		},
 	}
 
-	secret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf(scope.AccessKeyNameTemplate, "lifecycle"),
-			Namespace: "default",
-		},
-	}
-
 	ct := NewControllerTestSuite(mock.MockLinodeObjectStorageClient{})
 	reconciler := LinodeObjectStorageBucketReconciler{
 		Recorder: ct.Recorder(),
@@ -101,7 +94,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		objectKey := client.ObjectKey{Name: "lifecycle", Namespace: "default"}
 		Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 
-		// Create patch helper with latest state of obj
+		// Create patch helper with latest state of resource.
+		// This is only needed when relying on envtest's k8sClient.
 		patchHelper, err := patch.NewHelper(&obj, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
 		bScope.PatchHelper = patchHelper
@@ -169,11 +163,13 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			Expect(obj.Status.CreationTime).NotTo(BeNil())
 			Expect(*obj.Status.LastKeyGeneration).To(Equal(*obj.Spec.KeyGeneration))
 			Expect(*obj.Status.LastKeyGeneration).To(Equal(0))
-			Expect(*obj.Status.KeySecretName).To(Equal(secret.Name))
+			Expect(*obj.Status.KeySecretName).To(Equal(fmt.Sprintf(scope.AccessKeyNameTemplate, "lifecycle")))
 			Expect(obj.Status.AccessKeyRefs).To(HaveLen(scope.NumAccessKeys))
 
 			By("secret")
-			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&secret), &secret)).To(Succeed())
+			var secret corev1.Secret
+			secretKey := client.ObjectKey{Namespace: "default", Name: *obj.Status.KeySecretName}
+			Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 			Expect(secret.Data).To(HaveLen(1))
 
 			var key accessKeySecret
@@ -262,6 +258,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				}),
 			),
 			Once("secret is deleted", func(ctx context.Context) {
+				var secret corev1.Secret
+				secretKey := client.ObjectKey{Namespace: "default", Name: *obj.Status.KeySecretName}
+				Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 				Expect(k8sClient.Delete(ctx, &secret)).To(Succeed())
 			}),
 		),
@@ -291,7 +290,10 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					bScope.LinodeClient = ctx.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&secret), &secret)).To(Succeed())
+
+					var secret corev1.Secret
+					secretKey := client.ObjectKey{Namespace: "default", Name: *obj.Status.KeySecretName}
+					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(1))
 
 					var key accessKeySecret
@@ -360,12 +362,8 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 		mock.MockK8sClient{},
 	)
 
-	reconciler := LinodeObjectStorageBucketReconciler{
-		Recorder: ct.Recorder(),
-	}
-	bScope := scope.ObjectStorageBucketScope{
-		Logger: ct.Logger(),
-	}
+	reconciler := LinodeObjectStorageBucketReconciler{Recorder: ct.Recorder()}
+	bScope := scope.ObjectStorageBucketScope{Logger: ct.Logger()}
 
 	BeforeEach(func() {
 		// Reset obj to base state to be modified in each test path.

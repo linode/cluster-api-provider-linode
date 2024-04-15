@@ -14,12 +14,7 @@ import (
 type MockContext struct {
 	context.Context
 	gomock.TestReporter
-
-	MachineClient       *mock.MockLinodeMachineClient
-	VPCClient           *mock.MockLinodeVPCClient
-	NodeBalancerClient  *mock.MockLinodeNodeBalancerClient
-	ObjectStorageClient *mock.MockLinodeObjectStorageClient
-	K8sClient           *mock.MockK8sClient
+	mock.MockClients
 
 	recorder *record.FakeRecorder
 	logs     *bytes.Buffer
@@ -36,29 +31,27 @@ func (ctx MockContext) Logs() string {
 }
 
 // Mock declares a function for mocking method calls on a single mock client.
-func Mock(text string, value any) call {
+func Mock(text string, do func(MockContext)) call {
 	return call{
-		text:  fmt.Sprintf("Mock(%s)", text),
-		value: value,
+		text: fmt.Sprintf("Mock(%s)", text),
+		do:   do,
 	}
 }
 
 // Result terminates a test path with a function that tests the effects of mocked method calls.
-func Result(text string, value any) result {
+func Result(text string, do func(MockContext)) result {
 	return result{
-		text:  fmt.Sprintf("Result(%s)", text),
-		value: value,
+		text: fmt.Sprintf("Result(%s)", text),
+		do:   do,
 	}
 }
 
 // Once declares a function that runs one time when executing all test paths.
 // It is triggered at the beginning of the leftmost test path where it is inserted.
-func Once(text string, value any) once {
+func Once(text string, do func(context.Context)) once {
 	return once{
-		fn: fn{
-			text:  fmt.Sprintf("Once(%s)", text),
-			value: value,
-		},
+		text: fmt.Sprintf("Once(%s)", text),
+		do:   do,
 	}
 }
 
@@ -79,8 +72,8 @@ type node interface {
 
 // A container for describing and holding a function.
 type fn struct {
-	text  string
-	value any
+	text string
+	do   func(MockContext)
 }
 
 // Contains a function for mocking method calls on a single mock client.
@@ -91,7 +84,8 @@ type result fn
 
 // Contains a function for an event trigger that runs once.
 type once struct {
-	fn
+	text      string
+	do        func(context.Context)
 	described bool
 	ran       bool
 }
