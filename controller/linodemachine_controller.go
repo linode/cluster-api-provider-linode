@@ -51,7 +51,7 @@ import (
 
 const (
 	linodeBusyCode           = 400
-	sizeToMB                 = 1024
+	sizeToMB                 = 1000
 	defaultResizeWaitSeconds = 5
 
 	// conditions for preflight instance creation
