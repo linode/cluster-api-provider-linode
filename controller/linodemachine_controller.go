@@ -52,6 +52,7 @@ import (
 
 const (
 	linodeBusyCode           = 400
+	defaultDiskFilesystem    = string(linodego.FilesystemExt4)
 	defaultResizeWaitSeconds = 5
 
 	// conditions for preflight instance creation
@@ -381,45 +382,56 @@ func (r *LinodeMachineReconciler) configureDisks(
 		return err
 	}
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated) {
-		for deviceName, disk := range machineScope.LinodeMachine.Spec.DataDisks {
-			if disk.DiskID != 0 {
-				continue
-			}
-			label := disk.Label
-			if label == "" {
-				label = deviceName
-			}
-			// create the disk
-			linodeDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
-				ctx,
-				linodeInstanceID,
-				linodego.InstanceDiskCreateOptions{
-					Label:      label,
-					Size:       int(disk.Size.ScaledValue(resource.Mega)),
-					Filesystem: string(linodego.FilesystemExt4),
-				},
-			)
-			if err != nil {
-				logger.Error(err, "Failed to create disk", "DiskLabel", label)
-
-				conditions.MarkFalse(
-					machineScope.LinodeMachine,
-					ConditionPreflightAdditionalDisksCreated,
-					string(cerrs.CreateMachineError),
-					clusterv1.ConditionSeverityWarning,
-					err.Error(),
-				)
-				return err
-			}
-			disk.DiskID = linodeDisk.ID
-			machineScope.LinodeMachine.Spec.DataDisks[deviceName] = disk
-		}
-		err := r.UpdateInstanceConfigProfile(ctx, logger, machineScope, linodeInstanceID)
-		if err != nil {
+		if err := r.createDisks(ctx, logger, machineScope, linodeInstanceID); err != nil {
 			return err
 		}
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated)
 	}
+	return nil
+}
+
+func (r *LinodeMachineReconciler) createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
+	for deviceName, disk := range machineScope.LinodeMachine.Spec.DataDisks {
+		if disk.DiskID != 0 {
+			continue
+		}
+		label := disk.Label
+		if label == "" {
+			label = deviceName
+		}
+		// create the disk
+		diskFilesystem := defaultDiskFilesystem
+		if disk.Filesystem != "" {
+			diskFilesystem = disk.Filesystem
+		}
+		linodeDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
+			ctx,
+			linodeInstanceID,
+			linodego.InstanceDiskCreateOptions{
+				Label:      label,
+				Size:       int(disk.Size.ScaledValue(resource.Mega)),
+				Filesystem: diskFilesystem,
+			},
+		)
+		if err != nil {
+			logger.Error(err, "Failed to create disk", "DiskLabel", label)
+
+			conditions.MarkFalse(
+				machineScope.LinodeMachine,
+				ConditionPreflightAdditionalDisksCreated,
+				string(cerrs.CreateMachineError),
+				clusterv1.ConditionSeverityWarning,
+				err.Error(),
+			)
+			return err
+		}
+		disk.DiskID = linodeDisk.ID
+		machineScope.LinodeMachine.Spec.DataDisks[deviceName] = disk
+	}
+	err := r.UpdateInstanceConfigProfile(ctx, logger, machineScope, linodeInstanceID)
+	if err != nil {
+		return err
+	}
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated)
 	return nil
 }
 

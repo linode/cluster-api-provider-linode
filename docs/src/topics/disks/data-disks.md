@@ -10,7 +10,8 @@ up to 90 seconds. This will be resolved when the disk creation refactor is finis
 A LinodeMachine can be configured with additional data disks with the key being the device to be mounted as and including an optional label and size.
 * `size` Required field. [resource.Quantity](https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/) for the size if a disk. The sum of all data disks must not be more than allowed by the [linode plan](https://www.linode.com/pricing/#compute-shared). 
 * `label`  Optional field. The label for the disk, defaults to the device name
-* `DeviceID` Optional field used by the controller to track disk IDs, this should not be set unless a disk is created outside CAPL
+* `diskID` Optional field used by the controller to track disk IDs, this should not be set unless a disk is created outside CAPL
+* `filesystem` Optional field used to specify the type filesystem of disk to provision, the default is `ext4` and valid options are any supported linode  filesystem
 
 ```yaml
 ---
