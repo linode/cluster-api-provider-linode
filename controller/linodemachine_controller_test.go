@@ -26,6 +26,7 @@ import (
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -222,9 +223,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		})
 	})
 
-	Context("creates a control plane instance", func() {
-		It("in a single call when everything succeeds", func(ctx SpecContext) {
+	Context("creates a instance with disks", func() {
+		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().
@@ -315,6 +317,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		It("in multiple calls when something fails", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().

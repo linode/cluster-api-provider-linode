@@ -107,6 +107,32 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+              dataDisks:
+                additionalProperties:
+                  description: InstanceDisk defines a list of disks to use for an
+                    instance
+                  properties:
+                    diskID:
+                      description: DiskID is the linode assigned ID of the disk
+                      type: integer
+                    label:
+                      description: Label is the label for the instance disk, if nothing
+                        is provided it will match the device name
+                      type: string
+                    size:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Size is the disk size in resource.Quantity notation
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                  required:
+                  - size
+                  type: object
+                description: |-
+                  DataDisks is a map of any additional disks to add to an instance,
+                  The sum of these disks + the OSDisk must not be more than allowed on a linodes plan
+                type: object
               firewallID:
                 type: integer
                 x-kubernetes-validations:
@@ -161,6 +187,28 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              osDisk:
+                description: |-
+                  OSDisk is configuration for the root disk that includes the OS,
+                  if not specified this defaults to whatever space is not taken up by the DataDisks
+                properties:
+                  diskID:
+                    description: DiskID is the linode assigned ID of the disk
+                    type: integer
+                  label:
+                    description: Label is the label for the instance disk, if nothing
+                      is provided it will match the device name
+                    type: string
+                  size:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: Size is the disk size in resource.Quantity notation
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                required:
+                - size
+                type: object
               privateIP:
                 type: boolean
                 x-kubernetes-validations:
