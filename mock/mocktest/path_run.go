@@ -1,57 +1,50 @@
 package mocktest
 
 import (
-	"fmt"
+	"context"
 	"testing"
 
 	"github.com/onsi/ginkgo/v2"
 )
 
 // Run evaluates all declared mock client methods and assertions for the given test path.
-func (p path) Run(ctx MockContext) {
-	if ctx.Context == nil {
-		panic("MockContext requires Context")
-	}
-	if ctx.TestReporter == nil {
-		panic("MockContext requires TestReporter, i.e. *testing.T, GinkgoT()")
+func (p path) Run(ctx context.Context, m Mock) {
+	if m.TestReporter == nil {
+		panic("Mock requires TestReporter, i.e. *testing.T, GinkgoT()")
 	}
 
 	for _, o := range p.once {
-		evalOnce(ctx, o)
+		evalOnce(ctx, m, o)
 	}
 	for _, c := range p.calls {
-		evalFn(ctx, fn(c))
+		evalFn(ctx, m, fn(c))
 	}
-	evalFn(ctx, fn(p.result))
+	evalFn(ctx, m, fn(p.result))
 }
 
-func evalFn(ctx MockContext, f fn) {
-	switch tt := ctx.TestReporter.(type) {
+func evalFn(ctx context.Context, m Mock, fun fn) {
+	switch tt := m.TestReporter.(type) {
 	case *testing.T:
-		tt.Log(f.text)
+		tt.Log(fun.text)
 	case ginkgo.GinkgoTInterface:
-		ginkgo.By(f.text)
-	default:
-		fmt.Println(f.text)
+		ginkgo.By(fun.text)
 	}
 
-	f.do(ctx)
+	fun.does(ctx, m)
 }
 
-func evalOnce(ctx MockContext, f *once) {
-	if f.ran {
+func evalOnce(ctx context.Context, m Mock, fun *once) {
+	if fun.ran {
 		return
 	}
 
-	switch tt := ctx.TestReporter.(type) {
+	switch tt := m.TestReporter.(type) {
 	case *testing.T:
-		tt.Log(f.text)
+		tt.Log(fun.text)
 	case ginkgo.GinkgoTInterface:
-		ginkgo.By(f.text)
-	default:
-		fmt.Println(f.text)
+		ginkgo.By(fun.text)
 	}
 
-	f.do(ctx)
-	f.ran = true
+	fun.does(ctx)
+	fun.ran = true
 }

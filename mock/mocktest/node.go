@@ -5,14 +5,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"go.uber.org/mock/gomock"
 	"k8s.io/client-go/tools/record"
+
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
-// MockContext is the context for a single test path.
-type MockContext struct {
-	context.Context
+// Mock holds configuration for a single test path.
+type Mock struct {
 	gomock.TestReporter
 	mock.MockClients
 
@@ -21,37 +21,37 @@ type MockContext struct {
 }
 
 // Events returns a channel for receiving event strings for a single test path.
-func (ctx MockContext) Events() <-chan string {
-	return ctx.recorder.Events
+func (m Mock) Events() <-chan string {
+	return m.recorder.Events
 }
 
 // Logs returns a string of all log output written during a single test path.
-func (ctx MockContext) Logs() string {
-	return ctx.logs.String()
+func (m Mock) Logs() string {
+	return m.logs.String()
 }
 
-// Mock declares a function for mocking method calls on a single mock client.
-func Mock(text string, do func(MockContext)) call {
+// Call declares a function for mocking method calls on a single mock client.
+func Call(text string, does func(context.Context, Mock)) call {
 	return call{
-		text: fmt.Sprintf("Mock(%s)", text),
-		do:   do,
+		text: fmt.Sprintf("Call(%s)", text),
+		does: does,
 	}
 }
 
 // Result terminates a test path with a function that tests the effects of mocked method calls.
-func Result(text string, do func(MockContext)) result {
+func Result(text string, does func(context.Context, Mock)) result {
 	return result{
 		text: fmt.Sprintf("Result(%s)", text),
-		do:   do,
+		does: does,
 	}
 }
 
 // Once declares a function that runs one time when executing all test paths.
 // It is triggered at the beginning of the leftmost test path where it is inserted.
-func Once(text string, do func(context.Context)) once {
+func Once(text string, does func(context.Context)) once {
 	return once{
 		text: fmt.Sprintf("Once(%s)", text),
-		do:   do,
+		does: does,
 	}
 }
 
@@ -73,7 +73,7 @@ type node interface {
 // A container for describing and holding a function.
 type fn struct {
 	text string
-	do   func(MockContext)
+	does func(context.Context, Mock)
 }
 
 // Contains a function for mocking method calls on a single mock client.
@@ -85,7 +85,7 @@ type result fn
 // Contains a function for an event trigger that runs once.
 type once struct {
 	text      string
-	do        func(context.Context)
+	does      func(context.Context)
 	described bool
 	ran       bool
 }

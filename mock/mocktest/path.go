@@ -15,7 +15,7 @@ type path struct {
 
 // Describe generates a string of all nodes belonging to a test path.
 func (p path) Describe() string {
-	var text []string
+	text := make([]string, 0, len(p.once)+len(p.calls)+1)
 	for _, o := range p.once {
 		if !o.described {
 			text = append(text, o.text)
@@ -43,14 +43,13 @@ func Paths(nodes ...node) []path {
 	tmp := []path{}
 	final := []path{}
 
-	for i, n := range nodes {
+	for idx, n := range nodes {
 		// If all paths are closed, make a new path
 		if len(tmp) == 0 {
 			tmp = append(tmp, path{})
 		}
 
 		switch impl := n.(type) {
-
 		// A once node should only be added to the first path.
 		// It will only invoked once in the first path evaluated.
 		case once:
@@ -59,13 +58,13 @@ func Paths(nodes ...node) []path {
 		// A call node should be appended to all open paths.
 		case call:
 			// Add new entry to each open path
-			for j, pth := range tmp {
-				tmp[j].calls = append(pth.calls, impl)
+			for j := range tmp {
+				tmp[j].calls = append(tmp[j].calls, impl)
 			}
 
 			// Panic if any paths are open at the end
-			if i == len(nodes)-1 {
-				panic(fmt.Errorf("unresolved path at index %d", i))
+			if idx == len(nodes)-1 {
+				panic(fmt.Errorf("unresolved path at index %d", idx))
 			}
 
 			// A result node should terminate all open paths.
@@ -83,8 +82,8 @@ func Paths(nodes ...node) []path {
 		// The call is appended to all open paths, and then immediately closed with the result.
 		case leaf:
 			// Add new entry to each open path and close it
-			for j, pth := range tmp {
-				tmp[j].calls = append(pth.calls, impl.call)
+			for j := range tmp {
+				tmp[j].calls = append(tmp[j].calls, impl.call)
 				tmp[j].result = impl.result
 			}
 
@@ -141,8 +140,8 @@ func Paths(nodes ...node) []path {
 			tmp = newTmp
 
 			// Panic if any paths are open at the end
-			if open && i == len(nodes)-1 {
-				panic(fmt.Errorf("unresolved path at index %d", i))
+			if open && idx == len(nodes)-1 {
+				panic(fmt.Errorf("unresolved path at index %d", idx))
 			}
 		}
 	}

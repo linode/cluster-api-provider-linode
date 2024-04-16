@@ -5,12 +5,15 @@ import (
 	"errors"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/onsi/ginkgo/v2"
 	"go.uber.org/mock/gomock"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
+
+const recorderBufferSize = 20
 
 type ctlrSuite struct {
 	clients  []mock.MockClient
@@ -26,17 +29,16 @@ func NewControllerTestSuite(clients ...mock.MockClient) *ctlrSuite {
 		panic(errors.New("unable to run tests without clients"))
 	}
 
-	c := ctlrSuite{
+	logs := bytes.Buffer{}
+
+	return &ctlrSuite{
 		clients: clients,
 		// Create a recorder with a buffered channel for consuming event strings.
-		recorder: record.NewFakeRecorder(50),
-		logs:     &bytes.Buffer{},
+		recorder: record.NewFakeRecorder(recorderBufferSize),
+		// Create a logger that writes to both GinkgoWriter and the local logs buffer
+		logger: zap.New(zap.WriteTo(ginkgo.GinkgoWriter), zap.WriteTo(&logs)),
+		logs:   &logs,
 	}
-
-	// Create a logger that writes to both GinkgoWriter and the local logs buffer
-	c.logger = zap.New(zap.WriteTo(ginkgo.GinkgoWriter), zap.WriteTo(c.logs))
-
-	return &c
 }
 
 // Recorder returns a *FakeRecorder for recording events published in a reconcile loop.
@@ -59,18 +61,17 @@ func (c *ctlrSuite) Run(paths []path) {
 			mockCtrl := gomock.NewController(ginkgo.GinkgoT())
 			defer mockCtrl.Finish()
 
-			mockCtx := MockContext{
-				Context:      ctx,
+			m := Mock{
 				TestReporter: mockCtrl.T,
 				recorder:     c.recorder,
 				logs:         c.logs,
 			}
 
 			for _, client := range c.clients {
-				mockCtx.MockClients.Build(client, mockCtrl)
+				m.MockClients.Build(client, mockCtrl)
 			}
 
-			path.Run(mockCtx)
+			path.Run(ctx, m)
 
 			// Flush the channel if any events were not consumed.
 			for len(c.recorder.Events) > 0 {

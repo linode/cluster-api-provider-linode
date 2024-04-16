@@ -1,14 +1,14 @@
 package mocktest
 
 import (
+	"context"
 	"errors"
 	"testing"
 
-	"go.uber.org/mock/gomock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -36,16 +36,15 @@ var _ = Describe("k8s client", Label("k8sclient"), func() {
 	})
 
 	for _, path := range Paths(
-		Mock("fetch object", func(ctx MockContext) {
-			ctx.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		Call("fetch object", func(ctx context.Context, m Mock) {
+			m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
-		Result("no error", func(ctx MockContext) {
-			Expect(contrivedCalls(ctx)).To(Succeed())
+		Result("no error", func(ctx context.Context, m Mock) {
+			Expect(contrivedCalls(ctx, m)).To(Succeed())
 		}),
 	) {
 		It(path.Describe(), func(ctx SpecContext) {
-			path.Run(MockContext{
-				Context:      ctx,
+			path.Run(ctx, Mock{
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
 					K8sClient: mock.NewMockK8sClient(mockCtrl),
@@ -67,31 +66,30 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 	})
 
 	for _, path := range Paths(
-		Mock("read object", func(ctx MockContext) {
-			ctx.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		Call("read object", func(ctx context.Context, m Mock) {
+			m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
 		Either(
 			Case(
-				Mock("underlying exists", func(ctx MockContext) {
-					ctx.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
+				Call("underlying exists", func(ctx context.Context, m Mock) {
+					m.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 				}),
-				Result("no error", func(ctx MockContext) {
-					Expect(contrivedCalls(ctx)).To(Succeed())
+				Result("no error", func(ctx context.Context, m Mock) {
+					Expect(contrivedCalls(ctx, m)).To(Succeed())
 				}),
 			),
 			Case(
-				Mock("underlying does not exist", func(ctx MockContext) {
-					ctx.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
+				Call("underlying does not exist", func(ctx context.Context, m Mock) {
+					m.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
 				}),
-				Result("error", func(ctx MockContext) {
-					Expect(contrivedCalls(ctx)).NotTo(Succeed())
+				Result("error", func(ctx context.Context, m Mock) {
+					Expect(contrivedCalls(ctx, m)).NotTo(Succeed())
 				}),
 			),
 		),
 	) {
 		It(path.Describe(), func(ctx SpecContext) {
-			path.Run(MockContext{
-				Context:      ctx,
+			path.Run(ctx, Mock{
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
 					MachineClient: mock.NewMockLinodeMachineClient(mockCtrl),
@@ -102,16 +100,16 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 	}
 })
 
-func contrivedCalls(ctx MockContext) error {
+func contrivedCalls(ctx context.Context, m Mock) error {
 	GinkgoHelper()
 
-	err := ctx.K8sClient.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
+	err := m.K8sClient.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
 	if err != nil {
 		return err
 	}
 
-	if ctx.MachineClient != nil {
-		_, err = ctx.MachineClient.CreateInstance(ctx, linodego.InstanceCreateOptions{})
+	if m.MachineClient != nil {
+		_, err = m.MachineClient.CreateInstance(ctx, linodego.InstanceCreateOptions{})
 		if err != nil {
 			return err
 		}
@@ -121,6 +119,8 @@ func contrivedCalls(ctx MockContext) error {
 }
 
 func TestPaths(t *testing.T) {
+	t.Parallel()
+
 	for _, tc := range []struct {
 		name     string
 		input    []node
@@ -356,6 +356,8 @@ func TestPaths(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			if tc.panicErr != nil {
 				assert.PanicsWithError(t, tc.panicErr.Error(), func() {
 					Paths(tc.input...)

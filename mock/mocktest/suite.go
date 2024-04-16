@@ -5,8 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"go.uber.org/mock/gomock"
+
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 type suite struct {
@@ -21,9 +22,7 @@ func NewTestSuite(clients ...mock.MockClient) *suite {
 	return &suite{clients: clients}
 }
 
-func (s *suite) Run(t *testing.T, paths []path) {
-	t.Parallel()
-
+func (s *suite) Run(ctx context.Context, t *testing.T, paths []path) {
 	for _, path := range paths {
 		t.Run(path.Describe(), func(t *testing.T) {
 			t.Parallel()
@@ -31,16 +30,15 @@ func (s *suite) Run(t *testing.T, paths []path) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			mockCtx := MockContext{
-				Context:      context.Background(),
+			m := Mock{
 				TestReporter: mockCtrl.T,
 			}
 
 			for _, client := range s.clients {
-				mockCtx.MockClients.Build(client, mockCtrl)
+				m.MockClients.Build(client, mockCtrl)
 			}
 
-			path.Run(mockCtx)
+			path.Run(ctx, m)
 		})
 	}
 }
