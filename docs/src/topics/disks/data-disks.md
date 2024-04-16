@@ -1,6 +1,7 @@
 # Data Disks
 This section describes how to specify additional data disks for a linode instance. These disks can use devices `sdb` through `sdh` 
-for a total of 7 disks. The total size of these disks + the OS Disk cannot exceed the linode plan size.
+for a total of 7 disks. The total size of these disks + the OS Disk cannot exceed the linode plan size. Disk information cannot 
+be updated in place and must be updated by creating new disks.
 
 ```admonish warning
 Currently SDB is being used by a swap disk, replacing this disk with a data disk will slow down linode creation by

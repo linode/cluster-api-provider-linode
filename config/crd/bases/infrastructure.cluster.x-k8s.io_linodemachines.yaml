@@ -125,16 +125,10 @@ spec:
                       - ext4
                       - initrd
                       type: string
-                      x-kubernetes-validations:
-                      - message: Value is immutable
-                        rule: self == oldSelf
                     label:
                       description: Label for the instance disk, if nothing is provided
                         it will match the device name
                       type: string
-                      x-kubernetes-validations:
-                      - message: Value is immutable
-                        rule: self == oldSelf
                     size:
                       anyOf:
                       - type: integer
@@ -142,9 +136,6 @@ spec:
                       description: Size of the disk in resource.Quantity notation
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       x-kubernetes-int-or-string: true
-                      x-kubernetes-validations:
-                      - message: Value is immutable
-                        rule: self == oldSelf
                   required:
                   - size
                   type: object
@@ -224,16 +215,10 @@ spec:
                     - ext4
                     - initrd
                     type: string
-                    x-kubernetes-validations:
-                    - message: Value is immutable
-                      rule: self == oldSelf
                   label:
                     description: Label for the instance disk, if nothing is provided
                       it will match the device name
                     type: string
-                    x-kubernetes-validations:
-                    - message: Value is immutable
-                      rule: self == oldSelf
                   size:
                     anyOf:
                     - type: integer
@@ -241,9 +226,6 @@ spec:
                     description: Size of the disk in resource.Quantity notation
                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                     x-kubernetes-int-or-string: true
-                    x-kubernetes-validations:
-                    - message: Value is immutable
-                      rule: self == oldSelf
                 required:
                 - size
                 type: object

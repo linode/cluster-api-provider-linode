@@ -87,14 +87,11 @@ type InstanceDisk struct {
 	// DiskID is the linode assigned ID of the disk
 	DiskID int `json:"diskID,omitempty"`
 	// Size of the disk in resource.Quantity notation
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Required
 	Size resource.Quantity `json:"size"`
 	// Label for the instance disk, if nothing is provided it will match the device name
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Label string `json:"label,omitempty"`
 	// Filesystem of disk to provision, the default disk filesystem is "ext4"
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum=raw;swap;ext3;ext4;initrd
 	Filesystem string `json:"filesystem,omitempty"`
 }
