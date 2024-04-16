@@ -86,11 +86,14 @@ type LinodeMachineSpec struct {
 type InstanceDisk struct {
 	// DiskID is the linode assigned ID of the disk
 	DiskID int `json:"diskID,omitempty"`
-	// Size is the disk size in resource.Quantity notation
+	// Size of the disk in resource.Quantity notation
 	// +kubebuilder:validation:Required
 	Size resource.Quantity `json:"size"`
-	// Label is the label for the instance disk, if nothing is provided it will match the device name
+	// Label for the instance disk, if nothing is provided it will match the device name
 	Label string `json:"label,omitempty"`
+	// Filesystem of disk to provision, the default disk filesystem is "ext4"
+	// +kubebuilder:validation:Enum=raw;swap;ext3;ext4;initrd
+	Filesystem string `json:"filesystem,omitempty"`
 }
 
 // InstanceMetadataOptions defines metadata of instance

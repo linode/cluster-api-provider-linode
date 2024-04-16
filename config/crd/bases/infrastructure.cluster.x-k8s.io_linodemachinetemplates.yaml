@@ -103,16 +103,25 @@ spec:
                               description: DiskID is the linode assigned ID of the
                                 disk
                               type: integer
+                            filesystem:
+                              description: Filesystem of disk to provision, the default
+                                disk filesystem is "ext4"
+                              enum:
+                              - raw
+                              - swap
+                              - ext3
+                              - ext4
+                              - initrd
+                              type: string
                             label:
-                              description: Label is the label for the instance disk,
-                                if nothing is provided it will match the device name
+                              description: Label for the instance disk, if nothing
+                                is provided it will match the device name
                               type: string
                             size:
                               anyOf:
                               - type: integer
                               - type: string
-                              description: Size is the disk size in resource.Quantity
-                                notation
+                              description: Size of the disk in resource.Quantity notation
                               pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                               x-kubernetes-int-or-string: true
                           required:
@@ -186,16 +195,25 @@ spec:
                           diskID:
                             description: DiskID is the linode assigned ID of the disk
                             type: integer
+                          filesystem:
+                            description: Filesystem of disk to provision, the default
+                              disk filesystem is "ext4"
+                            enum:
+                            - raw
+                            - swap
+                            - ext3
+                            - ext4
+                            - initrd
+                            type: string
                           label:
-                            description: Label is the label for the instance disk,
-                              if nothing is provided it will match the device name
+                            description: Label for the instance disk, if nothing is
+                              provided it will match the device name
                             type: string
                           size:
                             anyOf:
                             - type: integer
                             - type: string
-                            description: Size is the disk size in resource.Quantity
-                              notation
+                            description: Size of the disk in resource.Quantity notation
                             pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                             x-kubernetes-int-or-string: true
                         required:

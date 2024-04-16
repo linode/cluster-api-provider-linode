@@ -51,7 +51,8 @@ import (
 )
 
 const (
-	linodeBusyCode = 400
+	linodeBusyCode        = 400
+	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
 	ConditionPreflightCreated                clusterv1.ConditionType = "PreflightCreated"
@@ -287,11 +288,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
-		if err = r.configureDisks(
-			ctx, logger, machineScope,
-			*machineScope.LinodeMachine.Spec.InstanceID,
-			createOpts, tags,
-		); err != nil {
+		if err = r.configureDisks(ctx, logger, machineScope, *machineScope.LinodeMachine.Spec.InstanceID, createOpts, tags); err != nil {
 			if !linodego.ErrHasStatus(err, linodeBusyCode) {
 				logger.Error(err, "Failed to configure disks")
 			}
@@ -391,7 +388,7 @@ func (r *LinodeMachineReconciler) configureDisks(
 
 	if machineScope.LinodeMachine.Spec.DataDisks != nil && !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated) {
 		for deviceName, disk := range machineScope.LinodeMachine.Spec.DataDisks {
-			if err := r.configureDisk(ctx, logger, machineScope, linodeInstanceID, *createOpts, deviceName, disk); err != nil {
+			if err := r.createDisk(ctx, logger, machineScope, linodeInstanceID, *createOpts, deviceName, disk); err != nil {
 				conditions.MarkFalse(
 					machineScope.LinodeMachine,
 					ConditionPreflightAdditionalDisksCreated,
@@ -408,7 +405,7 @@ func (r *LinodeMachineReconciler) configureDisks(
 	}
 
 	if !conditions.IsTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskCreated) {
-		if err := r.configureDisk(ctx, logger, machineScope, linodeInstanceID, *createOpts, "sda", machineScope.LinodeMachine.Spec.OSDisk); err != nil {
+		if err := r.createDisk(ctx, logger, machineScope, linodeInstanceID, *createOpts, "sda", machineScope.LinodeMachine.Spec.OSDisk); err != nil {
 			conditions.MarkFalse(
 				machineScope.LinodeMachine,
 				ConditionPreflightRootDiskCreated,
@@ -451,7 +448,7 @@ func (r *LinodeMachineReconciler) configureDisks(
 	return err
 }
 
-func (r *LinodeMachineReconciler) configureDisk(
+func (r *LinodeMachineReconciler) createDisk(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
@@ -485,10 +482,15 @@ func (r *LinodeMachineReconciler) configureDisk(
 		label = deviceName
 	}
 
+	diskFilesystem := defaultDiskFilesystem
+	if disk.Filesystem != "" {
+		diskFilesystem = disk.Filesystem
+	}
+
 	createOpts := linodego.InstanceDiskCreateOptions{
 		Label:      label,
 		Size:       int(disk.Size.ScaledValue(resource.Mega)),
-		Filesystem: string(linodego.FilesystemExt4),
+		Filesystem: diskFilesystem,
 	}
 	if deviceName == "sda" {
 		var additionalDiskSize int
