@@ -10,7 +10,7 @@ There are a couple caveats with specifying disks for a linode instance:
 
 ```admonish warning
 Currently SDB is being used by a swap disk, replacing this disk with a data disk will slow down linode creation by
-up to 90 seconds. This will be resolved when the disk creation refactor is finished in https://github.com/linode/cluster-api-provider-linode/pull/216
+up to 90 seconds. This will be resolved when the disk creation refactor is finished in PR [#216](https://github.com/linode/cluster-api-provider-linode/pull/216)
 ```
 ## Specify a data disk
 A LinodeMachine can be configured with additional data disks with the key being the device to be mounted as and including an optional label and size.
