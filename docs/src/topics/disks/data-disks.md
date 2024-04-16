@@ -1,7 +1,12 @@
 # Data Disks
 This section describes how to specify additional data disks for a linode instance. These disks can use devices `sdb` through `sdh` 
-for a total of 7 disks. The total size of these disks + the OS Disk cannot exceed the linode plan size. Disk information cannot 
-be updated in place and must be updated by creating new disks.
+for a total of 7 disks. 
+
+~~~admonish warning
+There are a couple caveats with specifying disks for a linode instance:
+1. The total size of these disks + the OS Disk cannot exceed the linode instance plan size.
+2. Instance disk configuration is currently immutable via CAPL after the instance is booted.
+~~~
 
 ```admonish warning
 Currently SDB is being used by a swap disk, replacing this disk with a data disk will slow down linode creation by
