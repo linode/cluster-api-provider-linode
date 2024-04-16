@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"net/http"
 	"time"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -471,13 +471,7 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 			diskSize = int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))
 		}
 
-		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-			if !linodego.ErrHasStatus(err, linodeBusyCode) {
-				logger.Error(err, "Failed to resize root disk")
-			}
-
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
+		if err := r.ResizeDisk(ctx, logger, machineScope, linodeInstanceID, rootDiskID, diskSize); err != nil {
 			return err
 		}
 
@@ -498,6 +492,19 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 	conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
 
+	return nil
+}
+
+func (r *LinodeMachineReconciler) ResizeDisk(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID, rootDiskID, diskSize int) error {
+	if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
+		if !linodego.ErrHasStatus(err, linodeBusyCode) {
+			logger.Error(err, "Failed to resize root disk")
+		}
+
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
+		return err
+	}
 	return nil
 }
 
