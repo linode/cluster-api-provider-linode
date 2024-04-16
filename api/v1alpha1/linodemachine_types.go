@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -64,6 +65,12 @@ type LinodeMachineSpec struct {
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallID,omitempty"`
+	// OSDisk is configuration for the root disk that includes the OS,
+	// if not specified this defaults to whatever space is not taken up by the DataDisks
+	OSDisk *InstanceDisk `json:"osDisk,omitempty"`
+	// DataDisks is a map of any additional disks to add to an instance,
+	// The sum of these disks + the OSDisk must not be more than allowed on a linodes plan
+	DataDisks map[string]*InstanceDisk `json:"dataDisks,omitempty"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials
 	// to use for provisioning this machine. If not supplied then these
@@ -73,6 +80,20 @@ type LinodeMachineSpec struct {
 	//   3. Controller
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
+}
+
+// InstanceDisk defines a list of disks to use for an instance
+type InstanceDisk struct {
+	// DiskID is the linode assigned ID of the disk
+	DiskID int `json:"diskID,omitempty"`
+	// Size of the disk in resource.Quantity notation
+	// +kubebuilder:validation:Required
+	Size resource.Quantity `json:"size"`
+	// Label for the instance disk, if nothing is provided it will match the device name
+	Label string `json:"label,omitempty"`
+	// Filesystem of disk to provision, the default disk filesystem is "ext4"
+	// +kubebuilder:validation:Enum=raw;swap;ext3;ext4;initrd
+	Filesystem string `json:"filesystem,omitempty"`
 }
 
 // InstanceMetadataOptions defines metadata of instance

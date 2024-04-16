@@ -45,7 +45,7 @@ linters-settings:
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
-    local-prefixes: github.com/crossplane/provider-template
+    local-prefixes: github.com/linode/cluster-api-provider-linode
 
   cyclop:
     max-complexity: 15

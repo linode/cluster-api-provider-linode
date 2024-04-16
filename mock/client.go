@@ -354,6 +354,21 @@ func (mr *MockLinodeMachineClientMockRecorder) ResizeInstanceDisk(ctx, linodeID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeMachineClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
 }
 
+// UpdateInstanceConfig mocks base method.
+func (m *MockLinodeMachineClient) UpdateInstanceConfig(ctx context.Context, linodeID, configID int, opts linodego.InstanceConfigUpdateOptions) (*linodego.InstanceConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateInstanceConfig", ctx, linodeID, configID, opts)
+	ret0, _ := ret[0].(*linodego.InstanceConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateInstanceConfig indicates an expected call of UpdateInstanceConfig.
+func (mr *MockLinodeMachineClientMockRecorder) UpdateInstanceConfig(ctx, linodeID, configID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstanceConfig", reflect.TypeOf((*MockLinodeMachineClient)(nil).UpdateInstanceConfig), ctx, linodeID, configID, opts)
+}
+
 // WaitForInstanceDiskStatus mocks base method.
 func (m *MockLinodeMachineClient) WaitForInstanceDiskStatus(ctx context.Context, instanceID, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error) {
 	m.ctrl.T.Helper()
@@ -597,6 +612,21 @@ func (m *MockLinodeInstanceClient) ResizeInstanceDisk(ctx context.Context, linod
 func (mr *MockLinodeInstanceClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
+}
+
+// UpdateInstanceConfig mocks base method.
+func (m *MockLinodeInstanceClient) UpdateInstanceConfig(ctx context.Context, linodeID, configID int, opts linodego.InstanceConfigUpdateOptions) (*linodego.InstanceConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateInstanceConfig", ctx, linodeID, configID, opts)
+	ret0, _ := ret[0].(*linodego.InstanceConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateInstanceConfig indicates an expected call of UpdateInstanceConfig.
+func (mr *MockLinodeInstanceClientMockRecorder) UpdateInstanceConfig(ctx, linodeID, configID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstanceConfig", reflect.TypeOf((*MockLinodeInstanceClient)(nil).UpdateInstanceConfig), ctx, linodeID, configID, opts)
 }
 
 // WaitForInstanceDiskStatus mocks base method.
