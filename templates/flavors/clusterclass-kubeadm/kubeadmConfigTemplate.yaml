@@ -36,5 +36,4 @@ spec:
         nodeRegistration:
           kubeletExtraArgs:
             cloud-provider: external
-            provider-id: 'linode://{{ ds.meta_data.id }}'
           name: '{{ ds.meta_data.label }}'
