@@ -116,11 +116,6 @@ linters-settings:
     require-explanation: true
     require-specific: true
 
-  varnamelen:
-    ignore-names:
-      - err
-      - ok
-
 linters:
   enable:
     - asasalint
