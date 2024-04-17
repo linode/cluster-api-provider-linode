@@ -7,7 +7,7 @@
 * [Quickstart](../getting-started.md) completed
 * Select an [rke2 kubernetes version](https://github.com/rancher/rke2/releases) to set for the kubernetes version
   ```bash
-  export RKE2_KUBERNETES_VERSION=v1.29.1+rke2r1
+  export KUBERNETES_VERSION=v1.29.1+rke2r1
   ```
 * Installed [rke2 bootstrap provider](https://github.com/rancher-sandbox/cluster-api-provider-rke2) into your management cluster
   ```shell
