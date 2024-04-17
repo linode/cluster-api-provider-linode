@@ -8,6 +8,7 @@
     - [Flavors](./topics/flavors/flavors.md)
       - [Default (kubeadm)](./topics/flavors/default.md)
       - [Dual-stack (kubeadm)](./topics/flavors/dual-stack.md)
+      - [Etcd-disk (kubeadm)](./topics/flavors/etcd-disk.md)
       - [ClusterClass kubeadm](./topics/flavors/clusterclass-kubeadm.md)
       - [k3s](./topics/flavors/k3s.md)
       - [rke2](./topics/flavors/rke2.md)
