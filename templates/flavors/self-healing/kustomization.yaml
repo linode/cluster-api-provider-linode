@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../default
+  - ../../addons/machine-health-check
+patches:
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KubeadmControlPlane
+    patch: |-
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlane
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        remediationStrategy:
+          maxRetry: 5
+          retryPeriod: 2m
+          minHealthyPeriod: 2h

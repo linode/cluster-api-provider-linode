@@ -17,6 +17,7 @@
     - [Disks](./topics/disks/disks.md)
       - [OS Disk](./topics/disks/os-disk.md)
       - [Data Disks](./topics/disks/data-disks.md)
+    - [Machine Health Checks](./topics/health-checking.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
 - [Reference](./reference/reference.md)
