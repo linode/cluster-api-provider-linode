@@ -348,7 +348,11 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		return fmt.Errorf("get region: %w", err)
 	}
 	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
-	image, err := machineScope.LinodeClient.GetImage(ctx, machineScope.LinodeMachine.Spec.Image)
+	imageName := reconciler.DefaultMachineControllerLinodeImage
+	if machineScope.LinodeMachine.Spec.Image != "" {
+		imageName = machineScope.LinodeMachine.Spec.Image
+	}
+	image, err := machineScope.LinodeClient.GetImage(ctx, imageName)
 	if err != nil {
 		return fmt.Errorf("get image: %w", err)
 	}
@@ -375,5 +379,33 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 			"userdata":     b64.StdEncoding.EncodeToString(bootstrapData),
 		}
 	}
+	return nil
+}
+
+func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha1.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {
+	for deviceName, disk := range instanceDisks {
+		dev := linodego.InstanceConfigDevice{
+			DiskID: disk.DiskID,
+		}
+		switch deviceName {
+		case "sdb":
+			instanceConfig.SDB = &dev
+		case "sdc":
+			instanceConfig.SDC = &dev
+		case "sdd":
+			instanceConfig.SDD = &dev
+		case "sde":
+			instanceConfig.SDE = &dev
+		case "sdf":
+			instanceConfig.SDF = &dev
+		case "sdg":
+			instanceConfig.SDG = &dev
+		case "sdh":
+			instanceConfig.SDH = &dev
+		default:
+			return fmt.Errorf("unknown device name: %q", deviceName)
+		}
+	}
+
 	return nil
 }

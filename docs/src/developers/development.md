@@ -113,9 +113,14 @@ When adding a new controller, it is preferable that controller code only use the
 ~~~admonish note
 If you want to create RKE2 and/or K3s clusters, make sure to
 set the following env vars first:
-```
+```sh
 export INSTALL_RKE2_PROVIDER=true
 export INSTALL_K3S_PROVIDER=true
+```
+Additionally, if you want to skip the docker build step for CAPL to
+instead use the latest image on `main` from Dockerhub, set the following:
+```sh
+export SKIP_DOCKER_BUILD=true
 ```
 ~~~
 
