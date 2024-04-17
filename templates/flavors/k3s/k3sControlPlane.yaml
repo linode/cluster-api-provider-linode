@@ -39,12 +39,11 @@ spec:
         - traefik
     agentConfig:
       nodeName: '{{ ds.meta_data.label }}'
-      kubeletArgs:
-        - "provider-id=linode://{{ ds.meta_data.id }}"
     preK3sCommands:
       - |
         echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
       - sed -i '/swap/d' /etc/fstab
       - swapoff -a
+      - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
-  version: ${K3S_KUBERNETES_VERSION}
+  version: ${KUBERNETES_VERSION}
