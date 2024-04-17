@@ -35,7 +35,8 @@ data:
                 "secretAccessKey": "$${AWS_SECRET_ACCESS_KEY}",
                 "region": "$${AWS_REGION}",
                 "endpoint": "$${AWS_ENDPOINT#*$$BUCKET_NAME.}",
-                "sseCustomerKey": "$${AWS_SSE_CUSTOMER_KEY}"
+                "sseCustomerKey": "$${AWS_SSE_CUSTOMER_KEY}",
+                "sseCustomerAlgorithm": "AES256"
               }
               EOF
             volumeMounts:
