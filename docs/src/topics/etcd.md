@@ -4,9 +4,13 @@ This guide covers etcd configuration for the control plane of provisioned CAPL c
 
 ## Default configuration
 
-By default, etcd is configured to be on a separate device from the root filesystem on
-control plane nodes. The etcd disk is automatically sized at 10 GB with a quota backend of 8 GB per
-recommendation from [the etcd documentation](https://etcd.io/docs/latest/dev-guide/limit/#storage-size-limit)
+The `quota-backend-bytes` for etcd is set to `8589934592` (8 GiB) per recommendation from
+[the etcd documentation](https://etcd.io/docs/latest/dev-guide/limit/#storage-size-limit).
+
+By default, etcd is configured to be on the same disk as the root filesystem on
+control plane nodes. If users prefer etcd to be on a separate disk, see the
+[etcd-disk flavor](flavors/etcd-disk.md).
+
 
 ## ETCD Backups
 
