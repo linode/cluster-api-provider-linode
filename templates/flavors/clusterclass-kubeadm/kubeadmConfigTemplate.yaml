@@ -28,7 +28,10 @@ spec:
               key: kubeadm-pre-init.sh
           permissions: "0500"
       preKubeadmCommands:
-        - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' ${KUBERNETES_VERSION}
+        - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
+        - sed -i '/swap/d' /etc/fstab
+        - swapoff -a
+        - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
