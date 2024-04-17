@@ -47,14 +47,6 @@ spec:
       controllerManager:
         extraArgs:
           cloud-provider: external
-    diskSetup:
-      filesystems:
-        - label: etcd_data
-          filesystem: ext4
-          device: /dev/sdc
-    mounts:
-      - - LABEL=etcd_data
-        - /var/lib/etcd_data
     initConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
