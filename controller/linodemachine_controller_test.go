@@ -226,7 +226,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	Context("creates a instance with disks", func() {
 		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{
+				"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")}),
+			}
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().
@@ -317,7 +319,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		It("in multiple calls when something fails", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{
+				"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")}),
+			}
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().

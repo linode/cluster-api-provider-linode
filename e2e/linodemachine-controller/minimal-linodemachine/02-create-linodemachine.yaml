@@ -1,32 +1,34 @@
----
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlane
 metadata:
-    name: ($cluster)
+  name: ($cluster)
 spec:
-    kubeadmConfigSpec:
-        clusterConfiguration:
-            apiServer:
-                extraArgs:
-                    cloud-provider: external
-            controllerManager:
-                extraArgs:
-                    cloud-provider: external
-    machineTemplate:
-        infrastructureRef:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-            kind: LinodeMachineTemplate
-            name: ($cluster)
-    replicas: 1
-    version: 1.29.1
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          cloud-provider: external
+      controllerManager:
+        extraArgs:
+          cloud-provider: external
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeMachineTemplate
+      name: ($cluster)
+  replicas: 1
+  version: 1.29.1
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeMachineTemplate
 metadata:
-    name: ($cluster)
+  name: ($cluster)
 spec:
-    template:
-        spec:
-            region: us-sea
-            type: g5-nanode-1
-
+  template:
+    spec:
+      region: us-sea
+      type: g5-nanode-1
+      dataDisks:
+        sdb:
+          label: etcd-data
+          size: 50Mi
