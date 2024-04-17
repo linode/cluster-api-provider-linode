@@ -16,7 +16,7 @@ clusterctl generate cluster $CLUSTER_NAME \
   --flavor etcd-backup-restore \
   | kubectl apply -f -
 ```
-For more fine-grain control and to know more about etcd backups, refere [backups.md](../topics/etcd.md)
+For more fine-grain control and to know more about etcd backups, refer to [the backups section of the etcd page](../topics/etcd.md#etcd-backups)
 
 ## Object Storage
 
