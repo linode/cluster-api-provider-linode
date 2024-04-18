@@ -2,15 +2,16 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: minimal-linodevpc
+  creationTimestamp: null
+  name: default-full-cluster
 spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'min-vpc', env('GIT_REF')]))
-  - name: vpc
-    # Format the VPC name into a valid Kubernetes object name
-    value: (trim((truncate(($run), `63`)), '-'))
+    value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
+  - name: cluster
+    # Format the cluster name
+    value: (trim((truncate(($run), `32`)), '-'))
   template: true
   steps:
   - name: step-00
@@ -20,49 +21,65 @@ spec:
   - name: step-01
     try:
     - apply:
-        file: 01-create-vpc.yaml
+        file: 01-create-cluster.yaml
     - assert:
-        file: 01-assert.yaml
-  - name: step-02
+        file: 02-assert.yaml
+  - name: step-03
     try:
     - script:
         env:
+        - name: TARGET_API
+          value: api.linode.com
+        - name: TARGET_API_VERSION
+          value: v4beta
+        - name: URI
+          value: linode/instances
         - name: FILTER
-          value: (to_string({"label":($vpc)}))
+          value: (to_string({"tags":($cluster)}))
         content: |
           set -e
           curl -s \
             -H "Authorization: Bearer $LINODE_TOKEN" \
             -H "X-Filter: $FILTER" \
             -H "Content-Type: application/json" \
-            "https://api.linode.com/v4/vpcs"
+            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
         check:
           ($error): ~
           (json_parse($stdout)):
-            results: 1
-  - name: step-03
+            results: 2
+  - name: step-04
     try:
     - delete:
         ref:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-          kind: LinodeVPC
-          name: ($vpc)
+          apiVersion: cluster.x-k8s.io/v1beta1
+          kind: Cluster
+          name: ($cluster)
     - error:
-        file: 03-error.yaml
-  - name: step-04
+        file: 04-error.yaml
+  - name: step-05
     try:
     - script:
         env:
+        - name: TARGET_API
+          value: api.linode.com
+        - name: TARGET_API_VERSION
+          value: v4beta
+        - name: URI
+          value: linode/instances
         - name: FILTER
-          value: (to_string({"label":($vpc)}))
+          value: (to_string({"tags":($cluster)}))
         content: |
           set -e
           curl -s \
             -H "Authorization: Bearer $LINODE_TOKEN" \
             -H "X-Filter: $FILTER" \
             -H "Content-Type: application/json" \
-            "https://api.linode.com/v4/nodebalancers"
+            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
         check:
           ($error): ~
           (json_parse($stdout)):
             results: 0
+  - name: step-06
+    try:
+    - apply:
+        file: 06-cleanup-cluster.yaml

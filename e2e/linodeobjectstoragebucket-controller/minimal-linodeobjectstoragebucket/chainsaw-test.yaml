@@ -3,6 +3,8 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   name: minimal-linodeobjectstoragebucket
+  labels:
+    on-pr:
 spec:
   bindings:
     # A short identifier for the E2E test run

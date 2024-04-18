@@ -3,18 +3,19 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   creationTimestamp: null
-  name: minimal-linodemachine
-    # This is a short identifier for the E2E test run on every PR
+  name: minimal-linodecluster
   labels:
-    regularPR:
+    on-pr:
 spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
+    value: (join('-', ['e2e', 'min-cluster', env('GIT_REF')]))
   - name: cluster
     # Format the cluster name
     value: (trim((truncate(($run), `32`)), '-'))
+  - name: nodebalancer
+    value: ($cluster)
   template: true
   steps:
   - name: step-00
@@ -28,7 +29,7 @@ spec:
   - name: step-02
     try:
     - apply:
-        file: 02-create-linodemachine.yaml
+        file: 02-create-linodecluster.yaml
     - assert:
         file: 02-assert.yaml
   - name: step-03
@@ -40,9 +41,9 @@ spec:
         - name: TARGET_API_VERSION
           value: v4beta
         - name: URI
-          value: linode/instances
+          value: nodebalancers
         - name: FILTER
-          value: (to_string({"tags":($cluster)}))
+          value: (to_string({"label":($nodebalancer)}))
         content: |
           set -e
           curl -s \
@@ -72,9 +73,9 @@ spec:
         - name: TARGET_API_VERSION
           value: v4beta
         - name: URI
-          value: linode/instances
+          value: nodebalancers
         - name: FILTER
-          value: (to_string({"tags":($cluster)}))
+          value: (to_string({"label":($nodebalancer)}))
         content: |
           set -e
           curl -s \
