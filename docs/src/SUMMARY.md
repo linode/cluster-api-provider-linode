@@ -13,6 +13,7 @@
       - [Cluster Autoscaler (kubeadm)](./topics/flavors/cluster-autoscaler.md)
       - [k3s](./topics/flavors/k3s.md)
       - [rke2](./topics/flavors/rke2.md)
+      - [vpcless (kubeadm)](./topics/flavors/vpcless.md)
     - [Etcd](./topics/etcd.md)
     - [Backups](./topics/backups.md)
     - [Multi-Tenancy](./topics/multi-tenancy.md)

@@ -1,25 +1,21 @@
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
-  name: linode-cloud-controller-manager
+  name: linode-cloud-controller-manager-vpcless
 spec:
   clusterSelector:
-    matchExpressions:
-      - {key: vpcless, operator: DoesNotExist}
-      - {key: ccm, operator: In, values: ['linode']}
+    matchLabels:
+      ccm: linode
+      vpcless: "true"
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
   chartName: ccm-linode
   namespace: kube-system
-  version: ${LINODE_CCM_VERSION:=v0.4.4}
+  version: ${LINODE_CCM_VERSION:=v0.4.3}
   options:
     waitForJobs: true
     wait: true
     timeout: 5m
   valuesTemplate: |
-    routeController:
-      vpcName: ${VPC_NAME:=${CLUSTER_NAME}}
-      clusterCIDR: 10.0.0.0/8
-      configureCloudRoutes: true
     secretRef:
       name: "linode-token-region"
     image:

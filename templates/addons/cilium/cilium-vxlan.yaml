@@ -1,0 +1,27 @@
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: cilium-vxlan
+spec:
+  clusterSelector:
+    matchLabels:
+      cni: cilium
+      vxlan: "true"
+  repoURL: https://helm.cilium.io/
+  chartName: cilium
+  namespace: kube-system
+  version: ${CILIUM_VERSION:=1.15.0}
+  options:
+    waitForJobs: true
+    wait: true
+    timeout: 5m
+  valuesTemplate: |
+    ipam:
+      mode: kubernetes
+    k8s:
+      requireIPv4PodCIDR: true
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true
