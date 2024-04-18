@@ -103,9 +103,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 
 	ctlrSuite.Run(Paths(
 		Either(
-			Call("bucket is created", func(ctx context.Context, m Mock) {
-				getBucket := m.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
-				m.ObjectStorageClient.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
+			Call("bucket is created", func(ctx context.Context, mck Mock) {
+				getBucket := mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
+				mck.ObjectStorageClient.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
 					After(getBucket).
 					Return(&linodego.ObjectStorageBucket{
 						Label:    obj.Name,
@@ -115,21 +115,21 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					}, nil)
 			}),
 			Case(
-				Call("bucket is not created", func(ctx context.Context, m Mock) {
-					getBucket := m.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
-					m.ObjectStorageClient.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).After(getBucket).Return(nil, errors.New("create bucket error"))
+				Call("bucket is not created", func(ctx context.Context, mck Mock) {
+					getBucket := mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
+					mck.ObjectStorageClient.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).After(getBucket).Return(nil, errors.New("create bucket error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
-					bScope.LinodeClient = m.ObjectStorageClient
+				Result("error", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("create bucket error"))
 				}),
 			),
 		),
 		Either(
-			Call("keys are created", func(ctx context.Context, m Mock) {
+			Call("keys are created", func(ctx context.Context, mck Mock) {
 				for idx := range 2 {
-					m.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+					mck.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).
 						Return(&linodego.ObjectStorageKey{
 							ID:        idx,
 							AccessKey: fmt.Sprintf("access-key-%d", idx),
@@ -138,19 +138,19 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				}
 			}),
 			Case(
-				Call("keys are not created", func(ctx context.Context, m Mock) {
-					m.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("create key error"))
+				Call("keys are not created", func(ctx context.Context, mck Mock) {
+					mck.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("create key error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
-					bScope.LinodeClient = m.ObjectStorageClient
+				Result("error", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("create key error"))
 				}),
 			),
 		),
-		Result("resource status is updated and key secret is created", func(ctx context.Context, m Mock) {
+		Result("resource status is updated and key secret is created", func(ctx context.Context, mck Mock) {
 			objectKey := client.ObjectKeyFromObject(&obj)
-			bScope.LinodeClient = m.ObjectStorageClient
+			bScope.LinodeClient = mck.ObjectStorageClient
 			_, err := reconciler.reconcile(ctx, &bScope)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -182,17 +182,17 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			Expect(key.StringData.AccessKeyRO).To(Equal("access-key-1"))
 			Expect(key.StringData.SecretKeyRO).To(Equal("secret-key-1"))
 
-			Expect(<-m.Events()).To(ContainSubstring("Object storage keys assigned"))
-			Expect(<-m.Events()).To(ContainSubstring("Object storage keys stored in secret"))
-			Expect(<-m.Events()).To(ContainSubstring("Object storage bucket synced"))
+			Expect(<-mck.Events()).To(ContainSubstring("Object storage keys assigned"))
+			Expect(<-mck.Events()).To(ContainSubstring("Object storage keys stored in secret"))
+			Expect(<-mck.Events()).To(ContainSubstring("Object storage bucket synced"))
 
-			logOutput := m.Logs()
+			logOutput := mck.Logs()
 			Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 			Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 		}),
 		Either(
-			Call("bucket is retrieved on update", func(ctx context.Context, m Mock) {
-				m.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).
+			Call("bucket is retrieved on update", func(ctx context.Context, mck Mock) {
+				mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).
 					Return(&linodego.ObjectStorageBucket{
 						Label:    obj.Name,
 						Cluster:  obj.Spec.Cluster,
@@ -201,11 +201,11 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					}, nil)
 			}),
 			Case(
-				Call("bucket is not retrieved on update", func(ctx context.Context, m Mock) {
-					m.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, errors.New("get bucket error"))
+				Call("bucket is not retrieved on update", func(ctx context.Context, mck Mock) {
+					mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, errors.New("get bucket error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
-					bScope.LinodeClient = m.ObjectStorageClient
+				Result("error", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("get bucket error"))
 				}),
@@ -221,38 +221,38 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			// nb: Order matters for paths of the same length. The leftmost path is evaluated first.
 			// If we evaluate the happy path first, the bucket resource is mutated so the error path won't occur.
 			Case(
-				Call("keys are not rotated", func(ctx context.Context, m Mock) {
-					m.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("create key error"))
+				Call("keys are not rotated", func(ctx context.Context, mck Mock) {
+					mck.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("create key error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
-					bScope.LinodeClient = m.ObjectStorageClient
+				Result("error", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("create key error"))
 				}),
 			),
 			Case(
-				Call("keys are rotated", func(ctx context.Context, m Mock) {
+				Call("keys are rotated", func(ctx context.Context, mck Mock) {
 					for idx := range 2 {
-						createCall := m.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).
+						createCall := mck.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).
 							Return(&linodego.ObjectStorageKey{
 								ID:        idx + 2,
 								AccessKey: fmt.Sprintf("access-key-%d", idx+2),
 								SecretKey: fmt.Sprintf("secret-key-%d", idx+2),
 							}, nil)
-						m.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), idx).After(createCall).Return(nil)
+						mck.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), idx).After(createCall).Return(nil)
 					}
 				}),
-				Result("resource lastKeyGeneration is updated", func(ctx context.Context, m Mock) {
+				Result("resource lastKeyGeneration is updated", func(ctx context.Context, mck Mock) {
 					objectKey := client.ObjectKeyFromObject(&obj)
-					bScope.LinodeClient = m.ObjectStorageClient
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 					Expect(*obj.Status.LastKeyGeneration).To(Equal(1))
 
-					Expect(<-m.Events()).To(ContainSubstring("Object storage keys assigned"))
+					Expect(<-mck.Events()).To(ContainSubstring("Object storage keys assigned"))
 
-					logOutput := m.Logs()
+					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 					Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 				}),
@@ -266,19 +266,19 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		),
 		Either(
 			Case(
-				Call("keys are not retrieved", func(ctx context.Context, m Mock) {
-					m.ObjectStorageClient.EXPECT().GetObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(nil, errors.New("get key error"))
+				Call("keys are not retrieved", func(ctx context.Context, mck Mock) {
+					mck.ObjectStorageClient.EXPECT().GetObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(nil, errors.New("get key error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
-					bScope.LinodeClient = m.ObjectStorageClient
+				Result("error", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("get key error"))
 				}),
 			),
 			Case(
-				Call("keys are retrieved", func(ctx context.Context, m Mock) {
+				Call("keys are retrieved", func(ctx context.Context, mck Mock) {
 					for idx := range 2 {
-						m.ObjectStorageClient.EXPECT().GetObjectStorageKey(gomock.Any(), idx+2).
+						mck.ObjectStorageClient.EXPECT().GetObjectStorageKey(gomock.Any(), idx+2).
 							Return(&linodego.ObjectStorageKey{
 								ID:        idx + 2,
 								AccessKey: fmt.Sprintf("access-key-%d", idx+2),
@@ -286,8 +286,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 							}, nil)
 					}
 				}),
-				Result("secret is restored", func(ctx context.Context, m Mock) {
-					bScope.LinodeClient = m.ObjectStorageClient
+				Result("secret is restored", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -306,11 +306,11 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(key.StringData.AccessKeyRO).To(Equal("access-key-3"))
 					Expect(key.StringData.SecretKeyRO).To(Equal("secret-key-3"))
 
-					Expect(<-m.Events()).To(ContainSubstring("Object storage keys retrieved"))
-					Expect(<-m.Events()).To(ContainSubstring("Object storage keys stored in secret"))
-					Expect(<-m.Events()).To(ContainSubstring("Object storage bucket synced"))
+					Expect(<-mck.Events()).To(ContainSubstring("Object storage keys retrieved"))
+					Expect(<-mck.Events()).To(ContainSubstring("Object storage keys stored in secret"))
+					Expect(<-mck.Events()).To(ContainSubstring("Object storage bucket synced"))
 
-					logOutput := m.Logs()
+					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 					Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 				}),
@@ -324,31 +324,31 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		}),
 		Either(
 			Case(
-				Call("keys are not revoked", func(ctx context.Context, m Mock) {
-					m.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(errors.New("revoke error"))
+				Call("keys are not revoked", func(ctx context.Context, mck Mock) {
+					mck.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(errors.New("revoke error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
-					bScope.LinodeClient = m.ObjectStorageClient
+				Result("error", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("revoke error"))
 				}),
 			),
 			Case(
-				Call("keys are revoked", func(ctx context.Context, m Mock) {
-					m.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), 2).Return(nil)
-					m.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), 3).Return(nil)
+				Call("keys are revoked", func(ctx context.Context, mck Mock) {
+					mck.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), 2).Return(nil)
+					mck.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), 3).Return(nil)
 				}),
-				Result("finalizer is removed", func(ctx context.Context, m Mock) {
+				Result("finalizer is removed", func(ctx context.Context, mck Mock) {
 					objectKey := client.ObjectKeyFromObject(&obj)
 					k8sClient.Get(ctx, objectKey, &obj)
-					bScope.LinodeClient = m.ObjectStorageClient
+					bScope.LinodeClient = mck.ObjectStorageClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &obj))).To(BeTrue())
 
-					Expect(<-m.Events()).To(ContainSubstring("Object storage keys revoked"))
+					Expect(<-mck.Events()).To(ContainSubstring("Object storage keys revoked"))
 
-					logOutput := m.Logs()
+					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling delete"))
 				}),
 			),
@@ -382,15 +382,15 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 
 	ctlrSuite.Run(Paths(
 		Either(
-			Call("resource can be fetched", func(ctx context.Context, m Mock) {
-				m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			Call("resource can be fetched", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			}),
 			Case(
-				Call("resource is not found", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "mock"))
+				Call("resource is not found", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "mock"))
 				}),
-				Result("no error", func(ctx context.Context, m Mock) {
-					reconciler.Client = m.K8sClient
+				Result("no error", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
 					_, err := reconciler.Reconcile(ctx, reconcile.Request{
 						NamespacedName: client.ObjectKeyFromObject(bScope.Bucket),
 					})
@@ -398,112 +398,112 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 				}),
 			),
 			Case(
-				Call("resource can't be fetched", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("non-404 error"))
+				Call("resource can't be fetched", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("non-404 error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
-					reconciler.Client = m.K8sClient
+				Result("error", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
 					reconciler.Logger = bScope.Logger
 					_, err := reconciler.Reconcile(ctx, reconcile.Request{
 						NamespacedName: client.ObjectKeyFromObject(bScope.Bucket),
 					})
 					Expect(err.Error()).To(ContainSubstring("non-404 error"))
-					Expect(m.Logs()).To(ContainSubstring("Failed to fetch LinodeObjectStorageBucket"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeObjectStorageBucket"))
 				}),
 			),
 		),
-		Result("scope params is missing args", func(ctx context.Context, m Mock) {
-			reconciler.Client = m.K8sClient
+		Result("scope params is missing args", func(ctx context.Context, mck Mock) {
+			reconciler.Client = mck.K8sClient
 			reconciler.Logger = bScope.Logger
 			_, err := reconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: client.ObjectKeyFromObject(bScope.Bucket),
 			})
 			Expect(err.Error()).To(ContainSubstring("failed to create object storage bucket scope"))
-			Expect(m.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
+			Expect(mck.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
 		}),
-		Call("scheme with no infrav1alpha1", func(ctx context.Context, m Mock) {
-			prev := m.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
-			m.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(2)
+		Call("scheme with no infrav1alpha1", func(ctx context.Context, mck Mock) {
+			prev := mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
+			mck.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(2)
 		}),
-		Result("error", func(ctx context.Context, m Mock) {
-			bScope.Client = m.K8sClient
+		Result("error", func(ctx context.Context, mck Mock) {
+			bScope.Client = mck.K8sClient
 
-			patchHelper, err := patch.NewHelper(bScope.Bucket, m.K8sClient)
+			patchHelper, err := patch.NewHelper(bScope.Bucket, mck.K8sClient)
 			Expect(err).NotTo(HaveOccurred())
 			bScope.PatchHelper = patchHelper
 
 			_, err = reconciler.reconcile(ctx, &bScope)
 			Expect(err.Error()).To(ContainSubstring("no kind is registered"))
 		}),
-		Call("get bucket", func(ctx context.Context, m Mock) {
-			m.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{Created: ptr.To(time.Now())}, nil)
+		Call("get bucket", func(ctx context.Context, mck Mock) {
+			mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{Created: ptr.To(time.Now())}, nil)
 		}),
 		Either(
 			Case(
-				Call("failed check for deleted secret", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("api error"))
+				Call("failed check for deleted secret", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("api error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
+				Result("error", func(ctx context.Context, mck Mock) {
 					bScope.Bucket.Spec.KeyGeneration = ptr.To(1)
 					bScope.Bucket.Status.LastKeyGeneration = bScope.Bucket.Spec.KeyGeneration
 					bScope.Bucket.Status.KeySecretName = ptr.To("mock-bucket-details")
 					bScope.Bucket.Status.AccessKeyRefs = []int{0, 1}
 
-					bScope.LinodeClient = m.ObjectStorageClient
-					bScope.Client = m.K8sClient
+					bScope.LinodeClient = mck.ObjectStorageClient
+					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("api error"))
-					Expect(<-m.Events()).To(ContainSubstring("api error"))
-					Expect(m.Logs()).To(ContainSubstring("Failed to ensure access key secret exists"))
+					Expect(<-mck.Events()).To(ContainSubstring("api error"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to ensure access key secret exists"))
 				}),
 			),
-			Call("secret deleted", func(ctx context.Context, m Mock) {
-				m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-bucket-details"))
+			Call("secret deleted", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-bucket-details"))
 			}),
 		),
-		Call("get keys", func(ctx context.Context, m Mock) {
+		Call("get keys", func(ctx context.Context, mck Mock) {
 			for idx := range 2 {
-				m.ObjectStorageClient.EXPECT().GetObjectStorageKey(gomock.Any(), idx).Return(&linodego.ObjectStorageKey{ID: idx}, nil)
+				mck.ObjectStorageClient.EXPECT().GetObjectStorageKey(gomock.Any(), idx).Return(&linodego.ObjectStorageKey{ID: idx}, nil)
 			}
 		}),
 		Either(
 			Case(
-				Call("secret resource creation fails", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Scheme().Return(scheme.Scheme).AnyTimes()
-					m.K8sClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("secret creation error"))
+				Call("secret resource creation fails", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme).AnyTimes()
+					mck.K8sClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("secret creation error"))
 				}),
-				Result("creation error", func(ctx context.Context, m Mock) {
+				Result("creation error", func(ctx context.Context, mck Mock) {
 					bScope.Bucket.Spec.KeyGeneration = ptr.To(1)
 					bScope.Bucket.Status.LastKeyGeneration = bScope.Bucket.Spec.KeyGeneration
 					bScope.Bucket.Status.KeySecretName = ptr.To("mock-bucket-details")
 					bScope.Bucket.Status.AccessKeyRefs = []int{0, 1}
 
-					bScope.LinodeClient = m.ObjectStorageClient
-					bScope.Client = m.K8sClient
+					bScope.LinodeClient = mck.ObjectStorageClient
+					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("secret creation error"))
-					Expect(<-m.Events()).To(ContainSubstring("keys retrieved"))
-					Expect(<-m.Events()).To(ContainSubstring("secret creation error"))
-					Expect(m.Logs()).To(ContainSubstring("Failed to apply key secret"))
+					Expect(<-mck.Events()).To(ContainSubstring("keys retrieved"))
+					Expect(<-mck.Events()).To(ContainSubstring("secret creation error"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to apply key secret"))
 				}),
 			),
 			Case(
-				Call("secret generation fails", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
+				Call("secret generation fails", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
+				Result("error", func(ctx context.Context, mck Mock) {
 					bScope.Bucket.Spec.KeyGeneration = ptr.To(1)
 					bScope.Bucket.Status.LastKeyGeneration = bScope.Bucket.Spec.KeyGeneration
 					bScope.Bucket.Status.KeySecretName = ptr.To("mock-bucket-details")
 					bScope.Bucket.Status.AccessKeyRefs = []int{0, 1}
 
-					bScope.LinodeClient = m.ObjectStorageClient
-					bScope.Client = m.K8sClient
+					bScope.LinodeClient = mck.ObjectStorageClient
+					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("no kind is registered"))
-					Expect(<-m.Events()).To(ContainSubstring("keys retrieved"))
-					Expect(<-m.Events()).To(ContainSubstring("no kind is registered"))
-					Expect(m.Logs()).To(ContainSubstring("Failed to generate key secret"))
+					Expect(<-mck.Events()).To(ContainSubstring("keys retrieved"))
+					Expect(<-mck.Events()).To(ContainSubstring("no kind is registered"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to generate key secret"))
 				}),
 			),
 		),
@@ -511,15 +511,15 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			bScope.Bucket.Status.AccessKeyRefs = []int{0, 1}
 			bScope.Bucket.ObjectMeta.Finalizers = []string{}
 		}),
-		Call("revoke keys", func(ctx context.Context, m Mock) {
-			m.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(nil)
+		Call("revoke keys", func(ctx context.Context, mck Mock) {
+			mck.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(nil)
 		}),
-		Result("error", func(ctx context.Context, m Mock) {
-			bScope.LinodeClient = m.ObjectStorageClient
-			bScope.Client = m.K8sClient
+		Result("error", func(ctx context.Context, mck Mock) {
+			bScope.LinodeClient = mck.ObjectStorageClient
+			bScope.Client = mck.K8sClient
 			err := reconciler.reconcileDelete(ctx, &bScope)
 			Expect(err.Error()).To(ContainSubstring("failed to remove finalizer from bucket"))
-			Expect(<-m.Events()).To(ContainSubstring("failed to remove finalizer from bucket"))
+			Expect(<-mck.Events()).To(ContainSubstring("failed to remove finalizer from bucket"))
 		}),
 	))
 })

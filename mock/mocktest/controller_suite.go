@@ -61,17 +61,17 @@ func (c *ctlrSuite) Run(paths []path) {
 			mockCtrl := gomock.NewController(ginkgo.GinkgoT())
 			defer mockCtrl.Finish()
 
-			m := Mock{
+			mck := Mock{
 				TestReporter: mockCtrl.T,
 				recorder:     c.recorder,
 				logs:         c.logs,
 			}
 
 			for _, client := range c.clients {
-				m.MockClients.Build(client, mockCtrl)
+				mck.MockClients.Build(client, mockCtrl)
 			}
 
-			path.Run(ctx, m)
+			path.Run(ctx, mck)
 
 			// Flush the channel if any events were not consumed.
 			for len(c.recorder.Events) > 0 {

@@ -36,11 +36,11 @@ var _ = Describe("k8s client", Label("k8sclient"), func() {
 	})
 
 	for _, path := range Paths(
-		Call("fetch object", func(ctx context.Context, m Mock) {
-			m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		Call("fetch object", func(ctx context.Context, mck Mock) {
+			mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
-		Result("no error", func(ctx context.Context, m Mock) {
-			Expect(contrivedCalls(ctx, m)).To(Succeed())
+		Result("no error", func(ctx context.Context, mck Mock) {
+			Expect(contrivedCalls(ctx, mck)).To(Succeed())
 		}),
 	) {
 		It(path.Describe(), func(ctx SpecContext) {
@@ -66,24 +66,24 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 	})
 
 	for _, path := range Paths(
-		Call("read object", func(ctx context.Context, m Mock) {
-			m.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		Call("read object", func(ctx context.Context, mck Mock) {
+			mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
 		Either(
 			Case(
-				Call("underlying exists", func(ctx context.Context, m Mock) {
-					m.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
+				Call("underlying exists", func(ctx context.Context, mck Mock) {
+					mck.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 				}),
-				Result("no error", func(ctx context.Context, m Mock) {
-					Expect(contrivedCalls(ctx, m)).To(Succeed())
+				Result("no error", func(ctx context.Context, mck Mock) {
+					Expect(contrivedCalls(ctx, mck)).To(Succeed())
 				}),
 			),
 			Case(
-				Call("underlying does not exist", func(ctx context.Context, m Mock) {
-					m.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
+				Call("underlying does not exist", func(ctx context.Context, mck Mock) {
+					mck.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
-					Expect(contrivedCalls(ctx, m)).NotTo(Succeed())
+				Result("error", func(ctx context.Context, mck Mock) {
+					Expect(contrivedCalls(ctx, mck)).NotTo(Succeed())
 				}),
 			),
 		),
@@ -100,16 +100,16 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 	}
 })
 
-func contrivedCalls(ctx context.Context, m Mock) error {
+func contrivedCalls(ctx context.Context, mck Mock) error {
 	GinkgoHelper()
 
-	err := m.K8sClient.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
+	err := mck.K8sClient.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
 	if err != nil {
 		return err
 	}
 
-	if m.MachineClient != nil {
-		_, err = m.MachineClient.CreateInstance(ctx, linodego.InstanceCreateOptions{})
+	if mck.MachineClient != nil {
+		_, err = mck.MachineClient.CreateInstance(ctx, linodego.InstanceCreateOptions{})
 		if err != nil {
 			return err
 		}
@@ -121,11 +121,11 @@ func contrivedCalls(ctx context.Context, m Mock) error {
 func TestPaths(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		name     string
-		input    []node
-		output   []path
-		panicErr error
+	for _, testCase := range []struct {
+		name   string
+		input  []node
+		output []path
+		panic  bool
 	}{
 		{
 			name: "basic",
@@ -143,9 +143,9 @@ func TestPaths(t *testing.T) {
 		{
 			name: "open",
 			input: []node{
-				call{},
+				call{text: "0"},
 			},
-			panicErr: errors.New("unresolved path at index 0"),
+			panic: true,
 		},
 		{
 			name: "open fork",
@@ -156,7 +156,7 @@ func TestPaths(t *testing.T) {
 					leaf{call{text: "1"}, result{text: "1"}},
 				},
 			},
-			panicErr: errors.New("unresolved path at index 1"),
+			panic: true,
 		},
 		{
 			name: "split",
@@ -182,6 +182,66 @@ func TestPaths(t *testing.T) {
 						{text: "2"},
 					},
 					result: result{text: "4"},
+				},
+			},
+		},
+		{
+			name: "recursive",
+			input: []node{
+				fork{
+					fork{
+						call{text: "0"},
+						fork{
+							call{text: "1"},
+							call{text: "2"},
+						},
+					},
+					fork{
+						call{text: "3"},
+						fork{
+							call{text: "4"},
+							call{text: "5"},
+						},
+					},
+				},
+				result{text: "6"},
+			},
+			output: []path{
+				{
+					calls: []call{
+						{text: "0"},
+					},
+					result: result{text: "6"},
+				},
+				{
+					calls: []call{
+						{text: "1"},
+					},
+					result: result{text: "6"},
+				},
+				{
+					calls: []call{
+						{text: "2"},
+					},
+					result: result{text: "6"},
+				},
+				{
+					calls: []call{
+						{text: "3"},
+					},
+					result: result{text: "6"},
+				},
+				{
+					calls: []call{
+						{text: "4"},
+					},
+					result: result{text: "6"},
+				},
+				{
+					calls: []call{
+						{text: "5"},
+					},
+					result: result{text: "6"},
 				},
 			},
 		},
@@ -355,18 +415,18 @@ func TestPaths(t *testing.T) {
 			},
 		},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.panicErr != nil {
-				assert.PanicsWithError(t, tc.panicErr.Error(), func() {
-					Paths(tc.input...)
+			if testCase.panic {
+				assert.Panics(t, func() {
+					Paths(testCase.input...)
 				})
 				return
 			}
 
-			actual := Paths(tc.input...)
-			assert.Equal(t, tc.output, actual)
+			actual := Paths(testCase.input...)
+			assert.Equal(t, testCase.output, actual)
 		})
 	}
 }

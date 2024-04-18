@@ -8,37 +8,37 @@ import (
 )
 
 // Run evaluates all declared mock client methods and assertions for the given test path.
-func (p path) Run(ctx context.Context, m Mock) {
-	if m.TestReporter == nil {
+func (p path) Run(ctx context.Context, mck Mock) {
+	if mck.TestReporter == nil {
 		panic("Mock requires TestReporter, i.e. *testing.T, GinkgoT()")
 	}
 
 	for _, o := range p.once {
-		evalOnce(ctx, m, o)
+		evalOnce(ctx, mck, o)
 	}
 	for _, c := range p.calls {
-		evalFn(ctx, m, fn(c))
+		evalFn(ctx, mck, fn(c))
 	}
-	evalFn(ctx, m, fn(p.result))
+	evalFn(ctx, mck, fn(p.result))
 }
 
-func evalFn(ctx context.Context, m Mock, fun fn) {
-	switch tt := m.TestReporter.(type) {
+func evalFn(ctx context.Context, mck Mock, fun fn) {
+	switch tt := mck.TestReporter.(type) {
 	case *testing.T:
 		tt.Log(fun.text)
 	case ginkgo.GinkgoTInterface:
 		ginkgo.By(fun.text)
 	}
 
-	fun.does(ctx, m)
+	fun.does(ctx, mck)
 }
 
-func evalOnce(ctx context.Context, m Mock, fun *once) {
+func evalOnce(ctx context.Context, mck Mock, fun *once) {
 	if fun.ran {
 		return
 	}
 
-	switch tt := m.TestReporter.(type) {
+	switch tt := mck.TestReporter.(type) {
 	case *testing.T:
 		tt.Log(fun.text)
 	case ginkgo.GinkgoTInterface:

@@ -22,7 +22,9 @@ func NewTestSuite(clients ...mock.MockClient) *suite {
 	return &suite{clients: clients}
 }
 
-func (s *suite) Run(ctx context.Context, t *testing.T, paths []path) {
+func (s *suite) Run(t *testing.T, paths []path) {
+	t.Helper()
+
 	for _, path := range paths {
 		t.Run(path.Describe(), func(t *testing.T) {
 			t.Parallel()
@@ -30,15 +32,15 @@ func (s *suite) Run(ctx context.Context, t *testing.T, paths []path) {
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			m := Mock{
+			mck := Mock{
 				TestReporter: mockCtrl.T,
 			}
 
 			for _, client := range s.clients {
-				m.MockClients.Build(client, mockCtrl)
+				mck.MockClients.Build(client, mockCtrl)
 			}
 
-			path.Run(ctx, m)
+			path.Run(context.Background(), mck)
 		})
 	}
 }

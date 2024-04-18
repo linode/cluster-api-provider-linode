@@ -61,26 +61,46 @@ func Case(c call, r result) leaf {
 }
 
 // Either declares multiple nodes that fork out into unique test paths.
-func Either(nodes ...prong) fork {
+func Either(nodes ...node) fork {
 	return nodes
 }
 
 // Common interface for defining permutations of test paths as a tree.
 type node interface {
-	node()
-}
-
-// A container for describing and holding a function.
-type fn struct {
-	text string
-	does func(context.Context, Mock)
+	update(staged, committed []path) (st, com []path)
 }
 
 // Contains a function for mocking method calls on a single mock client.
 type call fn
 
+// Adds the call to each staged path.
+func (c call) update(staged, committed []path) (st, com []path) {
+	for idx, pth := range staged {
+		newCalls := make([]call, len(pth.calls), len(pth.calls)+1)
+		copy(newCalls, pth.calls)
+		staged[idx] = path{
+			once:  pth.once,
+			calls: append(newCalls, c),
+		}
+	}
+
+	return staged, committed
+}
+
 // Contains a function that tests the effects of mocked method calls.
 type result fn
+
+// Commits each staged path with the result.
+func (r result) update(staged, committed []path) (st, com []path) {
+	for idx := range staged {
+		staged[idx].result = r
+	}
+
+	committed = append(committed, staged...)
+	staged = []path{}
+
+	return staged, committed
+}
 
 // Contains a function for an event trigger that runs once.
 type once struct {
@@ -90,26 +110,58 @@ type once struct {
 	ran       bool
 }
 
+// Adds once to the first staged path.
+// It will only be invoked once in the first path to be evaluated.
+func (o once) update(staged, committed []path) (st, com []path) {
+	staged[0].once = append(staged[0].once, &o)
+
+	return staged, committed
+}
+
+// Contains both a function for mocking calls and a result to end a path.
 type leaf struct {
 	call
 	result
 }
 
-// A container for defining nodes that fork out into new test paths.
-type fork []prong
+// Commits each staged path with the leaf's call and result.
+func (l leaf) update(staged, committed []path) (st, com []path) {
+	for _, pth := range staged {
+		newCalls := make([]call, len(pth.calls), len(pth.calls)+1)
+		copy(newCalls, pth.calls)
+		committed = append(committed, path{
+			once:   pth.once,
+			calls:  append(newCalls, l.call),
+			result: l.result,
+		})
+	}
 
-// Common interface for nodes that fork out into new test paths.
-type prong interface {
-	prong()
+	staged = []path{}
+
+	return staged, committed
 }
 
-func (call) node()   {}
-func (result) node() {}
-func (once) node()   {}
-func (leaf) node()   {}
-func (fork) node()   {}
+// A container for defining nodes that fork out into new test paths.
+type fork []node
 
-func (call) prong()   {}
-func (result) prong() {}
-func (once) prong()   {}
-func (leaf) prong()   {}
+// Generates new permutations of each staged path with each node in the fork.
+// Each node in the fork should never occur on the same path.
+func (f fork) update(staged, committed []path) (st, com []path) {
+	var permutations []path
+
+	for _, pth := range staged {
+		for _, fi := range f {
+			var localPerms []path
+			localPerms, committed = fi.update([]path{pth}, committed)
+			permutations = append(permutations, localPerms...)
+		}
+	}
+
+	return permutations, committed
+}
+
+// A container for describing and holding a function.
+type fn struct {
+	text string
+	does func(context.Context, Mock)
+}

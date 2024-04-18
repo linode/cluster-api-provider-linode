@@ -112,25 +112,25 @@ func TestValidateMachineScopeParams(t *testing.T) {
 func TestMachineScopeAddFinalizer(t *testing.T) {
 	t.Parallel()
 
-	NewTestSuite(mock.MockK8sClient{}).Run(context.Background(), t, Paths(
-		Call("scheme 1", func(ctx context.Context, m Mock) {
-			m.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+	NewTestSuite(mock.MockK8sClient{}).Run(t, Paths(
+		Call("scheme 1", func(ctx context.Context, mck Mock) {
+			mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 				s := runtime.NewScheme()
 				infrav1alpha1.AddToScheme(s)
 				return s
 			})
 		}),
 		Either(
-			Call("scheme 2", func(ctx context.Context, m Mock) {
-				m.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+			Call("scheme 2", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
 				})
 			}),
-			Result("has finalizer", func(ctx context.Context, m Mock) {
+			Result("has finalizer", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "token", MachineScopeParams{
-					Client:        m.K8sClient,
+					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{},
@@ -148,12 +148,12 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 		),
 		Either(
 			Case(
-				Call("able to patch", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil)
+				Call("able to patch", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil)
 				}),
-				Result("finalizer added", func(ctx context.Context, m Mock) {
+				Result("finalizer added", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(ctx, "token", MachineScopeParams{
-						Client:        m.K8sClient,
+						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha1.LinodeCluster{},
@@ -166,12 +166,12 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 				}),
 			),
 			Case(
-				Call("unable to patch", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("fail"))
+				Call("unable to patch", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("fail"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
+				Result("error", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(ctx, "token", MachineScopeParams{
-						Client:        m.K8sClient,
+						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha1.LinodeCluster{},
@@ -189,16 +189,16 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 func TestNewMachineScope(t *testing.T) {
 	t.Parallel()
 
-	NewTestSuite(mock.MockK8sClient{}).Run(context.Background(), t, Paths(
+	NewTestSuite(mock.MockK8sClient{}).Run(t, Paths(
 		Either(
-			Result("invalid params", func(ctx context.Context, m Mock) {
+			Result("invalid params", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "token", MachineScopeParams{})
 				require.ErrorContains(t, err, "is required")
 				assert.Nil(t, mScope)
 			}),
-			Result("no token", func(ctx context.Context, m Mock) {
+			Result("no token", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "", MachineScopeParams{
-					Client:        m.K8sClient,
+					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{},
@@ -208,12 +208,12 @@ func TestNewMachineScope(t *testing.T) {
 				assert.Nil(t, mScope)
 			}),
 			Case(
-				Call("no secret", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "example"))
+				Call("no secret", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "example"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
+				Result("error", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(ctx, "", MachineScopeParams{
-						Client:        m.K8sClient,
+						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha1.LinodeCluster{},
@@ -232,20 +232,20 @@ func TestNewMachineScope(t *testing.T) {
 			),
 		),
 		Either(
-			Call("valid scheme", func(ctx context.Context, m Mock) {
-				m.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+			Call("valid scheme", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
 					infrav1alpha1.AddToScheme(s)
 					return s
 				})
 			}),
 			Case(
-				Call("invalid scheme", func(ctx context.Context, m Mock) {
-					m.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
+				Call("invalid scheme", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
 				}),
-				Result("cannot init patch helper", func(ctx context.Context, m Mock) {
+				Result("cannot init patch helper", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(ctx, "token", MachineScopeParams{
-						Client:        m.K8sClient,
+						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha1.LinodeCluster{},
@@ -257,8 +257,8 @@ func TestNewMachineScope(t *testing.T) {
 			),
 		),
 		Either(
-			Call("credentials in secret", func(ctx context.Context, m Mock) {
-				m.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
+			Call("credentials in secret", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						*obj = corev1.Secret{
 							Data: map[string][]byte{
@@ -268,9 +268,9 @@ func TestNewMachineScope(t *testing.T) {
 						return nil
 					})
 			}),
-			Result("default credentials", func(ctx context.Context, m Mock) {
+			Result("default credentials", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "token", MachineScopeParams{
-					Client:        m.K8sClient,
+					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{},
@@ -281,9 +281,9 @@ func TestNewMachineScope(t *testing.T) {
 			}),
 		),
 		Either(
-			Result("credentials from LinodeMachine credentialsRef", func(ctx context.Context, m Mock) {
+			Result("credentials from LinodeMachine credentialsRef", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "", MachineScopeParams{
-					Client:        m.K8sClient,
+					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{},
@@ -299,9 +299,9 @@ func TestNewMachineScope(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, mScope)
 			}),
-			Result("credentials from LinodeCluster credentialsRef", func(ctx context.Context, m Mock) {
+			Result("credentials from LinodeCluster credentialsRef", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "token", MachineScopeParams{
-					Client:  m.K8sClient,
+					Client:  mck.K8sClient,
 					Cluster: &clusterv1.Cluster{},
 					Machine: &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha1.LinodeCluster{
@@ -324,18 +324,18 @@ func TestNewMachineScope(t *testing.T) {
 func TestMachineScopeGetBootstrapData(t *testing.T) {
 	t.Parallel()
 
-	NewTestSuite(mock.MockK8sClient{}).Run(context.Background(), t, Paths(
-		Call("able to get secret", func(ctx context.Context, m Mock) {
-			m.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
+	NewTestSuite(mock.MockK8sClient{}).Run(t, Paths(
+		Call("able to get secret", func(ctx context.Context, mck Mock) {
+			mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 					secret := corev1.Secret{Data: map[string][]byte{"value": []byte("test-data")}}
 					*obj = secret
 					return nil
 				})
 		}),
-		Result("success", func(ctx context.Context, m Mock) {
+		Result("success", func(ctx context.Context, mck Mock) {
 			mScope := MachineScope{
-				Client: m.K8sClient,
+				Client: mck.K8sClient,
 				Machine: &clusterv1.Machine{
 					Spec: clusterv1.MachineSpec{
 						Bootstrap: clusterv1.Bootstrap{
@@ -351,20 +351,20 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 			assert.Equal(t, data, []byte("test-data"))
 		}),
 		Either(
-			Call("unable to get secret", func(ctx context.Context, m Mock) {
-				m.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
+			Call("unable to get secret", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
 					Return(apierrors.NewNotFound(schema.GroupResource{}, "test-data"))
 			}),
-			Call("secret is missing data", func(ctx context.Context, m Mock) {
-				m.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
+			Call("secret is missing data", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						*obj = corev1.Secret{}
 						return nil
 					})
 			}),
-			Result("secret ref missing", func(ctx context.Context, m Mock) {
+			Result("secret ref missing", func(ctx context.Context, mck Mock) {
 				mScope := MachineScope{
-					Client:        m.K8sClient,
+					Client:        mck.K8sClient,
 					Machine:       &clusterv1.Machine{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				}
@@ -374,9 +374,9 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 				assert.Empty(t, data)
 			}),
 		),
-		Result("error", func(ctx context.Context, m Mock) {
+		Result("error", func(ctx context.Context, mck Mock) {
 			mScope := MachineScope{
-				Client: m.K8sClient,
+				Client: mck.K8sClient,
 				Machine: &clusterv1.Machine{
 					Spec: clusterv1.MachineSpec{
 						Bootstrap: clusterv1.Bootstrap{
