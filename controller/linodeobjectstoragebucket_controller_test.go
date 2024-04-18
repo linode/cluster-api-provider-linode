@@ -42,10 +42,10 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
 
+	//nolint:goimports // local dot import
+	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
 type accessKeySecret struct {
@@ -115,7 +115,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 						Hostname: "hostname",
 					}, nil)
 			}),
-			Case(
+			Path(
 				Call("bucket is not created", func(ctx context.Context, mck Mock) {
 					getBucket := mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
 					mck.ObjectStorageClient.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).After(getBucket).Return(nil, errors.New("create bucket error"))
@@ -138,7 +138,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 						}, nil)
 				}
 			}),
-			Case(
+			Path(
 				Call("keys are not created", func(ctx context.Context, mck Mock) {
 					mck.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("create key error"))
 				}),
@@ -201,7 +201,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 						Hostname: "hostname",
 					}, nil)
 			}),
-			Case(
+			Path(
 				Call("bucket is not retrieved on update", func(ctx context.Context, mck Mock) {
 					mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, errors.New("get bucket error"))
 				}),
@@ -221,7 +221,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		Either(
 			// nb: Order matters for paths of the same length. The leftmost path is evaluated first.
 			// If we evaluate the happy path first, the bucket resource is mutated so the error path won't occur.
-			Case(
+			Path(
 				Call("keys are not rotated", func(ctx context.Context, mck Mock) {
 					mck.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("create key error"))
 				}),
@@ -231,7 +231,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(err.Error()).To(ContainSubstring("create key error"))
 				}),
 			),
-			Case(
+			Path(
 				Call("keys are rotated", func(ctx context.Context, mck Mock) {
 					for idx := range 2 {
 						createCall := mck.ObjectStorageClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).
@@ -266,7 +266,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			}),
 		),
 		Either(
-			Case(
+			Path(
 				Call("keys are not retrieved", func(ctx context.Context, mck Mock) {
 					mck.ObjectStorageClient.EXPECT().GetObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(nil, errors.New("get key error"))
 				}),
@@ -276,7 +276,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(err.Error()).To(ContainSubstring("get key error"))
 				}),
 			),
-			Case(
+			Path(
 				Call("keys are retrieved", func(ctx context.Context, mck Mock) {
 					for idx := range 2 {
 						mck.ObjectStorageClient.EXPECT().GetObjectStorageKey(gomock.Any(), idx+2).
@@ -324,7 +324,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 		}),
 		Either(
-			Case(
+			Path(
 				Call("keys are not revoked", func(ctx context.Context, mck Mock) {
 					mck.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Times(2).Return(errors.New("revoke error"))
 				}),
@@ -334,7 +334,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(err.Error()).To(ContainSubstring("revoke error"))
 				}),
 			),
-			Case(
+			Path(
 				Call("keys are revoked", func(ctx context.Context, mck Mock) {
 					mck.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), 2).Return(nil)
 					mck.ObjectStorageClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), 3).Return(nil)
@@ -386,7 +386,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			Call("resource can be fetched", func(ctx context.Context, mck Mock) {
 				mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			}),
-			Case(
+			Path(
 				Call("resource is not found", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "mock"))
 				}),
@@ -398,7 +398,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 					Expect(err).NotTo(HaveOccurred())
 				}),
 			),
-			Case(
+			Path(
 				Call("resource can't be fetched", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("non-404 error"))
 				}),
@@ -440,7 +440,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{Created: ptr.To(time.Now())}, nil)
 		}),
 		Either(
-			Case(
+			Path(
 				Call("failed check for deleted secret", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("api error"))
 				}),
@@ -468,7 +468,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			}
 		}),
 		Either(
-			Case(
+			Path(
 				Call("secret resource creation fails", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme).AnyTimes()
 					mck.K8sClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("secret creation error"))
@@ -488,7 +488,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 					Expect(mck.Logs()).To(ContainSubstring("Failed to apply key secret"))
 				}),
 			),
-			Case(
+			Path(
 				Call("secret generation fails", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
 				}),

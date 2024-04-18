@@ -1,33 +1,19 @@
 package mocktest
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-
-	"go.uber.org/mock/gomock"
-	"k8s.io/client-go/tools/record"
-
-	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
-// Mock holds configuration for a single test path.
-type Mock struct {
-	gomock.TestReporter
-	mock.MockClients
-
-	recorder *record.FakeRecorder
-	logs     *bytes.Buffer
+// Common interface for defining permutations of test paths as a tree.
+type node interface {
+	update(staged, committed []path) (st, com []path)
 }
 
-// Events returns a channel for receiving event strings for a single test path.
-func (m Mock) Events() <-chan string {
-	return m.recorder.Events
-}
-
-// Logs returns a string of all log output written during a single test path.
-func (m Mock) Logs() string {
-	return m.logs.String()
+// A container for describing and holding a function.
+type fn struct {
+	text string
+	does func(context.Context, Mock)
 }
 
 // Call declares a function for mocking method calls on a single mock client.
@@ -36,38 +22,6 @@ func Call(text string, does func(context.Context, Mock)) call {
 		text: fmt.Sprintf("Call(%s)", text),
 		does: does,
 	}
-}
-
-// Result terminates a test path with a function that tests the effects of mocked method calls.
-func Result(text string, does func(context.Context, Mock)) result {
-	return result{
-		text: fmt.Sprintf("Result(%s)", text),
-		does: does,
-	}
-}
-
-// Once declares a function that runs one time when executing all test paths.
-// It is triggered at the beginning of the leftmost test path where it is inserted.
-func Once(text string, does func(context.Context)) once {
-	return once{
-		text: fmt.Sprintf("Once(%s)", text),
-		does: does,
-	}
-}
-
-// Case declares both a Mock and a Result for terminating a test path.
-func Case(c call, r result) leaf {
-	return leaf{c, r}
-}
-
-// Either declares multiple nodes that fork out into unique test paths.
-func Either(nodes ...node) fork {
-	return nodes
-}
-
-// Common interface for defining permutations of test paths as a tree.
-type node interface {
-	update(staged, committed []path) (st, com []path)
 }
 
 // Contains a function for mocking method calls on a single mock client.
@@ -87,6 +41,14 @@ func (c call) update(staged, committed []path) (st, com []path) {
 	return staged, committed
 }
 
+// Result terminates a test path with a function that tests the effects of mocked method calls.
+func Result(text string, does func(context.Context, Mock)) result {
+	return result{
+		text: fmt.Sprintf("Result(%s)", text),
+		does: does,
+	}
+}
+
 // Contains a function that tests the effects of mocked method calls.
 type result fn
 
@@ -100,6 +62,15 @@ func (r result) update(staged, committed []path) (st, com []path) {
 	staged = []path{}
 
 	return staged, committed
+}
+
+// Once declares a function that runs one time when executing all test paths.
+// It is triggered at the beginning of the leftmost test path where it is inserted.
+func Once(text string, does func(context.Context)) once {
+	return once{
+		text: fmt.Sprintf("Once(%s)", text),
+		does: does,
+	}
 }
 
 // Contains a function for an event trigger that runs once.
@@ -118,50 +89,43 @@ func (o once) update(staged, committed []path) (st, com []path) {
 	return staged, committed
 }
 
-// Contains both a function for mocking calls and a result to end a path.
-type leaf struct {
-	call
-	result
+// Path declares a sequence of nodes belonging to the same test path.
+func Path(nodes ...node) allOf {
+	return nodes
 }
 
-// Commits each staged path with the leaf's call and result.
-func (l leaf) update(staged, committed []path) (st, com []path) {
-	for _, pth := range staged {
-		newCalls := make([]call, len(pth.calls), len(pth.calls)+1)
-		copy(newCalls, pth.calls)
-		committed = append(committed, path{
-			once:   pth.once,
-			calls:  append(newCalls, l.call),
-			result: l.result,
-		})
-	}
+// A container for defining nodes added to the same test path.
+type allOf []node
 
-	staged = []path{}
+// Adds all nodes to each staged path, committing paths whenever a result is included.
+func (a allOf) update(staged, committed []path) (st, com []path) {
+	for _, impl := range a {
+		staged, committed = impl.update(staged, committed)
+	}
 
 	return staged, committed
 }
 
-// A container for defining nodes that fork out into new test paths.
-type fork []node
+// Either declares multiple nodes that fork out into unique test paths.
+func Either(nodes ...node) oneOf {
+	return nodes
+}
 
-// Generates new permutations of each staged path with each node in the fork.
-// Each node in the fork should never occur on the same path.
-func (f fork) update(staged, committed []path) (st, com []path) {
+// A container for defining nodes that fork out into unique test paths.
+type oneOf []node
+
+// Generates new permutations of each staged path with each node.
+// Each node should never occur on the same path.
+func (o oneOf) update(staged, committed []path) (st, com []path) {
 	var permutations []path
 
 	for _, pth := range staged {
-		for _, fi := range f {
+		for _, impl := range o {
 			var localPerms []path
-			localPerms, committed = fi.update([]path{pth}, committed)
+			localPerms, committed = impl.update([]path{pth}, committed)
 			permutations = append(permutations, localPerms...)
 		}
 	}
 
 	return permutations, committed
-}
-
-// A container for describing and holding a function.
-type fn struct {
-	text string
-	does func(context.Context, Mock)
 }

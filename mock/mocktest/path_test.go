@@ -70,7 +70,7 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 			mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
 		Either(
-			Case(
+			Path(
 				Call("underlying exists", func(ctx context.Context, mck Mock) {
 					mck.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 				}),
@@ -78,7 +78,7 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 					Expect(contrivedCalls(ctx, mck)).To(Succeed())
 				}),
 			),
-			Case(
+			Path(
 				Call("underlying does not exist", func(ctx context.Context, mck Mock) {
 					mck.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
 				}),
@@ -151,9 +151,9 @@ func TestPaths(t *testing.T) {
 			name: "open fork",
 			input: []node{
 				call{text: "0"},
-				fork{
+				oneOf{
 					call{text: "1"},
-					leaf{call{text: "1"}, result{text: "1"}},
+					allOf{call{text: "1"}, result{text: "1"}},
 				},
 			},
 			panic: true,
@@ -162,7 +162,7 @@ func TestPaths(t *testing.T) {
 			name: "split",
 			input: []node{
 				call{text: "0"},
-				fork{
+				oneOf{
 					call{text: "1"},
 					call{text: "2"},
 				},
@@ -188,17 +188,17 @@ func TestPaths(t *testing.T) {
 		{
 			name: "recursive",
 			input: []node{
-				fork{
-					fork{
+				oneOf{
+					oneOf{
 						call{text: "0"},
-						fork{
+						oneOf{
 							call{text: "1"},
 							call{text: "2"},
 						},
 					},
-					fork{
+					oneOf{
 						call{text: "3"},
-						fork{
+						oneOf{
 							call{text: "4"},
 							call{text: "5"},
 						},
@@ -249,7 +249,7 @@ func TestPaths(t *testing.T) {
 			name: "close order",
 			input: []node{
 				call{text: "0"},
-				fork{
+				oneOf{
 					call{text: "1"},
 					result{text: "2"},
 				},
@@ -274,13 +274,13 @@ func TestPaths(t *testing.T) {
 		{
 			name: "path order",
 			input: []node{
-				fork{
-					leaf{call{text: "0"}, result{text: "0"}},
+				oneOf{
+					allOf{call{text: "0"}, result{text: "0"}},
 					call{text: "1"},
 				},
-				fork{
-					leaf{call{text: "2"}, result{text: "2"}},
-					leaf{call{text: "3"}, result{text: "3"}},
+				oneOf{
+					allOf{call{text: "2"}, result{text: "2"}},
+					allOf{call{text: "3"}, result{text: "3"}},
 				},
 			},
 			output: []path{
@@ -308,23 +308,23 @@ func TestPaths(t *testing.T) {
 			name: "once",
 			input: []node{
 				once{text: "0"},
-				fork{
-					leaf{call{text: "1"}, result{text: "1"}},
+				oneOf{
+					allOf{call{text: "1"}, result{text: "1"}},
 					call{text: "1"},
 				},
-				fork{
-					leaf{call{text: "2"}, result{text: "2"}},
+				oneOf{
+					allOf{call{text: "2"}, result{text: "2"}},
 					call{text: "2"},
 				},
 				result{text: "3"},
 				once{text: "4"},
-				fork{
-					leaf{call{text: "5"}, result{text: "5"}},
+				oneOf{
+					allOf{call{text: "5"}, result{text: "5"}},
 					call{text: "5"},
 				},
-				fork{
-					leaf{call{text: "6"}, result{text: "6"}},
-					leaf{call{text: "7"}, result{text: "7"}},
+				oneOf{
+					allOf{call{text: "6"}, result{text: "6"}},
+					allOf{call{text: "7"}, result{text: "7"}},
 				},
 			},
 			output: []path{
@@ -376,14 +376,14 @@ func TestPaths(t *testing.T) {
 			name: "no shared state",
 			input: []node{
 				call{text: "mock1"},
-				fork{
-					leaf{call{text: "mock1.1"}, result{text: "result1"}},
+				oneOf{
+					allOf{call{text: "mock1.1"}, result{text: "result1"}},
 					call{text: "mock2"},
 				},
 				call{text: "mock3"},
-				fork{
-					leaf{call{text: "mock3.1"}, result{text: "result2"}},
-					leaf{call{text: "mock3.2"}, result{text: "result3"}},
+				oneOf{
+					allOf{call{text: "mock3.1"}, result{text: "result2"}},
+					allOf{call{text: "mock3.2"}, result{text: "result3"}},
 				},
 			},
 			output: []path{

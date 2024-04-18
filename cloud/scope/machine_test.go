@@ -147,7 +147,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 			}),
 		),
 		Either(
-			Case(
+			Path(
 				Call("able to patch", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil)
 				}),
@@ -165,7 +165,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					assert.Equal(t, mScope.LinodeMachine.Finalizers[0], infrav1alpha1.GroupVersion.String())
 				}),
 			),
-			Case(
+			Path(
 				Call("unable to patch", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("fail"))
 				}),
@@ -207,7 +207,7 @@ func TestNewMachineScope(t *testing.T) {
 				require.ErrorContains(t, err, "failed to create linode client")
 				assert.Nil(t, mScope)
 			}),
-			Case(
+			Path(
 				Call("no secret", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "example"))
 				}),
@@ -239,7 +239,7 @@ func TestNewMachineScope(t *testing.T) {
 					return s
 				})
 			}),
-			Case(
+			Path(
 				Call("invalid scheme", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
 				}),
