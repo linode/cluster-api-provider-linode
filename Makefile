@@ -215,7 +215,7 @@ tilt-cluster: ctlptl tilt kind clusterctl
 RELEASE_DIR ?= infrastructure-linode
 
 .PHONY: release
-release: $(KUSTOMIZE) clean-release set-manifest-image release-manifests generate-flavors release-templates release-metadata clean-release-git
+release: kustomize clean-release set-manifest-image release-manifests generate-flavors release-templates release-metadata clean-release-git
 
 $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)/
