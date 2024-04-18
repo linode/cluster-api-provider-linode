@@ -1,0 +1,46 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachine
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+spec:
+  region: us-sea
+  type: g5-nanode-1
+status:
+  ready: true
+  instanceState: running
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Machine
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+spec:
+  clusterName: ($cluster)
+status:
+  bootstrapReady: true
+  infrastructureReady: true
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+spec:
+  clusterName: ($cluster)
+  replicas: 3
+status:
+  readyReplicas: 3
+  unavailableReplicas: 0
+  availableReplicas: 3
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+status:
+  readyReplicas: 3
+  unavailableReplicas: 0
+  ready: true

@@ -4,6 +4,9 @@ kind: Test
 metadata:
   creationTimestamp: null
   name: minimal-linodemachine
+    # This is a short identifier for the E2E test run on every PR
+  labels:
+    regularPR:
 spec:
   bindings:
     # A short identifier for the E2E test run
