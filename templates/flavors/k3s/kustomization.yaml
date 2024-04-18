@@ -22,11 +22,3 @@ patches:
       - op: replace
         path: /spec/template/spec/bootstrap/configRef/kind
         value: KThreesConfigTemplate
-  - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
-      kind: MachineDeployment
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/version
-        value: ${K3S_KUBERNETES_VERSION}

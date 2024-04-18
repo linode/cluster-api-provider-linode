@@ -31,11 +31,8 @@ spec:
       kubernetesComponents:
         - "cloudController"
   agentConfig:
-    version: ${RKE2_KUBERNETES_VERSION}
+    version: ${KUBERNETES_VERSION}
     nodeName: '{{ ds.meta_data.label }}'
-    kubelet:
-      extraArgs:
-        - "provider-id=linode://{{ ds.meta_data.id }}"
   preRKE2Commands:
     - |
       mkdir -p /etc/rancher/rke2/config.yaml.d/
