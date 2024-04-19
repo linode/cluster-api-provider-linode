@@ -43,8 +43,10 @@ to provision the node. If you are using a custom image ensure the [cloud_init](h
     ```
 
 ## Install CAPL on your management cluster
-1. clusterctl init --infrastructure akamai-linode
-
+Install CAPL and enable the helm addon provider which is used by the majority of the CAPL flavors
+```bash
+clusterctl init --infrastructure akamai-linode --addon helm
+```
 
 ## Deploying your first cluster
 
