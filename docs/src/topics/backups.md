@@ -12,7 +12,7 @@ To enable backups, use the addon flag during provisioning to select the etcd-bac
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --infrastructure linode:0.0.0 \
+  --infrastructure akamai-linode \
   --flavor etcd-backup-restore \
   | kubectl apply -f -
 ```
@@ -49,7 +49,7 @@ The bucket label must be unique within the region across all accounts. Otherwise
 
 ### Access Keys Creation
 
-CAPL will also create `read_write` and `read_only` access keys for the bucket and store credentials in a secret in the same namespace where the `LinodeObjectStorageBucket` was created alongwith other details about the Linode OBJ Bucket:
+CAPL will also create `read_write` and `read_only` access keys for the bucket and store credentials in a secret in the same namespace where the `LinodeObjectStorageBucket` was created along with other details about the Linode OBJ Bucket:
 
 ```yaml
 apiVersion: v1
@@ -62,6 +62,7 @@ metadata:
       kind: LinodeObjectStorageBucket
       name: <unique-bucket-label>
       controller: true
+      uid: <unique-uid>
 data:
   bucket_name: <unique-bucket-label>
   bucket_region: <linode-obj-bucket-region>

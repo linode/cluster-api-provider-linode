@@ -10,7 +10,7 @@ using the `self-healing` flavor is the quickest way to get started:
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --infrastructure linode:0.0.0 \
+  --infrastructure akamai-linode \
   --flavor self-healing \
   | kubectl apply -f -
 ```

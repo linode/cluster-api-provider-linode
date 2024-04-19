@@ -39,7 +39,7 @@ export ETCDBR_IMAGE=docker.io/username/your-custom-image:version
 export SSE_KEY=cdQdZ3PrKgm5vmqxeqwQCuAWJ7pPVyHg
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --infrastructure linode:0.0.0 \
+  --infrastructure akamai-linode \
   --flavor etcd-backup-restore \
   | kubectl apply -f -
 ```
