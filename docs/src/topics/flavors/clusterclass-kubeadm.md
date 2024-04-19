@@ -10,7 +10,8 @@
 1. Generate the ClusterClass and cluster manifests
     ```bash
     clusterctl generate cluster test-cluster \
-        --infrastructure linode:0.0.0 \
+        --kubernetes-version v1.29.1 \
+        --infrastructure akamai-linode \
         --flavor clusterclass-kubeadm > test-cluster.yaml
     ```
 2. Apply cluster manifests
@@ -21,6 +22,7 @@
 1.  Generate cluster manifests
       ```bash
       clusterctl generate cluster test-cluster-2 \
+          --kubernetes-version v1.29.1 \
           --flavor clusterclass-kubeadm > test-cluster-2.yaml
       ```
       ```yaml

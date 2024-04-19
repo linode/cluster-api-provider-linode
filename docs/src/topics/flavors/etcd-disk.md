@@ -8,7 +8,7 @@ the `quota-backend-bytes` to `8589934592` (8 GiB) per recommendation from
 ## Specification
 | Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
 |---------------|--------|--------------|-----------------------|------|------|
-| Kubeadm       | Cilium | Ubuntu 22.04 | No                    | Yes  | No  |
+| Kubeadm       | Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
 
 ## Prerequisites
 [Quickstart](../getting-started.md) completed
@@ -17,7 +17,8 @@ the `quota-backend-bytes` to `8589934592` (8 GiB) per recommendation from
 1. Generate cluster yaml
     ```bash
     clusterctl generate cluster test-cluster \
-        --infrastructure linode:0.0.0 \
+        --kubernetes-version v1.29.1 \
+        --infrastructure akamai-linode \
         --flavor etcd-disk > test-cluster.yaml
     ```
 2. Apply cluster yaml
