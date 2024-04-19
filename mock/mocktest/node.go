@@ -12,8 +12,10 @@ type node interface {
 
 // A container for describing and holding a function.
 type fn struct {
-	text string
-	does func(context.Context, Mock)
+	text      string
+	does      func(context.Context, Mock)
+	described bool
+	ran       bool
 }
 
 // Call declares a function for mocking method calls on a single mock client.
@@ -66,20 +68,15 @@ func (r result) update(staged, committed []path) (st, com []path) {
 
 // Once declares a function that runs one time when executing all test paths.
 // It is triggered at the beginning of the leftmost test path where it is inserted.
-func Once(text string, does func(context.Context)) once {
+func Once(text string, does func(context.Context, Mock)) once {
 	return once{
 		text: fmt.Sprintf("Once(%s)", text),
 		does: does,
 	}
 }
 
-// Contains a function for an event trigger that runs once.
-type once struct {
-	text      string
-	does      func(context.Context)
-	described bool
-	ran       bool
-}
+// Contains a function that will only run once.
+type once fn
 
 // Adds once to the first staged path.
 // It will only be invoked once in the first path to be evaluated.

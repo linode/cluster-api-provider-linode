@@ -42,7 +42,6 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
 
-	//nolint:goimports // local dot import
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -67,6 +66,8 @@ type accessKeySecret struct {
 }
 
 var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
+	suite := NewControllerTestSuite(GinkgoT(), mock.MockLinodeObjectStorageClient{})
+
 	obj := infrav1.LinodeObjectStorageBucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lifecycle",
@@ -77,21 +78,21 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		},
 	}
 
-	ctlrSuite := NewControllerTestSuite(mock.MockLinodeObjectStorageClient{})
-	reconciler := LinodeObjectStorageBucketReconciler{
-		Recorder: ctlrSuite.Recorder(),
-	}
 	bScope := scope.ObjectStorageBucketScope{
 		Bucket: &obj,
-		Logger: ctlrSuite.Logger(),
+		Logger: suite.Logger(),
 	}
 
-	BeforeAll(func(ctx SpecContext) {
+	reconciler := LinodeObjectStorageBucketReconciler{
+		Recorder: suite.Recorder(),
+	}
+
+	suite.BeforeAll(func(ctx context.Context, _ Mock) {
 		bScope.Client = k8sClient
 		Expect(k8sClient.Create(ctx, &obj)).To(Succeed())
 	})
 
-	BeforeEach(func(ctx SpecContext) {
+	suite.BeforeEach(func(ctx context.Context, _ Mock) {
 		objectKey := client.ObjectKey{Name: "lifecycle", Namespace: "default"}
 		Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 
@@ -102,7 +103,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		bScope.PatchHelper = patchHelper
 	})
 
-	ctlrSuite.Run(Paths(
+	suite.Run(Paths(
 		Either(
 			Call("bucket is created", func(ctx context.Context, mck Mock) {
 				getBucket := mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
@@ -212,7 +213,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				}),
 			),
 		),
-		Once("resource keyGeneration is modified", func(ctx context.Context) {
+		Once("resource keyGeneration is modified", func(ctx context.Context, _ Mock) {
 			objectKey := client.ObjectKeyFromObject(&obj)
 			Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 			obj.Spec.KeyGeneration = ptr.To(1)
@@ -258,7 +259,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 				}),
 			),
-			Once("secret is deleted", func(ctx context.Context) {
+			Once("secret is deleted", func(ctx context.Context, _ Mock) {
 				var secret corev1.Secret
 				secretKey := client.ObjectKey{Namespace: "default", Name: *obj.Status.KeySecretName}
 				Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
@@ -317,7 +318,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				}),
 			),
 		),
-		Once("resource is deleted", func(ctx context.Context) {
+		Once("resource is deleted", func(ctx context.Context, _ Mock) {
 			// nb: client.Delete does not set DeletionTimestamp on the object, so re-fetch from the apiserver.
 			objectKey := client.ObjectKeyFromObject(&obj)
 			Expect(k8sClient.Delete(ctx, &obj)).To(Succeed())
@@ -358,15 +359,16 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 })
 
 var _ = Describe("errors", Label("bucket", "errors"), func() {
-	ctlrSuite := NewControllerTestSuite(
+	suite := NewControllerTestSuite(
+		GinkgoT(),
 		mock.MockLinodeObjectStorageClient{},
 		mock.MockK8sClient{},
 	)
 
-	reconciler := LinodeObjectStorageBucketReconciler{Recorder: ctlrSuite.Recorder()}
-	bScope := scope.ObjectStorageBucketScope{Logger: ctlrSuite.Logger()}
+	reconciler := LinodeObjectStorageBucketReconciler{Recorder: suite.Recorder()}
+	bScope := scope.ObjectStorageBucketScope{Logger: suite.Logger()}
 
-	BeforeEach(func() {
+	suite.BeforeEach(func(_ context.Context, _ Mock) {
 		// Reset obj to base state to be modified in each test path.
 		// We can use a consistent name since these tests are stateless.
 		bScope.Bucket = &infrav1.LinodeObjectStorageBucket{
@@ -381,7 +383,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 		}
 	})
 
-	ctlrSuite.Run(Paths(
+	suite.Run(Paths(
 		Either(
 			Call("resource can be fetched", func(ctx context.Context, mck Mock) {
 				mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -508,7 +510,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 				}),
 			),
 		),
-		Once("finalizer is missing", func(ctx context.Context) {
+		Once("finalizer is missing", func(ctx context.Context, _ Mock) {
 			bScope.Bucket.Status.AccessKeyRefs = []int{0, 1}
 			bScope.Bucket.ObjectMeta.Finalizers = []string{}
 		}),

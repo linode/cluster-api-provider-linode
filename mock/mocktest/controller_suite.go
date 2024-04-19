@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/onsi/ginkgo/v2"
-	"go.uber.org/mock/gomock"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -16,7 +15,9 @@ import (
 const recorderBufferSize = 20
 
 type ctlrSuite struct {
-	clients  []mock.MockClient
+	suite
+
+	ginkgoT  ginkgo.FullGinkgoTInterface
 	recorder *record.FakeRecorder
 	logger   logr.Logger
 	logs     *bytes.Buffer
@@ -24,7 +25,7 @@ type ctlrSuite struct {
 
 // NewControllerTestSuite creates a test suite for a controller.
 // It generates new mock clients for each test path it runs.
-func NewControllerTestSuite(clients ...mock.MockClient) *ctlrSuite {
+func NewControllerTestSuite(ginkgoT ginkgo.FullGinkgoTInterface, clients ...mock.MockClient) *ctlrSuite {
 	if len(clients) == 0 {
 		panic(errors.New("unable to run tests without clients"))
 	}
@@ -32,7 +33,8 @@ func NewControllerTestSuite(clients ...mock.MockClient) *ctlrSuite {
 	logs := bytes.Buffer{}
 
 	return &ctlrSuite{
-		clients: clients,
+		suite:   suite{clients: clients},
+		ginkgoT: ginkgoT,
 		// Create a recorder with a buffered channel for consuming event strings.
 		recorder: record.NewFakeRecorder(recorderBufferSize),
 		// Create a logger that writes to both GinkgoWriter and the local logs buffer
@@ -43,43 +45,33 @@ func NewControllerTestSuite(clients ...mock.MockClient) *ctlrSuite {
 
 // Recorder returns a *FakeRecorder for recording events published in a reconcile loop.
 // Events can be consumed within test paths by receiving from a MockContext.Events() channel.
-func (c *ctlrSuite) Recorder() *record.FakeRecorder {
-	return c.recorder
+func (cs *ctlrSuite) Recorder() *record.FakeRecorder {
+	return cs.recorder
 }
 
 // Logger returns a logr.Logger for capturing logs written during a reconcile loop.
 // Log output can be read within test paths by calling MockContext.Logs().
-func (c *ctlrSuite) Logger() logr.Logger {
-	return c.logger
+func (cs *ctlrSuite) Logger() logr.Logger {
+	return cs.logger
 }
 
 // Run executes Ginkgo test specs for each computed test path.
 // It manages mock client instantiation, events, and logging.
-func (c *ctlrSuite) Run(paths []path) {
+func (cs *ctlrSuite) Run(paths []path) {
 	for _, path := range paths {
 		ginkgo.It(path.Describe(), func(ctx ginkgo.SpecContext) {
-			mockCtrl := gomock.NewController(ginkgo.GinkgoT())
-			defer mockCtrl.Finish()
-
-			mck := Mock{
-				TestReporter: mockCtrl.T,
-				recorder:     c.recorder,
-				logs:         c.logs,
-			}
-
-			for _, client := range c.clients {
-				mck.MockClients.Build(client, mockCtrl)
-			}
-
-			path.Run(ctx, mck)
+			cs.suite.run(cs.ginkgoT, ctx, path, func(mck *Mock) {
+				mck.recorder = cs.recorder
+				mck.logs = cs.logs
+			})
 
 			// Flush the channel if any events were not consumed.
-			for len(c.recorder.Events) > 0 {
-				<-c.recorder.Events
+			for len(cs.recorder.Events) > 0 {
+				<-cs.recorder.Events
 			}
 
 			// Flush the logs buffer for each test run
-			c.logs.Reset()
+			cs.logs.Reset()
 		})
 	}
 }

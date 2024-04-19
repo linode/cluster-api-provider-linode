@@ -38,13 +38,7 @@ func evalOnce(ctx context.Context, mck Mock, fun *once) {
 		return
 	}
 
-	switch tt := mck.TestReporter.(type) {
-	case *testing.T:
-		tt.Log(fun.text)
-	case ginkgo.GinkgoTInterface:
-		ginkgo.By(fun.text)
-	}
+	evalFn(ctx, mck, fn(*fun))
 
-	fun.does(ctx)
 	fun.ran = true
 }

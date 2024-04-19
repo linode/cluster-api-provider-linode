@@ -112,7 +112,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 func TestMachineScopeAddFinalizer(t *testing.T) {
 	t.Parallel()
 
-	NewTestSuite(mock.MockK8sClient{}).Run(t, Paths(
+	NewTestSuite(t, mock.MockK8sClient{}).Run(Paths(
 		Call("scheme 1", func(ctx context.Context, mck Mock) {
 			mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 				s := runtime.NewScheme()
@@ -189,7 +189,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 func TestNewMachineScope(t *testing.T) {
 	t.Parallel()
 
-	NewTestSuite(mock.MockK8sClient{}).Run(t, Paths(
+	NewTestSuite(t, mock.MockK8sClient{}).Run(Paths(
 		Either(
 			Result("invalid params", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "token", MachineScopeParams{})
@@ -324,7 +324,7 @@ func TestNewMachineScope(t *testing.T) {
 func TestMachineScopeGetBootstrapData(t *testing.T) {
 	t.Parallel()
 
-	NewTestSuite(mock.MockK8sClient{}).Run(t, Paths(
+	NewTestSuite(t, mock.MockK8sClient{}).Run(Paths(
 		Call("able to get secret", func(ctx context.Context, mck Mock) {
 			mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
