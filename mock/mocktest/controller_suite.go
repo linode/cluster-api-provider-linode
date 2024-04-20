@@ -65,7 +65,8 @@ func (cs *ctlrSuite) Run(paths []path) {
 				mck.logs = cs.logs
 			})
 
-			// Flush the channel if any events were not consumed.
+			// Flush the channel if any events were not consumed
+			// i.e. Mock.Events was never called
 			for len(cs.recorder.Events) > 0 {
 				<-cs.recorder.Events
 			}

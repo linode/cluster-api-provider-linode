@@ -19,6 +19,10 @@ func (p path) Run(ctx context.Context, mck Mock) {
 	for _, c := range p.calls {
 		evalFn(ctx, mck, fn(c))
 	}
+
+	mckPtr := &mck
+	mckPtr.endOfPath = true
+
 	evalFn(ctx, mck, fn(p.result))
 }
 
