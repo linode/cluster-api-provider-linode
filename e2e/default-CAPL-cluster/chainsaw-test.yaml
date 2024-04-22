@@ -3,7 +3,7 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   creationTimestamp: null
-  name: default-CAPL-cluster
+  name: default-capl-cluster
 spec:
   bindings:
     # A short identifier for the E2E test run
