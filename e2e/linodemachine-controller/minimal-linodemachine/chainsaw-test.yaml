@@ -4,7 +4,7 @@ kind: Test
 metadata:
   creationTimestamp: null
   name: minimal-linodemachine
-    # This is a short identifier for the E2E test run on every PR
+  # Label to trigger the test on every PR
   labels:
     on-pr:
 spec:

@@ -4,6 +4,7 @@ kind: Test
 metadata:
   creationTimestamp: null
   name: minimal-linodecluster
+  # Label to trigger the test on every PR
   labels:
     on-pr:
 spec:

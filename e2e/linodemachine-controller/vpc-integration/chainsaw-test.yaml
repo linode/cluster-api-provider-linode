@@ -4,6 +4,7 @@ kind: Test
 metadata:
   creationTimestamp: null
   name: vpc-integration
+  # Label to trigger the test on every PR
   labels:
     on-pr:
 spec:
