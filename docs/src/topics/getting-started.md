@@ -12,7 +12,8 @@ Make sure to create the token with at least the following read/write permissions
   - VPCs
   - IPs
   - Object Storage
-
+- clusterctl is [installed](https://cluster-api.sigs.k8s.io/user/quick-start#installation)
+- Cluster API [management cluster](https://cluster-api.sigs.k8s.io/user/quick-start#install-andor-configure-a-kubernetes-cluster) is created
 ```admonish question title=""
 For more information please see the
 [Linode Guide](https://www.linode.com/docs/products/tools/api/guides/manage-api-tokens/#create-an-api-token).
@@ -22,11 +23,6 @@ For more information please see the
 
 Once you have provisioned your PAT, save it in an environment variable along with other required settings:
 ```bash
-# Cluster settings
-export CLUSTER_NAME=capl-cluster
-export KUBERNETES_VERSION=v1.29.1
-
-# Linode settings
 export LINODE_REGION=us-ord
 export LINODE_TOKEN=<your linode PAT>
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
@@ -37,18 +33,20 @@ For Regions and Images that do not yet support Akamai's cloud-init datasource CA
 to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
 ```
 
-## Register linode locally as an infrastructure provider
-1. Generate local release files 
-    ```bash
-    make local-release
-    ```
-2. Add `linode` as an infrastructure provider in `~/.cluster-api/clusterctl.yaml`
+## Register linode as an infrastructure provider
+1. Add `linode` as an infrastructure provider in `~/.cluster-api/clusterctl.yaml`
     ```yaml
     providers:
-       - name: linode
-         url: ${PWD}/infrastructure-linode/0.0.0/infrastructure-components.yaml
+       - name: akamai-linode
+         url: https://github.com/linode/cluster-api-provider-linode/releases/latest/infrastructure-components.yaml
          type: InfrastructureProvider
     ```
+
+## Install CAPL on your management cluster
+Install CAPL and enable the helm addon provider which is used by the majority of the CAPL flavors
+```bash
+clusterctl init --infrastructure akamai-linode --addon helm
+```
 
 ## Deploying your first cluster
 

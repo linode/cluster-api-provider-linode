@@ -216,10 +216,10 @@ tilt-cluster: ctlptl tilt kind clusterctl
 
 ##@ Release:
 
-RELEASE_DIR ?= release
+RELEASE_DIR ?= infrastructure-linode
 
 .PHONY: release
-release: $(KUSTOMIZE) clean-release set-manifest-image release-manifests generate-flavors release-templates release-metadata clean-release-git
+release: kustomize clean-release set-manifest-image release-manifests generate-flavors release-templates release-metadata clean-release-git
 
 $(RELEASE_DIR):
 	mkdir -p $(RELEASE_DIR)/
@@ -243,7 +243,7 @@ release-manifests: $(KUSTOMIZE) $(RELEASE_DIR)
 
 .PHONY: local-release
 local-release:
-	RELEASE_DIR=infrastructure-linode/0.0.0 $(MAKE) release
+	RELEASE_DIR=infrastructure-linode/v0.0.0 $(MAKE) release
 	$(MAKE) clean-release-git
 
 ## --------------------------------------
