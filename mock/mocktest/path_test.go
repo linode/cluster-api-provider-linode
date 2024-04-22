@@ -122,10 +122,11 @@ func TestPaths(t *testing.T) {
 	t.Parallel()
 
 	for _, testCase := range []struct {
-		name   string
-		input  []node
-		output []path
-		panic  bool
+		name     string
+		input    []node
+		output   paths
+		describe []string
+		panic    bool
 	}{
 		{
 			name: "basic",
@@ -133,11 +134,14 @@ func TestPaths(t *testing.T) {
 				call{text: "0"},
 				result{text: "0"},
 			},
-			output: []path{
+			output: paths{
 				{
 					calls:  []call{{text: "0"}},
 					result: result{text: "0"},
 				},
+			},
+			describe: []string{
+				"0 > 0",
 			},
 		},
 		{
@@ -168,7 +172,7 @@ func TestPaths(t *testing.T) {
 				},
 				result{text: "4"},
 			},
-			output: []path{
+			output: paths{
 				{
 					calls: []call{
 						{text: "0"},
@@ -183,6 +187,10 @@ func TestPaths(t *testing.T) {
 					},
 					result: result{text: "4"},
 				},
+			},
+			describe: []string{
+				"0 > 1 > 4",
+				"0 > 2 > 4",
 			},
 		},
 		{
@@ -206,7 +214,7 @@ func TestPaths(t *testing.T) {
 				},
 				result{text: "6"},
 			},
-			output: []path{
+			output: paths{
 				{
 					calls: []call{
 						{text: "0"},
@@ -244,6 +252,14 @@ func TestPaths(t *testing.T) {
 					result: result{text: "6"},
 				},
 			},
+			describe: []string{
+				"0 > 6",
+				"1 > 6",
+				"2 > 6",
+				"3 > 6",
+				"4 > 6",
+				"5 > 6",
+			},
 		},
 		{
 			name: "close order",
@@ -255,7 +271,7 @@ func TestPaths(t *testing.T) {
 				},
 				result{text: "3"},
 			},
-			output: []path{
+			output: paths{
 				{
 					calls: []call{
 						{text: "0"},
@@ -270,6 +286,10 @@ func TestPaths(t *testing.T) {
 					result: result{text: "3"},
 				},
 			},
+			describe: []string{
+				"0 > 2",
+				"0 > 1 > 3",
+			},
 		},
 		{
 			name: "path order",
@@ -283,7 +303,7 @@ func TestPaths(t *testing.T) {
 					allOf{call{text: "3"}, result{text: "3"}},
 				},
 			},
-			output: []path{
+			output: paths{
 				{
 					calls:  []call{{text: "0"}},
 					result: result{text: "0"},
@@ -302,6 +322,11 @@ func TestPaths(t *testing.T) {
 					},
 					result: result{text: "3"},
 				},
+			},
+			describe: []string{
+				"0 > 0",
+				"1 > 2 > 2",
+				"1 > 3 > 3",
 			},
 		},
 		{
@@ -327,7 +352,7 @@ func TestPaths(t *testing.T) {
 					allOf{call{text: "7"}, result{text: "7"}},
 				},
 			},
-			output: []path{
+			output: paths{
 				{
 					once:   []*once{{text: "0"}},
 					calls:  []call{{text: "1"}},
@@ -371,6 +396,14 @@ func TestPaths(t *testing.T) {
 					result: result{text: "7"},
 				},
 			},
+			describe: []string{
+				"0 > 1 > 1",
+				"1 > 2 > 2",
+				"1 > 2 > 3",
+				"4 > 5 > 5",
+				"5 > 6 > 6",
+				"5 > 7 > 7",
+			},
 		},
 		{
 			name: "no shared state",
@@ -386,7 +419,7 @@ func TestPaths(t *testing.T) {
 					allOf{call{text: "mock3.2"}, result{text: "result3"}},
 				},
 			},
-			output: []path{
+			output: paths{
 				{
 					calls: []call{
 						{text: "mock1"},
@@ -413,6 +446,43 @@ func TestPaths(t *testing.T) {
 					result: result{text: "result3"},
 				},
 			},
+			describe: []string{
+				"mock1 > mock1.1 > result1",
+				"mock1 > mock2 > mock3 > mock3.1 > result2",
+				"mock1 > mock2 > mock3 > mock3.2 > result3",
+			},
+		},
+		{
+			name: "tmp",
+			input: []node{
+				oneOf{
+					allOf{
+						call{text: "instance exists and is not offline"},
+						result{text: "success"},
+					},
+					allOf{
+						call{text: "instance does not exist"},
+						oneOf{
+							call{text: "able to be created"},
+							allOf{
+								call{text: "not able to be created"},
+								result{text: "error"},
+							},
+						},
+					},
+					call{text: "instance exists but is offline"},
+				},
+				oneOf{
+					allOf{
+						call{text: "able to boot"},
+						result{text: "success"},
+					},
+					allOf{
+						call{text: "not able to boot"},
+						result{text: "error"},
+					},
+				},
+			},
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -427,6 +497,7 @@ func TestPaths(t *testing.T) {
 
 			actual := Paths(testCase.input...)
 			assert.Equal(t, testCase.output, actual)
+			assert.Equal(t, testCase.describe, actual.Describe())
 		})
 	}
 }

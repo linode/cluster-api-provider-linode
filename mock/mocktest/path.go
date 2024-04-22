@@ -15,13 +15,7 @@ type path struct {
 
 // Describe generates a string of all nodes belonging to a test path.
 func (p path) Describe() string {
-	text := make([]string, 0, len(p.once)+len(p.calls)+1)
-	for _, o := range p.once {
-		if !o.described {
-			text = append(text, o.text)
-			o.described = true
-		}
-	}
+	text := make([]string, 0, len(p.calls)+1)
 	for _, c := range p.calls {
 		text = append(text, c.text)
 	}
@@ -29,10 +23,31 @@ func (p path) Describe() string {
 	return strings.Join(text, " > ")
 }
 
+type paths []path
+
+func (ps paths) Describe() []string {
+	texts := make([]string, 0, len(ps))
+	described := make(map[*once]bool)
+
+	for _, pth := range ps {
+		var text strings.Builder
+		for _, o := range pth.once {
+			if !described[o] {
+				text.WriteString(o.text + " > ")
+				described[o] = true
+			}
+		}
+		text.WriteString(pth.Describe())
+		texts = append(texts, text.String())
+	}
+
+	return texts
+}
+
 // Paths declares one or more test paths with mock clients.
 // It traverses each node and their children, returning a list of permutations,
 // each representing a different test path as specified and evaluated in order.
-func Paths(nodes ...node) []path {
+func Paths(nodes ...node) paths {
 	if len(nodes) == 0 {
 		return nil
 	}

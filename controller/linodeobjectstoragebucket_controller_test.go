@@ -184,11 +184,11 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			Expect(key.StringData.AccessKeyRO).To(Equal("access-key-1"))
 			Expect(key.StringData.SecretKeyRO).To(Equal("secret-key-1"))
 
-			Expect(mck.Events()).To(ContainSubstring("Object storage keys assigned"))
-			Expect(mck.Events()).To(ContainSubstring("Object storage keys stored in secret"))
-			Expect(mck.Events()).To(ContainSubstring("Object storage bucket synced"))
+			Expect(suite.Events()).To(ContainSubstring("Object storage keys assigned"))
+			Expect(suite.Events()).To(ContainSubstring("Object storage keys stored in secret"))
+			Expect(suite.Events()).To(ContainSubstring("Object storage bucket synced"))
 
-			logOutput := mck.Logs()
+			logOutput := suite.Logs()
 			Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 			Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 		}),
@@ -252,9 +252,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 					Expect(*obj.Status.LastKeyGeneration).To(Equal(1))
 
-					Expect(mck.Events()).To(ContainSubstring("Object storage keys assigned"))
+					Expect(suite.Events()).To(ContainSubstring("Object storage keys assigned"))
 
-					logOutput := mck.Logs()
+					logOutput := suite.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 					Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 				}),
@@ -308,11 +308,11 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(key.StringData.AccessKeyRO).To(Equal("access-key-3"))
 					Expect(key.StringData.SecretKeyRO).To(Equal("secret-key-3"))
 
-					Expect(mck.Events()).To(ContainSubstring("Object storage keys retrieved"))
-					Expect(mck.Events()).To(ContainSubstring("Object storage keys stored in secret"))
-					Expect(mck.Events()).To(ContainSubstring("Object storage bucket synced"))
+					Expect(suite.Events()).To(ContainSubstring("Object storage keys retrieved"))
+					Expect(suite.Events()).To(ContainSubstring("Object storage keys stored in secret"))
+					Expect(suite.Events()).To(ContainSubstring("Object storage bucket synced"))
 
-					logOutput := mck.Logs()
+					logOutput := suite.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 					Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 				}),
@@ -348,9 +348,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &obj))).To(BeTrue())
 
-					Expect(mck.Events()).To(ContainSubstring("Object storage keys revoked"))
+					Expect(suite.Events()).To(ContainSubstring("Object storage keys revoked"))
 
-					logOutput := mck.Logs()
+					logOutput := suite.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling delete"))
 				}),
 			),
@@ -411,7 +411,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 						NamespacedName: client.ObjectKeyFromObject(bScope.Bucket),
 					})
 					Expect(err.Error()).To(ContainSubstring("non-404 error"))
-					Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeObjectStorageBucket"))
+					Expect(suite.Logs()).To(ContainSubstring("Failed to fetch LinodeObjectStorageBucket"))
 				}),
 			),
 		),
@@ -422,7 +422,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 				NamespacedName: client.ObjectKeyFromObject(bScope.Bucket),
 			})
 			Expect(err.Error()).To(ContainSubstring("failed to create object storage bucket scope"))
-			Expect(mck.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
+			Expect(suite.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
 		}),
 		Call("scheme with no infrav1alpha1", func(ctx context.Context, mck Mock) {
 			prev := mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
@@ -456,8 +456,8 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("api error"))
-					Expect(mck.Events()).To(ContainSubstring("api error"))
-					Expect(mck.Logs()).To(ContainSubstring("Failed to ensure access key secret exists"))
+					Expect(suite.Events()).To(ContainSubstring("api error"))
+					Expect(suite.Logs()).To(ContainSubstring("Failed to ensure access key secret exists"))
 				}),
 			),
 			Call("secret deleted", func(ctx context.Context, mck Mock) {
@@ -485,9 +485,9 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("secret creation error"))
-					Expect(mck.Events()).To(ContainSubstring("keys retrieved"))
-					Expect(mck.Events()).To(ContainSubstring("secret creation error"))
-					Expect(mck.Logs()).To(ContainSubstring("Failed to apply key secret"))
+					Expect(suite.Events()).To(ContainSubstring("keys retrieved"))
+					Expect(suite.Events()).To(ContainSubstring("secret creation error"))
+					Expect(suite.Logs()).To(ContainSubstring("Failed to apply key secret"))
 				}),
 			),
 			Path(
@@ -504,9 +504,9 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("no kind is registered"))
-					Expect(mck.Events()).To(ContainSubstring("keys retrieved"))
-					Expect(mck.Events()).To(ContainSubstring("no kind is registered"))
-					Expect(mck.Logs()).To(ContainSubstring("Failed to generate key secret"))
+					Expect(suite.Events()).To(ContainSubstring("keys retrieved"))
+					Expect(suite.Events()).To(ContainSubstring("no kind is registered"))
+					Expect(suite.Logs()).To(ContainSubstring("Failed to generate key secret"))
 				}),
 			),
 		),
@@ -522,7 +522,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			bScope.Client = mck.K8sClient
 			err := reconciler.reconcileDelete(ctx, &bScope)
 			Expect(err.Error()).To(ContainSubstring("failed to remove finalizer from bucket"))
-			Expect(mck.Events()).To(ContainSubstring("failed to remove finalizer from bucket"))
+			Expect(suite.Events()).To(ContainSubstring("failed to remove finalizer from bucket"))
 		}),
 	))
 })

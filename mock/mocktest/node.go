@@ -2,8 +2,19 @@ package mocktest
 
 import (
 	"context"
-	"fmt"
+
+	"go.uber.org/mock/gomock"
+
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
+
+// Mock holds configuration for a single test path.
+type Mock struct {
+	gomock.TestReporter
+	mock.MockClients
+
+	endOfPath bool
+}
 
 // Common interface for defining permutations of test paths as a tree.
 type node interface {
@@ -12,16 +23,15 @@ type node interface {
 
 // A container for describing and holding a function.
 type fn struct {
-	text      string
-	does      func(context.Context, Mock)
-	described bool
-	ran       bool
+	text string
+	does func(context.Context, Mock)
+	ran  bool
 }
 
 // Call declares a function for mocking method calls on a single mock client.
 func Call(text string, does func(context.Context, Mock)) call {
 	return call{
-		text: fmt.Sprintf("Call(%s)", text),
+		text: text,
 		does: does,
 	}
 }
@@ -46,7 +56,7 @@ func (c call) update(staged, committed []path) (st, com []path) {
 // Result terminates a test path with a function that tests the effects of mocked method calls.
 func Result(text string, does func(context.Context, Mock)) result {
 	return result{
-		text: fmt.Sprintf("Result(%s)", text),
+		text: text,
 		does: does,
 	}
 }
@@ -70,7 +80,7 @@ func (r result) update(staged, committed []path) (st, com []path) {
 // It is triggered at the beginning of the leftmost test path where it is inserted.
 func Once(text string, does func(context.Context, Mock)) once {
 	return once{
-		text: fmt.Sprintf("Once(%s)", text),
+		text: text,
 		does: does,
 	}
 }
