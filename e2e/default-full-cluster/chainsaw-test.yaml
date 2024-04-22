@@ -24,7 +24,7 @@ spec:
         file: 01-create-cluster.yaml
     - assert:
         file: 02-assert.yaml
-  - name: step-03
+  - name: step-02
     try:
     - script:
         env:
@@ -47,7 +47,7 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 2
-  - name: step-04
+  - name: step-03
     try:
     - delete:
         ref:
@@ -55,8 +55,8 @@ spec:
           kind: Cluster
           name: ($cluster)
     - error:
-        file: 04-error.yaml
-  - name: step-05
+        file: 03-error.yaml
+  - name: step-04
     try:
     - script:
         env:
@@ -79,7 +79,7 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 0
-  - name: step-06
+  - name: step-05
     try:
     - apply:
-        file: 06-cleanup-cluster.yaml
+        file: 04-cleanup-cluster.yaml

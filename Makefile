@@ -147,7 +147,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-deploy chainsaw
-	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e
+	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e --assert-timeout 600s
 
 .PHONY: e2etest-pr
 e2etest-pr: generate local-deploy chainsaw
