@@ -273,17 +273,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				ResizeInstanceDisk(ctx, 123, 100, 4262).
 				After(getInstDisk).
 				Return(nil)
-			waitForInstDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultResizeWaitSeconds).
-				After(resizeInstDisk).
-				Return(nil, nil)
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
 					Label:      "etcd-data",
 					Size:       10738,
 					Filesystem: string(linodego.FilesystemExt4),
 				}).
-				After(waitForInstDisk).
+				After(resizeInstDisk).
 				Return(&linodego.InstanceDisk{ID: 101}, nil)
 			listInstConfsForProfile := mockLinodeClient.EXPECT().
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
@@ -398,10 +394,15 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				ResizeInstanceDisk(ctx, 123, 100, 4262).
 				After(getInstDisk).
 				Return(nil)
-			mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultResizeWaitSeconds).
+
+			createFailedEtcdDisk := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "etcd-data",
+					Size:       10738,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
 				After(resizeInstDisk).
-				Return(nil, errors.New("Waiting for Instance 123 Disk 100 status ready: not yet"))
+				Return(nil, linodego.Error{Code: 400})
 
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -421,30 +422,19 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			listInst = mockLinodeClient.EXPECT().
 				ListInstances(ctx, gomock.Any()).
+				After(createFailedEtcdDisk).
 				Return([]linodego.Instance{{
 					ID:     123,
 					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 					Status: linodego.InstanceOffline,
 				}}, nil)
-			listInstConfs = mockLinodeClient.EXPECT().
-				ListInstanceConfigs(ctx, 123, gomock.Any()).
-				After(listInst).
-				Return([]linodego.InstanceConfig{{
-					Devices: &linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-					},
-				}}, nil)
-			waitForInstDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultResizeWaitSeconds).
-				After(listInstConfs).
-				Return(nil, nil)
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
 					Label:      "etcd-data",
 					Size:       10738,
 					Filesystem: string(linodego.FilesystemExt4),
 				}).
-				After(waitForInstDisk).
+				After(listInst).
 				Return(&linodego.InstanceDisk{ID: 101}, nil)
 			listInstConfsForProfile := mockLinodeClient.EXPECT().
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
