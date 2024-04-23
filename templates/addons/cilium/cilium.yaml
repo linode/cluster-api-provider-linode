@@ -16,6 +16,8 @@ spec:
     wait: true
     timeout: 5m
   valuesTemplate: |
+    bgpControlPlane:
+      enabled: true
     ipam:
       mode: kubernetes
     k8s:
