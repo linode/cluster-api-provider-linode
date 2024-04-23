@@ -91,7 +91,9 @@ type once fn
 // Adds once to the first staged path.
 // It will only be invoked once in the first path to be evaluated.
 func (o once) update(staged, committed []path) (st, com []path) {
-	staged[0].once = append(staged[0].once, &o)
+	if len(staged) > 0 {
+		staged[0].once = append(staged[0].once, &o)
+	}
 
 	return staged, committed
 }
