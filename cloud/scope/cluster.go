@@ -72,7 +72,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 	}
 
 	return &ClusterScope{
-		client:        params.Client,
+		Client:        params.Client,
 		Cluster:       params.Cluster,
 		LinodeClient:  linodeClient,
 		LinodeCluster: params.LinodeCluster,
@@ -82,7 +82,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	client        K8sClient
+	Client        K8sClient
 	PatchHelper   *patch.Helper
 	LinodeClient  LinodeNodeBalancerClient
 	Cluster       *clusterv1.Cluster
