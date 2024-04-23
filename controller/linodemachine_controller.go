@@ -51,9 +51,8 @@ import (
 )
 
 const (
-	linodeBusyCode           = 400
-	defaultDiskFilesystem    = string(linodego.FilesystemExt4)
-	defaultResizeWaitSeconds = 5
+	linodeBusyCode        = 400
+	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
 	ConditionPreflightCreated                clusterv1.ConditionType = "PreflightCreated"
@@ -413,7 +412,9 @@ func (r *LinodeMachineReconciler) createDisks(ctx context.Context, logger logr.L
 			},
 		)
 		if err != nil {
-			logger.Error(err, "Failed to create disk", "DiskLabel", label)
+			if !linodego.ErrHasStatus(err, linodeBusyCode) {
+				logger.Error(err, "Failed to create disk", "DiskLabel", label)
+			}
 
 			conditions.MarkFalse(
 				machineScope.LinodeMachine,
@@ -488,17 +489,6 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 		}
 
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
-	}
-
-	// wait for the disk to resize
-	if _, err := machineScope.LinodeClient.WaitForInstanceDiskStatus(ctx, linodeInstanceID, rootDiskID, linodego.DiskReady, defaultResizeWaitSeconds); err != nil {
-		logger.Info("Timed out resizing root disk",
-			"timeout", defaultResizeWaitSeconds,
-			"reqeue", true,
-		)
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
-		return err
 	}
 
 	conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
