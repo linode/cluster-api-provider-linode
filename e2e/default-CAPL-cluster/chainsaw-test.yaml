@@ -47,6 +47,19 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 2
+  - name: step-02b - get child cluster kubeconfig
+    try:
+    - script:
+        content: |
+          clusterctl get kubeconfig ($cluster) > child-cluster-kubeconfig.yaml
+        check:
+          ($error == null): true
+  # - name: step-02c - check child cluster
+  #   try:
+  #   - script:
+  #       cluster: child-cluster
+  #       content: |
+  #         kubectl get nodes -o wide
   - name: step-03
     try:
     - delete:
@@ -79,7 +92,3 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 0
-  - name: step-05
-    try:
-    - apply:
-        file: 04-cleanup-cluster.yaml

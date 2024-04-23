@@ -147,11 +147,11 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-deploy chainsaw
-	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e --assert-timeout 600s
+	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e/default-capl-cluster --assert-timeout 600s --cluster child-cluster=/e2e/default-capl-cluster/child-cluster-kubeconfig.yaml
 
 .PHONY: e2etest-pr
-e2etest-pr: generate local-deploy chainsaw
-	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e --selector on-pr
+e2etest-quick: generate local-deploy chainsaw
+	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e --selector quick
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode

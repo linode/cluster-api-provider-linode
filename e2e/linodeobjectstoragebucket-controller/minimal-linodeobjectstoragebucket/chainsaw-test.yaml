@@ -5,7 +5,7 @@ metadata:
   name: minimal-linodeobjectstoragebucket
   # Label to trigger the test on every PR
   labels:
-    on-pr:
+    quick:
 spec:
   bindings:
     # A short identifier for the E2E test run

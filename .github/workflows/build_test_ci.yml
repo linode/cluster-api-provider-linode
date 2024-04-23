@@ -172,8 +172,9 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.github_token }}
         LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
     
-    - name: Partial E2E Test
-      run: make e2etest-pr
+    - name: Quick E2E Test
+      if: github.ref != 'refs/heads/main'
+      run: make e2etest-quick
       env:
         GITHUB_TOKEN: ${{ secrets.github_token }}
         LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
