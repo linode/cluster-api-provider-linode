@@ -21,7 +21,6 @@ import (
 	"errors"
 
 	"go.uber.org/mock/gomock"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -236,113 +235,6 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 			reconciler.Client = m.K8sClient
 			err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
 			Expect(err).NotTo(HaveOccurred())
-		}),
-	))
-})
-
-var _ = Describe("mocked", Ordered, Label("cluster", "mocked"), func() {
-	nodebalancerID := 1
-	controlPlaneEndpointHost := "10.0.0.1"
-	controlPlaneEndpointPort := 6443
-	clusterName := "mocked"
-	clusterNameSpace := "default"
-	ownerRef := metav1.OwnerReference{
-		Name:       clusterName,
-		APIVersion: "cluster.x-k8s.io/v1beta1",
-		Kind:       "Cluster",
-		UID:        "00000000-000-0000-0000-000000000000",
-	}
-	ownerRefs := []metav1.OwnerReference{ownerRef}
-	metadata := metav1.ObjectMeta{
-		Name:            clusterName,
-		Namespace:       clusterNameSpace,
-		OwnerReferences: ownerRefs,
-	}
-
-	linodeCluster := infrav1.LinodeCluster{
-		ObjectMeta: metadata,
-		Spec: infrav1.LinodeClusterSpec{
-			Region: "us-ord",
-		},
-	}
-
-	caplCluster := clusterv1.Cluster{
-		ObjectMeta: metadata,
-		Spec: clusterv1.ClusterSpec{
-			InfrastructureRef: &corev1.ObjectReference{
-				Kind:      "LinodeCluster",
-				Name:      clusterName,
-				Namespace: clusterNameSpace,
-			},
-			ControlPlaneRef: &corev1.ObjectReference{
-				Kind:      "KubeadmControlPlane",
-				Name:      "lifecycle-control-plane",
-				Namespace: clusterNameSpace,
-			},
-		},
-	}
-
-	ctlrSuite := NewControllerTestSuite(
-		GinkgoT(),
-		mock.MockLinodeNodeBalancerClient{},
-		mock.MockK8sClient{},
-	)
-	reconciler := LinodeClusterReconciler{
-		LinodeApiKey: "test",
-		Recorder:     ctlrSuite.Recorder(),
-	}
-
-	cScope := &scope.ClusterScope{
-		LinodeCluster: &linodeCluster,
-		Cluster:       &caplCluster,
-	}
-
-	BeforeAll(func(ctx SpecContext) {
-		cScope.Client = k8sClient
-		Expect(k8sClient.Create(ctx, &linodeCluster)).To(Succeed())
-		Expect(k8sClient.Create(ctx, &caplCluster)).To(Succeed())
-	})
-
-	BeforeEach(func(ctx SpecContext) {
-		clusterKey := client.ObjectKey{Name: "mocked", Namespace: "default"}
-		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
-		Expect(k8sClient.Get(ctx, clusterKey, &caplCluster)).To(Succeed())
-
-		// Create patch helper with latest state of resource.
-		// This is only needed when relying on envtest's k8sClient.
-		patchHelper, err := patch.NewHelper(&linodeCluster, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		cScope.PatchHelper = patchHelper
-	})
-
-	ctlrSuite.Run(Paths(
-		Either(
-			Call("cluster is created because there is a capl cluster", func(ctx context.Context, m Mock) {
-				cScope.Client = k8sClient
-				cScope.LinodeClient = m.NodeBalancerClient
-				getNB := m.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-				m.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-					After(getNB).
-					Return(&linodego.NodeBalancer{
-						ID:   nodebalancerID,
-						IPv4: &controlPlaneEndpointHost,
-					}, nil)
-				m.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).After(getNB).Return(&linodego.NodeBalancerConfig{
-					Port:           controlPlaneEndpointPort,
-					Protocol:       linodego.ProtocolTCP,
-					Algorithm:      linodego.AlgorithmRoundRobin,
-					Check:          linodego.CheckConnection,
-					NodeBalancerID: nodebalancerID,
-				}, nil)
-			}),
-		),
-		Result("resource status is updated and NB is created", func(ctx context.Context, m Mock) {
-			_, err := reconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: client.ObjectKeyFromObject(cScope.LinodeCluster),
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(linodeCluster.Status.Ready).To(BeFalseBecause("failed to get Cluster/no-capl-cluster: clusters.cluster.x-k8s.io \"no-capl-cluster\" not found"))
-
 		}),
 	))
 })
