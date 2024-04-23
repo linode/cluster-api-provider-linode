@@ -220,6 +220,11 @@ issues:
     - path: controller/suite_test.go
       linters:
         - gci
+    # Exclude goimports check for controller tests that import both mocktest and ginkgo/gomega as dot imports.
+    # goimports wants mocktest as a dot import in a separate group, but gci wants them in the same group.
+    - path: controller/.*_controller_test.go
+      linters:
+        - goimports
 
     # These are performance optimisations rather than style issues per se.
     # They warn when function arguments or range values copy a lot of memory
