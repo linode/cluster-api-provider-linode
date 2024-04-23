@@ -8,6 +8,7 @@ TAG                 ?= dev
 ENVTEST_K8S_VERSION := 1.28.0
 VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 GIT_REF             ?= $(shell git rev-parse --short HEAD)
+GIT_TAG             ?= $(shell git describe --tags --abbrev=0)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
 .SHELLFLAGS          = -ec
@@ -212,7 +213,7 @@ tilt-cluster: ctlptl tilt kind clusterctl
 
 ##@ Release:
 
-RELEASE_DIR ?= infrastructure-linode
+RELEASE_DIR ?= infrastructure-linode/$(GIT_TAG)
 
 .PHONY: release
 release: kustomize clean-release set-manifest-image release-manifests generate-flavors release-templates release-metadata clean-release-git
@@ -231,7 +232,7 @@ release-templates: $(RELEASE_DIR)
 
 .PHONY: set-manifest-image
 set-manifest-image: ## Update kustomize image patch file for default resource.
-	sed -i'' -e 's@image: .*@image: '"$(REGISTRY)/$(IMAGE_NAME):$(VERSION)"'@' ./config/default/manager_image_patch.yaml
+	sed -i'' -e 's@image: .*@image: '"$(REGISTRY)/$(IMAGE_NAME):$(GIT_TAG)"'@' ./config/default/manager_image_patch.yaml
 
 .PHONY: release-manifests
 release-manifests: $(KUSTOMIZE) $(RELEASE_DIR)
@@ -239,7 +240,7 @@ release-manifests: $(KUSTOMIZE) $(RELEASE_DIR)
 
 .PHONY: local-release
 local-release:
-	RELEASE_DIR=infrastructure-linode/v0.0.0 $(MAKE) release
+	RELEASE_DIR=infrastructure-linode/v0.0.0 GIT_TAG=latest $(MAKE) release
 	$(MAKE) clean-release-git
 
 ## --------------------------------------

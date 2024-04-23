@@ -8,5 +8,5 @@ spec:
   template:
     spec:
       containers:
-        - image: docker.io/linode/cluster-api-provider-linode:main
+        - image: docker.io/linode/cluster-api-provider-linode:v0.1.0
           name: manager
