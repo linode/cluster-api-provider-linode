@@ -453,7 +453,7 @@ func TestPaths(t *testing.T) {
 			},
 		},
 		{
-			name: "tmp",
+			name: "docs",
 			input: []node{
 				oneOf{
 					allOf{
@@ -482,6 +482,57 @@ func TestPaths(t *testing.T) {
 						result{text: "error"},
 					},
 				},
+			},
+			output: paths{
+				{
+					calls:  []call{{text: "instance exists and is not offline"}},
+					result: result{text: "success"},
+				},
+				{
+					calls: []call{
+						{text: "instance does not exist"},
+						{text: "not able to be created"},
+					},
+					result: result{text: "error"},
+				},
+				{
+					calls: []call{
+						{text: "instance does not exist"},
+						{text: "able to be created"},
+						{text: "able to boot"},
+					},
+					result: result{text: "success"},
+				},
+				{
+					calls: []call{
+						{text: "instance does not exist"},
+						{text: "able to be created"},
+						{text: "not able to boot"},
+					},
+					result: result{text: "error"},
+				},
+				{
+					calls: []call{
+						{text: "instance exists but is offline"},
+						{text: "able to boot"},
+					},
+					result: result{text: "success"},
+				},
+				{
+					calls: []call{
+						{text: "instance exists but is offline"},
+						{text: "not able to boot"},
+					},
+					result: result{text: "error"},
+				},
+			},
+			describe: []string{
+				"instance exists and is not offline > success",
+				"instance does not exist > not able to be created > error",
+				"instance does not exist > able to be created > able to boot > success",
+				"instance does not exist > able to be created > not able to boot > error",
+				"instance exists but is offline > able to boot > success",
+				"instance exists but is offline > not able to boot > error",
 			},
 		},
 	} {
