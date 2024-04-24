@@ -36,6 +36,10 @@ func (m *Mock) Logger() logr.Logger {
 
 // Events returns a string of all events currently recorded during path evaluation.
 func (m *Mock) Events() string {
+	if m.recorder == nil {
+		panic("no recorder configured on Mock")
+	}
+
 	var strBuilder strings.Builder
 	for len(m.recorder.Events) > 0 {
 		strBuilder.WriteString(<-m.recorder.Events)
@@ -48,5 +52,9 @@ func (m *Mock) Events() string {
 
 // Logs returns a string of all log outputs currently written during path evaluation.
 func (m *Mock) Logs() string {
+	if m.logs == nil {
+		panic("no logger configured on Mock")
+	}
+
 	return m.logs.String()
 }
