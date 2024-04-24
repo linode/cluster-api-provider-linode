@@ -80,19 +80,19 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 
 	bScope := scope.ObjectStorageBucketScope{
 		Bucket: &obj,
-		Logger: suite.Logger(),
 	}
 
-	reconciler := LinodeObjectStorageBucketReconciler{
-		Recorder: suite.Recorder(),
-	}
+	reconciler := LinodeObjectStorageBucketReconciler{}
 
 	BeforeAll(func(ctx SpecContext) {
 		bScope.Client = k8sClient
 		Expect(k8sClient.Create(ctx, &obj)).To(Succeed())
 	})
 
-	suite.BeforeEach(func(ctx context.Context, _ Mock) {
+	suite.BeforeEach(func(ctx context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+		bScope.Logger = mck.Logger()
+
 		objectKey := client.ObjectKey{Name: "lifecycle", Namespace: "default"}
 		Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 
@@ -184,11 +184,12 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			Expect(key.StringData.AccessKeyRO).To(Equal("access-key-1"))
 			Expect(key.StringData.SecretKeyRO).To(Equal("secret-key-1"))
 
-			Expect(suite.Events()).To(ContainSubstring("Object storage keys assigned"))
-			Expect(suite.Events()).To(ContainSubstring("Object storage keys stored in secret"))
-			Expect(suite.Events()).To(ContainSubstring("Object storage bucket synced"))
+			events := mck.Events()
+			Expect(events).To(ContainSubstring("Object storage keys assigned"))
+			Expect(events).To(ContainSubstring("Object storage keys stored in secret"))
+			Expect(events).To(ContainSubstring("Object storage bucket synced"))
 
-			logOutput := suite.Logs()
+			logOutput := mck.Logs()
 			Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 			Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 		}),
@@ -252,9 +253,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 					Expect(*obj.Status.LastKeyGeneration).To(Equal(1))
 
-					Expect(suite.Events()).To(ContainSubstring("Object storage keys assigned"))
+					Expect(mck.Events()).To(ContainSubstring("Object storage keys assigned"))
 
-					logOutput := suite.Logs()
+					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 					Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 				}),
@@ -308,11 +309,12 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(key.StringData.AccessKeyRO).To(Equal("access-key-3"))
 					Expect(key.StringData.SecretKeyRO).To(Equal("secret-key-3"))
 
-					Expect(suite.Events()).To(ContainSubstring("Object storage keys retrieved"))
-					Expect(suite.Events()).To(ContainSubstring("Object storage keys stored in secret"))
-					Expect(suite.Events()).To(ContainSubstring("Object storage bucket synced"))
+					events := mck.Events()
+					Expect(events).To(ContainSubstring("Object storage keys retrieved"))
+					Expect(events).To(ContainSubstring("Object storage keys stored in secret"))
+					Expect(events).To(ContainSubstring("Object storage bucket synced"))
 
-					logOutput := suite.Logs()
+					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 					Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 				}),
@@ -348,10 +350,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &obj))).To(BeTrue())
 
-					Expect(suite.Events()).To(ContainSubstring("Object storage keys revoked"))
-
-					logOutput := suite.Logs()
-					Expect(logOutput).To(ContainSubstring("Reconciling delete"))
+					Expect(mck.Events()).To(ContainSubstring("Object storage keys revoked"))
+					Expect(mck.Logs()).To(ContainSubstring("Reconciling delete"))
 				}),
 			),
 		),
@@ -365,10 +365,13 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 		mock.MockK8sClient{},
 	)
 
-	reconciler := LinodeObjectStorageBucketReconciler{Recorder: suite.Recorder()}
-	bScope := scope.ObjectStorageBucketScope{Logger: suite.Logger()}
+	reconciler := LinodeObjectStorageBucketReconciler{}
+	bScope := scope.ObjectStorageBucketScope{}
 
-	suite.BeforeEach(func(_ context.Context, _ Mock) {
+	suite.BeforeEach(func(_ context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+		bScope.Logger = mck.Logger()
+
 		// Reset obj to base state to be modified in each test path.
 		// We can use a consistent name since these tests are stateless.
 		bScope.Bucket = &infrav1.LinodeObjectStorageBucket{
@@ -411,7 +414,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 						NamespacedName: client.ObjectKeyFromObject(bScope.Bucket),
 					})
 					Expect(err.Error()).To(ContainSubstring("non-404 error"))
-					Expect(suite.Logs()).To(ContainSubstring("Failed to fetch LinodeObjectStorageBucket"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeObjectStorageBucket"))
 				}),
 			),
 		),
@@ -422,7 +425,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 				NamespacedName: client.ObjectKeyFromObject(bScope.Bucket),
 			})
 			Expect(err.Error()).To(ContainSubstring("failed to create object storage bucket scope"))
-			Expect(suite.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
+			Expect(mck.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
 		}),
 		Call("scheme with no infrav1alpha1", func(ctx context.Context, mck Mock) {
 			prev := mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
@@ -456,8 +459,8 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("api error"))
-					Expect(suite.Events()).To(ContainSubstring("api error"))
-					Expect(suite.Logs()).To(ContainSubstring("Failed to ensure access key secret exists"))
+					Expect(mck.Events()).To(ContainSubstring("api error"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to ensure access key secret exists"))
 				}),
 			),
 			Call("secret deleted", func(ctx context.Context, mck Mock) {
@@ -485,9 +488,9 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("secret creation error"))
-					Expect(suite.Events()).To(ContainSubstring("keys retrieved"))
-					Expect(suite.Events()).To(ContainSubstring("secret creation error"))
-					Expect(suite.Logs()).To(ContainSubstring("Failed to apply key secret"))
+					Expect(mck.Events()).To(ContainSubstring("keys retrieved"))
+					Expect(mck.Events()).To(ContainSubstring("secret creation error"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to apply key secret"))
 				}),
 			),
 			Path(
@@ -504,9 +507,9 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 					bScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("no kind is registered"))
-					Expect(suite.Events()).To(ContainSubstring("keys retrieved"))
-					Expect(suite.Events()).To(ContainSubstring("no kind is registered"))
-					Expect(suite.Logs()).To(ContainSubstring("Failed to generate key secret"))
+					Expect(mck.Events()).To(ContainSubstring("keys retrieved"))
+					Expect(mck.Events()).To(ContainSubstring("no kind is registered"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to generate key secret"))
 				}),
 			),
 		),
@@ -522,7 +525,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			bScope.Client = mck.K8sClient
 			err := reconciler.reconcileDelete(ctx, &bScope)
 			Expect(err.Error()).To(ContainSubstring("failed to remove finalizer from bucket"))
-			Expect(suite.Events()).To(ContainSubstring("failed to remove finalizer from bucket"))
+			Expect(mck.Events()).To(ContainSubstring("failed to remove finalizer from bucket"))
 		}),
 	))
 })

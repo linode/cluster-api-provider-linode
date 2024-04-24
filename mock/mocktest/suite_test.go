@@ -3,21 +3,24 @@ package mocktest
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/onsi/ginkgo/v2"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 func TestSuitesNoClients(t *testing.T) {
 	t.Parallel()
 
 	assert.Panics(t, func() { NewSuite(t) })
-	assert.Panics(t, func() { NewControllerSuite(ginkgo.GinkgoT()) })
+	assert.Panics(t, func() { NewControllerSuite(GinkgoT()) })
 }
 
 func TestSuite(t *testing.T) {
@@ -90,3 +93,27 @@ func waitCh(counter *sync.WaitGroup) <-chan struct{} {
 	}()
 	return out
 }
+
+var _ = Describe("controller suite", Label("suite"), func() {
+	suite := NewControllerSuite(GinkgoT(), mock.MockK8sClient{})
+
+	suite.Run(Paths(
+		Either(
+			Call("call1", func(_ context.Context, mck Mock) {
+				mck.recorder.Event(nil, "", "", "+")
+				mck.logger.Info("+")
+			}),
+			Call("call2", func(_ context.Context, mck Mock) {
+				mck.recorder.Event(nil, "", "", "+")
+				mck.logger.Info("+")
+			}),
+		),
+		Result("result", func(_ context.Context, mck Mock) {
+			mck.recorder.Event(nil, "", "", "+")
+			mck.logger.Info("+")
+
+			Expect(strings.Count(mck.Events(), "+")).To(Equal(2))
+			Expect(strings.Count(mck.Logs(), "+")).To(Equal(2))
+		}),
+	))
+})

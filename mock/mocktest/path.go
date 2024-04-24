@@ -45,8 +45,7 @@ func (ps paths) Describe() []string {
 }
 
 // Paths declares one or more test paths with mock clients.
-// It traverses each node and their children, returning a list of permutations,
-// each representing a different test path as specified and evaluated in order.
+// It traverses each node and their children, returning a list of permutations of test paths.
 func Paths(nodes ...node) paths {
 	if len(nodes) == 0 {
 		return nil

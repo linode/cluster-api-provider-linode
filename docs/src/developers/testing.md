@@ -40,7 +40,7 @@ While writing test cases for each scenario, we'd likely find a lot of overlap be
 func TestEnsureInstanceNotOffline(t *testing.T) {
   suite := NewSuite(t, mock.MockLinodeMachineClient{})
   
-  suite.Run(t, Paths(
+  suite.Run(Paths(
     Either(
       Path(
         Call("instance exists and is not offline", func(ctx context.Context, mck Mock) {
@@ -129,13 +129,11 @@ paths.Describe() /* [
 #### Testing controllers
 CAPL uses controller-runtime's [envtest](https://book.kubebuilder.io/reference/envtest) package which runs an instance of etcd and the Kubernetes API server for testing controllers. The test setup uses [ginkgo](https://onsi.github.io/ginkgo/) as its test runner as well as [gomega](https://onsi.github.io/gomega/) for assertions.
 
-`mocktest` is also recommended when writing tests for controllers. The following is another contrived example of how to use it within the context of a Ginkgo `Describe` node:
+`mocktest` is also recommended when writing tests for controllers. The following is another contrived example of how to use its controller suite:
 
 ```go
-// Add the `Ordered` decorator so that tests run in order versus in parallel.
-// This is needed when relying on EnvTest for managing Kubernetes API server state.
-var _ = Describe("test name", Ordered, func() {
-  // Create a mocktest controller test suite.
+var _ = Describe("linode creation", func() {
+  // Create a mocktest controller suite.
   suite := NewControllerSuite(GinkgoT(), mock.MockLinodeMachineClient{})
 
   obj := infrav1alpha1.LinodeMachine{
@@ -151,14 +149,15 @@ var _ = Describe("test name", Ordered, func() {
     Call("create a linode", func(ctx context.Context, mck Mock) {
       mck.MachineClient.CreateInstance(ctx, gomock.Any(), gomock.Any()).Return(&linodego.Instance{/* ... */}, nil)
     })
-    Result("update the resource with info about the linode", func(ctx context.Context, mck Mock) {
+    Result("update the resource status after linode creation", func(ctx context.Context, mck Mock) {
       reconciler := LinodeMachineReconciler{
         // Configure the reconciler to use the mock client for this test path
         LinodeClient: mck.MachineClient,
         // Use a managed recorder for capturing events published during this test
-        Recorder: suite.Recorder(),
+        Recorder: mck.Recorder(),
         // Use a managed logger for capturing logs written during the test
-        Logger: suite.Logger(), // Note: This isn't a real struct field. A logger is configured elsewhere.
+        // Note: This isn't a real struct field in LinodeMachineReconciler. A logger is configured elsewhere.
+        Logger: mck.Logger(),
       }
 
       _, err := reconciler.Reconcile(ctx, reconcile.Request{/* ... */})
@@ -169,8 +168,8 @@ var _ = Describe("test name", Ordered, func() {
       Expect(obj.Status.Ready).To(BeTrue())
 
       // Check for expected events and logs
-      Expect(suite.Events()).To(ContainSubstring("Linode created!"))
-      Expect(suite.Logs()).To(ContainSubstring("Linode created!"))
+      Expect(mck.Events()).To(ContainSubstring("Linode created!"))
+      Expect(mck.Logs()).To(ContainSubstring("Linode created!"))
     })
   ))
 })

@@ -2,17 +2,7 @@ package mocktest
 
 import (
 	"context"
-
-	"go.uber.org/mock/gomock"
-
-	"github.com/linode/cluster-api-provider-linode/mock"
 )
-
-// Mock holds configuration for a single test path.
-type Mock struct {
-	gomock.TestReporter
-	mock.MockClients
-}
 
 // Common interface for defining permutations of test paths as a tree.
 type node interface {
