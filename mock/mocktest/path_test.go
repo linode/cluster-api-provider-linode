@@ -35,7 +35,8 @@ var _ = Describe("k8s client", Label("k8sclient"), func() {
 		mockCtrl.Finish()
 	})
 
-	for _, path := range Paths(
+	for _, pth := range Paths(
+		Once("setup", func(_ context.Context, _ Mock) {}),
 		Call("fetch object", func(ctx context.Context, mck Mock) {
 			mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
@@ -43,8 +44,8 @@ var _ = Describe("k8s client", Label("k8sclient"), func() {
 			Expect(contrivedCalls(ctx, mck)).To(Succeed())
 		}),
 	) {
-		It(path.Describe(), func(ctx SpecContext) {
-			path.Run(ctx, Mock{
+		It(pth.Describe(), func(ctx SpecContext) {
+			pth.Run(ctx, Mock{
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
 					K8sClient: mock.NewMockK8sClient(mockCtrl),
@@ -65,7 +66,7 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 		mockCtrl.Finish()
 	})
 
-	for _, path := range Paths(
+	for _, pth := range Paths(
 		Call("read object", func(ctx context.Context, mck Mock) {
 			mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
@@ -88,8 +89,8 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 			),
 		),
 	) {
-		It(path.Describe(), func(ctx SpecContext) {
-			path.Run(ctx, Mock{
+		It(pth.Describe(), func(ctx SpecContext) {
+			pth.Run(ctx, Mock{
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
 					MachineClient: mock.NewMockLinodeMachineClient(mockCtrl),
@@ -128,6 +129,12 @@ func TestPaths(t *testing.T) {
 		describe []string
 		panic    bool
 	}{
+		{
+			name:     "empty",
+			input:    []node{},
+			output:   nil,
+			describe: []string{},
+		},
 		{
 			name: "basic",
 			input: []node{
@@ -551,4 +558,30 @@ func TestPaths(t *testing.T) {
 			assert.Equal(t, testCase.describe, actual.Describe())
 		})
 	}
+}
+
+func TestRunWithoutTestReporter(t *testing.T) {
+	t.Parallel()
+
+	pth := path{}
+	assert.Panics(t, func() {
+		pth.Run(context.Background(), Mock{})
+	})
+}
+
+func TestEvalOnceOnlyCallsOnce(t *testing.T) {
+	t.Parallel()
+
+	var toggle bool
+
+	onceFn := once{does: func(_ context.Context, _ Mock) {
+		toggle = !toggle
+	}}
+
+	ctx := context.Background()
+	mck := Mock{}
+	evalOnce(ctx, mck, &onceFn)
+	evalOnce(ctx, mck, &onceFn)
+
+	assert.True(t, toggle)
 }

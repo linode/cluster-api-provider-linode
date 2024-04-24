@@ -66,7 +66,7 @@ type accessKeySecret struct {
 }
 
 var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
-	suite := NewControllerTestSuite(GinkgoT(), mock.MockLinodeObjectStorageClient{})
+	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeObjectStorageClient{})
 
 	obj := infrav1.LinodeObjectStorageBucket{
 		ObjectMeta: metav1.ObjectMeta{
@@ -87,7 +87,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		Recorder: suite.Recorder(),
 	}
 
-	suite.BeforeAll(func(ctx context.Context, _ Mock) {
+	BeforeAll(func(ctx SpecContext) {
 		bScope.Client = k8sClient
 		Expect(k8sClient.Create(ctx, &obj)).To(Succeed())
 	})
@@ -359,7 +359,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 })
 
 var _ = Describe("errors", Label("bucket", "errors"), func() {
-	suite := NewControllerTestSuite(
+	suite := NewControllerSuite(
 		GinkgoT(),
 		mock.MockLinodeObjectStorageClient{},
 		mock.MockK8sClient{},

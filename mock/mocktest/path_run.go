@@ -20,9 +20,6 @@ func (p path) Run(ctx context.Context, mck Mock) {
 		evalFn(ctx, mck, fn(c))
 	}
 
-	mckPtr := &mck
-	mckPtr.endOfPath = true
-
 	evalFn(ctx, mck, fn(p.result))
 }
 

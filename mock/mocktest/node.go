@@ -12,8 +12,6 @@ import (
 type Mock struct {
 	gomock.TestReporter
 	mock.MockClients
-
-	endOfPath bool
 }
 
 // Common interface for defining permutations of test paths as a tree.

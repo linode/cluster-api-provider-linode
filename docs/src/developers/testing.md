@@ -38,7 +38,7 @@ While writing test cases for each scenario, we'd likely find a lot of overlap be
 
 ```go
 func TestEnsureInstanceNotOffline(t *testing.T) {
-  suite := NewTestSuite(t, mock.MockLinodeMachineClient{})
+  suite := NewSuite(t, mock.MockLinodeMachineClient{})
   
   suite.Run(t, Paths(
     Either(
@@ -104,9 +104,7 @@ In this example, the nodes passed into `Paths` are used to describe each permuta
 * `Either` is a list of nodes that all belong to different test paths. It is used to define diverging test path, with each path containing the set of all preceding `Call` nodes.
 
 #### Setup, tear down, and event triggers
-Setup and teardown nodes can be scheduled before and after each run:
-* `suite.BeforeEach` receives a `func(context.Context, Mock)` function that will run before each path is evaluated. Likewise, `suite.AfterEach` will run after each path is evaluated.
-* `suite.BeforeAll` receives a `func(context.Context, Mock)` function taht will run once before all paths are evaluated. Likewise, `suite.AfterEach` will run after each path is evaluated.
+Setup and tear down nodes can be scheduled before and after each run. `suite.BeforeEach` receives a `func(context.Context, Mock)` function that will run before each path is evaluated. Likewise, `suite.AfterEach` will run after each path is evaluated.
 
 In addition to the path nodes listed in the section above, a special node type `Once` may be specified to inject a function that will only be evaluated one time across all paths. It can be used to trigger side effects outside of mock client behavior that can impact the output of the function being tested.
 
@@ -138,7 +136,7 @@ CAPL uses controller-runtime's [envtest](https://book.kubebuilder.io/reference/e
 // This is needed when relying on EnvTest for managing Kubernetes API server state.
 var _ = Describe("test name", Ordered, func() {
   // Create a mocktest controller test suite.
-  suite := NewControllerTestSuite(GinkgoT(), mock.MockLinodeMachineClient{})
+  suite := NewControllerSuite(GinkgoT(), mock.MockLinodeMachineClient{})
 
   obj := infrav1alpha1.LinodeMachine{
     ObjectMeta: metav1.ObjectMeta{/* ... */}
