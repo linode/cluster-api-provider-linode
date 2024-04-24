@@ -109,23 +109,36 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				}, nil)
 			}),
 			Path(
-				Call("cluster is not created because there is no nb", func(ctx context.Context, m Mock) {
+				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, m Mock) {
 					cScope.LinodeClient = m.NodeBalancerClient
 					getNB := m.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
 					m.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
 						After(getNB).
 						Return(nil, errors.New("create NB error"))
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
+				Result("create nb error", func(ctx context.Context, m Mock) {
 					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
 					Expect(err.Error()).To(ContainSubstring("create NB error"))
+				}),
+			),
+			Path(
+				Call("cluster is not created because nb was nil", func(ctx context.Context, m Mock) {
+					cScope.LinodeClient = m.NodeBalancerClient
+					getNB := m.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
+					m.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(nil, nil)
+				}),
+				Result("created nb is nil", func(ctx context.Context, m Mock) {
+					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
+					Expect(err.Error()).To(ContainSubstring("nodeBalancer created was nil"))
 				}),
 			),
 			Path(
 				Call("cluster is not created because there is no capl cluster", func(ctx context.Context, m Mock) {
 					cScope.LinodeClient = m.NodeBalancerClient
 				}),
-				Result("error", func(ctx context.Context, m Mock) {
+				Result("no capl cluster error", func(ctx context.Context, m Mock) {
 					reconciler.Client = k8sClient
 					_, err := reconciler.Reconcile(ctx, reconcile.Request{
 						NamespacedName: client.ObjectKeyFromObject(cScope.LinodeCluster),
