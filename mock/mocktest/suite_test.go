@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
 
@@ -98,19 +100,34 @@ var _ = Describe("controller suite", Label("suite"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockK8sClient{})
 
 	suite.Run(Paths(
+		Call("call", func(ctx context.Context, mck Mock) {
+			mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).Return(nil)
+		}),
+		Result("result", func(ctx context.Context, mck Mock) {
+			mck.recorder.Event(nil, "", "", "event")
+			err := mck.K8sClient.Get(ctx, client.ObjectKey{Namespace: "default", Name: "myobj"}, nil)
+			Expect(err).NotTo(HaveOccurred())
+		}),
+	))
+})
+
+var _ = Describe("controller suite with events/logs", Label("suite"), func() {
+	suite := NewControllerSuite(GinkgoT(), mock.MockK8sClient{})
+
+	suite.Run(Paths(
 		Either(
 			Call("call1", func(_ context.Context, mck Mock) {
-				mck.recorder.Event(nil, "", "", "+")
-				mck.logger.Info("+")
+				mck.Recorder().Event(nil, "", "", "+")
+				mck.Logger().Info("+")
 			}),
 			Call("call2", func(_ context.Context, mck Mock) {
-				mck.recorder.Event(nil, "", "", "+")
-				mck.logger.Info("+")
+				mck.Recorder().Event(nil, "", "", "+")
+				mck.Logger().Info("+")
 			}),
 		),
 		Result("result", func(_ context.Context, mck Mock) {
-			mck.recorder.Event(nil, "", "", "+")
-			mck.logger.Info("+")
+			mck.Recorder().Event(nil, "", "", "+")
+			mck.Logger().Info("+")
 
 			Expect(strings.Count(mck.Events(), "+")).To(Equal(2))
 			Expect(strings.Count(mck.Logs(), "+")).To(Equal(2))
