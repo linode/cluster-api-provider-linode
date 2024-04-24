@@ -3,10 +3,10 @@ kind: Secret
 metadata:
   labels:
     clusterctl.cluster.x-k8s.io/move: "true"
-  name: (join('-', [($cluster), 'credentials']))
-  namespace: ($namespace)
+  name: e2e-default-cluster-98e04b5-credentials
+  namespace: chainsaw-ethical-glowworm
 stringData:
-  apiToken: (env('LINODE_TOKEN'))
+  apiToken: e4ca3057407bd2051f5c218cb4574e936e9dce3c68ab92dfc5d1935b2585c7a5
 ---
 apiVersion: v1
 kind: Secret
@@ -14,7 +14,7 @@ metadata:
   labels:
     clusterctl.cluster.x-k8s.io/move: "true"
   name: common-init-files
-  namespace: ($namespace)
+  namespace: chainsaw-ethical-glowworm
 stringData:
   containerd-config.toml: |
     version = 2
@@ -33,9 +33,8 @@ stringData:
     #!/bin/bash
     set -euo pipefail
     export DEBIAN_FRONTEND=noninteractive
-    hostnamectl set-hostname "$1" && hostname -F /etc/hostname
     mkdir -p -m 755 /etc/apt/keyrings
-    PATCH_VERSION=${2#[v]}
+    PATCH_VERSION=${1#[v]}
     VERSION=${PATCH_VERSION%.*}
     curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
@@ -45,18 +44,17 @@ stringData:
     modprobe overlay
     modprobe br_netfilter
     sysctl --system
-    sed -i '/swap/d' /etc/fstab
-    swapoff -a
   sysctl-k8s.conf: |
     net.bridge.bridge-nf-call-iptables  = 1
     net.bridge.bridge-nf-call-ip6tables = 1
     net.ipv4.ip_forward                 = 1
+    net.ipv6.conf.all.forwarding        = 1
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: (join('-', ['linode', ($cluster), 'crs-0']))
-  namespace: ($namespace)
+  name: linode-e2e-default-cluster-98e04b5-crs-0
+  namespace: chainsaw-ethical-glowworm
 stringData:
   linode-token-region.yaml: |-
     kind: Secret
@@ -65,7 +63,7 @@ stringData:
       name: linode-token-region
       namespace: kube-system
     stringData:
-      apiToken: (env('LINODE_TOKEN'))
+      apiToken: e4ca3057407bd2051f5c218cb4574e936e9dce3c68ab92dfc5d1935b2585c7a5
       region: us-ord
 type: addons.cluster.x-k8s.io/resource-set
 ---
@@ -73,11 +71,17 @@ apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
   name: cilium
+  namespace: chainsaw-ethical-glowworm
 spec:
   chartName: cilium
   clusterSelector:
-    matchLabels:
-      cni: cilium
+    matchExpressions:
+    - key: ipv6
+      operator: DoesNotExist
+    - key: cni
+      operator: In
+      values:
+      - cilium
   namespace: kube-system
   options:
     timeout: 5m
@@ -85,6 +89,41 @@ spec:
     waitForJobs: true
   repoURL: https://helm.cilium.io/
   valuesTemplate: |
+    bgpControlPlane:
+      enabled: true
+    ipam:
+      mode: kubernetes
+    k8s:
+      requireIPv4PodCIDR: true
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+  version: 1.15.0
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: cilium-ipv6
+  namespace: chainsaw-ethical-glowworm
+spec:
+  chartName: cilium
+  clusterSelector:
+    matchLabels:
+      cni: cilium
+      ipv6: "true"
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://helm.cilium.io/
+  valuesTemplate: |
+    bgpControlPlane:
+      enabled: true
+    ipv6:
+      enabled: true
     ipam:
       mode: kubernetes
     k8s:
@@ -100,6 +139,7 @@ apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
   name: csi-driver-linode
+  namespace: chainsaw-ethical-glowworm
 spec:
   chartName: linode-blockstorage-csi-driver
   clusterSelector:
@@ -121,6 +161,7 @@ apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
   name: linode-cloud-controller-manager
+  namespace: chainsaw-ethical-glowworm
 spec:
   chartName: ccm-linode
   clusterSelector:
@@ -142,21 +183,22 @@ spec:
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
 metadata:
-  name: (join('-', [($cluster), 'crs-0']))
+  name: e2e-default-cluster-98e04b5-crs-0
+  namespace: chainsaw-ethical-glowworm
 spec:
   clusterSelector:
     matchLabels:
-      crs: (join('-', [($cluster), 'crs']))
+      crs: e2e-default-cluster-98e04b5-crs
   resources:
   - kind: Secret
-    name: (join('-', ['linode', ($cluster), 'crs-0']))
-    namespace: ($namespace)
+    name: linode-e2e-default-cluster-98e04b5-crs-0
   strategy: ApplyOnce
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: (join('-', [($cluster), 'md-0']))
+  name: e2e-default-cluster-98e04b5-md-0
+  namespace: chainsaw-ethical-glowworm
 spec:
   template:
     spec:
@@ -165,68 +207,72 @@ spec:
           secret:
             key: containerd-config.toml
             name: common-init-files
-            namespace: ($namespace)
         path: /etc/containerd/config.toml
       - contentFrom:
           secret:
             key: k8s-modules.conf
             name: common-init-files
-            namespace: ($namespace)
         path: /etc/modules-load.d/k8s.conf
       - contentFrom:
           secret:
             key: sysctl-k8s.conf
             name: common-init-files
-            namespace: ($namespace)
         path: /etc/sysctl.d/k8s.conf
       - contentFrom:
           secret:
             key: kubeadm-pre-init.sh
             name: common-init-files
-            namespace: ($namespace)
         path: /kubeadm-pre-init.sh
         permissions: "0500"
       joinConfiguration:
         nodeRegistration:
           kubeletExtraArgs:
             cloud-provider: external
-            provider-id: linode://{{ ds.meta_data.id }}
           name: '{{ ds.meta_data.label }}'
       preKubeadmCommands:
-      - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "v1.29.1"
+      - /kubeadm-pre-init.sh v1.29.1
+      - sed -i '/swap/d' /etc/fstab
+      - swapoff -a
+      - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   labels:
     ccm: linode
-    cluster: ($cluster)
+    cluster: e2e-default-cluster-98e04b5
     cni: cilium
-    crs: (join('-', [($cluster), 'crs']))
+    crs: e2e-default-cluster-98e04b5-crs
     csi: linode
-  name: ($cluster)
+    ipv6: "true"
+  name: e2e-default-cluster-98e04b5
+  namespace: chainsaw-ethical-glowworm
 spec:
   clusterNetwork:
     pods:
       cidrBlocks:
       - 10.192.0.0/10
+      - fd02::/80
+    services:
+      cidrBlocks:
+      - 10.96.0.0/12
+      - fd03::/108
   controlPlaneRef:
     apiVersion: controlplane.cluster.x-k8s.io/v1beta1
     kind: KubeadmControlPlane
-    name: (join('-', [($cluster), 'control-plane']))
-    namespace: ($namespace)
+    name: e2e-default-cluster-98e04b5-control-plane
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
     kind: LinodeCluster
-    name: ($cluster)
-    namespace: ($namespace)
+    name: e2e-default-cluster-98e04b5
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
-  name: (join('-', [($cluster), 'md-0']))
+  name: e2e-default-cluster-98e04b5-md-0
+  namespace: chainsaw-ethical-glowworm
 spec:
-  clusterName: ($cluster)
+  clusterName: e2e-default-cluster-98e04b5
   replicas: 1
   selector:
     matchLabels: null
@@ -236,20 +282,19 @@ spec:
         configRef:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: (join('-', [($cluster), 'md-0']))
-          namespace: ($namespace)
-      clusterName: ($cluster)
+          name: e2e-default-cluster-98e04b5-md-0
+      clusterName: e2e-default-cluster-98e04b5
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
         kind: LinodeMachineTemplate
-        name: (join('-', [($cluster), 'md-0']))
-        namespace: ($namespace)
+        name: e2e-default-cluster-98e04b5-md-0
       version: v1.29.1
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: KubeadmControlPlane
 metadata:
-  name: (join('-', [($cluster), 'control-plane']))
+  name: e2e-default-cluster-98e04b5-control-plane
+  namespace: chainsaw-ethical-glowworm
 spec:
   kubeadmConfigSpec:
     clusterConfiguration:
@@ -259,82 +304,72 @@ spec:
       controllerManager:
         extraArgs:
           cloud-provider: external
+          node-cidr-mask-size-ipv6: "96"
       etcd:
         local:
           dataDir: /var/lib/etcd_data/etcd
           extraArgs:
             quota-backend-bytes: "8589934592"
-    diskSetup:
-      filesystems:
-      - device: /dev/sdc
-        filesystem: ext4
-        label: etcd_data
     files:
     - contentFrom:
         secret:
           key: containerd-config.toml
           name: common-init-files
-          namespace: ($namespace)
       path: /etc/containerd/config.toml
     - contentFrom:
         secret:
           key: k8s-modules.conf
           name: common-init-files
-          namespace: ($namespace)
       path: /etc/modules-load.d/k8s.conf
     - contentFrom:
         secret:
           key: sysctl-k8s.conf
           name: common-init-files
-          namespace: ($namespace)
       path: /etc/sysctl.d/k8s.conf
     - contentFrom:
         secret:
           key: kubeadm-pre-init.sh
           name: common-init-files
-          namespace: ($namespace)
       path: /kubeadm-pre-init.sh
       permissions: "0500"
     initConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
           cloud-provider: external
-          provider-id: linode://{{ ds.meta_data.id }}
         name: '{{ ds.meta_data.label }}'
     joinConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
           cloud-provider: external
-          provider-id: linode://{{ ds.meta_data.id }}
         name: '{{ ds.meta_data.label }}'
-    mounts:
-    - - LABEL=etcd_data
-      - /var/lib/etcd_data
     preKubeadmCommands:
-    - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "v1.29.1"
+    - /kubeadm-pre-init.sh v1.29.1
+    - sed -i '/swap/d' /etc/fstab
+    - swapoff -a
+    - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
   machineTemplate:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
       kind: LinodeMachineTemplate
-      name: (join('-', [($cluster), 'control-plane']))
-      namespace: ($namespace)
+      name: e2e-default-cluster-98e04b5-control-plane
   replicas: 1
   version: v1.29.1
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeCluster
 metadata:
-  name: ($cluster)
+  name: e2e-default-cluster-98e04b5
+  namespace: chainsaw-ethical-glowworm
 spec:
   credentialsRef:
-    name: (join('-', [($cluster), 'credentials']))
-    namespace: ($namespace)
+    name: e2e-default-cluster-98e04b5-credentials
   region: us-ord
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeMachineTemplate
 metadata:
-  name: (join('-', [($cluster), 'control-plane']))
+  name: e2e-default-cluster-98e04b5-control-plane
+  namespace: chainsaw-ethical-glowworm
 spec:
   template:
     spec:
@@ -346,7 +381,8 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: LinodeMachineTemplate
 metadata:
-  name: (join('-', [($cluster), 'md-0']))
+  name: e2e-default-cluster-98e04b5-md-0
+  namespace: chainsaw-ethical-glowworm
 spec:
   template:
     spec:

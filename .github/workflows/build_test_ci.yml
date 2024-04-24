@@ -174,7 +174,7 @@ jobs:
     
     - name: Quick E2E Test
       if: github.ref != 'refs/heads/main'
-      run: make e2etest-quick
+      run: make e2etest
       env:
         GITHUB_TOKEN: ${{ secrets.github_token }}
         LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}

@@ -4,27 +4,46 @@ kind: Test
 metadata:
   creationTimestamp: null
   name: default-capl-cluster
+  # Labels to allow the test to be triggered based on selector flag
+  labels:
+    default-cluster:
+    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
+    value: (join('-', ['e2e', 'default-cluster', env('GIT_REF')]))
   - name: cluster
     # Format the cluster name
     value: (trim((truncate(($run), `32`)), '-'))
   template: true
   steps:
-  - name: step-00
+  - name: Check if CAPI provider resources exist
     try:
     - assert:
-        file: 00-assert.yaml
-  - name: step-01
+        file: assert-capi-resources.yaml
+  - name: Generate cluster using clusterctl
+    try:
+    - script:
+        env:
+        - name: CLUSTER
+          value: ($cluster)
+        - name: NAMESPACE
+          value: ($namespace)
+        - name: FLAVOR
+          value: (env('FLAVOR'))
+        content: |
+          set -e
+          clusterctl generate cluster $CLUSTER -n $NAMESPACE $FLAVOR --kubernetes-version v1.29.1 --infrastructure linode:v0.0.0 --control-plane-machine-count 1 --worker-machine-count 1 > default-cluster.yaml
+        check:
+          ($error == null): true
+  - name: Apply cluster file
     try:
     - apply:
-        file: 01-create-cluster.yaml
+        file: default-cluster.yaml
     - assert:
-        file: 02-assert.yaml
-  - name: step-02
+        file: assert-child-cluster-resources.yaml
+  - name: step-02 - Check if the linodes are created
     try:
     - script:
         env:
@@ -47,20 +66,7 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 2
-  - name: step-02b - get child cluster kubeconfig
-    try:
-    - script:
-        content: |
-          clusterctl get kubeconfig ($cluster) > child-cluster-kubeconfig.yaml
-        check:
-          ($error == null): true
-  # - name: step-02c - check child cluster
-  #   try:
-  #   - script:
-  #       cluster: child-cluster
-  #       content: |
-  #         kubectl get nodes -o wide
-  - name: step-03
+  - name: step-03 - delete cluster
     try:
     - delete:
         ref:
@@ -68,8 +74,8 @@ spec:
           kind: Cluster
           name: ($cluster)
     - error:
-        file: 03-error.yaml
-  - name: step-04
+        file: check-child-cluster-deleted.yaml
+  - name: step-04 - Check if the linodes are deleted
     try:
     - script:
         env:
@@ -92,3 +98,10 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 0
+  - name: step-05 - delete cluster file
+    try:
+    - script:
+        content: |
+          rm -f e2e-auto-gen*.yaml
+        check:
+          ($error == null): true
