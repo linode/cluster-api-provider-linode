@@ -135,6 +135,25 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				}),
 			),
 			Path(
+				Call("cluster is not created because nb config was nil", func(ctx context.Context, m Mock) {
+					cScope.LinodeClient = m.NodeBalancerClient
+					getNB := m.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
+					m.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(&linodego.NodeBalancer{
+							ID:   nodebalancerID,
+							IPv4: &controlPlaneEndpointHost,
+						}, nil)
+					m.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(nil, errors.New("nodeBalancer config created was nil"))
+				}),
+				Result("created nb config is nil", func(ctx context.Context, m Mock) {
+					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
+					Expect(err.Error()).To(ContainSubstring("nodeBalancer config created was nil"))
+				}),
+			),
+			Path(
 				Call("cluster is not created because there is no capl cluster", func(ctx context.Context, m Mock) {
 					cScope.LinodeClient = m.NodeBalancerClient
 				}),
