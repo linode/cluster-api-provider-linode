@@ -33,6 +33,8 @@ spec:
   agentConfig:
     version: ${KUBERNETES_VERSION}
     nodeName: '{{ ds.meta_data.label }}'
+    cisProfile: ${CIS_PROFILE:-"cis-1.23"}
+    protectKernelDefaults: true
   preRKE2Commands:
     - |
       mkdir -p /etc/rancher/rke2/config.yaml.d/
