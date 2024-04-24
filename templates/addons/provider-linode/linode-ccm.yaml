@@ -9,7 +9,7 @@ spec:
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
   chartName: ccm-linode
   namespace: kube-system
-  version: ${LINODE_CCM_VERSION:=v0.4.3}
+  version: ${LINODE_CCM_VERSION:=v0.4.4}
   options:
     waitForJobs: true
     wait: true
