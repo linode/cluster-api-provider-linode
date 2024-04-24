@@ -61,7 +61,7 @@ const (
 	ConditionPreflightAdditionalDisksCreated clusterv1.ConditionType = "PreflightAdditionalDisksCreated"
 	ConditionPreflightConfigured             clusterv1.ConditionType = "PreflightConfigured"
 	ConditionPreflightBootTriggered          clusterv1.ConditionType = "PreflightBootTriggered"
-	ConditionPreflightNBConfigured           clusterv1.ConditionType = "PreflightNBConfigured"
+	ConditionPreflightNetworking             clusterv1.ConditionType = "PreflightNetworking"
 	ConditionPreflightReady                  clusterv1.ConditionType = "PreflightReady"
 )
 
@@ -351,12 +351,12 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered)
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNBConfigured) {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
 		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			logger.Error(err, "Failed to add instance to Node Balancer backend")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-				ConditionPreflightNBConfigured, string(cerrs.CreateMachineError), err.Error(),
+				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
 				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
 				return ctrl.Result{}, err
 			}
@@ -364,7 +364,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNBConfigured)
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightReady) {

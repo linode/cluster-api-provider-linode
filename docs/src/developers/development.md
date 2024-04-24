@@ -213,7 +213,7 @@ clusterctl generate cluster $CLUSTER_NAME \
   | kubectl apply -f -
 ```
 
-This will provision the cluster with the CNI defaulted to [cilium](../topics/addons.md#cilium)
+This will provision the cluster within VPC with the CNI defaulted to [cilium](../topics/addons.md#cilium)
 and the [linode-ccm](../topics/addons.md#ccm) installed.
 
 ##### Using ClusterClass (alpha)
@@ -244,6 +244,9 @@ To delete the cluster, simply run:
 
 ```sh
 kubectl delete cluster $CLUSTER_NAME
+```
+```admonish warning
+VPCs are not deleted when a cluster is deleted using kubectl. One can run `kubectl delete linodevpc <vpcname>` to cleanup VPC once cluster is deleted.
 ```
 
 ```admonish question title=""
