@@ -148,10 +148,26 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 				Status: linodego.InstanceOffline,
 			}, nil)
-		mockLinodeClient.EXPECT().
+		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
 			Return(nil)
+		getAddrs := mockLinodeClient.EXPECT().
+			GetInstanceIPAddresses(ctx, 123).
+			After(bootInst).
+			Return(&linodego.InstanceIPAddressResponse{
+				IPv4: &linodego.InstanceIPv4Response{
+					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+				},
+			}, nil)
+		mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(getAddrs).
+			Return([]linodego.InstanceConfig{{
+				Devices: &linodego.InstanceConfigDeviceMap{
+					SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+				},
+			}}, nil)
 
 		mScope := scope.MachineScope{
 			Client:        k8sClient,
@@ -308,7 +324,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
 					},
 				}, nil)
-			mockLinodeClient.EXPECT().
+			createNB := mockLinodeClient.EXPECT().
 				CreateNodeBalancerNode(ctx, 1, 2, linodego.NodeBalancerNodeCreateOptions{
 					Label:   "mock",
 					Address: "192.168.0.2:6443",
@@ -316,6 +332,22 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				}).
 				After(getAddrs).
 				Return(nil, nil)
+			getAddrs = mockLinodeClient.EXPECT().
+				GetInstanceIPAddresses(ctx, 123).
+				After(createNB).
+				Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+					},
+				}, nil)
+			mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(getAddrs).
+				Return([]linodego.InstanceConfig{{
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+					},
+				}}, nil)
 
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -461,9 +493,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 				}, nil)
-			mockLinodeClient.EXPECT().
+			createNB := mockLinodeClient.EXPECT().
 				CreateNodeBalancerNode(ctx, 1, 2, linodego.NodeBalancerNodeCreateOptions{
 					Label:   "mock",
 					Address: "192.168.0.2:6443",
@@ -471,6 +504,27 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				}).
 				After(getAddrs).
 				Return(nil, nil)
+			getAddrs = mockLinodeClient.EXPECT().
+				GetInstanceIPAddresses(ctx, 123).
+				After(createNB).
+				Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+				}, nil)
+			mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(getAddrs).
+				Return([]linodego.InstanceConfig{{
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+					},
+					Interfaces: []linodego.InstanceConfigInterface{{
+						VPCID: ptr.To(1),
+						IPv4:  &linodego.VPCIPv4{VPC: "10.0.0.2"},
+					}},
+				}}, nil)
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
@@ -483,10 +537,20 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
-			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{{
-				Type:    clusterv1.MachineInternalIP,
-				Address: "192.168.0.2",
-			}}))
+			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
+				{
+					Type:    clusterv1.MachineExternalIP,
+					Address: "172.0.0.2",
+				},
+				{
+					Type:    clusterv1.MachineInternalIP,
+					Address: "10.0.0.2",
+				},
+				{
+					Type:    clusterv1.MachineInternalIP,
+					Address: "192.168.0.2",
+				},
+			}))
 
 			Expect(testLogs.String()).To(ContainSubstring("creating machine"))
 			Expect(testLogs.String()).To(ContainSubstring("Linode instance already exists"))
