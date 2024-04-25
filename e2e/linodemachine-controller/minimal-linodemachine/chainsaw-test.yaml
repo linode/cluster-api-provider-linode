@@ -18,21 +18,21 @@ spec:
     value: (trim((truncate(($run), `32`)), '-'))
   template: true
   steps:
-  - name: step-00
+  - name: Check if CAPI provider resources exist
     try:
     - assert:
-        file: 00-assert.yaml
-  - name: step-01
+        file: assert-capi-resources.yaml
+  - name: Create Cluster resource
     try:
     - apply:
-        file: 01-create-cluster.yaml
-  - name: step-02
+        file: create-cluster.yaml
+  - name: Create LinodeMachine resource
     try:
     - apply:
-        file: 02-create-linodemachine.yaml
+        file: create-linodemachine.yaml
     - assert:
-        file: 02-assert.yaml
-  - name: step-03
+        file: assert-linodemachine.yaml
+  - name: Check if the Linodes were created
     try:
     - script:
         env:
@@ -55,7 +55,7 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 1
-  - name: step-04
+  - name: Delete Cluster resource
     try:
     - delete:
         ref:
@@ -63,8 +63,8 @@ spec:
           kind: Cluster
           name: ($cluster)
     - error:
-        file: 04-error.yaml
-  - name: step-05
+        file: check-linodemachine-deletion.yaml
+  - name: Check if the Linodes were deleted
     try:
     - script:
         env:
@@ -87,7 +87,3 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 0
-  - name: step-06
-    try:
-    - apply:
-        file: 06-cleanup-cluster.yaml

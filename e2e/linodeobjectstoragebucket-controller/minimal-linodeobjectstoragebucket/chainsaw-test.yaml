@@ -20,17 +20,17 @@ spec:
     value: (join('-', [($bucket), 'bucket-details']))
   template: true
   steps:
-  - name: step-00
+  - name: Check if CAPI provider resources exist
     try:
     - assert:
-        file: 00-assert.yaml
-  - name: step-01
+        file: assert-capi-resources.yaml
+  - name: Create LinodeObjectStorageBucket
     try:
     - apply:
-        file: 01-create-linodeobjectstoragebucket.yaml
+        file: create-linodeobjectstoragebucket.yaml
     - assert:
-        file: 01-assert.yaml
-  - name: step-02
+        file: assert-obj-and-secret.yaml
+  - name: Check if the bucket was created
     try:
     - script:
         env:
@@ -46,24 +46,24 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             label: ($bucket)
-  - name: step-03
+  - name: Test Key Generation
     try:
     - apply:
-        file: 03-patch-bucket.yaml
+        file: patch-bucket.yaml
     - assert:
-        file: 03-assert.yaml
-  - name: step-04
+        file: assert-keygen.yaml
+  - name: Delete LinodeObjectStorageBucket details Secret
     try:
     - delete:
         ref:
           apiVersion: v1
           kind: Secret
           name: (join('-', [($namespace), 'backups-bucket-details']))
-  - name: step-05
+  - name: Assert LinodeObjectStorageBucket key secret exists
     try:
     - assert:
-        file: 05-assert.yaml
-  - name: step-06
+        file: assert-key-secret.yaml
+  - name: Delete LinodeObjectStorageBucket
     try:
     - delete:
         ref:
@@ -82,7 +82,7 @@ spec:
             "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
         check:
           ($error): ~
-  - name: step-07
+  - name: Check if the LinodeObjectStorageBucket was deleted
     try:
     - error:
-        file: 07-errors.yaml
+        file: check-obj-and-key-deletion.yaml

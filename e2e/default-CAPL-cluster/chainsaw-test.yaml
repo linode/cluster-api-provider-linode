@@ -4,17 +4,21 @@ kind: Test
 metadata:
   creationTimestamp: null
   name: default-capl-cluster
+  # Labels to allow the test to be triggered based on selector flag
+  labels:
+    default-cluster:
+    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
+    value: (join('-', ['e2e', 'default-cluster', env('GIT_REF')]))
   - name: cluster
     # Format the cluster name
     value: (trim((truncate(($run), `32`)), '-'))
   template: true
   steps:
-  - name: step-00
+  - name: Check if CAPI provider resources exist
     try:
     - assert:
         file: assert-capi-resources.yaml
@@ -26,13 +30,15 @@ spec:
           value: ($cluster)
         - name: NAMESPACE
           value: ($namespace)
+        - name: CLUSTERCTL_CONFIG
+          value: (env('CLUSTERCTL_CONFIG'))
         content: |
           set -e
           clusterctl generate cluster $CLUSTER -n $NAMESPACE \
           --kubernetes-version v1.29.1 \
           --infrastructure linode:v0.0.0 \
           --control-plane-machine-count 1 --worker-machine-count 1 \
-          --config /home/runner/work/cluster-api-provider-linode/e2e/clusterctl-config.yaml > default-cluster.yaml
+          --config $CLUSTERCTL_CONFIG > default-cluster.yaml
         check:
           ($error == null): true
   - name: Apply generated cluster yaml

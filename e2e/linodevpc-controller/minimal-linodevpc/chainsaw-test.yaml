@@ -17,17 +17,17 @@ spec:
     value: (trim((truncate(($run), `63`)), '-'))
   template: true
   steps:
-  - name: step-00
+  - name: Check if CAPI provider resources exist
     try:
     - assert:
-        file: 00-assert.yaml
-  - name: step-01
+        file: assert-capi-resources.yaml
+  - name: Create LinodeVPC
     try:
     - apply:
-        file: 01-create-vpc.yaml
+        file: create-vpc.yaml
     - assert:
-        file: 01-assert.yaml
-  - name: step-02
+        file: assert-vpc.yaml
+  - name: Check if the VPC was created
     try:
     - script:
         env:
@@ -44,7 +44,7 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 1
-  - name: step-03
+  - name: Delete VPC
     try:
     - delete:
         ref:
@@ -52,8 +52,8 @@ spec:
           kind: LinodeVPC
           name: ($vpc)
     - error:
-        file: 03-error.yaml
-  - name: step-04
+        file: check-vpc-deletion.yaml
+  - name: Check if the VPC was deleted
     try:
     - script:
         env:

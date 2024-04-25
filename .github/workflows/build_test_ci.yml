@@ -179,12 +179,16 @@ jobs:
 
     
     - name: Quick E2E Test
-      if: github.ref != 'refs/heads/main'
       run: make e2etest
       env:
         GITHUB_TOKEN: ${{ secrets.github_token }}
         LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
-        E2E_SELECTOR: '--selector quick'
+        INSTALL_K3S_PROVIDER: true
+        INSTALL_RKE2_PROVIDER: true
+        LINODE_REGION: us-sea
+        LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
+        LINODE_MACHINE_TYPE: g6-standard-2
+        CLUSTERCTL_CONFIG: $PWD/e2e/clusterctl-config.yaml
 
     - name: Copy logs
       if: ${{ always() }}

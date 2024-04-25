@@ -21,23 +21,23 @@ spec:
     value: (trim((truncate(($run), `63`)), '-'))
   template: true
   steps:
-  - name: step-00
+  - name: Check if CAPI provider resources exist
     try:
     - assert:
-        file: 00-assert.yaml
-  - name: step-01
-    try:
-    - apply:
-        file: 01-create-cluster.yaml
-    - assert:
-        file: 01-assert.yaml
-  - name: step-02
+        file: assert-capi-resources.yaml
+  - name: Create Cluster and LinodeVPC resources
     try:
     - apply:
-        file: 02-create-linodemachine.yaml
+        file: create-cluster-vpc.yaml
     - assert:
-        file: 02-assert.yaml
-  - name: step-03
+        file: assert-vpc.yaml
+  - name: Create LinodeMachine resource
+    try:
+    - apply:
+        file: create-linodemachine.yaml
+    - assert:
+        file: assert-linodemachine-exists.yaml
+  - name: Check if the Linodes & VPC were created
     try:
     - script:
         env:
@@ -85,7 +85,7 @@ spec:
               - linodes:
                 - interfaces:
                   - active: true
-  - name: step-04
+  - name: Delete the Cluster & LinodeVPC resource
     try:
     - delete:
         ref:
@@ -98,8 +98,8 @@ spec:
           kind: LinodeVPC
           name: ($vpc)
     - error:
-        file: 04-error.yaml
-  - name: step-05
+        file: check-vpc-lm-deletion.yaml
+  - name: Check if the Linodes & VPC were deleted
     try:
     - script:
         env:
@@ -143,7 +143,3 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 0
-  - name: step-06
-    try:
-    - apply:
-        file: 06-cleanup-cluster.yaml

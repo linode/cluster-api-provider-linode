@@ -41,14 +41,5 @@ metadata:
   labels:
     cluster.x-k8s.io/cluster-name: ($cluster)
 status:
-  conditions:
-  - type: Ready
-    status: "True"
-  - type: Available
-    status: "True"
-  - type: ControlPlaneComponentsHealthy
-    status: "True"
-  initialized: true
   ready: true
   readyReplicas: 1
-  

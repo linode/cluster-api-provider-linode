@@ -12,7 +12,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'default-cluster', env('GIT_REF')]))
+    value: (join('-', ['e2e', 'rke2-cluster', env('GIT_REF')]))
   - name: cluster
     # Format the cluster name
     value: (trim((truncate(($run), `32`)), '-'))
@@ -30,15 +30,20 @@ spec:
           value: ($cluster)
         - name: NAMESPACE
           value: ($namespace)
+        - name: CLUSTERCTL_CONFIG
+          value: (env('CLUSTERCTL_CONFIG'))
         content: |
           set -e
-          clusterctl generate cluster $CLUSTER -n $NAMESPACE --flavor rke2 --kubernetes-version v1.29.1+rke2r1 --infrastructure linode:v0.0.0 --control-plane-machine-count 1 --worker-machine-count 1 > rke2-cluster.yaml
+          clusterctl generate cluster $CLUSTER -n $NAMESPACE \
+          --flavor rke2 --kubernetes-version v1.29.1+rke2r1 \
+          --infrastructure linode:v0.0.0 \
+          --control-plane-machine-count 1 --worker-machine-count 1 > rke2-cluster.yaml
         check:
           ($error == null): true
   - name: Apply generated cluster yaml
     try:
     - apply:
-        file: default-cluster.yaml
+        file: rke2-cluster.yaml
     - assert:
         file: assert-child-cluster-resources.yaml
   - name: Check if the linodes are created

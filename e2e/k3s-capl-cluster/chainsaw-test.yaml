@@ -6,13 +6,13 @@ metadata:
   name: k3s-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
-    k3s-cluster:
+    k3s:
     flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'default-cluster', env('GIT_REF')]))
+    value: (join('-', ['e2e', 'k3s-cluster', env('GIT_REF')]))
   - name: cluster
     # Format the cluster name
     value: (trim((truncate(($run), `32`)), '-'))
@@ -30,15 +30,21 @@ spec:
           value: ($cluster)
         - name: NAMESPACE
           value: ($namespace)
+        - name: CLUSTERCTL_CONFIG
+          value: (env('CLUSTERCTL_CONFIG'))
         content: |
           set -e
-          clusterctl generate cluster $CLUSTER -n $NAMESPACE --flavor k3s --kubernetes-version v1.29.1+k3s2 --infrastructure linode:v0.0.0 --control-plane-machine-count 1 --worker-machine-count 1 > k3s-cluster.yaml
+          clusterctl generate cluster $CLUSTER -n $NAMESPACE \
+          --flavor k3s --kubernetes-version v1.29.1+k3s2 \
+          --infrastructure linode:v0.0.0 \
+          --control-plane-machine-count 1 --worker-machine-count 1 \
+          --config $CLUSTERCTL_CONFIG > k3s-cluster.yaml
         check:
           ($error == null): true
   - name: Apply generated cluster yaml
     try:
     - apply:
-        file: default-cluster.yaml
+        file: k3s-cluster.yaml
     - assert:
         file: assert-child-cluster-resources.yaml
   - name: Check if the linodes are created
