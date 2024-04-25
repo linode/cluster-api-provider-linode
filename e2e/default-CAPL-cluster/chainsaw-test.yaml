@@ -37,13 +37,13 @@ spec:
           clusterctl generate cluster $CLUSTER -n $NAMESPACE $FLAVOR --kubernetes-version v1.29.1 --infrastructure linode:v0.0.0 --control-plane-machine-count 1 --worker-machine-count 1 > default-cluster.yaml
         check:
           ($error == null): true
-  - name: Apply cluster file
+  - name: Apply generated cluster yaml
     try:
     - apply:
         file: default-cluster.yaml
     - assert:
         file: assert-child-cluster-resources.yaml
-  - name: step-02 - Check if the linodes are created
+  - name: Check if the linodes are created
     try:
     - script:
         env:
@@ -66,7 +66,7 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 2
-  - name: step-03 - delete cluster
+  - name: Delete child cluster
     try:
     - delete:
         ref:
@@ -75,7 +75,7 @@ spec:
           name: ($cluster)
     - error:
         file: check-child-cluster-deleted.yaml
-  - name: step-04 - Check if the linodes are deleted
+  - name: Check if the linodes are deleted
     try:
     - script:
         env:
@@ -98,7 +98,7 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 0
-  - name: step-05 - delete cluster file
+  - name: Delete generated child cluster manifest yaml
     try:
     - script:
         content: |
