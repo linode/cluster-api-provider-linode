@@ -188,7 +188,7 @@ jobs:
         LINODE_REGION: us-sea
         LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
         LINODE_MACHINE_TYPE: g6-standard-2
-        CLUSTERCTL_CONFIG: $PWD/e2e/clusterctl-config.yaml
+        CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/e2e/clusterctl-config.yaml
 
     - name: Copy logs
       if: ${{ always() }}

@@ -36,7 +36,7 @@ spec:
     - apply:
         file: create-linodemachine.yaml
     - assert:
-        file: assert-linodemachine-exists.yaml
+        file: assert-linodemachine.yaml
   - name: Check if the Linodes & VPC were created
     try:
     - script:
