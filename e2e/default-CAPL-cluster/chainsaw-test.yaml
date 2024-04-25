@@ -26,17 +26,19 @@ spec:
           value: ($cluster)
         - name: NAMESPACE
           value: ($namespace)
-        - name: FLAVOR
-          value: (env('FLAVOR'))
         content: |
           set -e
-          clusterctl generate cluster $CLUSTER -n $NAMESPACE $FLAVOR --kubernetes-version v1.29.1 --infrastructure linode:v0.0.0 --control-plane-machine-count 1 --worker-machine-count 1 > default-cluster.yaml
+          clusterctl generate cluster $CLUSTER -n $NAMESPACE \
+          --kubernetes-version v1.29.1 \
+          --infrastructure linode:v0.0.0 \
+          --control-plane-machine-count 1 --worker-machine-count 1 \
+          --config /home/runner/work/cluster-api-provider-linode/e2e/clusterctl-config.yaml > default-cluster.yaml
         check:
           ($error == null): true
   - name: Apply generated cluster yaml
     try:
     - apply:
-        file: 01-create-cluster.yaml
+        file: default-cluster.yaml
     - assert:
         file: assert-child-cluster-resources.yaml
   - name: Check if the linodes are created
@@ -98,6 +100,6 @@ spec:
     try:
     - script:
         content: |
-          rm -f e2e-auto-gen*.yaml
+          rm -f default-cluster.yaml
         check:
           ($error == null): true

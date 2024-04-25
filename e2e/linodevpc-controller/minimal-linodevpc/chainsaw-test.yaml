@@ -6,7 +6,7 @@ metadata:
   # Label to trigger the test on every PR
   labels:
     quick:
-    min-vpc:
+    vpc:
 spec:
   bindings:
     # A short identifier for the E2E test run

@@ -3,10 +3,10 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   creationTimestamp: null
-  name: rke2-capl-cluster
+  name: k3s-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
-    rke2:
+    k3s-cluster:
     flavors:
 spec:
   bindings:
@@ -32,7 +32,7 @@ spec:
           value: ($namespace)
         content: |
           set -e
-          clusterctl generate cluster $CLUSTER -n $NAMESPACE --flavor rke2 --kubernetes-version v1.29.1+rke2r1 --infrastructure linode:v0.0.0 --control-plane-machine-count 1 --worker-machine-count 1 > rke2-cluster.yaml
+          clusterctl generate cluster $CLUSTER -n $NAMESPACE --flavor k3s --kubernetes-version v1.29.1+k3s2 --infrastructure linode:v0.0.0 --control-plane-machine-count 1 --worker-machine-count 1 > k3s-cluster.yaml
         check:
           ($error == null): true
   - name: Apply generated cluster yaml
@@ -100,6 +100,6 @@ spec:
     try:
     - script:
         content: |
-          rm -f rke2-cluster.yaml
+          rm -f k3s-cluster.yaml
         check:
           ($error == null): true
