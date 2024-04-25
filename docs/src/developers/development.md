@@ -150,10 +150,10 @@ For local development, templates should be generated via:
 make local-release
 ```
 
-This creates `infrastructure-linode/v0.0.0/` with all the cluster templates:
+This creates `infrastructure-local-linode/v0.0.0/` with all the cluster templates:
 
 ```sh
-infrastructure-linode/v0.0.0
+infrastructure-local-linode/v0.0.0
 ├── cluster-template-clusterclass-kubeadm.yaml
 ├── cluster-template-etcd-backup-restore.yaml
 ├── cluster-template-k3s.yaml
@@ -169,7 +169,7 @@ This can then be used with `clusterctl` by adding the following to `~/.clusterct
 
 ```
 providers:
-  - name: akamai-linode
+  - name: local-linode
     url: ${HOME}/cluster-api-provider-linode/infrastructure-linode/v0.0.0/infrastructure-components.yaml
     type: InfrastructureProvider
 ```
@@ -194,7 +194,7 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 You can also use `clusterctl generate` to see which variables need to be set:
 
 ```
-clusterctl generate cluster $CLUSTER_NAME --infrastructure akamai-linode:v0.0.0 [--flavor <flavor>] --list-variables
+clusterctl generate cluster $CLUSTER_NAME --infrastructure local-linode:v0.0.0 [--flavor <flavor>] --list-variables
 ```
 
 ~~~
@@ -209,7 +209,7 @@ you can deploy a workload cluster with the default flavor:
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --infrastructure akamai-akamai-linode:v0.0.0 \
+  --infrastructure local-linode:v0.0.0 \
   | kubectl apply -f -
 ```
 
@@ -229,7 +229,7 @@ management cluster has the [ClusterTopology feature gate set](https://cluster-ap
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --infrastructure akamai-linode:v0.0.0 \
+  --infrastructure local-linode:v0.0.0 \
   --flavor clusterclass-kubeadm \
   | kubectl apply -f -
 ```

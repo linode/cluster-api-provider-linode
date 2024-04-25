@@ -25,7 +25,7 @@ will not work for RKE2 versions >= v1.29.
     ```bash
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1+rke2r1 \
-        --infrastructure akamai-linode \
+        --infrastructure linode-linode \
         --flavor rke2 > test-rke2-cluster.yaml
     ```
 2. Apply cluster yaml
