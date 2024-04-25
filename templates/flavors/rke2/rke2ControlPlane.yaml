@@ -23,13 +23,14 @@ spec:
       path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
   registrationMethod: internal-only-ips
   serverConfig:
-    cni: cilium
+    cni: none
     cloudProviderName: external
     disableComponents:
       pluginComponents:
         - "rke2-ingress-nginx"
       kubernetesComponents:
         - "cloudController"
+        - "kubeProxy"
   agentConfig:
     version: ${KUBERNETES_VERSION}
     nodeName: '{{ ds.meta_data.label }}'
@@ -38,7 +39,7 @@ spec:
   preRKE2Commands:
     - |
       mkdir -p /etc/rancher/rke2/config.yaml.d/
-      echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
+      echo "node-ip: $(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
     - sed -i '/swap/d' /etc/fstab
     - swapoff -a
     - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname

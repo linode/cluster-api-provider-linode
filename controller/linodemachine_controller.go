@@ -61,6 +61,7 @@ const (
 	ConditionPreflightAdditionalDisksCreated clusterv1.ConditionType = "PreflightAdditionalDisksCreated"
 	ConditionPreflightConfigured             clusterv1.ConditionType = "PreflightConfigured"
 	ConditionPreflightBootTriggered          clusterv1.ConditionType = "PreflightBootTriggered"
+	ConditionPreflightNetworking             clusterv1.ConditionType = "PreflightNetworking"
 	ConditionPreflightReady                  clusterv1.ConditionType = "PreflightReady"
 )
 
@@ -248,7 +249,6 @@ func (r *LinodeMachineReconciler) reconcile(
 	return
 }
 
-//nolint:cyclop // keep top-level preflight condition checks in the same function for readability
 func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
@@ -312,8 +312,17 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		return ctrl.Result{}, err
 	}
 
+	return r.reconcileInstanceCreate(ctx, logger, machineScope, linodeInstance)
+}
+
+func (r *LinodeMachineReconciler) reconcileInstanceCreate(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+	linodeInstance *linodego.Instance,
+) (ctrl.Result, error) {
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
-		if err = r.configureDisks(ctx, logger, machineScope, linodeInstance.ID); err != nil {
+		if err := r.configureDisks(ctx, logger, machineScope, linodeInstance.ID); err != nil {
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
 				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
@@ -327,7 +336,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
-		if err = machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
 			logger.Error(err, "Failed to boot instance")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
@@ -342,9 +351,26 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered)
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
-		if err = services.AddNodeToNB(ctx, logger, machineScope); err != nil {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
+		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			logger.Error(err, "Failed to add instance to Node Balancer backend")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
+	}
+
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
+		addrs, err := r.buildInstanceAddrs(ctx, machineScope, linodeInstance.ID)
+		if err != nil {
+			logger.Error(err, "Failed to get instance ip addresses")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightReady, string(cerrs.CreateMachineError), err.Error(),
@@ -354,12 +380,12 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
+		machineScope.LinodeMachine.Status.Addresses = addrs
 
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightReady)
 	}
 
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
-	machineScope.LinodeMachine.Status.Addresses = buildInstanceAddrs(linodeInstance)
 
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
