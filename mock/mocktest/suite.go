@@ -56,7 +56,7 @@ func (s *suite) run(t gomock.TestHelper, ctx context.Context, pth path, mockOpts
 		evalFn(ctx, mck, fun)
 	}
 
-	pth.Run(ctx, mck)
+	pth.run(ctx, mck)
 
 	for _, fun := range s.afterEach {
 		evalFn(ctx, mck, fun)
@@ -92,9 +92,11 @@ func NewSuite(t *testing.T, clients ...mock.MockClient) *standardSuite {
 }
 
 // Run calls t.Run for each computed test path.
-func (ss *standardSuite) Run(pths []path) {
+func (ss *standardSuite) Run(nodes ...node) {
+	pths := mkPaths(nodes...)
+
 	for _, pth := range pths {
-		ss.t.Run(pth.Describe(), func(t *testing.T) {
+		ss.t.Run(pth.describe(), func(t *testing.T) {
 			t.Parallel()
 
 			ss.suite.run(t, context.Background(), pth)
@@ -125,9 +127,11 @@ func NewControllerSuite(ginkgoT ginkgo.FullGinkgoTInterface, clients ...mock.Moc
 
 // Run executes Ginkgo test specs for each computed test path.
 // It manages mock client instantiation, events, and logging.
-func (cs *ctlrSuite) Run(pths []path) {
+func (cs *ctlrSuite) Run(nodes ...node) {
+	pths := mkPaths(nodes...)
+
 	for _, pth := range pths {
-		ginkgo.It(pth.Describe(), func(ctx ginkgo.SpecContext) {
+		ginkgo.It(pth.describe(), func(ctx ginkgo.SpecContext) {
 			cs.suite.run(cs.ginkgoT, ctx, pth, func(mck *Mock) {
 				// Create a recorder with a buffered channel for consuming event strings.
 				mck.recorder = record.NewFakeRecorder(recorderBufferSize)

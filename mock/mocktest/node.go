@@ -4,9 +4,16 @@ import (
 	"context"
 )
 
+// DescribePaths computes all permutations for the given nodes
+// and returns a slice of strings describing each permutation.
+func DescribePaths(nodes ...node) []string {
+	pths := mkPaths(nodes...)
+	return pths.describe()
+}
+
 // Common interface for defining permutations of test paths as a tree.
 type node interface {
-	update(staged, committed []path) (st, com []path)
+	update(staged, committed paths) (st, com paths)
 }
 
 // A container for describing and holding a function.
@@ -28,7 +35,7 @@ func Call(text string, does func(context.Context, Mock)) call {
 type call fn
 
 // Adds the call to each staged path.
-func (c call) update(staged, committed []path) (st, com []path) {
+func (c call) update(staged, committed paths) (st, com paths) {
 	for idx, pth := range staged {
 		newCalls := make([]call, len(pth.calls), len(pth.calls)+1)
 		copy(newCalls, pth.calls)
@@ -53,13 +60,13 @@ func Result(text string, does func(context.Context, Mock)) result {
 type result fn
 
 // Commits each staged path with the result.
-func (r result) update(staged, committed []path) (st, com []path) {
+func (r result) update(staged, committed paths) (st, com paths) {
 	for idx := range staged {
 		staged[idx].result = r
 	}
 
 	committed = append(committed, staged...)
-	staged = []path{}
+	staged = paths{}
 
 	return staged, committed
 }
@@ -78,7 +85,7 @@ type once fn
 
 // Adds once to the first staged path.
 // It will only be invoked once in the first path to be evaluated.
-func (o once) update(staged, committed []path) (st, com []path) {
+func (o once) update(staged, committed paths) (st, com paths) {
 	if len(staged) > 0 {
 		staged[0].once = append(staged[0].once, &o)
 	}
@@ -88,6 +95,10 @@ func (o once) update(staged, committed []path) (st, com []path) {
 
 // Path declares a sequence of nodes belonging to the same test path.
 func Path(nodes ...node) allOf {
+	if len(nodes) == 0 {
+		panic("Path called with no nodes")
+	}
+
 	return nodes
 }
 
@@ -95,7 +106,7 @@ func Path(nodes ...node) allOf {
 type allOf []node
 
 // Adds all nodes to each staged path, committing paths whenever a result is included.
-func (a allOf) update(staged, committed []path) (st, com []path) {
+func (a allOf) update(staged, committed paths) (st, com paths) {
 	for _, impl := range a {
 		staged, committed = impl.update(staged, committed)
 	}
@@ -103,23 +114,27 @@ func (a allOf) update(staged, committed []path) (st, com []path) {
 	return staged, committed
 }
 
-// Either declares multiple nodes that fork out into unique test paths.
-func Either(nodes ...node) oneOf {
+// OneOf declares multiple nodes that fork out into unique test paths.
+func OneOf(nodes ...allOf) oneOf {
+	if len(nodes) == 0 {
+		panic("OneOf called with no nodes")
+	}
+
 	return nodes
 }
 
 // A container for defining nodes that fork out into unique test paths.
-type oneOf []node
+type oneOf []allOf
 
 // Generates new permutations of each staged path with each node.
 // Each node should never occur on the same path.
-func (o oneOf) update(staged, committed []path) (st, com []path) {
-	var permutations []path
+func (o oneOf) update(staged, committed paths) (st, com paths) {
+	permutations := paths{}
 
 	for _, pth := range staged {
 		for _, impl := range o {
-			var localPerms []path
-			localPerms, committed = impl.update([]path{pth}, committed)
+			var localPerms paths
+			localPerms, committed = impl.update(paths{pth}, committed)
 			permutations = append(permutations, localPerms...)
 		}
 	}

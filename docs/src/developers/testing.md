@@ -21,7 +21,7 @@ import (
 )
 ```
 
-Using `mocktest` involves creating a test suite that specifies the mock clients to be used within each test scope and running the test suite using a DSL for defnining test nodes belong to one or more `Paths`.
+Using `mocktest` involves creating a test suite that specifies the mock clients to be used within each test scope and running the test suite using a DSL for defnining test nodes belong to one or more test paths.
 
 #### Example
 The following is a contrived example using the mock Linode machine client.
@@ -40,8 +40,8 @@ While writing test cases for each scenario, we'd likely find a lot of overlap be
 func TestEnsureInstanceNotOffline(t *testing.T) {
   suite := NewSuite(t, mock.MockLinodeMachineClient{})
   
-  suite.Run(Paths(
-    Either(
+  suite.Run(
+    OneOf(
       Path(
         Call("instance exists and is not offline", func(ctx context.Context, mck Mock) {
           mck.MachineClient.EXPECT().GetInstance(ctx, /* ... */).Return(&linodego.Instance{Status: linodego.InstanceRunning}, nil)
@@ -56,25 +56,25 @@ func TestEnsureInstanceNotOffline(t *testing.T) {
         Call("instance does not exist", func(ctx context.Context, mck Mock) {
           mck.MachineClient.EXPECT().GetInstance(ctx, /* ... */).Return(nil, linodego.Error{Code: 404})
         }),
-        Either(
-          Call("able to be created", func(ctx context.Context, mck Mock) {
+        OneOf(
+          Path(Call("able to be created", func(ctx context.Context, mck Mock) {
             mck.MachineClient.EXPECT().CreateInstance(ctx, /* ... */).Return(&linodego.Instance{Status: linodego.InstanceOffline}, nil)
-          }),
+          })),
           Path(
             Call("not able to be created", func(ctx context.Context, mck Mock) {/* ... */})
             Result("error", func(ctx context.Context, mck Mock) {
               inst, err := EnsureInstanceNotOffline(ctx, /* ... */)
               require.ErrorContains(t, err, "instance was not booted: failed to create instance: reasons...")
               assert.Empty(inst)
-            })
+            }),
           )
         ),
       ),
-      Call("instance exists but is offline", func(ctx context.Context, mck Mock) {
+      Path(Call("instance exists but is offline", func(ctx context.Context, mck Mock) {
         mck.MachineClient.EXPECT().GetInstance(ctx, /* ... */).Return(&linodego.Instance{Status: linodego.InstanceOffline}, nil)
-      }),
+      })),
     ),
-    Either(
+    OneOf(
       Path(
         Call("able to boot", func(ctx context.Context, mck Mock) {/*  */})
         Result("success", func(ctx context.Context, mck Mock) {
@@ -95,13 +95,13 @@ func TestEnsureInstanceNotOffline(t *testing.T) {
   )
 }
 ```
-In this example, the nodes passed into `Paths` are used to describe each permutation of the function being called with different results from the mock Linode machine client.
+In this example, the nodes passed into `Run` are used to describe each permutation of the function being called with different results from the mock Linode machine client.
 
 #### Nodes
 * `Call` describes the behavior of method calls by mock clients. A `Call` node can belong to one or more paths.
 * `Result` invokes the function with mock clients and tests the output. A `Result` node terminates each path it belongs to.
-* `Path` is a list of nodes that all belong to the same test path. Each child node of a `Path` is evaluated in order.
-* `Either` is a list of nodes that all belong to different test paths. It is used to define diverging test path, with each path containing the set of all preceding `Call` nodes.
+* `OneOf` is a collection of diverging paths that will be evaluated in separate test cases.
+* `Path` is a collection of nodes that all belong to the same test path. Each child node of a `Path` is evaluated in order. Note that `Path` is only needed for logically grouping and isolating nodes within different test cases in a `OneOf` node.
 
 #### Setup, tear down, and event triggers
 Setup and tear down nodes can be scheduled before and after each run. `suite.BeforeEach` receives a `func(context.Context, Mock)` function that will run before each path is evaluated. Likewise, `suite.AfterEach` will run after each path is evaluated.
@@ -111,12 +111,10 @@ In addition to the path nodes listed in the section above, a special node type `
 #### Control flow
 When `Run` is called on a test suite, paths are evaluated in parallel using `t.Parallel()`. Each path will be run with a separate `t.Run` call, and each test run will be named according to the descriptions specified in each node.
 
-To help with visualizing the paths that will be rendered from nodes, a `Describe` helper method can be called which returns a slice of strings describing each path. For instance, the following shows the output of `Describe` on the paths described in the example above:
+To help with visualizing the paths that will be rendered from nodes, a `DescribePaths` helper function can be called which returns a slice of strings describing each path. For instance, the following shows the output of `DescribePaths` on the paths described in the example above:
 
 ```go
-paths := Paths(/* see example above */)
-
-paths.Describe() /* [
+DescribePaths(/* nodes... */) /* [
   "instance exists and is not offline > success",
   "instance does not exist > not able to be created > error",
   "instance does not exist > able to be created > able to boot > success",
@@ -141,14 +139,14 @@ var _ = Describe("linode creation", func() {
     Spec: infrav1alpha1.LinodeMachineSpec{/* ... */}
   }
 
-  suite.Run(Paths(
+  suite.Run(
     Once("create resource", func(ctx context.Context, _ Mock) {
       // Use the EnvTest k8sClient to create the resource in the test server
       Expect(k8sClient.Create(ctx, &obj).To(Succeed()))
-    })
+    }),
     Call("create a linode", func(ctx context.Context, mck Mock) {
       mck.MachineClient.CreateInstance(ctx, gomock.Any(), gomock.Any()).Return(&linodego.Instance{/* ... */}, nil)
-    })
+    }),
     Result("update the resource status after linode creation", func(ctx context.Context, mck Mock) {
       reconciler := LinodeMachineReconciler{
         // Configure the reconciler to use the mock client for this test path
@@ -170,8 +168,8 @@ var _ = Describe("linode creation", func() {
       // Check for expected events and logs
       Expect(mck.Events()).To(ContainSubstring("Linode created!"))
       Expect(mck.Logs()).To(ContainSubstring("Linode created!"))
-    })
-  ))
+    }),
+  )
 })
 ```
 

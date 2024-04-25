@@ -35,7 +35,7 @@ var _ = Describe("k8s client", Label("k8sclient"), func() {
 		mockCtrl.Finish()
 	})
 
-	for _, pth := range Paths(
+	for _, pth := range mkPaths(
 		Once("setup", func(_ context.Context, _ Mock) {}),
 		Call("fetch object", func(ctx context.Context, mck Mock) {
 			mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -44,8 +44,8 @@ var _ = Describe("k8s client", Label("k8sclient"), func() {
 			Expect(contrivedCalls(ctx, mck)).To(Succeed())
 		}),
 	) {
-		It(pth.Describe(), func(ctx SpecContext) {
-			pth.Run(ctx, Mock{
+		It(pth.describe(), func(ctx SpecContext) {
+			pth.run(ctx, Mock{
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
 					K8sClient: mock.NewMockK8sClient(mockCtrl),
@@ -66,11 +66,11 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 		mockCtrl.Finish()
 	})
 
-	for _, pth := range Paths(
+	for _, pth := range mkPaths(
 		Call("read object", func(ctx context.Context, mck Mock) {
 			mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		}),
-		Either(
+		OneOf(
 			Path(
 				Call("underlying exists", func(ctx context.Context, mck Mock) {
 					mck.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
@@ -89,8 +89,8 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 			),
 		),
 	) {
-		It(pth.Describe(), func(ctx SpecContext) {
-			pth.Run(ctx, Mock{
+		It(pth.describe(), func(ctx SpecContext) {
+			pth.run(ctx, Mock{
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
 					MachineClient: mock.NewMockLinodeMachineClient(mockCtrl),
@@ -132,7 +132,7 @@ func TestPaths(t *testing.T) {
 		{
 			name:     "empty",
 			input:    []node{},
-			output:   nil,
+			output:   paths{},
 			describe: []string{},
 		},
 		{
@@ -163,7 +163,7 @@ func TestPaths(t *testing.T) {
 			input: []node{
 				call{text: "0"},
 				oneOf{
-					call{text: "1"},
+					allOf{call{text: "1"}},
 					allOf{call{text: "1"}, result{text: "1"}},
 				},
 			},
@@ -174,8 +174,8 @@ func TestPaths(t *testing.T) {
 			input: []node{
 				call{text: "0"},
 				oneOf{
-					call{text: "1"},
-					call{text: "2"},
+					allOf{call{text: "1"}},
+					allOf{call{text: "2"}},
 				},
 				result{text: "4"},
 			},
@@ -204,20 +204,20 @@ func TestPaths(t *testing.T) {
 			name: "recursive",
 			input: []node{
 				oneOf{
-					oneOf{
-						call{text: "0"},
-						oneOf{
-							call{text: "1"},
-							call{text: "2"},
-						},
-					},
-					oneOf{
-						call{text: "3"},
-						oneOf{
-							call{text: "4"},
-							call{text: "5"},
-						},
-					},
+					allOf{oneOf{
+						allOf{call{text: "0"}},
+						allOf{oneOf{
+							allOf{call{text: "1"}},
+							allOf{call{text: "2"}},
+						}},
+					}},
+					allOf{oneOf{
+						allOf{call{text: "3"}},
+						allOf{oneOf{
+							allOf{call{text: "4"}},
+							allOf{call{text: "5"}},
+						}},
+					}},
 				},
 				result{text: "6"},
 			},
@@ -273,8 +273,8 @@ func TestPaths(t *testing.T) {
 			input: []node{
 				call{text: "0"},
 				oneOf{
-					call{text: "1"},
-					result{text: "2"},
+					allOf{call{text: "1"}},
+					allOf{result{text: "2"}},
 				},
 				result{text: "3"},
 			},
@@ -303,7 +303,7 @@ func TestPaths(t *testing.T) {
 			input: []node{
 				oneOf{
 					allOf{call{text: "0"}, result{text: "0"}},
-					call{text: "1"},
+					allOf{call{text: "1"}},
 				},
 				oneOf{
 					allOf{call{text: "2"}, result{text: "2"}},
@@ -342,17 +342,17 @@ func TestPaths(t *testing.T) {
 				once{text: "0"},
 				oneOf{
 					allOf{call{text: "1"}, result{text: "1"}},
-					call{text: "1"},
+					allOf{call{text: "1"}},
 				},
 				oneOf{
 					allOf{call{text: "2"}, result{text: "2"}},
-					call{text: "2"},
+					allOf{call{text: "2"}},
 				},
 				result{text: "3"},
 				once{text: "4"},
 				oneOf{
 					allOf{call{text: "5"}, result{text: "5"}},
-					call{text: "5"},
+					allOf{call{text: "5"}},
 				},
 				oneOf{
 					allOf{call{text: "6"}, result{text: "6"}},
@@ -418,7 +418,7 @@ func TestPaths(t *testing.T) {
 				call{text: "mock1"},
 				oneOf{
 					allOf{call{text: "mock1.1"}, result{text: "result1"}},
-					call{text: "mock2"},
+					allOf{call{text: "mock2"}},
 				},
 				call{text: "mock3"},
 				oneOf{
@@ -470,14 +470,14 @@ func TestPaths(t *testing.T) {
 					allOf{
 						call{text: "instance does not exist"},
 						oneOf{
-							call{text: "able to be created"},
+							allOf{call{text: "able to be created"}},
 							allOf{
 								call{text: "not able to be created"},
 								result{text: "error"},
 							},
 						},
 					},
-					call{text: "instance exists but is offline"},
+					allOf{call{text: "instance exists but is offline"}},
 				},
 				oneOf{
 					allOf{
@@ -548,14 +548,15 @@ func TestPaths(t *testing.T) {
 
 			if testCase.panic {
 				assert.Panics(t, func() {
-					Paths(testCase.input...)
+					mkPaths(testCase.input...)
 				})
 				return
 			}
 
-			actual := Paths(testCase.input...)
+			actual := mkPaths(testCase.input...)
 			assert.Equal(t, testCase.output, actual)
-			assert.Equal(t, testCase.describe, actual.Describe())
+			assert.Equal(t, testCase.describe, actual.describe())
+			assert.Equal(t, DescribePaths(testCase.input...), actual.describe())
 		})
 	}
 }
@@ -565,7 +566,7 @@ func TestRunWithoutTestReporter(t *testing.T) {
 
 	pth := path{}
 	assert.Panics(t, func() {
-		pth.Run(context.Background(), Mock{})
+		pth.run(context.Background(), Mock{})
 	})
 }
 

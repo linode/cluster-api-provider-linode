@@ -65,13 +65,13 @@ func TestSuite(t *testing.T) {
 				suite.AfterEach(func(_ context.Context, _ Mock) { counter.Done() })
 			}
 
-			suite.Run(Paths(
-				Either(
-					Call("", func(_ context.Context, _ Mock) { counter.Done() }),
-					Call("", func(_ context.Context, _ Mock) { counter.Done() }),
+			suite.Run(
+				OneOf(
+					Path(Call("", func(_ context.Context, _ Mock) { counter.Done() })),
+					Path(Call("", func(_ context.Context, _ Mock) { counter.Done() })),
 				),
 				Result("", func(_ context.Context, _ Mock) { counter.Done() }),
-			))
+			)
 
 			// Wait until the counter reaches 0, or time out.
 			// This runs in a goroutine so the nested t.Runs are scheduled.
@@ -99,7 +99,7 @@ func waitCh(counter *sync.WaitGroup) <-chan struct{} {
 var _ = Describe("controller suite", Label("suite"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockK8sClient{})
 
-	suite.Run(Paths(
+	suite.Run(
 		Call("call", func(ctx context.Context, mck Mock) {
 			mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).Return(nil)
 		}),
@@ -108,22 +108,22 @@ var _ = Describe("controller suite", Label("suite"), func() {
 			err := mck.K8sClient.Get(ctx, client.ObjectKey{Namespace: "default", Name: "myobj"}, nil)
 			Expect(err).NotTo(HaveOccurred())
 		}),
-	))
+	)
 })
 
 var _ = Describe("controller suite with events/logs", Label("suite"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockK8sClient{})
 
-	suite.Run(Paths(
-		Either(
-			Call("call1", func(_ context.Context, mck Mock) {
+	suite.Run(
+		OneOf(
+			Path(Call("call1", func(_ context.Context, mck Mock) {
 				mck.Recorder().Event(nil, "", "", "+")
 				mck.Logger().Info("+")
-			}),
-			Call("call2", func(_ context.Context, mck Mock) {
+			})),
+			Path(Call("call2", func(_ context.Context, mck Mock) {
 				mck.Recorder().Event(nil, "", "", "+")
 				mck.Logger().Info("+")
-			}),
+			})),
 		),
 		Result("result", func(_ context.Context, mck Mock) {
 			mck.Recorder().Event(nil, "", "", "+")
@@ -132,5 +132,5 @@ var _ = Describe("controller suite with events/logs", Label("suite"), func() {
 			Expect(strings.Count(mck.Events(), "+")).To(Equal(2))
 			Expect(strings.Count(mck.Logs(), "+")).To(Equal(2))
 		}),
-	))
+	)
 })

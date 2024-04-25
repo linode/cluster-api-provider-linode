@@ -17,8 +17,8 @@ type path struct {
 	result
 }
 
-// Describe generates a string of all nodes belonging to a test path.
-func (p path) Describe() string {
+// Generates a string of all nodes belonging to a test path.
+func (p path) describe() string {
 	text := make([]string, 0, len(p.calls)+1)
 	for _, c := range p.calls {
 		text = append(text, c.text)
@@ -27,8 +27,8 @@ func (p path) Describe() string {
 	return strings.Join(text, " > ")
 }
 
-// Run evaluates all declared mock client methods and assertions for the given test path.
-func (p path) Run(ctx context.Context, mck Mock) {
+// Evaluates all declared mock client methods and assertions for the given test path.
+func (p path) run(ctx context.Context, mck Mock) {
 	if mck.TestReporter == nil {
 		panic("Mock requires TestReporter, i.e. *testing.T, GinkgoT()")
 	}
@@ -66,7 +66,7 @@ func evalOnce(ctx context.Context, mck Mock, fun *once) {
 
 type paths []path
 
-func (ps paths) Describe() []string {
+func (ps paths) describe() []string {
 	texts := make([]string, 0, len(ps))
 	described := make(map[*once]bool)
 
@@ -78,21 +78,21 @@ func (ps paths) Describe() []string {
 				described[o] = true
 			}
 		}
-		text.WriteString(pth.Describe())
+		text.WriteString(pth.describe())
 		texts = append(texts, text.String())
 	}
 
 	return texts
 }
 
-// Paths declares one or more test paths with mock clients.
+// Declares one or more test paths with mock clients.
 // It traverses each node and their children, returning a list of permutations of test paths.
-func Paths(nodes ...node) paths {
+func mkPaths(nodes ...node) paths {
 	if len(nodes) == 0 {
-		return nil
+		return paths{}
 	}
 
-	staged, committed := rPaths(nil, nil, nodes)
+	staged, committed := rPaths(paths{}, paths{}, nodes)
 	if len(staged) > 0 {
 		panic(errors.New("unresolved path detected"))
 	}
@@ -100,7 +100,7 @@ func Paths(nodes ...node) paths {
 	return committed
 }
 
-func rPaths(staged, committed []path, each []node) (st, com []path) {
+func rPaths(staged, committed paths, each []node) (st, com paths) {
 	if len(each) == 0 {
 		return staged, committed
 	}
