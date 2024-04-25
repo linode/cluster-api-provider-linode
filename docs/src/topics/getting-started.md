@@ -40,7 +40,7 @@ By default, clusters are provisioned within VPC. For Regions which do not have [
 1. Add `linode` as an infrastructure provider in `~/.cluster-api/clusterctl.yaml`
     ```yaml
     providers:
-       - name: akamai-linode
+       - name: linode-linode
          url: https://github.com/linode/cluster-api-provider-linode/releases/latest/infrastructure-components.yaml
          type: InfrastructureProvider
     ```
@@ -48,7 +48,7 @@ By default, clusters are provisioned within VPC. For Regions which do not have [
 ## Install CAPL on your management cluster
 Install CAPL and enable the helm addon provider which is used by the majority of the CAPL flavors
 ```bash
-clusterctl init --infrastructure akamai-linode --addon helm
+clusterctl init --infrastructure linode-linode --addon helm
 ```
 
 ## Deploying your first cluster

@@ -12,7 +12,7 @@ To enable backups, use the addon flag during provisioning to select the etcd-bac
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --infrastructure akamai-linode \
+  --infrastructure linode-linode \
   --flavor etcd-backup-restore \
   | kubectl apply -f -
 ```
