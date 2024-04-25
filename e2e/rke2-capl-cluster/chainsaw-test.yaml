@@ -3,37 +3,45 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   creationTimestamp: null
-  name: minimal-linodecluster
-  # Label to trigger the test on every PR
+  name: default-capl-cluster
+  # Labels to allow the test to be triggered based on selector flag
   labels:
-    quick:
+    default-cluster:
+    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'min-cluster', env('GIT_REF')]))
+    value: (join('-', ['e2e', 'default-cluster', env('GIT_REF')]))
   - name: cluster
     # Format the cluster name
     value: (trim((truncate(($run), `32`)), '-'))
-  - name: nodebalancer
-    value: ($cluster)
   template: true
   steps:
   - name: Check if CAPI provider resources exist
     try:
     - assert:
         file: assert-capi-resources.yaml
-  - name: Create Cluster resource
+  - name: Generate cluster using clusterctl
+    try:
+    - script:
+        env:
+        - name: CLUSTER
+          value: ($cluster)
+        - name: NAMESPACE
+          value: ($namespace)
+        content: |
+          set -e
+          clusterctl generate cluster $CLUSTER -n $NAMESPACE --flavor rke2 --kubernetes-version v1.29.1 --infrastructure linode:v0.0.0 --control-plane-machine-count 1 --worker-machine-count 1 > default-cluster.yaml
+        check:
+          ($error == null): true
+  - name: Apply generated cluster yaml
     try:
     - apply:
-        file: create-cluster.yaml
-  - name: Create LinodeCluster resource
-    try:
-    - apply:
-        file: create-linodecluster.yaml
+        file: default-cluster.yaml
     - assert:
-        file: assert-linodecluster.yaml
-  - name: Check if the nodebalancer exists
+        file: assert-child-cluster-resources.yaml
+  - name: Check if the linodes are created
     try:
     - script:
         env:
@@ -42,9 +50,9 @@ spec:
         - name: TARGET_API_VERSION
           value: v4beta
         - name: URI
-          value: nodebalancers
+          value: linode/instances
         - name: FILTER
-          value: (to_string({"label":($nodebalancer)}))
+          value: (to_string({"tags":($cluster)}))
         content: |
           set -e
           curl -s \
@@ -55,8 +63,8 @@ spec:
         check:
           ($error): ~
           (json_parse($stdout)):
-            results: 1
-  - name: Delete Cluster resource
+            results: 2
+  - name: Delete child cluster
     try:
     - delete:
         ref:
@@ -64,8 +72,8 @@ spec:
           kind: Cluster
           name: ($cluster)
     - error:
-        file: check-linodecluster-deleted.yaml
-  - name: Check if the nodebalancer is deleted
+        file: check-child-cluster-deleted.yaml
+  - name: Check if the linodes are deleted
     try:
     - script:
         env:
@@ -74,9 +82,9 @@ spec:
         - name: TARGET_API_VERSION
           value: v4beta
         - name: URI
-          value: nodebalancers
+          value: linode/instances
         - name: FILTER
-          value: (to_string({"label":($nodebalancer)}))
+          value: (to_string({"tags":($cluster)}))
         content: |
           set -e
           curl -s \
@@ -88,3 +96,10 @@ spec:
           ($error): ~
           (json_parse($stdout)):
             results: 0
+  - name: Delete generated child cluster manifest yaml
+    try:
+    - script:
+        content: |
+          rm -f e2e-auto-gen*.yaml
+        check:
+          ($error == null): true

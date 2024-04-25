@@ -4,21 +4,17 @@ kind: Test
 metadata:
   creationTimestamp: null
   name: default-capl-cluster
-  # Labels to allow the test to be triggered based on selector flag
-  labels:
-    default-cluster:
-    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
   - name: run
-    value: (join('-', ['e2e', 'default-cluster', env('GIT_REF')]))
+    value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
   - name: cluster
     # Format the cluster name
     value: (trim((truncate(($run), `32`)), '-'))
   template: true
   steps:
-  - name: Check if CAPI provider resources exist
+  - name: step-00
     try:
     - assert:
         file: assert-capi-resources.yaml
@@ -40,7 +36,7 @@ spec:
   - name: Apply generated cluster yaml
     try:
     - apply:
-        file: default-cluster.yaml
+        file: 01-create-cluster.yaml
     - assert:
         file: assert-child-cluster-resources.yaml
   - name: Check if the linodes are created
