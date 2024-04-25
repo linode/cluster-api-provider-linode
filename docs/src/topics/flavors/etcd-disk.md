@@ -18,7 +18,7 @@ the `quota-backend-bytes` to `8589934592` (8 GiB) per recommendation from
     ```bash
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1 \
-        --infrastructure akamai-linode \
+        --infrastructure linode-linode \
         --flavor etcd-disk > test-cluster.yaml
     ```
 2. Apply cluster yaml
