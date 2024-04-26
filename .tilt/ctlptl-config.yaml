@@ -4,7 +4,7 @@ kind: Cluster
 product: kind
 registry: ctlptl-registry
 kindV1Alpha4Cluster:
-  name: tilt
+  name: tilt-2
   nodes:
     - role: control-plane
       image: kindest/node:v1.29.2
