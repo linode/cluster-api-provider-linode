@@ -1,5 +1,0 @@
-$patch: delete
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-kind: LinodeVPC
-metadata:
-  name: ${VPC_NAME:=${CLUSTER_NAME}}
