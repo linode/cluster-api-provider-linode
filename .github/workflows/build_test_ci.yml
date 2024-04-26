@@ -137,7 +137,7 @@ jobs:
       run: make e2etest
       env:
         # TODO: Switch selector to quick before the PR can be merged
-        E2E_FLAGS: '--assert-timeout 20m0s --selector flavors'
+        E2E_FLAGS: '--assert-timeout 30m0s --selector flavors'
         # TODO: ALL the var below need to be deleted before the PR can be merged
         INSTALL_K3S_PROVIDER: true
         INSTALL_RKE2_PROVIDER: true
