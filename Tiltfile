@@ -100,13 +100,14 @@ for resource in manager_yaml:
         resource["metadata"]["labels"]["clusterctl.cluster.x-k8s.io"] = ""
 k8s_yaml(encode_yaml_stream(manager_yaml))
 
-docker_build(
-    "docker.io/linode/cluster-api-provider-linode",
-    context=".",
-    only=("Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
-    "./api", "./cloud", "./cmd", "./controller", "./util", "./version",),
-    build_args={"VERSION": os.getenv("VERSION", "")},
-)
+if os.getenv("SKIP_DOCKER_BUILD", "false") != "true":
+    docker_build(
+        "docker.io/linode/cluster-api-provider-linode",
+        context=".",
+        only=("Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
+        "./api", "./cloud", "./cmd", "./controller", "./util", "./version",),
+        build_args={"VERSION": os.getenv("VERSION", "")},
+    )
 
 k8s_resource(
     workload="capl-controller-manager",

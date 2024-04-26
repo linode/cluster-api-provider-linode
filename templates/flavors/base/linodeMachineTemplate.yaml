@@ -9,6 +9,9 @@ spec:
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
+      interfaces:
+      - purpose: public
+        primary: true
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - ${LINODE_SSH_PUBKEY:=""}
@@ -23,6 +26,9 @@ spec:
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
+      interfaces:
+      - purpose: public
+        primary: true
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - ${LINODE_SSH_PUBKEY:=""}

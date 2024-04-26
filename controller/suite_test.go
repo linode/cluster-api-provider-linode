@@ -33,8 +33,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+
+	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 
 	//+kubebuilder:scaffold:imports
 

@@ -5,6 +5,7 @@ resources:
   - rke2ControlPlane.yaml
   - rke2ConfigTemplate.yaml
   - secret.yaml
+  - ../../addons/cilium
 patches:
   - target:
       group: cluster.x-k8s.io
@@ -17,16 +18,19 @@ patches:
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
-      kind: MachineDeployment
+      kind: Cluster
     patch: |-
-      - op: replace
-        path: /spec/template/spec/bootstrap/configRef/kind
-        value: RKE2ConfigTemplate
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+            cni: cilium
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
       kind: MachineDeployment
     patch: |-
       - op: replace
-        path: /spec/template/spec/version
-        value: ${RKE2_KUBERNETES_VERSION}
+        path: /spec/template/spec/bootstrap/configRef/kind
+        value: RKE2ConfigTemplate

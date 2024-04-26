@@ -26,6 +26,7 @@ import (
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -147,10 +148,26 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 				Status: linodego.InstanceOffline,
 			}, nil)
-		mockLinodeClient.EXPECT().
+		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
 			Return(nil)
+		getAddrs := mockLinodeClient.EXPECT().
+			GetInstanceIPAddresses(ctx, 123).
+			After(bootInst).
+			Return(&linodego.InstanceIPAddressResponse{
+				IPv4: &linodego.InstanceIPv4Response{
+					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+				},
+			}, nil)
+		mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(getAddrs).
+			Return([]linodego.InstanceConfig{{
+				Devices: &linodego.InstanceConfigDeviceMap{
+					SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+				},
+			}}, nil)
 
 		mScope := scope.MachineScope{
 			Client:        k8sClient,
@@ -231,9 +248,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		})
 	})
 
-	Context("creates a control plane instance", func() {
+	Context("creates a instance with disks", func() {
 		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
@@ -268,24 +286,35 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
 			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 15000-defaultEtcdDiskSize).
+				ResizeInstanceDisk(ctx, 123, 100, 4262).
 				After(getInstDisk).
 				Return(nil)
-			waitForInstDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultResizeWaitSeconds).
-				After(resizeInstDisk).
-				Return(nil, nil)
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
 					Label:      "etcd-data",
-					Size:       defaultEtcdDiskSize,
+					Size:       10738,
 					Filesystem: string(linodego.FilesystemExt4),
 				}).
-				After(waitForInstDisk).
+				After(resizeInstDisk).
 				Return(&linodego.InstanceDisk{ID: 101}, nil)
+			listInstConfsForProfile := mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(createEtcdDisk).
+				Return([]linodego.InstanceConfig{{
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+					},
+				}}, nil)
+			createInstanceProfile := mockLinodeClient.EXPECT().
+				UpdateInstanceConfig(ctx, 123, 0, linodego.InstanceConfigUpdateOptions{
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
+					}}).
+				After(listInstConfsForProfile)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
-				After(createEtcdDisk).
+				After(createInstanceProfile).
 				Return(nil)
 			getAddrs := mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
@@ -295,7 +324,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
 					},
 				}, nil)
-			mockLinodeClient.EXPECT().
+			createNB := mockLinodeClient.EXPECT().
 				CreateNodeBalancerNode(ctx, 1, 2, linodego.NodeBalancerNodeCreateOptions{
 					Label:   "mock",
 					Address: "192.168.0.2:6443",
@@ -303,6 +332,22 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				}).
 				After(getAddrs).
 				Return(nil, nil)
+			getAddrs = mockLinodeClient.EXPECT().
+				GetInstanceIPAddresses(ctx, 123).
+				After(createNB).
+				Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+					},
+				}, nil)
+			mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(getAddrs).
+				Return([]linodego.InstanceConfig{{
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+					},
+				}}, nil)
 
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -343,6 +388,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		It("in multiple calls when disks are delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
@@ -377,13 +423,18 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
 			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 15000-defaultEtcdDiskSize).
+				ResizeInstanceDisk(ctx, 123, 100, 4262).
 				After(getInstDisk).
 				Return(nil)
-			mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultResizeWaitSeconds).
+
+			createFailedEtcdDisk := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "etcd-data",
+					Size:       10738,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
 				After(resizeInstDisk).
-				Return(nil, errors.New("Waiting for Instance 123 Disk 100 status ready: not yet"))
+				Return(nil, linodego.Error{Code: 400})
 
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -403,30 +454,38 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			listInst = mockLinodeClient.EXPECT().
 				ListInstances(ctx, gomock.Any()).
+				After(createFailedEtcdDisk).
 				Return([]linodego.Instance{{
 					ID:     123,
 					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 					Status: linodego.InstanceOffline,
 				}}, nil)
-			listInstConfs = mockLinodeClient.EXPECT().
-				ListInstanceConfigs(ctx, 123, gomock.Any()).
+			createEtcdDisk := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "etcd-data",
+					Size:       10738,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
 				After(listInst).
+				Return(&linodego.InstanceDisk{ID: 101}, nil)
+			listInstConfsForProfile := mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(createEtcdDisk).
 				Return([]linodego.InstanceConfig{{
 					Devices: &linodego.InstanceConfigDeviceMap{
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 					},
 				}}, nil)
-			waitForInstDisk := mockLinodeClient.EXPECT().
-				WaitForInstanceDiskStatus(ctx, 123, 100, linodego.DiskReady, defaultResizeWaitSeconds).
-				After(listInstConfs).
-				Return(nil, nil)
-			createEtcdDisk := mockLinodeClient.EXPECT().
-				CreateInstanceDisk(ctx, 123, gomock.Any()).
-				After(waitForInstDisk).
-				Return(nil, nil)
+			createInstanceProfile := mockLinodeClient.EXPECT().
+				UpdateInstanceConfig(ctx, 123, 0, linodego.InstanceConfigUpdateOptions{
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
+					}}).
+				After(listInstConfsForProfile)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
-				After(createEtcdDisk).
+				After(createInstanceProfile).
 				Return(nil)
 			getAddrs := mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
@@ -434,9 +493,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 				}, nil)
-			mockLinodeClient.EXPECT().
+			createNB := mockLinodeClient.EXPECT().
 				CreateNodeBalancerNode(ctx, 1, 2, linodego.NodeBalancerNodeCreateOptions{
 					Label:   "mock",
 					Address: "192.168.0.2:6443",
@@ -444,6 +504,27 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				}).
 				After(getAddrs).
 				Return(nil, nil)
+			getAddrs = mockLinodeClient.EXPECT().
+				GetInstanceIPAddresses(ctx, 123).
+				After(createNB).
+				Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+				}, nil)
+			mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(getAddrs).
+				Return([]linodego.InstanceConfig{{
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+					},
+					Interfaces: []linodego.InstanceConfigInterface{{
+						VPCID: ptr.To(1),
+						IPv4:  &linodego.VPCIPv4{VPC: "10.0.0.2"},
+					}},
+				}}, nil)
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
@@ -456,10 +537,20 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
-			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{{
-				Type:    clusterv1.MachineInternalIP,
-				Address: "192.168.0.2",
-			}}))
+			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
+				{
+					Type:    clusterv1.MachineExternalIP,
+					Address: "172.0.0.2",
+				},
+				{
+					Type:    clusterv1.MachineInternalIP,
+					Address: "10.0.0.2",
+				},
+				{
+					Type:    clusterv1.MachineInternalIP,
+					Address: "192.168.0.2",
+				},
+			}))
 
 			Expect(testLogs.String()).To(ContainSubstring("creating machine"))
 			Expect(testLogs.String()).To(ContainSubstring("Linode instance already exists"))

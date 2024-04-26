@@ -55,6 +55,10 @@ kubectl label cluster $CLUSTER_NAME cni=cilium --overwrite
 
 Cilium will then be automatically installed via CAAPH into the labeled cluster.
 
+#### Enabled Features
+By default, Cilium's [BGP Control Plane](https://docs.cilium.io/en/stable/network/bgp-control-plane/)
+is enabled when using Cilium as the CNI.
+
 ## CCM
 
 In order for the `InternalIP` and `ExternalIP` of the provisioned Nodes to be set correctly,

@@ -34,7 +34,10 @@ spec:
             key: kubeadm-pre-init.sh
         permissions: "0500"
     preKubeadmCommands:
-      - /kubeadm-pre-init.sh '{{ ds.meta_data.label }}' "${KUBERNETES_VERSION}"
+      - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
+      - sed -i '/swap/d' /etc/fstab
+      - swapoff -a
+      - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
     clusterConfiguration:
       etcd:
         local:
@@ -47,24 +50,16 @@ spec:
       controllerManager:
         extraArgs:
           cloud-provider: external
-    diskSetup:
-      filesystems:
-        - label: etcd_data
-          filesystem: ext4
-          device: /dev/sdc
-    mounts:
-      - - LABEL=etcd_data
-        - /var/lib/etcd_data
     initConfiguration:
+      skipPhases:
+        - addon/kube-proxy
       nodeRegistration:
         kubeletExtraArgs:
           cloud-provider: external
-          provider-id: 'linode://{{ ds.meta_data.id }}'
         name: '{{ ds.meta_data.label }}'
     joinConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
           cloud-provider: external
-          provider-id: 'linode://{{ ds.meta_data.id }}'
         name: '{{ ds.meta_data.label }}'
   version: "${KUBERNETES_VERSION}"

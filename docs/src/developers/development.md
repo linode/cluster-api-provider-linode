@@ -17,7 +17,7 @@
     - [Customizing the cluster deployment](#customizing-the-cluster-deployment)
     - [Creating the workload cluster](#creating-the-workload-cluster)
       - [Using the default flavor](#using-the-default-flavor)
-      - [Using ClusterClass (alpha)](#using-clusterclass)
+      - [Using ClusterClass (alpha)](#using-clusterclass-alpha)
     - [Cleaning up the workload cluster](#cleaning-up-the-workload-cluster)
   - [Automated Testing](#automated-testing)
     - [E2E Testing](#e2e-testing)
@@ -113,9 +113,14 @@ When adding a new controller, it is preferable that controller code only use the
 ~~~admonish note
 If you want to create RKE2 and/or K3s clusters, make sure to
 set the following env vars first:
-```
+```sh
 export INSTALL_RKE2_PROVIDER=true
 export INSTALL_K3S_PROVIDER=true
+```
+Additionally, if you want to skip the docker build step for CAPL to
+instead use the latest image on `main` from Dockerhub, set the following:
+```sh
+export SKIP_DOCKER_BUILD=true
 ```
 ~~~
 
@@ -137,7 +142,7 @@ kind delete cluster --name tilt
 
 After your kind management cluster is up and running with Tilt, you should be ready to deploy your first cluster.
 
-#### Generating the cluster templates
+#### Generating local cluster templates
 
 For local development, templates should be generated via:
 
@@ -145,10 +150,10 @@ For local development, templates should be generated via:
 make local-release
 ```
 
-This creates `infrastructure-linode/0.0.0/` with all the cluster templates:
+This creates `infrastructure-local-linode/v0.0.0/` with all the cluster templates:
 
 ```sh
-infrastructure-linode/0.0.0
+infrastructure-local-linode/v0.0.0
 ├── cluster-template-clusterclass-kubeadm.yaml
 ├── cluster-template-etcd-backup-restore.yaml
 ├── cluster-template-k3s.yaml
@@ -164,8 +169,8 @@ This can then be used with `clusterctl` by adding the following to `~/.clusterct
 
 ```
 providers:
-  - name: linode
-    url: ${HOME}/cluster-api-provider-linode/infrastructure-linode/0.0.0/infrastructure-components.yaml
+  - name: local-linode
+    url: ${HOME}/cluster-api-provider-linode/infrastructure-linode/v0.0.0/infrastructure-components.yaml
     type: InfrastructureProvider
 ```
 
@@ -176,7 +181,6 @@ Here is a list of required configuration parameters:
 ```sh
 ## Cluster settings
 export CLUSTER_NAME=capl-cluster
-export KUBERNETES_VERSION=v1.29.1
 
 ## Linode settings
 export LINODE_REGION=us-ord
@@ -190,7 +194,7 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 You can also use `clusterctl generate` to see which variables need to be set:
 
 ```
-clusterctl generate cluster $CLUSTER_NAME --infrastructure linode:0.0.0 [--flavor <flavor>] --list-variables
+clusterctl generate cluster $CLUSTER_NAME --infrastructure local-linode:v0.0.0 [--flavor <flavor>] --list-variables
 ```
 
 ~~~
@@ -205,11 +209,11 @@ you can deploy a workload cluster with the default flavor:
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --infrastructure linode:0.0.0 \
+  --infrastructure local-linode:v0.0.0 \
   | kubectl apply -f -
 ```
 
-This will provision the cluster with the CNI defaulted to [cilium](../topics/addons.md#cilium)
+This will provision the cluster within VPC with the CNI defaulted to [cilium](../topics/addons.md#cilium)
 and the [linode-ccm](../topics/addons.md#ccm) installed.
 
 ##### Using ClusterClass (alpha)
@@ -225,7 +229,7 @@ management cluster has the [ClusterTopology feature gate set](https://cluster-ap
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.29.1 \
-  --infrastructure linode:0.0.0 \
+  --infrastructure local-linode:v0.0.0 \
   --flavor clusterclass-kubeadm \
   | kubectl apply -f -
 ```
@@ -240,6 +244,9 @@ To delete the cluster, simply run:
 
 ```sh
 kubectl delete cluster $CLUSTER_NAME
+```
+```admonish warning
+VPCs are not deleted when a cluster is deleted using kubectl. One can run `kubectl delete linodevpc <vpcname>` to cleanup VPC once cluster is deleted.
 ```
 
 ```admonish question title=""

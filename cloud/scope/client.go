@@ -23,6 +23,7 @@ type LinodeInstanceClient interface {
 	CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error)
 	BootInstance(ctx context.Context, linodeID int, configID int) error
 	ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error)
+	UpdateInstanceConfig(ctx context.Context, linodeID int, configID int, opts linodego.InstanceConfigUpdateOptions) (*linodego.InstanceConfig, error)
 	GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (*linodego.InstanceDisk, error)
 	ResizeInstanceDisk(ctx context.Context, linodeID int, diskID int, size int) error
 	CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (*linodego.InstanceDisk, error)
@@ -32,7 +33,6 @@ type LinodeInstanceClient interface {
 	GetImage(ctx context.Context, imageID string) (*linodego.Image, error)
 	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
 	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
-	WaitForInstanceDiskStatus(ctx context.Context, instanceID int, diskID int, status linodego.DiskStatus, timeoutSeconds int) (*linodego.InstanceDisk, error)
 }
 
 // LinodeVPCClient defines the methods that a Linode client must have to interact with Linode's VPC service.
