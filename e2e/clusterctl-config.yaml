@@ -1,6 +1,6 @@
 providers:
    - name: linode
-     url: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/infrastructure-local-linode/v0.0.0/infrastructure-components.yaml
+     url: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/infrastructure-linode/v0.0.0/infrastructure-components.yaml
      type: InfrastructureProvider
    - name: "k3s"
      url: https://github.com/k3s-io/cluster-api-k3s/releases/latest/bootstrap-components.yaml
