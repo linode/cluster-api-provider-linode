@@ -164,7 +164,7 @@ func TestGetCredentialDataFromRef(t *testing.T) {
 			defer ctrl.Finish()
 
 			// Create an instance of the mock K8sClient
-			mockClient := mock.NewMockk8sClient(ctrl)
+			mockClient := mock.NewMockK8sClient(ctrl)
 
 			// Setup Expected behaviour
 			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testCase.args.funcBehavior)

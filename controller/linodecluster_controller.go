@@ -192,6 +192,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "NodeBalancerIDMissing", "NodeBalancer ID is missing, nothing to do")
 
 		return nil
 	}

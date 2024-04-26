@@ -141,7 +141,7 @@ docs:
 
 .PHONY: test
 test: generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock`  -coverprofile cover.out.tmp
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
 	grep -v "zz_generated.deepcopy.go" cover.out.tmp > cover.out
 	rm cover.out.tmp
 
@@ -239,7 +239,7 @@ release-manifests: $(KUSTOMIZE) $(RELEASE_DIR)
 
 .PHONY: local-release
 local-release:
-	RELEASE_DIR=infrastructure-linode/v0.0.0 $(MAKE) release
+	RELEASE_DIR=infrastructure-local-linode/v0.0.0 $(MAKE) release
 	$(MAKE) clean-release-git
 
 ## --------------------------------------
