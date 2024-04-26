@@ -9,6 +9,8 @@ metadata:
     default-cluster:
     flavors:
 spec:
+  timeouts:
+    assert: 1000s
   bindings:
     # A short identifier for the E2E test run
   - name: run
@@ -77,8 +79,13 @@ spec:
           apiVersion: cluster.x-k8s.io/v1beta1
           kind: Cluster
           name: ($cluster)
+    - delete:
+        ref:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+          kind: LinodeVPC
+          name: ($vpc)
     - error:
-        file: check-child-cluster-deleted.yaml
+        file: check-child-cluster-and-vpc-deleted.yaml
   - name: Check if the linodes are deleted
     try:
     - script:

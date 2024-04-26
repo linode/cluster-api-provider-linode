@@ -74,6 +74,9 @@ jobs:
     needs:  [go-build-test, docker-build]
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
+    env:
+      GITHUB_TOKEN: ${{ secrets.github_token }}
+      LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@v2
@@ -122,27 +125,26 @@ jobs:
       if: github.ref == 'refs/heads/main' 
       run: make e2etest
       env:
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-        LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
-        INSTALL_K3S_PROVIDER: true
-        INSTALL_RKE2_PROVIDER: true
-        LINODE_REGION: us-sea
-        LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
-        LINODE_MACHINE_TYPE: g6-standard-2
-
-    
-    - name: Quick E2E Test
-      run: make e2etest
-      env:
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-        LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
         INSTALL_K3S_PROVIDER: true
         INSTALL_RKE2_PROVIDER: true
         LINODE_REGION: us-sea
         LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
         LINODE_MACHINE_TYPE: g6-standard-2
         CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/clusterctl-config.yaml
-        E2E_SELECTOR: '--selector flavors'
+
+    
+    - name: Quick E2E Test
+      run: make e2etest
+      env:
+        # TODO: Switch selector to quick before the PR can be merged
+        E2E_FLAGS: '--selector flavors'
+        # TODO: ALL the var below need to be deleted before the PR can be merged
+        INSTALL_K3S_PROVIDER: true
+        INSTALL_RKE2_PROVIDER: true
+        LINODE_REGION: us-sea
+        LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
+        LINODE_MACHINE_TYPE: g6-standard-2
+        CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/clusterctl-config.yaml
 
     - name: Copy logs
       if: ${{ always() }}
