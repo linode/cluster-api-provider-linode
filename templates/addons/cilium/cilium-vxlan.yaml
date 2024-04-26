@@ -1,13 +1,13 @@
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
-  name: cilium-ipv6
+  name: cilium-vxlan
 spec:
   clusterSelector:
     matchExpressions:
-      - {key: ipv6, operator: In, values: ['true']}
+      - {key: vxlan, operator: In, values: ['true']}
       - {key: cni, operator: In, values: ['cilium']}
-      - {key: vxlan, operator: DoesNotExist}
+      - {key: ipv6, operator: DoesNotExist}
   repoURL: https://helm.cilium.io/
   chartName: cilium
   namespace: kube-system
@@ -18,8 +18,6 @@ spec:
     timeout: 5m
   valuesTemplate: |
     bgpControlPlane:
-      enabled: true
-    ipv6:
       enabled: true
     ipam:
       mode: kubernetes
