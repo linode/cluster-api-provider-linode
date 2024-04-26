@@ -27,7 +27,7 @@
     ```bash
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1+k3s2 \
-        --infrastructure akamai-linode \
+        --infrastructure linode-linode \
         --flavor k3s > test-k3s-cluster.yaml
     ```
 2. Apply cluster yaml

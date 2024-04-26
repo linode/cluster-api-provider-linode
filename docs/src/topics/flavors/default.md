@@ -10,7 +10,7 @@
     ```bash
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1 \
-        --infrastructure akamai-linode > test-cluster.yaml
+        --infrastructure linode-linode > test-cluster.yaml
     ```
 2. Apply cluster yaml
     ```bash

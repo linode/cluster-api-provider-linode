@@ -33,7 +33,7 @@ Autoscaler](https://www.github.com/kubernetes/autoscaler/tree/master/cluster-aut
     ```sh
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1 \
-        --infrastructure akamai-linode \
+        --infrastructure linode-linode \
         --flavor cluster-autoscaler > test-cluster.yaml
     ```
 

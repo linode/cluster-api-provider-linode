@@ -239,7 +239,7 @@ release-manifests: $(KUSTOMIZE) $(RELEASE_DIR)
 
 .PHONY: local-release
 local-release:
-	RELEASE_DIR=infrastructure-linode/v0.0.0 $(MAKE) release
+	RELEASE_DIR=infrastructure-local-linode/v0.0.0 $(MAKE) release
 	$(MAKE) clean-release-git
 
 ## --------------------------------------

@@ -32,12 +32,15 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 For Regions and Images that do not yet support Akamai's cloud-init datasource CAPL will automatically use a stackscript shim
 to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
 ```
+```admonish warning
+By default, clusters are provisioned within VPC. For Regions which do not have [VPC support](https://www.linode.com/docs/products/networking/vpc/#availability) yet, use the VPCLess[TODO] flavor to have clusters provisioned.
+```
 
 ## Register linode as an infrastructure provider
 1. Add `linode` as an infrastructure provider in `~/.cluster-api/clusterctl.yaml`
     ```yaml
     providers:
-       - name: akamai-linode
+       - name: linode-linode
          url: https://github.com/linode/cluster-api-provider-linode/releases/latest/infrastructure-components.yaml
          type: InfrastructureProvider
     ```
@@ -45,7 +48,7 @@ to provision the node. If you are using a custom image ensure the [cloud_init](h
 ## Install CAPL on your management cluster
 Install CAPL and enable the helm addon provider which is used by the majority of the CAPL flavors
 ```bash
-clusterctl init --infrastructure akamai-linode --addon helm
+clusterctl init --infrastructure linode-linode --addon helm
 ```
 
 ## Deploying your first cluster
