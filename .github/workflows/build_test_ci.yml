@@ -190,6 +190,7 @@ jobs:
         LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
         LINODE_MACHINE_TYPE: g6-standard-2
         CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/clusterctl-config.yaml
+        E2E_SELECTOR: '--selector k3s'
 
     - name: Copy logs
       if: ${{ always() }}
