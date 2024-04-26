@@ -9,8 +9,6 @@ metadata:
     rke2:
     flavors:
 spec:
-  timeouts:
-    assert: 300s
   bindings:
     # A short identifier for the E2E test run
   - name: run
