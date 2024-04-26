@@ -165,9 +165,6 @@ jobs:
       with:
         key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
 
-    - name: Test Docker pull
-      run: docker pull ghcr.io/cluster-api-provider-k3s/cluster-api-k3s/bootstrap-controller:v0.1.9
-
     - name: Complete E2E Test
       if: github.ref == 'refs/heads/main' 
       run: make e2etest
