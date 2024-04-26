@@ -2,6 +2,8 @@ module github.com/linode/cluster-api-provider-linode
 
 go 1.22
 
+toolchain go1.22.2
+
 require (
 	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.6.0
