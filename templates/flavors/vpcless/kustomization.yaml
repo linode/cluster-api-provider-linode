@@ -36,9 +36,5 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}
         labels:
-            cni: cilium
             vxlan: "true"
-            ccm: linode
             vpcless: "true"
-            csi: linode
-            crs: ${CLUSTER_NAME}-crs
