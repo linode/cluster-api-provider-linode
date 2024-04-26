@@ -86,7 +86,7 @@ func TestSetUserData(t *testing.T) {
 		createConfig  *linodego.InstanceCreateOptions
 		wantConfig    *linodego.InstanceCreateOptions
 		expectedError error
-		expects       func(client *mock.MockLinodeMachineClient, kClient *mock.Mockk8sClient)
+		expects       func(client *mock.MockLinodeMachineClient, kClient *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - SetUserData metadata",
@@ -110,7 +110,7 @@ func TestSetUserData(t *testing.T) {
 			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
 				UserData: b64.StdEncoding.EncodeToString([]byte("test-data")),
 			}},
-			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.Mockk8sClient) {
+			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -151,7 +151,7 @@ func TestSetUserData(t *testing.T) {
 				"instancedata": b64.StdEncoding.EncodeToString([]byte("label: test-cluster\nregion: us-east\ntype: g6-standard-1")),
 				"userdata":     b64.StdEncoding.EncodeToString([]byte("test-data")),
 			}},
-			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.Mockk8sClient) {
+			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -191,7 +191,7 @@ func TestSetUserData(t *testing.T) {
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.Mockk8sClient) {
+			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -225,7 +225,7 @@ func TestSetUserData(t *testing.T) {
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(c *mock.MockLinodeMachineClient, k *mock.Mockk8sClient) {
+			expects: func(c *mock.MockLinodeMachineClient, k *mock.MockK8sClient) {
 			},
 			expectedError: fmt.Errorf("bootstrap data secret is nil for LinodeMachine default/test-cluster"),
 		},
@@ -249,7 +249,7 @@ func TestSetUserData(t *testing.T) {
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.Mockk8sClient) {
+			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -283,7 +283,7 @@ func TestSetUserData(t *testing.T) {
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.Mockk8sClient) {
+			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -323,7 +323,7 @@ func TestSetUserData(t *testing.T) {
 				"instancedata": b64.StdEncoding.EncodeToString([]byte("label: test-cluster\nregion: us-east\ntype: g6-standard-1")),
 				"userdata":     b64.StdEncoding.EncodeToString([]byte("test-data")),
 			}},
-			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.Mockk8sClient) {
+			expects: func(mockClient *mock.MockLinodeMachineClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -351,7 +351,7 @@ func TestSetUserData(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockClient := mock.NewMockLinodeMachineClient(ctrl)
-			mockK8sClient := mock.NewMockk8sClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
 			testcase.machineScope.LinodeClient = mockClient
 			testcase.machineScope.Client = mockK8sClient
 			testcase.expects(mockClient, mockK8sClient)
