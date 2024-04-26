@@ -36,7 +36,7 @@ spec:
           set -e
           clusterctl generate cluster $CLUSTER -n $NAMESPACE \
           --kubernetes-version v1.29.1 \
-          --infrastructure linode:v0.0.0 \
+          --infrastructure local-linode:v0.0.0 \
           --control-plane-machine-count 1 --worker-machine-count 1 \
           --config $CLUSTERCTL_CONFIG > default-cluster.yaml
         check:
