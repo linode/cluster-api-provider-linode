@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
     - cilium.yaml
     - cilium-ipv6.yaml
+    - cilium-vxlan.yaml

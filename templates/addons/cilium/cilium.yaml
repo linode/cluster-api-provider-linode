@@ -6,6 +6,7 @@ spec:
   clusterSelector:
     matchExpressions:
       - {key: ipv6, operator: DoesNotExist}
+      - {key: vxlan, operator: DoesNotExist}
       - {key: cni, operator: In, values: ['cilium']}
   repoURL: https://helm.cilium.io/
   chartName: cilium
