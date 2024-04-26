@@ -4,9 +4,10 @@ metadata:
   name: cilium-vxlan
 spec:
   clusterSelector:
-    matchLabels:
-      cni: cilium
-      vxlan: "true"
+    matchExpressions:
+      - {key: vxlan, operator: In, values: ['true']}
+      - {key: cni, operator: In, values: ['cilium']}
+      - {key: ipv6, operator: DoesNotExist}
   repoURL: https://helm.cilium.io/
   chartName: cilium
   namespace: kube-system
