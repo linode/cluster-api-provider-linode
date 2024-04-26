@@ -15,7 +15,7 @@ import (
 )
 
 type MachineScopeParams struct {
-	Client        k8sClient
+	Client        K8sClient
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
 	LinodeCluster *infrav1alpha1.LinodeCluster
@@ -23,7 +23,7 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client        k8sClient
+	Client        K8sClient
 	PatchHelper   *patch.Helper
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
@@ -34,7 +34,7 @@ type MachineScope struct {
 
 func validateMachineScopeParams(params MachineScopeParams) error {
 	if params.Cluster == nil {
-		return errors.New("custer is required when creating a MachineScope")
+		return errors.New("cluster is required when creating a MachineScope")
 	}
 	if params.Machine == nil {
 		return errors.New("machine is required when creating a MachineScope")
@@ -77,7 +77,7 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 	if credentialRef != nil {
 		data, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace)
 		if err != nil {
-			return nil, fmt.Errorf("credentials from cluster secret ref: %w", err)
+			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
 		apiKey = string(data)
 	}
