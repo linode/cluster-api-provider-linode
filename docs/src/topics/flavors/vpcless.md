@@ -19,7 +19,7 @@ supported in this flavor and it uses VXLAN for pod to pod communication.
 1. Generate cluster yaml
     ```bash
     clusterctl generate cluster test-cluster \
-        --infrastructure linode:0.0.0 \
+        --infrastructure linode-linode \
         --flavor vpcless > test-cluster.yaml
     ```
 2. Apply cluster yaml
