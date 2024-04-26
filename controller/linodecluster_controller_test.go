@@ -64,10 +64,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		},
 	}
 
-	ctlrSuite := NewControllerTestSuite(GinkgoT(), mock.MockLinodeNodeBalancerClient{})
-	reconciler := LinodeClusterReconciler{
-		Recorder: ctlrSuite.Recorder(),
-	}
+	ctlrSuite := NewControllerSuite(GinkgoT(), mock.MockLinodeNodeBalancerClient{})
+	reconciler := LinodeClusterReconciler{}
 
 	cScope := &scope.ClusterScope{
 		LinodeCluster: &linodeCluster,
@@ -78,7 +76,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		Expect(k8sClient.Create(ctx, &linodeCluster)).To(Succeed())
 	})
 
-	BeforeEach(func(ctx SpecContext) {
+	ctlrSuite.BeforeEach(func(ctx context.Context, m Mock) {
+		reconciler.Recorder = m.Recorder()
 		clusterKey := client.ObjectKey{Name: "cluster-lifecycle", Namespace: "default"}
 		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 
@@ -89,25 +88,27 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		cScope.PatchHelper = patchHelper
 	})
 
-	ctlrSuite.Run(Paths(
-		Either(
-			Call("cluster is created", func(ctx context.Context, m Mock) {
-				cScope.LinodeClient = m.NodeBalancerClient
-				getNB := m.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-				m.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-					After(getNB).
-					Return(&linodego.NodeBalancer{
-						ID:   nodebalancerID,
-						IPv4: &controlPlaneEndpointHost,
+	ctlrSuite.Run(
+		OneOf(
+			Path(
+				Call("cluster is created", func(ctx context.Context, m Mock) {
+					cScope.LinodeClient = m.NodeBalancerClient
+					getNB := m.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
+					m.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(&linodego.NodeBalancer{
+							ID:   nodebalancerID,
+							IPv4: &controlPlaneEndpointHost,
+						}, nil)
+					m.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).After(getNB).Return(&linodego.NodeBalancerConfig{
+						Port:           controlPlaneEndpointPort,
+						Protocol:       linodego.ProtocolTCP,
+						Algorithm:      linodego.AlgorithmRoundRobin,
+						Check:          linodego.CheckConnection,
+						NodeBalancerID: nodebalancerID,
 					}, nil)
-				m.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).After(getNB).Return(&linodego.NodeBalancerConfig{
-					Port:           controlPlaneEndpointPort,
-					Protocol:       linodego.ProtocolTCP,
-					Algorithm:      linodego.AlgorithmRoundRobin,
-					Check:          linodego.CheckConnection,
-					NodeBalancerID: nodebalancerID,
-				}, nil)
-			}),
+				}),
+			),
 			Path(
 				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, m Mock) {
 					cScope.LinodeClient = m.NodeBalancerClient
@@ -185,7 +186,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
 			Expect(linodeCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(controlPlaneEndpointPort)))
 		}),
-	))
+	)
 })
 
 var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), func() {
@@ -215,26 +216,30 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 		},
 	}
 
-	ctlrSuite := NewControllerTestSuite(
+	ctlrSuite := NewControllerSuite(
 		GinkgoT(),
 		mock.MockLinodeNodeBalancerClient{},
 		mock.MockK8sClient{},
 	)
-	reconciler := LinodeClusterReconciler{
-		Recorder: ctlrSuite.Recorder(),
-	}
+	reconciler := LinodeClusterReconciler{}
 
 	cScope := &scope.ClusterScope{
 		LinodeCluster: &linodeCluster,
 	}
 
-	ctlrSuite.Run(Paths(
-		Either(
-			Call("cluster is deleted", func(ctx context.Context, m Mock) {
-				cScope.LinodeClient = m.NodeBalancerClient
-				cScope.Client = m.K8sClient
-				m.NodeBalancerClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil)
-			}),
+	ctlrSuite.BeforeEach(func(ctx context.Context, m Mock) {
+		reconciler.Recorder = m.Recorder()
+	})
+
+	ctlrSuite.Run(
+		OneOf(
+			Path(
+				Call("cluster is deleted", func(ctx context.Context, m Mock) {
+					cScope.LinodeClient = m.NodeBalancerClient
+					cScope.Client = m.K8sClient
+					m.NodeBalancerClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil)
+				}),
+			),
 			Path(
 				Call("nothing to do because NB ID is nil", func(ctx context.Context, m Mock) {
 					cScope.Client = m.K8sClient
@@ -245,7 +250,7 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 					reconciler.Client = m.K8sClient
 					err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(ctlrSuite.Events()).To(ContainSubstring("Warning NodeBalancerIDMissing NodeBalancer ID is missing, nothing to do"))
+					Expect(m.Events()).To(ContainSubstring("Warning NodeBalancerIDMissing NodeBalancer ID is missing, nothing to do"))
 				}),
 			),
 			Path(
@@ -268,5 +273,5 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 			err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
 			Expect(err).NotTo(HaveOccurred())
 		}),
-	))
+	)
 })
