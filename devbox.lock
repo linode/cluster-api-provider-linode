@@ -2,22 +2,50 @@
   "lockfile_version": "1",
   "packages": {
     "clusterctl@latest": {
-      "last_modified": "2024-02-26T19:46:43Z",
-      "resolved": "github:NixOS/nixpkgs/548a86b335d7ecd8b57ec617781f5e652ab0c38e#clusterctl",
+      "last_modified": "2024-04-19T17:36:04-04:00",
+      "resolved": "github:NixOS/nixpkgs/92d295f588631b0db2da509f381b4fb1e74173c5#clusterctl",
       "source": "devbox-search",
-      "version": "1.6.1",
+      "version": "1.6.3",
       "systems": {
         "aarch64-darwin": {
-          "store_path": "/nix/store/dsnxs9cvgk0nxypa1gxwi6v2csr9z9kr-clusterctl-1.6.1"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/4svy759va00a6kscpmkqfrm2ingyj0xk-clusterctl-1.6.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/4svy759va00a6kscpmkqfrm2ingyj0xk-clusterctl-1.6.3"
         },
         "aarch64-linux": {
-          "store_path": "/nix/store/4192536b0006xzdypinzssf9fyvinzaj-clusterctl-1.6.1"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ilf6p08q54gq4wfraaw4zg8073hwhiqc-clusterctl-1.6.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ilf6p08q54gq4wfraaw4zg8073hwhiqc-clusterctl-1.6.3"
         },
         "x86_64-darwin": {
-          "store_path": "/nix/store/z9lz8vsdnl2q313a6qdcmj86x4dswa7j-clusterctl-1.6.1"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/83iii2qdjjf5isnlfrgzds1g5aklpazi-clusterctl-1.6.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/83iii2qdjjf5isnlfrgzds1g5aklpazi-clusterctl-1.6.3"
         },
         "x86_64-linux": {
-          "store_path": "/nix/store/n4h0n7w151kg5dln7zq48q8sxlmmyg65-clusterctl-1.6.1"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/iiyl7gnclgvbdkj3lp04nhsxzn41ddih-clusterctl-1.6.3",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/iiyl7gnclgvbdkj3lp04nhsxzn41ddih-clusterctl-1.6.3"
         }
       }
     },
@@ -62,42 +90,98 @@
       }
     },
     "go-tools@latest": {
-      "last_modified": "2024-02-26T19:46:43Z",
-      "resolved": "github:NixOS/nixpkgs/548a86b335d7ecd8b57ec617781f5e652ab0c38e#go-tools",
+      "last_modified": "2024-04-19T17:36:04-04:00",
+      "resolved": "github:NixOS/nixpkgs/92d295f588631b0db2da509f381b4fb1e74173c5#go-tools",
       "source": "devbox-search",
       "version": "2023.1.7",
       "systems": {
         "aarch64-darwin": {
-          "store_path": "/nix/store/rl80in8hbi1rhz9ih6shyy8faxk0mmz8-go-tools-2023.1.7"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/6bb5paky7pafanxpd6lbhffh2qyyzxmc-go-tools-2023.1.7",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/6bb5paky7pafanxpd6lbhffh2qyyzxmc-go-tools-2023.1.7"
         },
         "aarch64-linux": {
-          "store_path": "/nix/store/82cwimrkpyjhqx7wfnilr46a2nlqjana-go-tools-2023.1.7"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/r9gmxbndra1gl4j28x5zm7qsclgd9n16-go-tools-2023.1.7",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/r9gmxbndra1gl4j28x5zm7qsclgd9n16-go-tools-2023.1.7"
         },
         "x86_64-darwin": {
-          "store_path": "/nix/store/z7y51ka323njb7xjza1lkj75bs8v2prx-go-tools-2023.1.7"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/6q557hjsncsg47ayg31jd5y4hl7mvvfq-go-tools-2023.1.7",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/6q557hjsncsg47ayg31jd5y4hl7mvvfq-go-tools-2023.1.7"
         },
         "x86_64-linux": {
-          "store_path": "/nix/store/49qp9pm1nm6vq4jhcxagary4xfwa7hkb-go-tools-2023.1.7"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/iq1fn88b3phza87vdgwp5bja00l853ib-go-tools-2023.1.7",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/iq1fn88b3phza87vdgwp5bja00l853ib-go-tools-2023.1.7"
         }
       }
     },
     "go@1.22": {
-      "last_modified": "2024-02-26T19:46:43Z",
-      "resolved": "github:NixOS/nixpkgs/548a86b335d7ecd8b57ec617781f5e652ab0c38e#go_1_22",
+      "last_modified": "2024-04-19T17:36:04-04:00",
+      "resolved": "github:NixOS/nixpkgs/92d295f588631b0db2da509f381b4fb1e74173c5#go",
       "source": "devbox-search",
-      "version": "1.22.0",
+      "version": "1.22.2",
       "systems": {
         "aarch64-darwin": {
-          "store_path": "/nix/store/sbg2nmns0b8invf6ws8yid0gdak18w4d-go-1.22.0"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/x7gzwywk7mvjamdyc4n45fh62jks7lma-go-1.22.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/x7gzwywk7mvjamdyc4n45fh62jks7lma-go-1.22.2"
         },
         "aarch64-linux": {
-          "store_path": "/nix/store/48bhxp3lncnmss2i3f44k3r7wgcm0ijk-go-1.22.0"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ka1iykac1bfvy98p9g2ii3xn2fnl98cn-go-1.22.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ka1iykac1bfvy98p9g2ii3xn2fnl98cn-go-1.22.2"
         },
         "x86_64-darwin": {
-          "store_path": "/nix/store/3xay4cky9vhc2ir4prv53n5gbgal0nlj-go-1.22.0"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/s26vypls3i2rvprj2jq7l1ypb5y12mq9-go-1.22.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/s26vypls3i2rvprj2jq7l1ypb5y12mq9-go-1.22.2"
         },
         "x86_64-linux": {
-          "store_path": "/nix/store/8yw3g52r95h7cv09lcrran92n212997b-go-1.22.0"
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/9kriq85qac7phcxgpdqbqr25vlr61ifw-go-1.22.2",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/9kriq85qac7phcxgpdqbqr25vlr61ifw-go-1.22.2"
         }
       }
     },

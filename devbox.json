@@ -22,9 +22,7 @@
     "kubectl@latest"
   ],
   "shell": {
-    "init_hook": [
-      "export \"GOROOT=$(go env GOROOT)\""
-    ],
+    "init_hook": [],
     "scripts": {}
   }
 }
