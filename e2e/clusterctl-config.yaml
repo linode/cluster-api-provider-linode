@@ -1,5 +1,5 @@
 providers:
-   - name: linode
+   - name: local-linode
      url: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/infrastructure-local-linode/v0.0.0/infrastructure-components.yaml
      type: InfrastructureProvider
    - name: "k3s"
