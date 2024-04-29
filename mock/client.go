@@ -368,6 +368,21 @@ func (mr *MockLinodeClientMockRecorder) GetRegion(ctx, regionID any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockLinodeClient)(nil).GetRegion), ctx, regionID)
 }
 
+// GetType mocks base method.
+func (m *MockLinodeClient) GetType(ctx context.Context, typeID string) (*linodego.LinodeType, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetType", ctx, typeID)
+	ret0, _ := ret[0].(*linodego.LinodeType)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetType indicates an expected call of GetType.
+func (mr *MockLinodeClientMockRecorder) GetType(ctx, typeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetType", reflect.TypeOf((*MockLinodeClient)(nil).GetType), ctx, typeID)
+}
+
 // GetVPC mocks base method.
 func (m *MockLinodeClient) GetVPC(ctx context.Context, vpcID int) (*linodego.VPC, error) {
 	m.ctrl.T.Helper()
@@ -656,6 +671,21 @@ func (m *MockLinodeInstanceClient) GetRegion(ctx context.Context, regionID strin
 func (mr *MockLinodeInstanceClientMockRecorder) GetRegion(ctx, regionID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegion", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetRegion), ctx, regionID)
+}
+
+// GetType mocks base method.
+func (m *MockLinodeInstanceClient) GetType(ctx context.Context, typeID string) (*linodego.LinodeType, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetType", ctx, typeID)
+	ret0, _ := ret[0].(*linodego.LinodeType)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetType indicates an expected call of GetType.
+func (mr *MockLinodeInstanceClientMockRecorder) GetType(ctx, typeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetType", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetType), ctx, typeID)
 }
 
 // ListInstanceConfigs mocks base method.
