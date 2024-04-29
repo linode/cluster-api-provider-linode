@@ -292,7 +292,7 @@ $(LOCALBIN):
 ##@ Tooling Binaries:
 # setup-envtest does not have devbox support so always use CACHE_BIN
 
-KUBECTL        ?= kubectl
+KUBECTL        ?= $(LOCALBIN)/kubectl
 KUSTOMIZE      ?= $(LOCALBIN)/kustomize
 CTLPTL         ?= $(LOCALBIN)/ctlptl
 CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
