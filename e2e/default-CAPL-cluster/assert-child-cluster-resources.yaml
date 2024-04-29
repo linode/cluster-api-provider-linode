@@ -50,39 +50,6 @@ kind: HelmReleaseProxy
 metadata:
   labels:
     cluster.x-k8s.io/cluster-name: ($cluster)
-    helmreleaseproxy.addons.cluster.x-k8s.io/helmchartproxy-name: linode-cloud-controller-manager
-status:
-  conditions:
-  - type: Ready
-    status: "True"
-  - type: ClusterAvailable
-    status: "True"
-  - type: HelmReleaseReady
-    status: "True"
-  status: deployed
----
-apiVersion: addons.cluster.x-k8s.io/v1alpha1
-kind: HelmReleaseProxy
-metadata:
-  labels:
-    cluster.x-k8s.io/cluster-name: ($cluster)
-    helmreleaseproxy.addons.cluster.x-k8s.io/helmchartproxy-name: cilium
-status:
-  conditions:
-  - type: Ready
-    status: "True"
-  - type: ClusterAvailable
-    status: "True"
-  - type: HelmReleaseReady
-    status: "True"
-  status: deployed
----
-apiVersion: addons.cluster.x-k8s.io/v1alpha1
-kind: HelmReleaseProxy
-metadata:
-  labels:
-    cluster.x-k8s.io/cluster-name: ($cluster)
-    helmreleaseproxy.addons.cluster.x-k8s.io/helmchartproxy-name: csi-driver-linode
 status:
   conditions:
   - type: Ready

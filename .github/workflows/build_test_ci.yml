@@ -82,7 +82,7 @@ jobs:
       uses: step-security/harden-runner@v2
       with:
         disable-sudo: true
-        egress-policy: audit
+        egress-policy: block
         allowed-endpoints: >
           api.linode.com:443
           api.github.com:443
@@ -107,6 +107,8 @@ jobs:
           cloud.tilt.dev:443
           kubernetes-sigs.github.io:443
           charts.jetstack.io:443
+          helm.cilium.io:443
+          linode.github.io:443
 
     - uses: actions/checkout@v4
 
