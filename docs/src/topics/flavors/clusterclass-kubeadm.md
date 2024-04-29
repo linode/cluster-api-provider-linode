@@ -30,8 +30,8 @@
       kind: Cluster
       metadata:
         labels:
-          ccm: linode
-          cni: cilium
+          ccm: test-cluster-2-linode
+          cni: test-cluster-2-cilium
           crs: test-cluster-2-crs
         name: test-cluster-2
         namespace: default

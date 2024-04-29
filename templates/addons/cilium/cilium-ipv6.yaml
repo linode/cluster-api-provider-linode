@@ -1,12 +1,12 @@
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
-  name: cilium-ipv6
+  name: ${CLUSTER_NAME}-cilium-ipv6
 spec:
   clusterSelector:
     matchExpressions:
       - {key: ipv6, operator: In, values: ['true']}
-      - {key: cni, operator: In, values: ['cilium']}
+      - {key: cni, operator: In, values: ["${CLUSTER_NAME}-cilium"]}
       - {key: vxlan, operator: DoesNotExist}
   repoURL: https://helm.cilium.io/
   chartName: cilium

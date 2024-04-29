@@ -3,8 +3,8 @@ kind: Cluster
 metadata:
   name: ${CLUSTER_NAME}
   labels:
-    cni: cilium
-    ccm: linode
+    cni: ${CLUSTER_NAME}-cilium
+    ccm: ${CLUSTER_NAME}-linode
     crs: ${CLUSTER_NAME}-crs
 spec:
   clusterNetwork:
