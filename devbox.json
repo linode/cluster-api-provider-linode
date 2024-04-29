@@ -19,7 +19,8 @@
     "mockgen@latest",
     "kyverno-chainsaw@latest",
     "kubernetes-helm@latest",
-    "kubectl@latest"
+    "kubectl@latest",
+    "kubebuilder@latest"
   ],
   "shell": {
     "init_hook": [

@@ -296,6 +296,7 @@ KUBECTL        ?= $(LOCALBIN)/kubectl
 KUSTOMIZE      ?= $(LOCALBIN)/kustomize
 CTLPTL         ?= $(LOCALBIN)/ctlptl
 CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
+KUBEBUILDER    ?= $(LOCALBIN)/kubebuilder
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 TILT           ?= $(LOCALBIN)/tilt
 KIND           ?= $(LOCALBIN)/kind
@@ -310,6 +311,7 @@ MOCKGEN        ?= $(LOCALBIN)/mockgen
 KUSTOMIZE_VERSION        ?= v5.1.1
 CTLPTL_VERSION           ?= v0.8.25
 CLUSTERCTL_VERSION       ?= v1.5.3
+KUBEBUILDER_VERSION      ?= v3.14.1
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 TILT_VERSION             ?= 0.33.6
 KIND_VERSION             ?= 0.20.0
@@ -338,6 +340,12 @@ clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary.
 $(CLUSTERCTL): $(LOCALBIN)
 	curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(OS)-$(ARCH_SHORT) -o $(CLUSTERCTL)
 	chmod +x $(CLUSTERCTL)
+
+.PHONY: kubebuilder
+kubebuilder: $(KUBEBUILDER) ## Download kubebuilder locally if necessary.
+$(KUBEBUILDER): $(LOCALBIN)
+	curl -L -o $(LOCALBIN)/kubebuilder https://github.com/kubernetes-sigs/kubebuilder/releases/download/$(KUBEBUILDER_VERSION)/kubebuilder_$(OS)_$(ARCH_SHORT)
+	chmod +x $(LOCALBIN)/kubebuilder
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
