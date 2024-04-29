@@ -29,7 +29,7 @@ Otherwise, [ensure that the linode-ccm is installed on your workload cluster via
 Make sure [a CNI is installed on the workload cluster](../topics/addons.md#cni)
 and that all the pods on the workload cluster are in running state. 
 
-If the Cluster is labeled with `cni: cilium`, check that the cilium `HelmChartProxy` is installed in
+If the Cluster is labeled with `cni: <cluster-name>-cilium`, check that the \<cluster-name\>-cilium `HelmChartProxy` is installed in
 the management cluster and that the `HelmChartProxy` is in a `Ready` state:
 
 ```bash

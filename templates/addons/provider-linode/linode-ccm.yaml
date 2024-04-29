@@ -1,12 +1,12 @@
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmChartProxy
 metadata:
-  name: linode-cloud-controller-manager
+  name: ${CLUSTER_NAME}-linode-cloud-controller-manager
 spec:
   clusterSelector:
     matchExpressions:
       - {key: vpcless, operator: DoesNotExist}
-      - {key: ccm, operator: In, values: ['linode']}
+      - {key: ccm, operator: In, values: ["${CLUSTER_NAME}-linode"]}
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
   chartName: ccm-linode
   namespace: kube-system

@@ -28,9 +28,9 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}
         labels:
-            cni: cilium
-            ccm: linode
-            csi: linode
+            cni: ${CLUSTER_NAME}-cilium
+            ccm: ${CLUSTER_NAME}-linode
+            csi: ${CLUSTER_NAME}-linode
             crs: ${CLUSTER_NAME}-crs
   - target:
       group: cluster.x-k8s.io
