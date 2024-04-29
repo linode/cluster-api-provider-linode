@@ -25,7 +25,7 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}
         labels:
-            cni: cilium
+            cni: ${CLUSTER_NAME}-cilium
   - target:
       group: cluster.x-k8s.io
       version: v1beta1

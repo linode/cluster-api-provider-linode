@@ -46,11 +46,11 @@ In order for pod networking to work properly, a Container Network Interface (CNI
 Installed by default
 ```
 
-To install [Cilium](https://cilium.io/) on a self-managed cluster, simply apply the `cni: cilium`
+To install [Cilium](https://cilium.io/) on a self-managed cluster, simply apply the `cni: <cluster-name>-cilium`
 label on the `Cluster` resource if not already present.
 
 ```bash
-kubectl label cluster $CLUSTER_NAME cni=cilium --overwrite
+kubectl label cluster $CLUSTER_NAME cni=$CLUSTER_NAME-cilium --overwrite
 ```
 
 Cilium will then be automatically installed via CAAPH into the labeled cluster.
@@ -71,11 +71,11 @@ Installed by default
 ```
 
 To install the [linode-cloud-controller-manager (linode-ccm)](https://github.com/linode/linode-cloud-controller-manager)
-on a self-managed cluster, simply apply the `ccm: linode`
+on a self-managed cluster, simply apply the `ccm: <cluster-name>-linode`
 label on the `Cluster` resource if not already present.
 
 ```bash
-kubectl label cluster $CLUSTER_NAME ccm=linode --overwrite
+kubectl label cluster $CLUSTER_NAME ccm=$CLUSTER_NAME-linode --overwrite
 ```
 
 The linode-ccm will then be automatically installed via CAAPH into the labeled cluster.
@@ -91,11 +91,11 @@ Installed by default
 ```
 
 To install the [csi-driver-linode](https://github.com/linode/linode-blockstorage-csi-driver)
-on a self-managed cluster, simply apply the `csi: linode`
+on a self-managed cluster, simply apply the `csi: <cluster-name>-linode`
 label on the `Cluster` resource if not already present.
 
 ```bash
-kubectl label cluster $CLUSTER_NAME csi=linode --overwrite
+kubectl label cluster $CLUSTER_NAME csi=$CLUSTER_NAME-linode --overwrite
 ```
 
 The csi-driver-linode will then be automatically installed via CAAPH into the labeled cluster.
