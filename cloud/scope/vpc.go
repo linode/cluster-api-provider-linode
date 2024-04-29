@@ -30,7 +30,7 @@ import (
 
 // VPCScope defines the basic context for an actuator to operate upon.
 type VPCScope struct {
-	client k8sClient
+	client K8sClient
 
 	PatchHelper  *patch.Helper
 	LinodeClient *linodego.Client
@@ -39,7 +39,7 @@ type VPCScope struct {
 
 // VPCScopeParams defines the input parameters used to create a new Scope.
 type VPCScopeParams struct {
-	Client    k8sClient
+	Client    K8sClient
 	LinodeVPC *infrav1alpha1.LinodeVPC
 }
 

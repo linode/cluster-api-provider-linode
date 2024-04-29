@@ -33,7 +33,7 @@ For Regions and Images that do not yet support Akamai's cloud-init datasource CA
 to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
 ```
 ```admonish warning
-By default, clusters are provisioned within VPC. For Regions which do not have [VPC support](https://www.linode.com/docs/products/networking/vpc/#availability) yet, use the VPCLess[TODO] flavor to have clusters provisioned.
+By default, clusters are provisioned within VPC. For Regions which do not have [VPC support](https://www.linode.com/docs/products/networking/vpc/#availability) yet, use the [VPCLess](./flavors/vpcless.md) flavor to have clusters provisioned.
 ```
 
 ## Register linode as an infrastructure provider

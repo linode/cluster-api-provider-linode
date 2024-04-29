@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../default
+
+patches:
+  - target:
+      kind: LinodeVPC
+    patch: |-
+      $patch: delete
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeVPC
+      metadata:
+        name: ${VPC_NAME:=${CLUSTER_NAME}}
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha1
+      kind: LinodeCluster
+    patch: |-
+      - op: remove
+        path: /spec/vpcRef
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KubeadmControlPlane
+    patch: |-
+      - op: remove
+        path: /spec/kubeadmConfigSpec/initConfiguration/skipPhases
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+            vxlan: "true"
+            vpcless: "true"
