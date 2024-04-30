@@ -12,79 +12,90 @@ metadata:
 spec:
   bindings:
     # A short identifier for the E2E test run
-  - name: run
-    value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
-  - name: cluster
-    # Format the cluster name
-    value: (trim((truncate(($run), `32`)), '-'))
+    - name: run
+      value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
+    - name: cluster
+      # Format the cluster name
+      value: (trim((truncate(($run), `32`)), '-'))
   template: true
   steps:
-  - name: Check if CAPI provider resources exist
-    try:
-    - assert:
-        file: assert-capi-resources.yaml
-  - name: Create Cluster resource
-    try:
-    - apply:
-        file: create-cluster.yaml
-  - name: Create LinodeMachine resource
-    try:
-    - apply:
-        file: create-linodemachine.yaml
-    - assert:
-        file: assert-linodemachine.yaml
-  - name: Check if the Linodes were created
-    try:
-    - script:
-        env:
-        - name: TARGET_API
-          value: api.linode.com
-        - name: TARGET_API_VERSION
-          value: v4beta
-        - name: URI
-          value: linode/instances
-        - name: FILTER
-          value: (to_string({"tags":($cluster)}))
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "X-Filter: $FILTER" \
-            -H "Content-Type: application/json" \
-            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            results: 1
-  - name: Delete Cluster resource
-    try:
-    - delete:
-        ref:
-          apiVersion: cluster.x-k8s.io/v1beta1
-          kind: Cluster
-          name: ($cluster)
-    - error:
-        file: check-linodemachine-deletion.yaml
-  - name: Check if the Linodes were deleted
-    try:
-    - script:
-        env:
-        - name: TARGET_API
-          value: api.linode.com
-        - name: TARGET_API_VERSION
-          value: v4beta
-        - name: URI
-          value: linode/instances
-        - name: FILTER
-          value: (to_string({"tags":($cluster)}))
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "X-Filter: $FILTER" \
-            -H "Content-Type: application/json" \
-            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            results: 0
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create Cluster resource
+      try:
+        - apply:
+            file: create-cluster.yaml
+      catch:
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Cluster
+    - name: Create LinodeMachine resource
+      try:
+        - apply:
+            file: create-linodemachine.yaml
+        - assert:
+            file: assert-linodemachine.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+        - describe:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlane
+    - name: Check if the Linodes were created
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 1
+    - name: Delete Cluster resource
+      try:
+        - delete:
+            ref:
+              apiVersion: cluster.x-k8s.io/v1beta1
+              kind: Cluster
+              name: ($cluster)
+        - error:
+            file: check-linodemachine-deletion.yaml
+    - name: Check if the Linodes were deleted
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
