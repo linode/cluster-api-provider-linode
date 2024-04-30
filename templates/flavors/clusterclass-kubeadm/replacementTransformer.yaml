@@ -1,0 +1,30 @@
+---
+apiVersion: builtin
+kind: ReplacementTransformer
+metadata:
+  name: linode-cluster-replace
+replacements:
+  - source:
+      kind: LinodeCluster
+      fieldPath: spec
+    targets:
+      - select:
+          kind: LinodeClusterTemplate
+        fieldPaths:
+          - spec.template.spec
+---
+apiVersion: builtin
+kind: ReplacementTransformer
+metadata:
+  name: kubeadm-controlplane-replace
+replacements:
+  - source:
+      kind: KubeadmControlPlane
+      name: ${CLUSTER_NAME}-control-plane
+      fieldPath: spec
+    targets:
+      - select:
+          kind: KubeadmControlPlaneTemplate
+          name: kubeadm-control-plane
+        fieldPaths:
+          - spec.template.spec

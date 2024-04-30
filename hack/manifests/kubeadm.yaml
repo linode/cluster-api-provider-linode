@@ -10,3 +10,7 @@ kind: ControlPlaneProvider
 metadata:
   name: kubeadm
   namespace: kubeadm-control-plane-system
+spec:
+  manager:
+    featureGates:
+      ClusterTopology: true

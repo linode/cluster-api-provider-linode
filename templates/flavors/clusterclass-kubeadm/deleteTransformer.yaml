@@ -1,0 +1,80 @@
+---
+# Delete LinodeCluster after values are copied to LinodeClusterTemplate
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: LinodeCluster-patch-delete
+patch: |-
+  $patch: delete
+  apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+  kind: LinodeCluster
+  metadata:
+    name: ${CLUSTER_NAME}
+---
+# Delete Cluster from ../base
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: patch-delete-cluster
+patch: |-
+  $patch: delete
+  apiVersion: cluster.x-k8s.io/v1beta1
+  kind: Cluster
+  metadata:
+    name: ${CLUSTER_NAME}
+---
+# Delete kubeadmControlPlane after values are copied to KubeadmControlPlaneTemplate
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: kubeadm-patch-delete
+patch: |-
+  $patch: delete
+  apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+  kind: KubeadmControlPlane
+  metadata:
+    name: ${CLUSTER_NAME}-control-plane
+---
+# delete machineDeployment from ../base
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: patch-delete-machineDeployment
+patch: |-
+  $patch: delete
+  apiVersion: cluster.x-k8s.io/v1beta1
+  kind: MachineDeployment
+  metadata:
+    name: ${CLUSTER_NAME}-md-0
+---
+# delete extra fields from kubeadmControlPlaneTemplate
+apiVersion: builtin
+kind: PatchTransformer
+metadata:
+  name: patch-delete-KubeadmControlPlaneTemplate
+target:
+  kind: KubeadmControlPlaneTemplate
+patch: |-
+  - op: remove
+    path: /spec/template/spec/machineTemplate
+    value:
+  - op: remove
+    path: /spec/template/spec/replicas
+    value:
+  - op: remove
+    path: /spec/template/spec/version
+    value:
+#patch: |-
+#  $patch: delete
+#  apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+#  kind: KubeadmControlPlaneTemplate
+#  metadata:
+#    name: kubeadm-control-plane
+#  spec:
+#    machineTemplate:
+#      infrastructureRef:
+#        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+#        kind: LinodeMachineTemplate
+#        name: ${CLUSTER_NAME}-control-plane
+#    replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+#    version: ${KUBERNETES_VERSION}

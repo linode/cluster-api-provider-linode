@@ -3,9 +3,48 @@ kind: Kustomization
 resources:
   - clusterClass.yaml
   - kubeadmControlPlaneTemplate.yaml
-  - kubeadmConfigTemplate.yaml
-  - ../clusterclass-base
-  - ../../common-init-files
-  - ../../addons/cilium
-  - ../../addons/provider-linode
-  - ../../addons/cluster-resource-set
+  - linodeClusterTemplate.yaml
+  - ../default
+
+transformers:
+  - replacementTransformer.yaml
+  - deleteTransformer.yaml
+
+patches:
+
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha1
+      kind: LinodeMachineTemplate
+      name: .*md-0
+    options:
+      allowNameChange: true
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeMachineTemplate
+      metadata:
+        name: kubeadm-worker
+
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha1
+      kind: LinodeMachineTemplate
+      name: .*control-plane
+    options:
+      allowNameChange: true
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeMachineTemplate
+      metadata:
+        name: kubeadm-control-plane
+
+  - target:
+      group: bootstrap.cluster.x-k8s.io
+      version: v1beta1
+      kind: KubeadmConfigTemplate
+    options:
+      allowNameChange: true
+    patch: |-
+      kind: KubeadmConfigTemplate
+      metadata:
+        name: kubeadm-worker
