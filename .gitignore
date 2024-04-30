@@ -8,4 +8,4 @@ kubeconfig*
 docs/book
 release/*
 templates/cluster-template*.yaml
-infrastructure-linode/*
+infrastructure-*-linode/*
