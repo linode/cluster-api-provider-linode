@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../default
+  - machineDeployment.yaml
+  - linodeMachineTemplate.yaml
+  - kubeadmConfigTemplate.yaml
+patches:
+  - target:
+      kind: HelmChartProxy
+      name: .*-linode-cloud-controller-manager
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          sharedIPLoadBalancing:
+            defaultLoadBalancer: cilium-bgp
+            bgpNodeSelector: cilium-bgp-peering=true
+          routeController:
+            vpcName: {{ .InfraCluster.spec.vpcRef.name }}
+            clusterCIDR: 10.0.0.0/8
+            configureCloudRoutes: true
+          secretRef:
+            name: "linode-token-region"
+          image:
+            pullPolicy: IfNotPresent
+          env:
+            - name: LINODE_URL
+              value: https://api.linode.com/v4beta

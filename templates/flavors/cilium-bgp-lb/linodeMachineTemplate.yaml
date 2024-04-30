@@ -1,0 +1,16 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-bgp
+spec:
+  template:
+    spec:
+      image: ${LINODE_OS:="linode/ubuntu22.04"}
+      type: ${LINODE_BGP_PEER_MACHINE_TYPE:=${LINODE_MACHINE_TYPE}}
+      region: ${LINODE_REGION}
+      interfaces:
+      - purpose: public
+        primary: true
+      authorizedKeys:
+      # uncomment to include your ssh key in linode provisioning
+      # - ${LINODE_SSH_PUBKEY:=""}
