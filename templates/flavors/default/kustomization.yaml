@@ -4,7 +4,6 @@ resources:
   - ../base
   - kubeadmConfigTemplate.yaml
   - kubeadmControlPlane.yaml
-  - ../../common-init-files
   - ../../addons/cilium
   - ../../addons/csi-driver-linode
   - ../../addons/provider-linode
