@@ -38,6 +38,9 @@ type LinodeInstanceClient interface {
 // LinodeVPCClient defines the methods that a Linode client must have to interact with Linode's VPC service.
 type LinodeVPCClient interface {
 	GetVPC(ctx context.Context, vpcID int) (*linodego.VPC, error)
+	ListVPCs(ctx context.Context, opts *linodego.ListOptions) ([]linodego.VPC, error)
+	CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (*linodego.VPC, error)
+	DeleteVPC(ctx context.Context, vpcID int) error
 }
 
 // LinodeNodeBalancerClient defines the methods that a Linode client must have to interact with Linode's Node Balancer service.
