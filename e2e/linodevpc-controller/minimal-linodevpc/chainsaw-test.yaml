@@ -6,7 +6,8 @@ metadata:
   # Label to trigger the test on every PR
   labels:
     quick:
-    vpc:
+    linodevpc:
+    all:
 spec:
   bindings:
     # A short identifier for the E2E test run

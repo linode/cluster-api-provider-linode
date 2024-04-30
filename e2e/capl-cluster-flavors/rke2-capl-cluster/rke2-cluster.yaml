@@ -1,0 +1,354 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    clusterctl.cluster.x-k8s.io/move: "true"
+  name: e2e-rke2-cluster-6ee9c79-credentials
+  namespace: chainsaw-positive-tick
+stringData:
+  apiToken: 453270eb663c12a397649927fd2a873e856c559c5f33aa66581432899e1846be
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linode-e2e-rke2-cluster-6ee9c79-crs-0
+  namespace: chainsaw-positive-tick
+stringData:
+  linode-ccm.yaml: |-
+    apiVersion: helm.cattle.io/v1
+    kind: HelmChart
+    metadata:
+     namespace: kube-system
+     name: ccm-linode
+    spec:
+     targetNamespace: kube-system
+     version: v0.4.4
+     chart: ccm-linode
+     repo: https://linode.github.io/linode-cloud-controller-manager/
+     bootstrap: true
+     valuesContent: |-
+       routeController:
+         vpcName: e2e-rke2-cluster-6ee9c79
+         clusterCIDR: 10.0.0.0/8
+         configureCloudRoutes: true
+       secretRef:
+         name: "linode-token-region"
+       nodeSelector:
+         node-role.kubernetes.io/control-plane: "true"
+  linode-token-region.yaml: |-
+    kind: Secret
+    apiVersion: v1
+    metadata:
+      name: linode-token-region
+      namespace: kube-system
+    stringData:
+      apiToken: 453270eb663c12a397649927fd2a873e856c559c5f33aa66581432899e1846be
+      region: us-ord
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: e2e-rke2-cluster-6ee9c79-cilium
+  namespace: chainsaw-positive-tick
+spec:
+  chartName: cilium
+  clusterSelector:
+    matchExpressions:
+    - key: ipv6
+      operator: DoesNotExist
+    - key: vxlan
+      operator: DoesNotExist
+    - key: cni
+      operator: In
+      values:
+      - e2e-rke2-cluster-6ee9c79-cilium
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://helm.cilium.io/
+  valuesTemplate: |
+    bgpControlPlane:
+      enabled: true
+    routingMode: native
+    kubeProxyReplacement: true
+    ipv4NativeRoutingCIDR: 10.0.0.0/8
+    tunnelProtocol: ""
+    enableIPv4Masquerade: true
+    egressMasqueradeInterfaces: eth0
+    k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
+    k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
+    extraArgs:
+    - --direct-routing-device=eth1
+    - --nodeport-addresses=0.0.0.0/0
+    ipam:
+      mode: kubernetes
+    ipv4:
+      enabled: true
+    ipv6:
+      enabled: false
+    k8s:
+      requireIPv4PodCIDR: true
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+  version: 1.15.0
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: e2e-rke2-cluster-6ee9c79-cilium-ipv6
+  namespace: chainsaw-positive-tick
+spec:
+  chartName: cilium
+  clusterSelector:
+    matchExpressions:
+    - key: ipv6
+      operator: In
+      values:
+      - "true"
+    - key: cni
+      operator: In
+      values:
+      - e2e-rke2-cluster-6ee9c79-cilium
+    - key: vxlan
+      operator: DoesNotExist
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://helm.cilium.io/
+  valuesTemplate: |
+    bgpControlPlane:
+      enabled: true
+    ipv6:
+      enabled: true
+    ipam:
+      mode: kubernetes
+    k8s:
+      requireIPv4PodCIDR: true
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+  version: 1.15.0
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: e2e-rke2-cluster-6ee9c79-cilium-vxlan
+  namespace: chainsaw-positive-tick
+spec:
+  chartName: cilium
+  clusterSelector:
+    matchExpressions:
+    - key: vxlan
+      operator: In
+      values:
+      - "true"
+    - key: cni
+      operator: In
+      values:
+      - e2e-rke2-cluster-6ee9c79-cilium
+    - key: ipv6
+      operator: DoesNotExist
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://helm.cilium.io/
+  valuesTemplate: |
+    bgpControlPlane:
+      enabled: true
+    ipam:
+      mode: kubernetes
+    k8s:
+      requireIPv4PodCIDR: true
+    hubble:
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+  version: 1.15.0
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha1
+kind: RKE2ConfigTemplate
+metadata:
+  name: e2e-rke2-cluster-6ee9c79-md-0
+  namespace: chainsaw-positive-tick
+spec:
+  template:
+    spec:
+      agentConfig:
+        cisProfile: cis-1.23
+        kubelet:
+          extraArgs:
+          - provider-id=linode://{{ ds.meta_data.id }}
+        nodeName: '{{ ds.meta_data.label }}'
+        protectKernelDefaults: true
+        version: v1.29.1+rke2r1
+      preRKE2Commands:
+      - |
+        mkdir -p /etc/rancher/rke2/config.yaml.d/
+        echo "node-ip: $(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
+      - sed -i '/swap/d' /etc/fstab
+      - swapoff -a
+      - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    cluster: e2e-rke2-cluster-6ee9c79
+    cni: e2e-rke2-cluster-6ee9c79-cilium
+  name: e2e-rke2-cluster-6ee9c79
+  namespace: chainsaw-positive-tick
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 10.192.0.0/10
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: RKE2ControlPlane
+    name: e2e-rke2-cluster-6ee9c79-control-plane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: LinodeCluster
+    name: e2e-rke2-cluster-6ee9c79
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: e2e-rke2-cluster-6ee9c79-md-0
+  namespace: chainsaw-positive-tick
+spec:
+  clusterName: e2e-rke2-cluster-6ee9c79
+  replicas: 1
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: RKE2ConfigTemplate
+          name: e2e-rke2-cluster-6ee9c79-md-0
+      clusterName: e2e-rke2-cluster-6ee9c79
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        name: e2e-rke2-cluster-6ee9c79-md-0
+      version: v1.29.1+rke2r1
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha1
+kind: RKE2ControlPlane
+metadata:
+  name: e2e-rke2-cluster-6ee9c79-control-plane
+  namespace: chainsaw-positive-tick
+spec:
+  agentConfig:
+    cisProfile: cis-1.23
+    nodeName: '{{ ds.meta_data.label }}'
+    protectKernelDefaults: true
+    version: v1.29.1+rke2r1
+  files:
+  - contentFrom:
+      secret:
+        key: linode-ccm.yaml
+        name: linode-e2e-rke2-cluster-6ee9c79-crs-0
+    owner: root:root
+    path: /var/lib/rancher/rke2/server/manifests/linode-ccm.yaml
+  - contentFrom:
+      secret:
+        key: linode-token-region.yaml
+        name: linode-e2e-rke2-cluster-6ee9c79-crs-0
+    owner: root:root
+    path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: LinodeMachineTemplate
+    name: e2e-rke2-cluster-6ee9c79-control-plane
+  preRKE2Commands:
+  - |
+    mkdir -p /etc/rancher/rke2/config.yaml.d/
+    echo "node-ip: $(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
+  - sed -i '/swap/d' /etc/fstab
+  - swapoff -a
+  - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+  registrationMethod: internal-only-ips
+  replicas: 1
+  serverConfig:
+    cloudProviderName: external
+    cni: none
+    disableComponents:
+      kubernetesComponents:
+      - cloudController
+      - kubeProxy
+      pluginComponents:
+      - rke2-ingress-nginx
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeCluster
+metadata:
+  name: e2e-rke2-cluster-6ee9c79
+  namespace: chainsaw-positive-tick
+spec:
+  credentialsRef:
+    name: e2e-rke2-cluster-6ee9c79-credentials
+  region: us-ord
+  vpcRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: LinodeVPC
+    name: e2e-rke2-cluster-6ee9c79
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachineTemplate
+metadata:
+  name: e2e-rke2-cluster-6ee9c79-control-plane
+  namespace: chainsaw-positive-tick
+spec:
+  template:
+    spec:
+      authorizedKeys: null
+      image: linode/ubuntu22.04
+      interfaces:
+      - primary: true
+        purpose: public
+      region: us-ord
+      type: g6-standard-2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachineTemplate
+metadata:
+  name: e2e-rke2-cluster-6ee9c79-md-0
+  namespace: chainsaw-positive-tick
+spec:
+  template:
+    spec:
+      authorizedKeys: null
+      image: linode/ubuntu22.04
+      interfaces:
+      - primary: true
+        purpose: public
+      region: us-ord
+      type: g6-standard-2
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeVPC
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: e2e-rke2-cluster-6ee9c79
+  name: e2e-rke2-cluster-6ee9c79
+  namespace: chainsaw-positive-tick
+spec:
+  region: us-ord
+  subnets:
+  - ipv4: 10.0.0.0/8
+    label: default

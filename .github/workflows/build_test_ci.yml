@@ -127,26 +127,18 @@ jobs:
       if: github.ref == 'refs/heads/main' 
       run: make e2etest
       env:
+        E2E_FLAGS: '--selector all --assert-timeout 15m0s'
         INSTALL_K3S_PROVIDER: true
         INSTALL_RKE2_PROVIDER: true
         LINODE_REGION: us-sea
         LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
         LINODE_MACHINE_TYPE: g6-standard-2
-        CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/clusterctl-config.yaml
+        CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/gha-clusterctl-config.yaml
 
     
     - name: Quick E2E Test
+      if: github.ref != 'refs/heads/main'
       run: make e2etest
-      env:
-        # TODO: Switch selector to quick before the PR can be merged
-        E2E_FLAGS: '--assert-timeout 10m0s'
-        # TODO: ALL the var below need to be deleted before the PR can be merged
-        INSTALL_K3S_PROVIDER: true
-        INSTALL_RKE2_PROVIDER: true
-        LINODE_REGION: us-sea
-        LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
-        LINODE_MACHINE_TYPE: g6-standard-2
-        CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/clusterctl-config.yaml
 
     - name: Copy logs
       if: ${{ always() }}

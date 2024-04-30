@@ -6,7 +6,8 @@ metadata:
   # Label to trigger the test on every PR
   labels:
     quick:
-    obj:
+    linodeobj:
+    all:
 spec:
   bindings:
     # A short identifier for the E2E test run
