@@ -4,10 +4,8 @@ metadata:
   name: ${CLUSTER_NAME}-cilium
 spec:
   clusterSelector:
-    matchExpressions:
-      - {key: ipv6, operator: DoesNotExist}
-      - {key: vxlan, operator: DoesNotExist}
-      - {key: cni, operator: In, values: ["${CLUSTER_NAME}-cilium"]}
+    matchLabels:
+      cni: "${CLUSTER_NAME}-cilium"
   repoURL: https://helm.cilium.io/
   chartName: cilium
   namespace: kube-system

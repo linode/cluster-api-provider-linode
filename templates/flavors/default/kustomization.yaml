@@ -6,7 +6,7 @@ resources:
   - kubeadmControlPlane.yaml
   - ../../addons/cilium
   - ../../addons/csi-driver-linode
-  - ../../addons/provider-linode
+  - ../../addons/ccm-linode
   - ../../addons/cluster-resource-set
 patches:
   - target:
