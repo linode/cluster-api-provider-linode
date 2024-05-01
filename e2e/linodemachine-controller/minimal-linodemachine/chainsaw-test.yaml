@@ -26,7 +26,7 @@ spec:
     - name: Create Cluster resource
       try:
         - apply:
-            file: create-cluster.yaml
+            file: ../../test-resources/cluster.yaml
       catch:
         - describe:
             apiVersion: cluster.x-k8s.io/v1beta1
@@ -34,7 +34,7 @@ spec:
     - name: Create LinodeMachine resource
       try:
         - apply:
-            file: create-linodemachine.yaml
+            file: ../../test-resources/linodemachine.yaml
         - assert:
             file: assert-linodemachine.yaml
       catch:
