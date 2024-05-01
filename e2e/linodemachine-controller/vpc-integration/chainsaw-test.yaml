@@ -30,6 +30,10 @@ spec:
     - name: Create Cluster and LinodeVPC resources
       try:
         - apply:
+            file: ../../test-resources/cluster.yaml
+        - apply:
+            file: ../../test-resources/linodecluster.yaml
+        - apply:
             file: ../../test-resources/vpc.yaml
         - assert:
             file: assert-vpc.yaml
