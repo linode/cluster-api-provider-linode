@@ -3,82 +3,101 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   name: minimal-linodeobjectstoragebucket
+  # Label to trigger the test on every PR
+  labels:
+    quick:
+    linodeobj:
 spec:
   bindings:
     # A short identifier for the E2E test run
-  - name: run
-    value: (join('-', ['e2e', 'min-obj', env('GIT_REF')]))
-  - name: bucket
-    # Format the bucket name into a valid Kubernetes object name
-    # TODO: This is over-truncated to account for the Kubernetes access key Secret
-    value: (trim((truncate(($run), `52`)), '-'))
-  - name: access_keys_secret
-    value: (join('-', [($bucket), 'bucket-details']))
+    - name: run
+      value: (join('-', ['e2e', 'min-obj', env('GIT_REF')]))
+    - name: bucket
+      # Format the bucket name into a valid Kubernetes object name
+      # TODO: This is over-truncated to account for the Kubernetes access key Secret
+      value: (trim((truncate(($run), `52`)), '-'))
+    - name: access_keys_secret
+      value: (join('-', [($bucket), 'bucket-details']))
   template: true
   steps:
-  - name: step-00
-    try:
-    - assert:
-        file: 00-assert.yaml
-  - name: step-01
-    try:
-    - apply:
-        file: 01-create-linodeobjectstoragebucket.yaml
-    - assert:
-        file: 01-assert.yaml
-  - name: step-02
-    try:
-    - script:
-        env:
-        - name: BUCKET
-          value: ($bucket)
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "Content-Type: application/json" \
-            "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            label: ($bucket)
-  - name: step-03
-    try:
-    - apply:
-        file: 03-patch-bucket.yaml
-    - assert:
-        file: 03-assert.yaml
-  - name: step-04
-    try:
-    - delete:
-        ref:
-          apiVersion: v1
-          kind: Secret
-          name: (join('-', [($namespace), 'backups-bucket-details']))
-  - name: step-05
-    try:
-    - assert:
-        file: 05-assert.yaml
-  - name: step-06
-    try:
-    - delete:
-        ref:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-          kind: LinodeObjectStorageBucket
-          name: ($bucket)
-    - script:
-        env:
-        - name: BUCKET
-          value: ($bucket)
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -X DELETE \
-            "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
-        check:
-          ($error): ~
-  - name: step-07
-    try:
-    - error:
-        file: 07-errors.yaml
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create LinodeObjectStorageBucket
+      try:
+        - apply:
+            file: create-linodeobjectstoragebucket.yaml
+        - assert:
+            file: assert-obj-and-secret.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeObjectStorageBucket
+        - describe:
+            apiVersion: v1
+            kind: Secret
+    - name: Check if the bucket was created
+      try:
+        - script:
+            env:
+              - name: BUCKET
+                value: ($bucket)
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                label: ($bucket)
+    - name: Test Key Generation
+      try:
+        - apply:
+            file: patch-obj.yaml
+        - assert:
+            file: assert-keygen.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeObjectStorageBucket
+    - name: Delete LinodeObjectStorageBucket details Secret
+      try:
+        - delete:
+            ref:
+              apiVersion: v1
+              kind: Secret
+              name: (join('-', [($namespace), 'backups-bucket-details']))
+    - name: Assert LinodeObjectStorageBucket key secret exists
+      try:
+        - assert:
+            file: assert-key-secret.yaml
+      catch:
+        - describe:
+            apiVersion: v1
+            kind: Secret
+    - name: Delete LinodeObjectStorageBucket
+      try:
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+              kind: LinodeObjectStorageBucket
+              name: ($bucket)
+        - script:
+            env:
+              - name: BUCKET
+                value: ($bucket)
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -X DELETE \
+                "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
+            check:
+              ($error): ~
+    - name: Check if the LinodeObjectStorageBucket was deleted
+      try:
+        - error:
+            file: check-obj-and-key-deletion.yaml

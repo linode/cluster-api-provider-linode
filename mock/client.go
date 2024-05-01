@@ -148,6 +148,21 @@ func (mr *MockLinodeMachineClientMockRecorder) CreateStackscript(ctx, opts any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateStackscript", reflect.TypeOf((*MockLinodeMachineClient)(nil).CreateStackscript), ctx, opts)
 }
 
+// CreateVPC mocks base method.
+func (m *MockLinodeMachineClient) CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (*linodego.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVPC", ctx, opts)
+	ret0, _ := ret[0].(*linodego.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVPC indicates an expected call of CreateVPC.
+func (mr *MockLinodeMachineClientMockRecorder) CreateVPC(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPC", reflect.TypeOf((*MockLinodeMachineClient)(nil).CreateVPC), ctx, opts)
+}
+
 // DeleteInstance mocks base method.
 func (m *MockLinodeMachineClient) DeleteInstance(ctx context.Context, linodeID int) error {
 	m.ctrl.T.Helper()
@@ -188,6 +203,20 @@ func (m *MockLinodeMachineClient) DeleteNodeBalancerNode(ctx context.Context, no
 func (mr *MockLinodeMachineClientMockRecorder) DeleteNodeBalancerNode(ctx, nodebalancerID, configID, nodeID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNodeBalancerNode", reflect.TypeOf((*MockLinodeMachineClient)(nil).DeleteNodeBalancerNode), ctx, nodebalancerID, configID, nodeID)
+}
+
+// DeleteVPC mocks base method.
+func (m *MockLinodeMachineClient) DeleteVPC(ctx context.Context, vpcID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVPC", ctx, vpcID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteVPC indicates an expected call of DeleteVPC.
+func (mr *MockLinodeMachineClientMockRecorder) DeleteVPC(ctx, vpcID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPC", reflect.TypeOf((*MockLinodeMachineClient)(nil).DeleteVPC), ctx, vpcID)
 }
 
 // GetImage mocks base method.
@@ -338,6 +367,21 @@ func (m *MockLinodeMachineClient) ListStackscripts(ctx context.Context, opts *li
 func (mr *MockLinodeMachineClientMockRecorder) ListStackscripts(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStackscripts", reflect.TypeOf((*MockLinodeMachineClient)(nil).ListStackscripts), ctx, opts)
+}
+
+// ListVPCs mocks base method.
+func (m *MockLinodeMachineClient) ListVPCs(ctx context.Context, opts *linodego.ListOptions) ([]linodego.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVPCs", ctx, opts)
+	ret0, _ := ret[0].([]linodego.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVPCs indicates an expected call of ListVPCs.
+func (mr *MockLinodeMachineClientMockRecorder) ListVPCs(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockLinodeMachineClient)(nil).ListVPCs), ctx, opts)
 }
 
 // ResizeInstanceDisk mocks base method.
@@ -637,6 +681,35 @@ func (m *MockLinodeVPCClient) EXPECT() *MockLinodeVPCClientMockRecorder {
 	return m.recorder
 }
 
+// CreateVPC mocks base method.
+func (m *MockLinodeVPCClient) CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (*linodego.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVPC", ctx, opts)
+	ret0, _ := ret[0].(*linodego.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVPC indicates an expected call of CreateVPC.
+func (mr *MockLinodeVPCClientMockRecorder) CreateVPC(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).CreateVPC), ctx, opts)
+}
+
+// DeleteVPC mocks base method.
+func (m *MockLinodeVPCClient) DeleteVPC(ctx context.Context, vpcID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVPC", ctx, vpcID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteVPC indicates an expected call of DeleteVPC.
+func (mr *MockLinodeVPCClientMockRecorder) DeleteVPC(ctx, vpcID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).DeleteVPC), ctx, vpcID)
+}
+
 // GetVPC mocks base method.
 func (m *MockLinodeVPCClient) GetVPC(ctx context.Context, vpcID int) (*linodego.VPC, error) {
 	m.ctrl.T.Helper()
@@ -650,6 +723,21 @@ func (m *MockLinodeVPCClient) GetVPC(ctx context.Context, vpcID int) (*linodego.
 func (mr *MockLinodeVPCClientMockRecorder) GetVPC(ctx, vpcID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).GetVPC), ctx, vpcID)
+}
+
+// ListVPCs mocks base method.
+func (m *MockLinodeVPCClient) ListVPCs(ctx context.Context, opts *linodego.ListOptions) ([]linodego.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListVPCs", ctx, opts)
+	ret0, _ := ret[0].([]linodego.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListVPCs indicates an expected call of ListVPCs.
+func (mr *MockLinodeVPCClientMockRecorder) ListVPCs(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockLinodeVPCClient)(nil).ListVPCs), ctx, opts)
 }
 
 // MockLinodeNodeBalancerClient is a mock of LinodeNodeBalancerClient interface.

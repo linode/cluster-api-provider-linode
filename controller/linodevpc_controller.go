@@ -105,13 +105,13 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("failed to create VPC scope: %w", err)
 	}
 
-	return r.reconcile(ctx, vpcScope, log)
+	return r.reconcile(ctx, log, vpcScope)
 }
 
 func (r *LinodeVPCReconciler) reconcile(
 	ctx context.Context,
-	vpcScope *scope.VPCScope,
 	logger logr.Logger,
+	vpcScope *scope.VPCScope,
 ) (res ctrl.Result, err error) {
 	res = ctrl.Result{}
 
@@ -192,7 +192,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	// Create
 	failureReason = infrav1alpha1.CreateVPCError
 
-	err = r.reconcileCreate(ctx, vpcScope, logger)
+	err = r.reconcileCreate(ctx, logger, vpcScope)
 	if err != nil && vpcScope.LinodeVPC.ObjectMeta.CreationTimestamp.Add(reconciler.DefaultVPCControllerReconcileTimeout).After(time.Now()) {
 		logger.Info("re-queuing VPC creation")
 
@@ -203,7 +203,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	return
 }
 
-func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Logger) error {
+func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
 	logger.Info("creating vpc")
 
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {

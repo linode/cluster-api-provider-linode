@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/linode/linodego"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -30,10 +29,10 @@ import (
 
 // VPCScope defines the basic context for an actuator to operate upon.
 type VPCScope struct {
-	client K8sClient
+	Client K8sClient
 
 	PatchHelper  *patch.Helper
-	LinodeClient *linodego.Client
+	LinodeClient LinodeVPCClient
 	LinodeVPC    *infrav1alpha1.LinodeVPC
 }
 
@@ -78,7 +77,7 @@ func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VP
 	}
 
 	return &VPCScope{
-		client:       params.Client,
+		Client:       params.Client,
 		LinodeClient: linodeClient,
 		LinodeVPC:    params.LinodeVPC,
 		PatchHelper:  helper,

@@ -3,16 +3,16 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   creationTimestamp: null
-  name: minimal-linodemachine
-  # Label to trigger the test on every PR
+  name: rke2-capl-cluster
+  # Labels to allow the test to be triggered based on selector flag
   labels:
-    quick:
-    linodemachine:
+    rke2:
+    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'rke2-cluster', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `32`)), '-'))
@@ -22,28 +22,45 @@ spec:
       try:
         - assert:
             file: assert-capi-resources.yaml
-    - name: Create Cluster resource
+    - name: Generate cluster using clusterctl
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+            content: |
+              set -e
+              clusterctl generate cluster $CLUSTER -n $NAMESPACE \
+              --flavor rke2 --kubernetes-version v1.29.1+rke2r1 \
+              --infrastructure local-linode:v0.0.0 \
+              --control-plane-machine-count 1 --worker-machine-count 1 \
+              --config $CLUSTERCTL_CONFIG> rke2-cluster.yaml
+            check:
+              ($error == null): true
+    - name: Apply generated cluster yaml
       try:
         - apply:
-            file: create-cluster.yaml
-      catch:
-        - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
-            kind: Cluster
-    - name: Create LinodeMachine resource
-      try:
-        - apply:
-            file: create-linodemachine.yaml
+            file: rke2-cluster.yaml
         - assert:
-            file: assert-linodemachine.yaml
+            file: assert-child-cluster-resources.yaml
       catch:
         - describe:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-            kind: LinodeMachineTemplate
+            kind: LinodeMachine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Machine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: MachineDeployment
         - describe:
             apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-            kind: KubeadmControlPlane
-    - name: Check if the Linodes were created
+            kind: RKE2ControlPlane
+    - name: Check if the linodes are created
       try:
         - script:
             env:
@@ -65,17 +82,22 @@ spec:
             check:
               ($error): ~
               (json_parse($stdout)):
-                results: 1
-    - name: Delete Cluster resource
+                results: 2
+    - name: Delete child cluster
       try:
         - delete:
             ref:
               apiVersion: cluster.x-k8s.io/v1beta1
               kind: Cluster
               name: ($cluster)
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+              kind: LinodeVPC
+              name: ($cluster)
         - error:
-            file: check-linodemachine-deletion.yaml
-    - name: Check if the Linodes were deleted
+            file: check-child-cluster-and-vpc-deleted.yaml
+    - name: Check if the linodes are deleted
       try:
         - script:
             env:
@@ -98,3 +120,10 @@ spec:
               ($error): ~
               (json_parse($stdout)):
                 results: 0
+    - name: Delete generated child cluster manifest yaml
+      try:
+        - script:
+            content: |
+              rm -f rke2-cluster.yaml
+            check:
+              ($error == null): true

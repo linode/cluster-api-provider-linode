@@ -5,6 +5,38 @@ resources:
 
 patches:
   - target:
+      kind: HelmChartProxy
+      name: .*-cilium
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          bgpControlPlane:
+            enabled: true
+          ipam:
+            mode: kubernetes
+          k8s:
+            requireIPv4PodCIDR: true
+          hubble:
+            relay:
+              enabled: true
+            ui:
+              enabled: true
+
+  - target:
+      kind: HelmChartProxy
+      name: .*-linode-cloud-controller-manager
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          secretRef:
+            name: "linode-token-region"
+          image:
+            pullPolicy: IfNotPresent
+
+
+  - target:
       kind: LinodeVPC
     patch: |-
       $patch: delete
