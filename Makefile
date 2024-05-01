@@ -146,8 +146,8 @@ test: generate fmt vet envtest ## Run tests.
 	rm cover.out.tmp
 
 .PHONY: e2etest
-e2etest: generate local-deploy chainsaw
-	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e
+e2etest: generate local-release local-deploy chainsaw
+	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e $(E2E_FLAGS)
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode

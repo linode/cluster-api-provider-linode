@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capi-controller-manager
+  namespace: capi-system
+status:
+  availableReplicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capl-controller-manager
+  namespace: capl-system
+status:
+  availableReplicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capi-k3s-bootstrap-controller-manager
+  namespace: capi-k3s-bootstrap-system
+status:
+  availableReplicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capi-k3s-control-plane-controller-manager
+  namespace: capi-k3s-control-plane-system
+status:
+  availableReplicas: 1

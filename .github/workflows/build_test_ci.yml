@@ -74,6 +74,9 @@ jobs:
     needs:  [go-build-test, docker-build]
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
+    env:
+      GITHUB_TOKEN: ${{ secrets.github_token }}
+      LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@v2
@@ -85,6 +88,7 @@ jobs:
           api.github.com:443
           github.com:443
           gcr.io:443
+          ghcr.io:443
           proxy.golang.org:443
           sum.golang.org:443
           *.githubusercontent.com:443
@@ -103,6 +107,8 @@ jobs:
           cloud.tilt.dev:443
           kubernetes-sigs.github.io:443
           charts.jetstack.io:443
+          helm.cilium.io:443
+          linode.github.io:443
 
     - uses: actions/checkout@v4
 
@@ -117,11 +123,24 @@ jobs:
       with:
         key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
 
-    - name: E2E test
+    - name: Complete E2E Test
+      if: github.ref == 'refs/heads/main' 
       run: make e2etest
       env:
-        GITHUB_TOKEN: ${{ secrets.github_token }}
-        LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
+        E2E_FLAGS: '--assert-timeout 15m0s'
+        INSTALL_K3S_PROVIDER: true
+        INSTALL_RKE2_PROVIDER: true
+        LINODE_REGION: us-sea
+        LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
+        LINODE_MACHINE_TYPE: g6-standard-2
+        CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/gha-clusterctl-config.yaml
+
+    
+    - name: Quick E2E Test
+      if: github.ref != 'refs/heads/main'
+      run: make e2etest
+      env:
+        E2E_FLAGS: '--selector quick'
 
     - name: Copy logs
       if: ${{ always() }}

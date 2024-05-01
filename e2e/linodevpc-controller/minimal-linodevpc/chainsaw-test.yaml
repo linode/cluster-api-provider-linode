@@ -3,66 +3,74 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   name: minimal-linodevpc
+  # Label to trigger the test on every PR
+  labels:
+    quick:
+    linodevpc:
 spec:
   bindings:
     # A short identifier for the E2E test run
-  - name: run
-    value: (join('-', ['e2e', 'min-vpc', env('GIT_REF')]))
-  - name: vpc
-    # Format the VPC name into a valid Kubernetes object name
-    value: (trim((truncate(($run), `63`)), '-'))
+    - name: run
+      value: (join('-', ['e2e', 'min-vpc', env('GIT_REF')]))
+    - name: vpc
+      # Format the VPC name into a valid Kubernetes object name
+      value: (trim((truncate(($run), `63`)), '-'))
   template: true
   steps:
-  - name: step-00
-    try:
-    - assert:
-        file: 00-assert.yaml
-  - name: step-01
-    try:
-    - apply:
-        file: 01-create-vpc.yaml
-    - assert:
-        file: 01-assert.yaml
-  - name: step-02
-    try:
-    - script:
-        env:
-        - name: FILTER
-          value: (to_string({"label":($vpc)}))
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "X-Filter: $FILTER" \
-            -H "Content-Type: application/json" \
-            "https://api.linode.com/v4/vpcs"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            results: 1
-  - name: step-03
-    try:
-    - delete:
-        ref:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-          kind: LinodeVPC
-          name: ($vpc)
-    - error:
-        file: 03-error.yaml
-  - name: step-04
-    try:
-    - script:
-        env:
-        - name: FILTER
-          value: (to_string({"label":($vpc)}))
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "X-Filter: $FILTER" \
-            -H "Content-Type: application/json" \
-            "https://api.linode.com/v4/nodebalancers"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            results: 0
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create LinodeVPC
+      try:
+        - apply:
+            file: create-vpc.yaml
+        - assert:
+            file: assert-vpc.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeVPC
+    - name: Check if the VPC was created
+      try:
+        - script:
+            env:
+              - name: FILTER
+                value: (to_string({"label":($vpc)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/vpcs"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 1
+    - name: Delete VPC
+      try:
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+              kind: LinodeVPC
+              name: ($vpc)
+        - error:
+            file: check-vpc-deletion.yaml
+    - name: Check if the VPC was deleted
+      try:
+        - script:
+            env:
+              - name: FILTER
+                value: (to_string({"label":($vpc)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/nodebalancers"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
