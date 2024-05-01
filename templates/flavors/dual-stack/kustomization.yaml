@@ -14,8 +14,6 @@ patches:
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
-        labels:
-          ipv6: "true"
       spec:
         clusterNetwork:
           pods:
@@ -48,3 +46,23 @@ patches:
             controllerManager:
               extraArgs:
                 node-cidr-mask-size-ipv6: "96"
+  - target:
+      kind: HelmChartProxy
+      name: .*-cilium
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          bgpControlPlane:
+            enabled: true
+          ipv6:
+            enabled: true
+          ipam:
+            mode: kubernetes
+          k8s:
+            requireIPv4PodCIDR: true
+          hubble:
+            relay:
+              enabled: true
+            ui:
+              enabled: true
