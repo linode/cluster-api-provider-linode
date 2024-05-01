@@ -9,7 +9,6 @@ metadata:
     quick:
     linodemachine:
     linodevpc:
-    all:
 spec:
   bindings:
     # A short identifier for the E2E test run

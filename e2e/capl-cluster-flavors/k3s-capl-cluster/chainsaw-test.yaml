@@ -8,7 +8,6 @@ metadata:
   labels:
     k3s:
     flavors:
-    all:
 spec:
   bindings:
     # A short identifier for the E2E test run

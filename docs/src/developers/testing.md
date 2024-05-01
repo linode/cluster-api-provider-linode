@@ -179,17 +179,9 @@ spin up a cluster with the CAPL controllers installed and then uses `chainsaw-te
 
 All test live in the e2e folder with a directory structure of `e2e/${COMPONENT}/${TEST_NAME}`
 ### Running tests
-In order to run e2e tests run the following command. 
+In order to run e2e tests run the following commands: 
 ```bash
-make e2etest
-```
-*Note: By default `make e2etest` runs only the controller e2e tests*
-
-In order to run capl-cluster-flavors test, you need to pass flags to chainsaw by setting env var `E2E_FLAGS`
-
-Example: Only running e2e tests for flavors *(default, k3s, rke2)*
-```bash
-# Required env vars to run flavor tests
+# Required env vars to run e2e tests
 export INSTALL_K3S_PROVIDER=true
 export INSTALL_RKE2_PROVIDER=true
 export LINODE_REGION=us-sea
@@ -200,6 +192,14 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 # Find an example at e2e/gha-clusterctl-config.yaml
 export CLUSTERCTL_CONFIG=~/.cluster-api/clusterctl.yaml
 
+make e2etest
+```
+*Note: By default `make e2etest` runs all the e2e tests defined under `/e2e` dir*
+
+In order to run specific test, you need to pass flags to chainsaw by setting env var `E2E_FLAGS`
+
+Example: Only running e2e tests for flavors *(default, k3s, rke2)*
+```bash
 make e2etest E2E_FLAGS='--selector flavors --assert-timeout 10m0s'
 ```
 *Note: We need to bump up the assert timeout to 10 mins to allow the cluster to complete building and become available*
@@ -208,7 +208,6 @@ There are other selectors you can use to invoke specfic tests. Please look at th
 
 | Tests          | Selector     |
 | ------------- | ------------- |
-| All E2E Tests | `all` |
 | All Controllers | `quick`     |
 | All Flavors (default, k3s, rke2) | `flavors`   |
 | K3S Cluster | `k3s` | 

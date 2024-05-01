@@ -127,7 +127,7 @@ jobs:
       if: github.ref == 'refs/heads/main' 
       run: make e2etest
       env:
-        E2E_FLAGS: '--selector all --assert-timeout 15m0s'
+        E2E_FLAGS: '--assert-timeout 15m0s'
         INSTALL_K3S_PROVIDER: true
         INSTALL_RKE2_PROVIDER: true
         LINODE_REGION: us-sea
@@ -139,6 +139,8 @@ jobs:
     - name: Quick E2E Test
       if: github.ref != 'refs/heads/main'
       run: make e2etest
+      env:
+        E2E_FLAGS: '--selector quick'
 
     - name: Copy logs
       if: ${{ always() }}
