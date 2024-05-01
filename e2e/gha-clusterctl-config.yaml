@@ -1,0 +1,16 @@
+providers:
+  - name: local-linode
+    url: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/infrastructure-local-linode/v0.0.0/infrastructure-components.yaml
+    type: InfrastructureProvider
+  - name: "k3s"
+    url: https://github.com/k3s-io/cluster-api-k3s/releases/latest/bootstrap-components.yaml
+    type: "BootstrapProvider"
+  - name: "k3s"
+    url: https://github.com/k3s-io/cluster-api-k3s/releases/latest/control-plane-components.yaml
+    type: "ControlPlaneProvider"
+  - name: "rke2"
+    url: "https://github.com/rancher-sandbox/cluster-api-provider-rke2/releases/latest/bootstrap-components.yaml"
+    type: "BootstrapProvider"
+  - name: "rke2"
+    url: "https://github.com/rancher-sandbox/cluster-api-provider-rke2/releases/latest/control-plane-components.yaml"
+    type: "ControlPlaneProvider"

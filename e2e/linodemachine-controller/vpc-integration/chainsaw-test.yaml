@@ -4,142 +4,160 @@ kind: Test
 metadata:
   creationTimestamp: null
   name: vpc-integration
+  # Label to trigger the test on every PR
+  labels:
+    quick:
+    linodemachine:
+    linodevpc:
 spec:
   bindings:
     # A short identifier for the E2E test run
-  - name: run
-    value: (join('-', ['e2e', 'lm-vpc', env('GIT_REF')]))
-  - name: cluster
-    # Format the cluster name
-    value: (trim((truncate(($run), `32`)), '-'))
-  - name: vpc
-    # Format the VPC name into a valid Kubernetes object name
-    value: (trim((truncate(($run), `63`)), '-'))
+    - name: run
+      value: (join('-', ['e2e', 'lm-vpc', env('GIT_REF')]))
+    - name: cluster
+      # Format the cluster name
+      value: (trim((truncate(($run), `32`)), '-'))
+    - name: vpc
+      # Format the VPC name into a valid Kubernetes object name
+      value: (trim((truncate(($run), `63`)), '-'))
   template: true
   steps:
-  - name: step-00
-    try:
-    - assert:
-        file: 00-assert.yaml
-  - name: step-01
-    try:
-    - apply:
-        file: 01-create-cluster.yaml
-    - assert:
-        file: 01-assert.yaml
-  - name: step-02
-    try:
-    - apply:
-        file: 02-create-linodemachine.yaml
-    - assert:
-        file: 02-assert.yaml
-  - name: step-03
-    try:
-    - script:
-        env:
-        - name: TARGET_API
-          value: api.linode.com
-        - name: TARGET_API_VERSION
-          value: v4beta
-        - name: URI
-          value: linode/instances
-        - name: FILTER
-          value: (to_string({"tags":($cluster)}))
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "X-Filter: $FILTER" \
-            -H "Content-Type: application/json" \
-            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            results: 1
-    - script:
-        env:
-        - name: TARGET_API
-          value: api.linode.com
-        - name: TARGET_API_VERSION
-          value: v4beta
-        - name: URI
-          value: vpcs
-        - name: FILTER
-          value: (to_string({"label":($vpc)}))
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "X-Filter: $FILTER" \
-            -H "Content-Type: application/json" \
-            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            data:
-            - subnets:
-              - linodes:
-                - interfaces:
-                  - active: true
-  - name: step-04
-    try:
-    - delete:
-        ref:
-          apiVersion: cluster.x-k8s.io/v1beta1
-          kind: Cluster
-          name: ($cluster)
-    - delete:
-        ref:
-          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-          kind: LinodeVPC
-          name: ($vpc)
-    - error:
-        file: 04-error.yaml
-  - name: step-05
-    try:
-    - script:
-        env:
-        - name: TARGET_API
-          value: api.linode.com
-        - name: TARGET_API_VERSION
-          value: v4beta
-        - name: URI
-          value: linode/instances
-        - name: FILTER
-          value: (to_string({"tags":($cluster)}))
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "X-Filter: $FILTER" \
-            -H "Content-Type: application/json" \
-            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            results: 0
-    - script:
-        env:
-        - name: TARGET_API
-          value: api.linode.com
-        - name: TARGET_API_VERSION
-          value: v4beta
-        - name: URI
-          value: vpcs
-        - name: FILTER
-          value: (to_string({"label":($vpc)}))
-        content: |
-          set -e
-          curl -s \
-            -H "Authorization: Bearer $LINODE_TOKEN" \
-            -H "X-Filter: $FILTER" \
-            -H "Content-Type: application/json" \
-            "https://$TARGET_API/$TARGET_API_VERSION/$URI"
-        check:
-          ($error): ~
-          (json_parse($stdout)):
-            results: 0
-  - name: step-06
-    try:
-    - apply:
-        file: 06-cleanup-cluster.yaml
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create Cluster and LinodeVPC resources
+      try:
+        - apply:
+            file: create-cluster-vpc.yaml
+        - assert:
+            file: assert-vpc.yaml
+      catch:
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Cluster
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeCluster
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeVPC
+    - name: Create LinodeMachine resource
+      try:
+        - apply:
+            file: create-linodemachine.yaml
+        - assert:
+            file: assert-linodemachine.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Machine
+    - name: Check if the Linodes & VPC were created
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 1
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: vpcs
+              - name: FILTER
+                value: (to_string({"label":($vpc)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                data:
+                  - subnets:
+                      - linodes:
+                          - interfaces:
+                              - active: true
+    - name: Delete the Cluster & LinodeVPC resource
+      try:
+        - delete:
+            ref:
+              apiVersion: cluster.x-k8s.io/v1beta1
+              kind: Cluster
+              name: ($cluster)
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+              kind: LinodeVPC
+              name: ($vpc)
+        - error:
+            file: check-vpc-lm-deletion.yaml
+    - name: Check if the Linodes & VPC were deleted
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: vpcs
+              - name: FILTER
+                value: (to_string({"label":($vpc)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0

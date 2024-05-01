@@ -1,0 +1,10 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachine
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeVPC
+metadata:
+  name: ($cluster)
