@@ -256,6 +256,11 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 ) (ctrl.Result, error) {
 	logger.Info("creating machine")
 
+	if err := machineScope.AddCredentialsRefFinalizer(ctx); err != nil {
+		logger.Error(err, "Failed to update credentials secret")
+		return ctrl.Result{}, err
+	}
+
 	tags := []string{machineScope.LinodeCluster.Name}
 
 	listFilter := util.Filter{
@@ -629,6 +634,11 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	if machineScope.LinodeMachine.Spec.InstanceID == nil {
 		logger.Info("Machine ID is missing, nothing to do")
+
+		if err := machineScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+			logger.Error(err, "Failed to update credentials secret")
+			return err
+		}
 		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
 
 		return nil
@@ -655,6 +665,11 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	machineScope.LinodeMachine.Spec.ProviderID = nil
 	machineScope.LinodeMachine.Spec.InstanceID = nil
 	machineScope.LinodeMachine.Status.InstanceState = nil
+
+	if err := machineScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+		logger.Error(err, "Failed to update credentials secret")
+		return err
+	}
 	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
 
 	return nil

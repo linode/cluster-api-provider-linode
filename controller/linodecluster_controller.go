@@ -156,6 +156,11 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 }
 
 func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	if err := clusterScope.AddCredentialsRefFinalizer(ctx); err != nil {
+		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+		return err
+	}
+
 	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
 	if err != nil {
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
@@ -191,6 +196,11 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	logger.Info("deleting cluster")
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
+
+		if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+			return err
+		}
 		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "NodeBalancerIDMissing", "NodeBalancer ID is missing, nothing to do")
 
@@ -207,6 +217,11 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerConfigID = nil
+
+	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+		return err
+	}
 	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
 
 	return nil

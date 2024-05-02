@@ -326,3 +326,205 @@ func TestNewClusterScope(t *testing.T) {
 		})
 	}
 }
+
+func TestClusterAddCredentialsRefFinalizer(t *testing.T) {
+	t.Parallel()
+	type fields struct {
+		Cluster       *clusterv1.Cluster
+		LinodeCluster *infrav1alpha1.LinodeCluster
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		expects func(mock *mock.MockK8sClient)
+	}{
+		{
+			name: "Success - finalizer should be added to the Linode Cluster credentials Secret",
+			fields: fields{
+				Cluster: &clusterv1.Cluster{},
+				LinodeCluster: &infrav1alpha1.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha1.LinodeClusterSpec{
+						CredentialsRef: &corev1.SecretReference{
+							Name:      "example",
+							Namespace: "test",
+						},
+					},
+				},
+			},
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "example",
+							Namespace: "test",
+						},
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+
+					return nil
+				}).Times(2)
+				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "No-op - no Linode Cluster credentials Secret",
+			fields: fields{
+				Cluster: &clusterv1.Cluster{},
+				LinodeCluster: &infrav1alpha1.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+				},
+			},
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+			},
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			cScope, err := NewClusterScope(
+				context.Background(),
+				"test-key",
+				ClusterScopeParams{
+					Cluster:       testcase.fields.Cluster,
+					LinodeCluster: testcase.fields.LinodeCluster,
+					Client:        mockK8sClient,
+				})
+			if err != nil {
+				t.Errorf("NewClusterScope() error = %v", err)
+			}
+
+			if err := cScope.AddCredentialsRefFinalizer(context.Background()); err != nil {
+				t.Errorf("ClusterScope.AddCredentialsRefFinalizer() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestRemoveCredentialsRefFinalizer(t *testing.T) {
+	t.Parallel()
+	type fields struct {
+		Cluster       *clusterv1.Cluster
+		LinodeCluster *infrav1alpha1.LinodeCluster
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		expects func(mock *mock.MockK8sClient)
+	}{
+		{
+			name: "Success - finalizer should be removed from the Linode Cluster credentials Secret",
+			fields: fields{
+				Cluster: &clusterv1.Cluster{},
+				LinodeCluster: &infrav1alpha1.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha1.LinodeClusterSpec{
+						CredentialsRef: &corev1.SecretReference{
+							Name:      "example",
+							Namespace: "test",
+						},
+					},
+				},
+			},
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "example",
+							Namespace: "test",
+						},
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+
+					return nil
+				}).Times(2)
+				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "No-op - no Linode Cluster credentials Secret",
+			fields: fields{
+				Cluster: &clusterv1.Cluster{},
+				LinodeCluster: &infrav1alpha1.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+				},
+			},
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha1.AddToScheme(s)
+					return s
+				})
+			},
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			cScope, err := NewClusterScope(
+				context.Background(),
+				"test-key",
+				ClusterScopeParams{
+					Cluster:       testcase.fields.Cluster,
+					LinodeCluster: testcase.fields.LinodeCluster,
+					Client:        mockK8sClient,
+				})
+			if err != nil {
+				t.Errorf("NewClusterScope() error = %v", err)
+			}
+
+			if err := cScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+				t.Errorf("ClusterScope.RemoveCredentialsRefFinalizer() error = %v", err)
+			}
+		})
+	}
+}
