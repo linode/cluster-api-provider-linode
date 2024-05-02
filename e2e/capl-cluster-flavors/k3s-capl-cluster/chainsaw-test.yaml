@@ -6,6 +6,7 @@ metadata:
   name: k3s-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
+    all:
     k3s:
     flavors:
 spec:
