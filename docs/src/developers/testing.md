@@ -1,12 +1,23 @@
 # CAPL Testing
 
+<!-- TOC depthFrom:2 -->
+
+- [Unit Tests](#unit-tests)
+  - [Executing Tests](#executing-tests)
+  - [Creating tests](#creating-tests)
+- [E2E Tests](#e2e-tests)
+  - [Running tests](#running-tests)
+  - [Adding tests](#adding-tests)
+
+<!-- /TOC -->
+
 ## Unit Tests
-### Running Tests
+### Executing Tests
 In order to run the unit tests run the following command
 ```bash
 make test
 ```
-### Adding tests
+### Creating tests
 General unit tests of functions follow the same conventions for testing using Go's `testing` standard library, along with the [testify](https://github.com/stretchr/testify) toolkit for making assertions.
 
 Unit tests that require API clients use mock clients generated using [gomock](https://github.com/uber-go/mock). To simplify the usage of mock clients, this repo also uses an internal library defined in `mock/mocktest`.

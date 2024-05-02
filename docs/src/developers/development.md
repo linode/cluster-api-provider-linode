@@ -259,10 +259,23 @@ For any issues, please refer to the [troubleshooting guide](../topics/troublesho
 
 To run E2E locally run:
 ```sh
+# Required env vars to run e2e tests
+export INSTALL_K3S_PROVIDER=true
+export INSTALL_RKE2_PROVIDER=true
+export LINODE_REGION=us-sea
+export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
+export LINODE_MACHINE_TYPE=g6-standard-2
+
+# IMPORTANT: Set linode, k3s, and rke2 providers in this config file.
+# Find an example at e2e/gha-clusterctl-config.yaml
+export CLUSTERCTL_CONFIG=~/.cluster-api/clusterctl.yaml
+
 make e2etest
 ```
 
-This command creates a KIND cluster, and executes all the defined tests.
+This command creates a KIND cluster, and executes all the defined tests. 
+
+For more details on E2E tests, please refer to [E2E Testing](./testing.md)
 
 ```admonish warning
 Please ensure you have [increased maximum open files on your host](https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files)
