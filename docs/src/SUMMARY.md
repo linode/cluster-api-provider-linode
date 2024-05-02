@@ -25,4 +25,5 @@
     - [VPC](./topics/vpc.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
+    - [Testing](./developers/testing.md)
 - [Reference](./reference/reference.md)
