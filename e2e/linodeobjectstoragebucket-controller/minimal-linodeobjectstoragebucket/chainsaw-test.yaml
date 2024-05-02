@@ -27,7 +27,7 @@ spec:
     - name: Create LinodeObjectStorageBucket
       try:
         - apply:
-            file: create-linodeobjectstoragebucket.yaml
+            file: ../../test-resources/linodeobjectstoragebucket.yaml
         - assert:
             file: assert-obj-and-secret.yaml
       catch:

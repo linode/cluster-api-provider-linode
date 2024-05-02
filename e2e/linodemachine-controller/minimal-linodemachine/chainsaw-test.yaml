@@ -7,7 +7,7 @@ metadata:
   # Label to trigger the test on every PR
   labels:
     quick:
-    linodemachine:
+    # linodemachine:
 spec:
   bindings:
     # A short identifier for the E2E test run
@@ -25,7 +25,9 @@ spec:
     - name: Create Cluster resource
       try:
         - apply:
-            file: create-cluster.yaml
+            file: ../../test-resources/cluster.yaml
+        - apply:
+            file: ../../test-resources/linodecluster.yaml
       catch:
         - describe:
             apiVersion: cluster.x-k8s.io/v1beta1
@@ -33,7 +35,9 @@ spec:
     - name: Create LinodeMachine resource
       try:
         - apply:
-            file: create-linodemachine.yaml
+            file: ../../test-resources/linodemachinetemplate.yaml
+        - apply:
+            file: ../../test-resources/kubeadmcontrolplane.yaml
         - assert:
             file: assert-linodemachine.yaml
       catch:

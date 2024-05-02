@@ -29,10 +29,16 @@ spec:
     - name: Create Cluster and LinodeVPC resources
       try:
         - apply:
-            file: create-cluster-vpc.yaml
+            file: ../../test-resources/cluster.yaml
+        - apply:
+            file: ../../test-resources/linodecluster.yaml
+        - apply:
+            file: ../../test-resources/vpc.yaml
         - assert:
             file: assert-vpc.yaml
       catch:
+        # - podLogs:
+        #     selector: x=y
         - describe:
             apiVersion: cluster.x-k8s.io/v1beta1
             kind: Cluster
@@ -45,16 +51,37 @@ spec:
     - name: Create LinodeMachine resource
       try:
         - apply:
-            file: create-linodemachine.yaml
+            file: ../../test-resources/linodemachinetemplate.yaml
+        - apply:
+            file: ../../test-resources/kubeadmcontrolplane.yaml
         - assert:
             file: assert-linodemachine.yaml
       catch:
+        - get:
+            apiVersion: v1
+            kind: Pod
+            namespace: capl-system
+            format: yaml
+        - describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: capl-controller-manager
+            namespace: capl-system
+        - podLogs:
+            selector: control-plane=controller-manager
+            namespace: capl-system
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
         - describe:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
             kind: LinodeMachine
         - describe:
             apiVersion: cluster.x-k8s.io/v1beta1
             kind: Machine
+        - describe:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlane
     - name: Check if the Linodes & VPC were created
       try:
         - script:

@@ -1,0 +1,11 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachine
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+spec:
+  region: (env('LINODE_REGION'))
+  type: g6-standard-2
+status:
+  ready: true
+  instanceState: running

@@ -1,0 +1,14 @@
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmReleaseProxy
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+status:
+  conditions:
+    - type: Ready
+      status: "True"
+    - type: ClusterAvailable
+      status: "True"
+    - type: HelmReleaseReady
+      status: "True"
+  status: deployed

@@ -24,21 +24,18 @@ spec:
       try:
         - assert:
             file: assert-capi-resources.yaml
-    - name: Create Cluster resource
+    - name: Create Cluster and LinodeCluster resource
       try:
         - apply:
-            file: create-cluster.yaml
+            file: ../../test-resources/cluster.yaml
+        - apply:
+            file: ../../test-resources/linodecluster.yaml
+        - assert:
+            file: assert-linodecluster.yaml
       catch:
         - describe:
             apiVersion: cluster.x-k8s.io/v1beta1
             kind: Cluster
-    - name: Create LinodeCluster resource
-      try:
-        - apply:
-            file: create-linodecluster.yaml
-        - assert:
-            file: assert-linodecluster.yaml
-      catch:
         - describe:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
             kind: LinodeCluster
