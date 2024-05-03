@@ -196,27 +196,30 @@ make e2etest
 ```
 *Note: By default `make e2etest` runs all the e2e tests defined under `/e2e` dir*
 
-In order to run specific test, you need to pass flags to chainsaw by setting env var `E2E_FLAGS`
+In order to run specific test, you need to pass flags to chainsaw by setting env var `E2E_SELECTOR`
+
+Additional settings can be passed to chainsaw by setting env var `E2E_FLAGS`
 
 Example: Only running e2e tests for flavors *(default, k3s, rke2)*
 ```bash
-make e2etest E2E_FLAGS='--selector flavors --assert-timeout 10m0s'
+make e2etest E2E_SELECTOR='flavors' E2E_FLAGS='--assert-timeout 10m0s'
 ```
 *Note: We need to bump up the assert timeout to 10 mins to allow the cluster to complete building and become available*
 
 There are other selectors you can use to invoke specfic tests. Please look at the table below for all the selectors available:
 
-| Tests          | Selector     |
-| ------------- | ------------- |
-| All Controllers | `quick`     |
-| All Flavors (default, k3s, rke2) | `flavors`   |
-| K3S Cluster | `k3s` | 
-| RKE2 Cluster | `rke2` |
-| Default (kubeadm) Cluster | `default-cluster` |
-| Linode Cluster Controller | `linodecluster` |
-| Linode Machine Controller | `linodemachine` |
-| Linode Obj Controller | `linodeobj` | 
-| Linode VPC Controller | `linodevpc` | 
+| Tests                            | Selector          |
+|----------------------------------|-------------------|
+| All Tests                        | `all`             |
+| All Controllers                  | `quick`           |
+| All Flavors (default, k3s, rke2) | `flavors`         |
+| K3S Cluster                      | `k3s`             | 
+| RKE2 Cluster                     | `rke2`            |
+| Default (kubeadm) Cluster        | `default-cluster` |
+| Linode Cluster Controller        | `linodecluster`   |
+| Linode Machine Controller        | `linodemachine`   |
+| Linode Obj Controller            | `linodeobj`       | 
+| Linode VPC Controller            | `linodevpc`       | 
 
 *Note: For any flavor e2e tests, please set the required env variables*
 
