@@ -6,6 +6,7 @@ metadata:
   name: vpc-integration
   # Label to trigger the test on every PR
   labels:
+    all:
     quick:
     linodemachine:
     linodevpc:

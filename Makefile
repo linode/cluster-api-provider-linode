@@ -14,6 +14,7 @@ SHELL                = /usr/bin/env bash -o pipefail
 CONTAINER_TOOL      ?= docker
 MDBOOK_DEV_HOST      = 0.0.0.0
 MDBOOK_DEV_PORT      = 3000
+E2E_SELECTOR        ?= all
 
 # ENVTEST_K8S_VERSION
 # - refers to the version of kubebuilder assets to be downloaded by envtest binary.
@@ -119,7 +120,7 @@ gosec: ## Run gosec against code.
 
 .PHONY: lint
 lint: ## Run lint against code.
-	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:v1.57.2 golangci-lint run -c .golangci.yml
+	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:v1.57.2 golangci-lint run -c .golangci.yml --fix
 
 .PHONY: nilcheck
 nilcheck: nilaway ## Run nil check against code.
@@ -147,7 +148,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-release local-deploy chainsaw
-	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e $(E2E_FLAGS)
+	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode

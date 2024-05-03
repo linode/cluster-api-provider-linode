@@ -6,6 +6,7 @@ metadata:
   name: minimal-linodecluster
   # Label to trigger the test on every PR
   labels:
+    all:
     quick:
     linodecluster:
 spec:
