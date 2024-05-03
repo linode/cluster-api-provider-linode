@@ -6,6 +6,7 @@ metadata:
   name: default-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
+    all:
     default-cluster:
     flavors:
 spec:
