@@ -14,6 +14,7 @@ SHELL                = /usr/bin/env bash -o pipefail
 CONTAINER_TOOL      ?= docker
 MDBOOK_DEV_HOST      = 0.0.0.0
 MDBOOK_DEV_PORT      = 3000
+E2E_SELECTOR        ?= all
 
 # ENVTEST_K8S_VERSION
 # - refers to the version of kubebuilder assets to be downloaded by envtest binary.
