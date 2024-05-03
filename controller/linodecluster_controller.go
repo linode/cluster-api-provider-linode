@@ -68,7 +68,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.NamespacedName.String())
 	linodeCluster := &infrav1alpha1.LinodeCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeCluster); err != nil {
-		logger.Info("Failed to fetch Linode cluster", "error", err.Error())
+		logger.Info("test - Failed to fetch Linode cluster", "error", err.Error())
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
