@@ -17,361 +17,260 @@
 package controller
 
 import (
-	"bytes"
+	"context"
 	"errors"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
+	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
-	var linodeVPC infrav1alpha1.LinodeVPC
-	var reconciler *LinodeVPCReconciler
+	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeVPCClient{})
 
-	var mockCtrl *gomock.Controller
-	var testLogs *bytes.Buffer
-	var logger logr.Logger
-
-	recorder := record.NewFakeRecorder(10)
-
-	BeforeEach(func(ctx SpecContext) {
-		reconciler = &LinodeVPCReconciler{
-			Recorder: recorder,
-		}
-
-		vpcSpec := infrav1alpha1.LinodeVPCSpec{
+	linodeVPC := infrav1alpha1.LinodeVPC{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lifecycle",
+			Namespace: "default",
+		},
+		Spec: infrav1alpha1.LinodeVPCSpec{
 			Region: "us-east",
 			Subnets: []infrav1alpha1.VPCSubnetCreateOptions{
 				{Label: "subnet1", IPv4: "10.0.0.0/8"},
 			},
-		}
-		linodeVPC = infrav1alpha1.LinodeVPC{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Labels:    make(map[string]string),
-			},
-			Spec: vpcSpec,
-		}
+		},
+	}
 
-		mockCtrl = gomock.NewController(GinkgoT())
-		testLogs = &bytes.Buffer{}
-		logger = zap.New(
-			zap.WriteTo(GinkgoWriter),
-			zap.WriteTo(testLogs),
-			zap.UseDevMode(true),
-		)
+	objectKey := client.ObjectKeyFromObject(&linodeVPC)
+
+	var reconciler LinodeVPCReconciler
+	var vpcScope scope.VPCScope
+
+	BeforeAll(func(ctx SpecContext) {
+		vpcScope.Client = k8sClient
+		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
 	})
 
-	AfterEach(func(ctx SpecContext) {
-		mockCtrl.Finish()
-		for len(recorder.Events) > 0 {
-			<-recorder.Events
-		}
-	})
+	suite.BeforeEach(func(ctx context.Context, mck Mock) {
+		vpcScope.LinodeClient = mck.VPCClient
 
-	It("creates a vpc", func(ctx SpecContext) {
-		mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
+		Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
+		vpcScope.LinodeVPC = &linodeVPC
 
-		listVPCs := mockLinodeClient.EXPECT().
-			ListVPCs(ctx, gomock.Any()).
-			Return([]linodego.VPC{}, nil)
-		mockLinodeClient.EXPECT().
-			CreateVPC(ctx, gomock.Any()).
-			After(listVPCs).
-			Return(&linodego.VPC{
-				ID:     1,
-				Label:  "vpc1",
-				Region: "us-east",
-				Subnets: []linodego.VPCSubnet{
-					{ID: 123, Label: "subnet1", IPv4: "10.0.0.0/8"},
-				},
-			}, nil)
-
-		vpcScope := scope.VPCScope{
-			Client:       k8sClient,
-			LinodeClient: mockLinodeClient,
-			LinodeVPC:    &linodeVPC,
-		}
-
-		err := reconciler.reconcileCreate(ctx, logger, &vpcScope)
+		// Create patch helper with latest state of resource.
+		// This is only needed when relying on envtest's k8sClient.
+		patchHelper, err := patch.NewHelper(&linodeVPC, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
+		vpcScope.PatchHelper = patchHelper
 
-		Expect(*linodeVPC.Spec.VPCID).To(Equal(1))
-		Expect(linodeVPC.Spec.Subnets[0].IPv4).To(Equal("10.0.0.0/8"))
-		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to create VPC"))
+		// Reset reconciler for each test
+		reconciler = LinodeVPCReconciler{
+			Recorder: mck.Recorder(),
+		}
 	})
 
-	Context("when doing update", func() {
-		It("successfully updates a vpc", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
+	suite.Run(
+		OneOf(
+			Path(
+				Call("unable to create", func(ctx context.Context, mck Mock) {
+					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{}, nil)
+					mck.VPCClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).To(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+					})),
+				),
+			),
+			Path(
+				Call("able to create", func(ctx context.Context, mck Mock) {
+					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{}, nil)
+					mck.VPCClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+						ID:     1,
+						Region: "us-east",
+						Subnets: []linodego.VPCSubnet{
+							{Label: "subnet1", IPv4: "10.0.0.0/8"},
+						},
+					}, nil)
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					Expect(err).NotTo(HaveOccurred())
 
-			listVPCs := mockLinodeClient.EXPECT().
-				ListVPCs(ctx, gomock.Any()).
-				Return([]linodego.VPC{}, nil)
-			mockLinodeClient.EXPECT().
-				CreateVPC(ctx, gomock.Any()).
-				After(listVPCs).
-				Return(&linodego.VPC{
-					ID:     1,
-					Label:  "vpc1",
-					Region: "us-east",
-					Subnets: []linodego.VPCSubnet{
-						{ID: 123, Label: "subnet1", IPv4: "10.0.0.0/8"},
-					},
-				}, nil)
-
-			vpcScope := scope.VPCScope{
-				Client:       k8sClient,
-				LinodeClient: mockLinodeClient,
-				LinodeVPC:    &linodeVPC,
-			}
-
-			err := reconciler.reconcileUpdate(ctx, logger, &vpcScope)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(*linodeVPC.Spec.VPCID).To(Equal(1))
-			Expect(linodeVPC.Spec.Subnets[0].IPv4).To(Equal("10.0.0.0/8"))
-			Expect(testLogs.String()).NotTo(ContainSubstring("Failed to create VPC"))
-		})
-
-		It("fails if it can't list VPCs", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
-
-			mockLinodeClient.EXPECT().
-				ListVPCs(ctx, gomock.Any()).
-				Return([]linodego.VPC{}, errors.New("failed to make call"))
-
-			vpcScope := scope.VPCScope{
-				Client:       k8sClient,
-				LinodeClient: mockLinodeClient,
-				LinodeVPC:    &linodeVPC,
-			}
-
-			err := reconciler.reconcileUpdate(ctx, logger, &vpcScope)
-			Expect(err).To(HaveOccurred())
-			Expect(testLogs.String()).To(ContainSubstring("Failed to list VPCs"))
-		})
-
-		It("fails if it can't create VPC", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
-
-			listVPCs := mockLinodeClient.EXPECT().
-				ListVPCs(ctx, gomock.Any()).
-				Return([]linodego.VPC{}, nil)
-			mockLinodeClient.EXPECT().
-				CreateVPC(ctx, gomock.Any()).
-				After(listVPCs).
-				Return(&linodego.VPC{}, errors.New("failed creating VPC"))
-
-			vpcScope := scope.VPCScope{
-				Client:       k8sClient,
-				LinodeClient: mockLinodeClient,
-				LinodeVPC:    &linodeVPC,
-			}
-
-			err := reconciler.reconcileCreate(ctx, logger, &vpcScope)
-			Expect(err).To(HaveOccurred())
-			Expect(testLogs.String()).To(ContainSubstring("Failed to create VPC"))
-		})
-
-		It("fails if empty VPC is returned", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
-
-			listVPCs := mockLinodeClient.EXPECT().
-				ListVPCs(ctx, gomock.Any()).
-				Return([]linodego.VPC{}, nil)
-			mockLinodeClient.EXPECT().
-				CreateVPC(ctx, gomock.Any()).
-				After(listVPCs).
-				Return(nil, nil)
-
-			vpcScope := scope.VPCScope{
-				Client:       k8sClient,
-				LinodeClient: mockLinodeClient,
-				LinodeVPC:    &linodeVPC,
-			}
-
-			err := reconciler.reconcileCreate(ctx, logger, &vpcScope)
-			Expect(err).To(HaveOccurred())
-			Expect(testLogs.String()).To(ContainSubstring("Panic! Failed to create VPC"))
-		})
-	})
-
-	Context("when deleting a VPC", func() {
-		It("succeeds if no error occurs", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
-
-			vpcSpec := infrav1alpha1.LinodeVPCSpec{
-				VPCID:  ptr.To(1),
-				Region: "us-east",
-				Subnets: []infrav1alpha1.VPCSubnetCreateOptions{
-					{Label: "subnet1", IPv4: "10.0.0.0/8"},
-				},
-			}
-			linodeVPC = infrav1alpha1.LinodeVPC{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Labels:    make(map[string]string),
-				},
-				Spec: vpcSpec,
-			}
-
-			getVPC := mockLinodeClient.EXPECT().
-				GetVPC(ctx, gomock.Any()).
-				Return(&linodego.VPC{
-					ID:    1,
-					Label: "vpc1",
-					Subnets: []linodego.VPCSubnet{
-						{ID: 123, Linodes: []linodego.VPCSubnetLinode{}},
-					},
-				}, nil)
-			mockLinodeClient.EXPECT().
-				DeleteVPC(ctx, gomock.Any()).
-				After(getVPC).
-				Return(nil)
-
-			vpcScope := scope.VPCScope{
-				Client:       k8sClient,
-				LinodeClient: mockLinodeClient,
-				LinodeVPC:    &linodeVPC,
-			}
-
-			_, err := reconciler.reconcileDelete(ctx, logger, &vpcScope)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("fails if GetVPC API errors out", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
-
-			vpcSpec := infrav1alpha1.LinodeVPCSpec{
-				VPCID:  ptr.To(1),
-				Region: "us-east",
-				Subnets: []infrav1alpha1.VPCSubnetCreateOptions{
-					{Label: "subnet1", IPv4: "10.0.0.0/8"},
-				},
-			}
-			linodeVPC = infrav1alpha1.LinodeVPC{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Labels:    make(map[string]string),
-				},
-				Spec: vpcSpec,
-			}
-
-			mockLinodeClient.EXPECT().
-				GetVPC(ctx, gomock.Any()).
-				Return(&linodego.VPC{}, errors.New("service unavailable"))
-
-			vpcScope := scope.VPCScope{
-				Client:       k8sClient,
-				LinodeClient: mockLinodeClient,
-				LinodeVPC:    &linodeVPC,
-			}
-
-			_, err := reconciler.reconcileDelete(ctx, logger, &vpcScope)
-			Expect(err).To(HaveOccurred())
-			Expect(testLogs.String()).To(ContainSubstring("Failed to fetch VPC"))
-		})
-
-		It("fails if DeleteVPC API errors out", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
-
-			vpcSpec := infrav1alpha1.LinodeVPCSpec{
-				VPCID:  ptr.To(1),
-				Region: "us-east",
-				Subnets: []infrav1alpha1.VPCSubnetCreateOptions{
-					{Label: "subnet1", IPv4: "10.0.0.0/8"},
-				},
-			}
-			linodeVPC = infrav1alpha1.LinodeVPC{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Labels:    make(map[string]string),
-				},
-				Spec: vpcSpec,
-			}
-
-			getVPC := mockLinodeClient.EXPECT().
-				GetVPC(ctx, gomock.Any()).
-				Return(&linodego.VPC{
-					ID:    1,
-					Label: "vpc1",
-					Subnets: []linodego.VPCSubnet{
-						{ID: 123, Linodes: []linodego.VPCSubnetLinode{}},
-					},
-				}, nil)
-			mockLinodeClient.EXPECT().
-				DeleteVPC(ctx, gomock.Any()).
-				After(getVPC).
-				Return(errors.New("service unavailable"))
-
-			vpcScope := scope.VPCScope{
-				Client:       k8sClient,
-				LinodeClient: mockLinodeClient,
-				LinodeVPC:    &linodeVPC,
-			}
-
-			_, err := reconciler.reconcileDelete(ctx, logger, &vpcScope)
-			Expect(err).To(HaveOccurred())
-			Expect(testLogs.String()).To(ContainSubstring("Failed to delete VPC"))
-		})
-
-		It("requeues for reconciliation if linodes are still attached to VPC", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeVPCClient(mockCtrl)
-
-			vpcSpec := infrav1alpha1.LinodeVPCSpec{
-				VPCID:  ptr.To(1),
-				Region: "us-east",
-				Subnets: []infrav1alpha1.VPCSubnetCreateOptions{
-					{Label: "subnet1", IPv4: "10.0.0.0/8"},
-				},
-			}
-			linodeVPC = infrav1alpha1.LinodeVPC{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Labels:    make(map[string]string),
-				},
-				Spec: vpcSpec,
-			}
-
-			mockLinodeClient.EXPECT().
-				GetVPC(ctx, gomock.Any()).
-				Return(&linodego.VPC{
-					ID:      1,
-					Label:   "vpc1",
-					Updated: ptr.To(time.Now()),
-					Subnets: []linodego.VPCSubnet{
+					Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
+					Expect(*linodeVPC.Spec.VPCID).To(Equal(1))
+					Expect(linodeVPC.Spec.Subnets[0].IPv4).To(Equal("10.0.0.0/8"))
+					Expect(linodeVPC.Spec.Subnets[0].Label).To(Equal("subnet1"))
+					Expect(mck.Logs()).NotTo(ContainSubstring("Failed to create VPC"))
+				}),
+			),
+		),
+		Once("update", func(ctx context.Context, _ Mock) {
+			linodeVPC.Spec.Description = "update"
+			Expect(k8sClient.Update(ctx, &linodeVPC)).To(Succeed())
+			Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
+		}),
+		OneOf(
+			Path(
+				Call("able to list VPC", func(ctx context.Context, mck Mock) {
+					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{
 						{
-							ID: 123,
-							Linodes: []linodego.VPCSubnetLinode{
-								{ID: 2, Interfaces: []linodego.VPCSubnetLinodeInterface{}},
-							}},
-					},
-				}, nil)
-
-			vpcScope := scope.VPCScope{
-				Client:       k8sClient,
-				LinodeClient: mockLinodeClient,
-				LinodeVPC:    &linodeVPC,
-			}
-
-			resp, err := reconciler.reconcileDelete(ctx, logger, &vpcScope)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(resp.RequeueAfter).To(Equal(rec.DefaultVPCControllerWaitForHasNodesDelay))
-		})
-	})
+							ID:     1,
+							Label:  "vpc1",
+							Region: "us-east",
+							Subnets: []linodego.VPCSubnet{
+								{
+									Label: "subnet1",
+									IPv4:  "10.0.0.0/8",
+								},
+							},
+						},
+					}, nil)
+				}),
+				Result("update success", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					Expect(err).NotTo(HaveOccurred())
+				}),
+			),
+			Path(
+				Call("unable to list VPC", func(ctx context.Context, mck Mock) {
+					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return(nil, errors.New("api error"))
+				}),
+				OneOf(
+					Path(Result("update requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).To(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+					})),
+				),
+			),
+		),
+		Once("delete", func(ctx context.Context, _ Mock) {
+			Expect(k8sClient.Delete(ctx, &linodeVPC)).To(Succeed())
+			Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
+		}),
+		OneOf(
+			Path(
+				Call("unable to get", func(ctx context.Context, mck Mock) {
+					mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+				}),
+				OneOf(
+					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).To(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+					})),
+				),
+			),
+			Path(
+				Call("unable to delete", func(ctx context.Context, mck Mock) {
+					getVPC := mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+						ID:      1,
+						Label:   "vpc1",
+						Region:  "us-east",
+						Updated: ptr.To(time.Now()),
+						Subnets: []linodego.VPCSubnet{{}},
+					}, nil)
+					mck.VPCClient.EXPECT().DeleteVPC(ctx, gomock.Any()).After(getVPC).Return(errors.New("server error"))
+				}),
+				OneOf(
+					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).To(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+					})),
+				),
+			),
+			Path(
+				Call("with nodes still attached", func(ctx context.Context, mck Mock) {
+					mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+						ID:      1,
+						Label:   "vpc1",
+						Region:  "us-east",
+						Updated: ptr.To(time.Now()),
+						Subnets: []linodego.VPCSubnet{
+							{
+								Linodes: []linodego.VPCSubnetLinode{{ID: 1}},
+							},
+						},
+					}, nil)
+				}),
+				OneOf(
+					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerWaitForHasNodesDelay))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						Expect(err).To(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+					})),
+				),
+			),
+			Path(
+				Call("with no nodes attached", func(ctx context.Context, mck Mock) {
+					getVPC := mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+						ID:      1,
+						Label:   "vpc1",
+						Region:  "us-east",
+						Updated: ptr.To(time.Now()),
+						Subnets: []linodego.VPCSubnet{{}},
+					}, nil)
+					mck.VPCClient.EXPECT().
+						DeleteVPC(ctx, gomock.Any()).
+						After(getVPC).
+						Return(nil)
+				}),
+				Result("delete success", func(ctx context.Context, mck Mock) {
+					res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+					k8sClient.Get(ctx, objectKey, &linodeVPC)
+					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &linodeVPC))).To(BeTrue())
+				}),
+			),
+		),
+	)
 })

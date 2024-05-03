@@ -295,7 +295,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
@@ -325,7 +325,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		if err := r.configureDisks(ctx, logger, machineScope, linodeInstance.ID); err != nil {
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
@@ -341,7 +341,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightBootTriggered, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
@@ -357,7 +357,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
@@ -374,7 +374,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightReady, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 

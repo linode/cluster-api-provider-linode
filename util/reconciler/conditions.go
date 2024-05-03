@@ -21,6 +21,15 @@ func HasConditionStatus(from conditions.Getter, typ clusterv1.ConditionType, sta
 	return cond.Status == status
 }
 
+func HasConditionSeverity(from conditions.Getter, typ clusterv1.ConditionType, severity clusterv1.ConditionSeverity) bool {
+	cond := conditions.Get(from, typ)
+	if cond == nil {
+		return false
+	}
+
+	return cond.Severity == severity
+}
+
 func RecordDecayingCondition(to conditions.Setter, typ clusterv1.ConditionType, reason, message string, timeout time.Duration) bool {
 	conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityWarning, message)
 

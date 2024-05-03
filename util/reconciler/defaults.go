@@ -56,10 +56,10 @@ func DefaultedLoopTimeout(timeout time.Duration) time.Duration {
 	return timeout
 }
 
-// DefaultMachineControllerPreflightTimeout will default the preflight machine timeout if it is zero-valued.
-func DefaultMachineControllerPreflightTimeout(timeout time.Duration) time.Duration {
+// DefaultTimeout returns timeout or backup if timeout is zero-valued.
+func DefaultTimeout(timeout, backup time.Duration) time.Duration {
 	if timeout <= 0 {
-		return DefaultMachineControllerWaitForPreflightTimeout
+		return backup
 	}
 
 	return timeout

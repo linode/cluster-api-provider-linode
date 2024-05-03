@@ -193,6 +193,10 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 			Expect(logOutput).To(ContainSubstring("Secret lifecycle-bucket-details was applied with new access keys"))
 		}),
+		Once("resource keyGeneration is modified", func(ctx context.Context, _ Mock) {
+			obj.Spec.KeyGeneration = ptr.To(1)
+			Expect(k8sClient.Update(ctx, &obj)).To(Succeed())
+		}),
 		OneOf(
 			Path(Call("bucket is retrieved on update", func(ctx context.Context, mck Mock) {
 				mck.ObjectStorageClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).
@@ -214,12 +218,6 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				}),
 			),
 		),
-		Once("resource keyGeneration is modified", func(ctx context.Context, _ Mock) {
-			objectKey := client.ObjectKeyFromObject(&obj)
-			Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
-			obj.Spec.KeyGeneration = ptr.To(1)
-			Expect(k8sClient.Update(ctx, &obj)).To(Succeed())
-		}),
 		OneOf(
 			// nb: Order matters for paths of the same length. The leftmost path is evaluated first.
 			// If we evaluate the happy path first, the bucket resource is mutated so the error path won't occur.

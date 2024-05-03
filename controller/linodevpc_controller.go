@@ -36,6 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -134,7 +135,7 @@ func (r *LinodeVPCReconciler) reconcile(
 		// Always close the scope when exiting this function so we can persist
 		// any LinodeVPC changes. This ignores any resource not found errors
 		// when reconciling deletions.
-		if patchErr := vpcScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(patchErr, apierrors.IsNotFound) != nil {
+		if patchErr := vpcScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch LinodeVPC")
 
 			err = errors.Join(err, patchErr)
@@ -158,7 +159,7 @@ func (r *LinodeVPCReconciler) reconcile(
 				err = nil
 
 			default:
-				if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultVPCControllerReconcileTimeout).After(time.Now()) {
+				if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
 					logger.Info("re-queuing VPC deletion")
 
 					res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
@@ -180,11 +181,17 @@ func (r *LinodeVPCReconciler) reconcile(
 
 	// Update
 	if vpcScope.LinodeVPC.Spec.VPCID != nil {
-		// Update is not currently supported, so do nothing for now
-		vpcScope.LinodeVPC.Status.Ready = true
+		failureReason = infrav1alpha1.UpdateVPCError
 
-		// failureReason = infrav1alpha1.UpdateVPCError
-		// logger = logger.WithValues("vpcID", *vpcScope.LinodeVPC.Spec.VPCID)
+		logger = logger.WithValues("vpcID", *vpcScope.LinodeVPC.Spec.VPCID)
+
+		err = r.reconcileUpdate(ctx, logger, vpcScope)
+		if err != nil && !reconciler.HasConditionSeverity(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
+			logger.Info("re-queuing VPC update")
+
+			res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
+			err = nil
+		}
 
 		return
 	}
@@ -193,7 +200,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	failureReason = infrav1alpha1.CreateVPCError
 
 	err = r.reconcileCreate(ctx, logger, vpcScope)
-	if err != nil && vpcScope.LinodeVPC.ObjectMeta.CreationTimestamp.Add(reconciler.DefaultVPCControllerReconcileTimeout).After(time.Now()) {
+	if err != nil && !reconciler.HasConditionSeverity(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
 		logger.Info("re-queuing VPC creation")
 
 		res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
@@ -209,7 +216,7 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
 
-		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.CreateVPCError), clusterv1.ConditionSeverityWarning, err.Error())
+		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
 
 		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha1.CreateVPCError), err.Error())
 
@@ -231,7 +238,7 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
 
-		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.UpdateVPCError), clusterv1.ConditionSeverityWarning, err.Error())
+		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.UpdateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
 
 		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha1.UpdateVPCError), err.Error())
 
@@ -260,7 +267,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 					continue
 				}
 
-				if vpc.Updated.Add(reconciler.DefaultVPCControllerWaitForHasNodesTimeout).After(time.Now()) {
+				if vpc.Updated.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerWaitForHasNodesTimeout)).After(time.Now()) {
 					return errVPCHasNodesAttached
 				}
 
@@ -298,8 +305,11 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			predicate.And(
 				// Filter for objects with a specific WatchLabel.
 				predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
-				// Do not reconcile events generated by the controller itself.
-				predicate.GenerationChangedPredicate{},
+				// Do not reconcile the Delete events generated by the
+				// controller itself.
+				predicate.Funcs{
+					DeleteFunc: func(e event.DeleteEvent) bool { return false },
+				},
 			)).Build(r)
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
