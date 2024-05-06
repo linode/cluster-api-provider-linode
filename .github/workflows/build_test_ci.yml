@@ -4,29 +4,49 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**/**.md'
-      - 'docs/**'
   pull_request:
     branches:
       - "*"
-    paths-ignore:
-      - '**/**.md'
-      - 'docs/**'
   workflow_dispatch:
-  
+
 permissions:
   contents: read
   pull-requests: read
   actions: read
 
 concurrency:
-  group: build-test-ci-${{ github.ref }}-1
+  group: build-test-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # Expose matched filters as job 'src' output variable
+      src: ${{ steps.filter.outputs.src }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          predicate-quantifier: 'every'
+          filters: |
+            src: 
+             - '!**/**.md'
+             - '!docs/**'
+
   go-build-test:
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.src == 'true' }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@v2
@@ -71,90 +91,18 @@ jobs:
         slug: linode/cluster-api-provider-linode
 
   e2e-test:
-    needs:  [go-build-test, docker-build]
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
-    env:
-      GITHUB_TOKEN: ${{ secrets.github_token }}
-      LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@v2
-      with:
-        disable-sudo: true
-        egress-policy: block
-        allowed-endpoints: >
-          api.linode.com:443
-          api.github.com:443
-          github.com:443
-          gcr.io:443
-          ghcr.io:443
-          proxy.golang.org:443
-          sum.golang.org:443
-          *.githubusercontent.com:443
-          docker.io:443
-          registry-1.docker.io:443
-          auth.docker.io:443
-          production.cloudflare.docker.com:443
-          storage.googleapis.com:443
-          registry.k8s.io:443
-          *.pkg.dev:443
-          *.amazonaws.com:443
-          *.blob.core.windows.net:443
-          quay.io:443
-          *.quay.io:443
-          api.snapcraft.io:443
-          cloud.tilt.dev:443
-          kubernetes-sigs.github.io:443
-          charts.jetstack.io:443
-          helm.cilium.io:443
-          linode.github.io:443
-
-    - uses: actions/checkout@v4
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: 'go.mod'
-        check-latest: true
-
-    - name: Docker cache
-      uses: ScribeMD/docker-cache@0.5.0
-      with:
-        key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
-
-    - name: Complete E2E Test
-      if: github.ref == 'refs/heads/main' 
-      run: make e2etest
-      env:
-        E2E_FLAGS: '--assert-timeout 15m0s'
-        INSTALL_K3S_PROVIDER: true
-        INSTALL_RKE2_PROVIDER: true
-        LINODE_REGION: us-sea
-        LINODE_CONTROL_PLANE_MACHINE_TYPE: g6-standard-2
-        LINODE_MACHINE_TYPE: g6-standard-2
-        CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/gha-clusterctl-config.yaml
-
-    
-    - name: Quick E2E Test
-      if: github.ref != 'refs/heads/main'
-      run: make e2etest
-      env:
-        E2E_FLAGS: '--selector quick'
-
-    - name: Copy logs
-      if: ${{ always() }}
-      run: docker cp tilt-control-plane:/var/log .logs
-
-    - uses: actions/upload-artifact@v4
-      if: ${{ always() }}
-      with:
-        name: logs
-        path: .logs/*
-        overwrite: true
+    needs: changes
+    if: ${{ github.event.pull_request.draft == false &&  needs.changes.outputs.src == 'true' }}
+    uses: ./.github/workflows/e2e-test.yaml
+    secrets: inherit
+    with:
+      e2e-selector: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
+      e2e-flags: ${{ github.ref == 'refs/heads/main' && '--assert-timeout 15m0s' || '' }}
 
   docker-build:
     runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.src == 'true' }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@v2

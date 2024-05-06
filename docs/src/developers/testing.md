@@ -1,12 +1,23 @@
 # CAPL Testing
 
+<!-- TOC depthFrom:2 -->
+
+- [Unit Tests](#unit-tests)
+  - [Executing Tests](#executing-tests)
+  - [Creating Tests](#creating-tests)
+- [E2E Tests](#e2e-tests)
+  - [Running Tests](#running-tests)
+  - [Adding Tests](#adding-tests)
+
+<!-- /TOC -->
+
 ## Unit Tests
-### Running Tests
+### Executing Tests
 In order to run the unit tests run the following command
 ```bash
 make test
 ```
-### Adding tests
+### Creating Tests
 General unit tests of functions follow the same conventions for testing using Go's `testing` standard library, along with the [testify](https://github.com/stretchr/testify) toolkit for making assertions.
 
 Unit tests that require API clients use mock clients generated using [gomock](https://github.com/uber-go/mock). To simplify the usage of mock clients, this repo also uses an internal library defined in `mock/mocktest`.
@@ -178,7 +189,7 @@ For e2e tests CAPL uses the [Chainsaw project](https://kyverno.github.io/chainsa
 spin up a cluster with the CAPL controllers installed and then uses `chainsaw-test.yaml` files to drive e2e testing.
 
 All test live in the e2e folder with a directory structure of `e2e/${COMPONENT}/${TEST_NAME}`
-### Running tests
+### Running Tests
 In order to run e2e tests run the following commands: 
 ```bash
 # Required env vars to run e2e tests
@@ -196,31 +207,34 @@ make e2etest
 ```
 *Note: By default `make e2etest` runs all the e2e tests defined under `/e2e` dir*
 
-In order to run specific test, you need to pass flags to chainsaw by setting env var `E2E_FLAGS`
+In order to run specific test, you need to pass flags to chainsaw by setting env var `E2E_SELECTOR`
+
+Additional settings can be passed to chainsaw by setting env var `E2E_FLAGS`
 
 Example: Only running e2e tests for flavors *(default, k3s, rke2)*
 ```bash
-make e2etest E2E_FLAGS='--selector flavors --assert-timeout 10m0s'
+make e2etest E2E_SELECTOR='flavors' E2E_FLAGS='--assert-timeout 10m0s'
 ```
 *Note: We need to bump up the assert timeout to 10 mins to allow the cluster to complete building and become available*
 
 There are other selectors you can use to invoke specfic tests. Please look at the table below for all the selectors available:
 
-| Tests          | Selector     |
-| ------------- | ------------- |
-| All Controllers | `quick`     |
-| All Flavors (default, k3s, rke2) | `flavors`   |
-| K3S Cluster | `k3s` | 
-| RKE2 Cluster | `rke2` |
-| Default (kubeadm) Cluster | `default-cluster` |
-| Linode Cluster Controller | `linodecluster` |
-| Linode Machine Controller | `linodemachine` |
-| Linode Obj Controller | `linodeobj` | 
-| Linode VPC Controller | `linodevpc` | 
+| Tests                            | Selector          |
+|----------------------------------|-------------------|
+| All Tests                        | `all`             |
+| All Controllers                  | `quick`           |
+| All Flavors (default, k3s, rke2) | `flavors`         |
+| K3S Cluster                      | `k3s`             | 
+| RKE2 Cluster                     | `rke2`            |
+| Default (kubeadm) Cluster        | `default-cluster` |
+| Linode Cluster Controller        | `linodecluster`   |
+| Linode Machine Controller        | `linodemachine`   |
+| Linode Obj Controller            | `linodeobj`       | 
+| Linode VPC Controller            | `linodevpc`       | 
 
 *Note: For any flavor e2e tests, please set the required env variables*
 
-### Adding tests
+### Adding Tests
 1. Create a new directory under the controller you are testing with the naming scheme of `e2e/${COMPONENT}/${TEST_NAME}`
 2. Create a minimal `chainsaw-test.yaml` file in the new test dir
     ```yaml

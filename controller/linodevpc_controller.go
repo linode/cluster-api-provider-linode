@@ -187,6 +187,11 @@ func (r *LinodeVPCReconciler) reconcile(
 func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
 	logger.Info("creating vpc")
 
+	if err := vpcScope.AddCredentialsRefFinalizer(ctx); err != nil {
+		logger.Error(err, "Failed to update credentials secret")
+		return err
+	}
+
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
 
@@ -281,6 +286,11 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletedReason, "VPC has cleaned up")
 
 	vpcScope.LinodeVPC.Spec.VPCID = nil
+
+	if err := vpcScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+		logger.Error(err, "Failed to update credentials secret")
+		return res, err
+	}
 	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha1.GroupVersion.String())
 
 	return ctrl.Result{}, nil

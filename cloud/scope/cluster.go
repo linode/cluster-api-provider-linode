@@ -108,3 +108,23 @@ func (s *ClusterScope) AddFinalizer(ctx context.Context) error {
 
 	return nil
 }
+
+func (s *ClusterScope) AddCredentialsRefFinalizer(ctx context.Context) error {
+	if s.LinodeCluster.Spec.CredentialsRef == nil {
+		return nil
+	}
+
+	return addCredentialsFinalizer(ctx, s.Client,
+		*s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(),
+		toFinalizer(s.LinodeCluster))
+}
+
+func (s *ClusterScope) RemoveCredentialsRefFinalizer(ctx context.Context) error {
+	if s.LinodeCluster.Spec.CredentialsRef == nil {
+		return nil
+	}
+
+	return removeCredentialsFinalizer(ctx, s.Client,
+		*s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(),
+		toFinalizer(s.LinodeCluster))
+}

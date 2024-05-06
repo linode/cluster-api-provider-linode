@@ -103,3 +103,23 @@ func (s *VPCScope) AddFinalizer(ctx context.Context) error {
 
 	return nil
 }
+
+func (s *VPCScope) AddCredentialsRefFinalizer(ctx context.Context) error {
+	if s.LinodeVPC.Spec.CredentialsRef == nil {
+		return nil
+	}
+
+	return addCredentialsFinalizer(ctx, s.Client,
+		*s.LinodeVPC.Spec.CredentialsRef, s.LinodeVPC.GetNamespace(),
+		toFinalizer(s.LinodeVPC))
+}
+
+func (s *VPCScope) RemoveCredentialsRefFinalizer(ctx context.Context) error {
+	if s.LinodeVPC.Spec.CredentialsRef == nil {
+		return nil
+	}
+
+	return removeCredentialsFinalizer(ctx, s.Client,
+		*s.LinodeVPC.Spec.CredentialsRef, s.LinodeVPC.GetNamespace(),
+		toFinalizer(s.LinodeVPC))
+}

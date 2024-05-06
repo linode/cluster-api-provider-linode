@@ -154,3 +154,25 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 
 	return value, nil
 }
+
+func (s *MachineScope) AddCredentialsRefFinalizer(ctx context.Context) error {
+	// Only add the finalizer if the machine has an override for the credentials reference
+	if s.LinodeMachine.Spec.CredentialsRef == nil {
+		return nil
+	}
+
+	return addCredentialsFinalizer(ctx, s.Client,
+		*s.LinodeMachine.Spec.CredentialsRef, s.LinodeMachine.GetNamespace(),
+		toFinalizer(s.LinodeMachine))
+}
+
+func (s *MachineScope) RemoveCredentialsRefFinalizer(ctx context.Context) error {
+	// Only remove the finalizer if the machine has an override for the credentials reference
+	if s.LinodeMachine.Spec.CredentialsRef == nil {
+		return nil
+	}
+
+	return removeCredentialsFinalizer(ctx, s.Client,
+		*s.LinodeMachine.Spec.CredentialsRef, s.LinodeMachine.GetNamespace(),
+		toFinalizer(s.LinodeMachine))
+}
