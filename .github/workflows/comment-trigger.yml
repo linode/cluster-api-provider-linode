@@ -1,0 +1,18 @@
+  on:
+    issue_comment:
+      types:
+        - created
+  jobs:
+    deploy:
+      runs-on: ubuntu-latest
+      if: github.event.issue.pull_request # && startsWith(github.event.comment.body, '/test')
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v3
+
+        - name: Deploy
+          env:
+            COMMENT: "${{ github.event.comment.body }}"
+          run: |
+            export RAW_COMMENT=${COMMENT#/test }
+            echo "testing... ${RAW_COMMENT:-default}"
