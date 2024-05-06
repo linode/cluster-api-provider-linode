@@ -31,7 +31,7 @@ spec:
             nodeSelector:
               node-role.kubernetes.io/control-plane: "true"
       owner: root:root
-      path: /var/lib/rancher/rke2/server/manifests/linode-ccm.yaml
+      path: /var/lib/rancher/rke2/server/manifests/ccm-linode.yaml
     - contentFrom:
         secret:
           key:  linode-token-region.yaml

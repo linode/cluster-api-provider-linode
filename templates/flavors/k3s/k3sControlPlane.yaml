@@ -36,10 +36,8 @@ spec:
                 name: "linode-token-region"
               nodeSelector:
                 node-role.kubernetes.io/control-plane: "true"
-              owner: root:root
-              path: /var/lib/rancher/k3s/server/manifests/linode-ccm.yaml
         owner: root:root
-        path: /var/lib/rancher/k3s/server/manifests/linode-ccm.yaml
+        path: /var/lib/rancher/k3s/server/manifests/ccm-linode.yaml
       - contentFrom:
           secret:
             key:  linode-token-region.yaml
