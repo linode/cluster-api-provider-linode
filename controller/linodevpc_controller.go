@@ -189,6 +189,11 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 
 	if err := vpcScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
+
+		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
+
+		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha1.CreateVPCError), err.Error())
+
 		return err
 	}
 
@@ -289,8 +294,16 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 
 	if err := vpcScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
-		return res, err
+
+		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
+			logger.Info("re-queuing VPC deletion")
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+		}
+
+		return ctrl.Result{}, err
 	}
+
 	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha1.GroupVersion.String())
 
 	return ctrl.Result{}, nil
