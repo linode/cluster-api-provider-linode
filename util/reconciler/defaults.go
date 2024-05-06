@@ -37,9 +37,13 @@ const (
 	// DefaultMachineControllerWaitForRunningTimeout is the default timeout if instance is not running.
 	DefaultMachineControllerWaitForRunningTimeout = 20 * time.Minute
 
-	// DefaultVPCControllerWaitForHasNodesDelay is the default requeue delay if VPC has nodes.
+	// DefaultVPCControllerReconcileDelay is the default requeue delay when a reconcile operation fails.
+	DefaultVPCControllerReconcileDelay = 5 * time.Second
+	// DefaultVPCControllerWaitForHasNodesTimeout is the default timeout when reconcile operations fail.
+	DefaultVPCControllerReconcileTimeout = 20 * time.Minute
+	// DefaultVPCControllerWaitForHasNodesDelay is the default requeue delay if a VPC has nodes.
 	DefaultVPCControllerWaitForHasNodesDelay = 5 * time.Second
-	// DefaultVPCControllerWaitForHasNodesTimeout is the default timeout if instance is not running.
+	// DefaultVPCControllerWaitForHasNodesTimeout is the default timeout if a VPC still has nodes.
 	DefaultVPCControllerWaitForHasNodesTimeout = 20 * time.Minute
 )
 
@@ -52,10 +56,10 @@ func DefaultedLoopTimeout(timeout time.Duration) time.Duration {
 	return timeout
 }
 
-// DefaultMachineControllerPreflightTimeout will default the preflight machine timeout if it is zero-valued.
-func DefaultMachineControllerPreflightTimeout(timeout time.Duration) time.Duration {
+// DefaultTimeout returns timeout or backup if timeout is zero-valued.
+func DefaultTimeout(timeout, backup time.Duration) time.Duration {
 	if timeout <= 0 {
-		return DefaultMachineControllerWaitForPreflightTimeout
+		return backup
 	}
 
 	return timeout

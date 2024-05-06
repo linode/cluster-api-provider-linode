@@ -178,7 +178,8 @@ func (r *LinodeMachineReconciler) reconcile(
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
-		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(patchErr, apierrors.IsNotFound) != nil {
+		// This ignores any resource not found errors when reconciling deletions.
+		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch LinodeMachine")
 
 			err = errors.Join(err, patchErr)
@@ -300,7 +301,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
@@ -330,7 +331,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		if err := r.configureDisks(ctx, logger, machineScope, linodeInstance.ID); err != nil {
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
@@ -346,7 +347,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightBootTriggered, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
@@ -362,7 +363,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
@@ -379,7 +380,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightReady, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultMachineControllerPreflightTimeout(r.ReconcileTimeout)) {
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 				return ctrl.Result{}, err
 			}
 
