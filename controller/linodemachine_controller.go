@@ -178,7 +178,8 @@ func (r *LinodeMachineReconciler) reconcile(
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
-		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(patchErr, apierrors.IsNotFound) != nil {
+		// This ignores any resource not found errors when reconciling deletions.
+		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch LinodeMachine")
 
 			err = errors.Join(err, patchErr)

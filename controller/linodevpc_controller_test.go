@@ -95,12 +95,14 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC creation"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Events()).To(ContainSubstring("server error"))
 					})),
 				),
 			),
@@ -152,23 +154,26 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 				Result("update success", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 					Expect(err).NotTo(HaveOccurred())
+					Expect(mck.Logs()).NotTo(ContainSubstring("Failed to update VPC"))
 				}),
 			),
 			Path(
 				Call("unable to list VPC", func(ctx context.Context, mck Mock) {
-					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return(nil, errors.New("api error"))
+					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return(nil, errors.New("server error"))
 				}),
 				OneOf(
 					Path(Result("update requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC update"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Events()).To(ContainSubstring("server error"))
 					})),
 				),
 			),
@@ -183,16 +188,18 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
 				}),
 				OneOf(
-					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
+					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to fetch VPC"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Events()).To(ContainSubstring("server error"))
 					})),
 				),
 			),
@@ -212,12 +219,14 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to delete VPC"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Events()).To(ContainSubstring("server error"))
 					})),
 				),
 			),
@@ -236,16 +245,18 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					}, nil)
 				}),
 				OneOf(
-					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
+					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerWaitForHasNodesDelay))
+						Expect(mck.Logs()).To(ContainSubstring("VPC has node(s) attached, re-queuing VPC deletion"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Events()).To(ContainSubstring("will not delete VPC with node(s) attached"))
 					})),
 				),
 			),
@@ -258,10 +269,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 						Updated: ptr.To(time.Now()),
 						Subnets: []linodego.VPCSubnet{{}},
 					}, nil)
-					mck.VPCClient.EXPECT().
-						DeleteVPC(ctx, gomock.Any()).
-						After(getVPC).
-						Return(nil)
+					mck.VPCClient.EXPECT().DeleteVPC(ctx, gomock.Any()).After(getVPC).Return(nil)
 				}),
 				Result("delete success", func(ctx context.Context, mck Mock) {
 					res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
