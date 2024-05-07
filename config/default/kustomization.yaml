@@ -13,6 +13,7 @@ resources:
 - ../rbac
 - ../manager
 - linode-token-secret.yaml
+- manager-configmap.yaml
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml
 - ../webhook
@@ -35,9 +36,26 @@ patches:
 # 'CERTMANAGER' needs to be enabled to use ca injection
 - path: webhookcainjection_patch.yaml
 
+replacements:
+
+# [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
+# crd/kustomization.yaml
+ - source:
+     kind: ConfigMap
+     version: v1
+     name: manager-config # this name should match the one in manager-configmap.yaml
+     fieldPath: .metadata.name
+   targets:
+     - select:
+         kind: Deployment
+         group: apps
+         version: v1
+         name: controller-manager
+       fieldPaths:
+         - .spec.template.spec.containers.[name=manager].env.[name=ENABLE_WEBHOOKS].valueFrom.configMapKeyRef.name
+
 # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER' prefix.
 # Uncomment the following replacements to add the cert-manager CA injection annotations
-replacements:
  - source: # Add cert-manager annotation to ValidatingWebhookConfiguration, MutatingWebhookConfiguration and CRDs
      kind: Certificate
      group: cert-manager.io
