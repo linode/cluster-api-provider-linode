@@ -9,12 +9,29 @@ spec:
     kind: LinodeMachineTemplate
     name: ${CLUSTER_NAME}-control-plane
   files:
-    - contentFrom:
-        secret:
-          key: linode-ccm.yaml
-          name: linode-${CLUSTER_NAME}-crs-0
+    - content: |-
+        apiVersion: helm.cattle.io/v1
+        kind: HelmChart
+        metadata:
+          namespace: kube-system
+          name: ccm-linode
+        spec:
+          targetNamespace: kube-system
+          version: ${LINODE_CCM_VERSION:=v0.4.4}
+          chart: ccm-linode
+          repo: https://linode.github.io/linode-cloud-controller-manager/
+          bootstrap: true
+          valuesContent: |-
+            routeController:
+              vpcName: ${VPC_NAME:=${CLUSTER_NAME}}
+              clusterCIDR: 10.0.0.0/8
+              configureCloudRoutes: true
+            secretRef:
+              name: "linode-token-region"
+            nodeSelector:
+              node-role.kubernetes.io/control-plane: "true"
       owner: root:root
-      path: /var/lib/rancher/rke2/server/manifests/linode-ccm.yaml
+      path: /var/lib/rancher/rke2/server/manifests/ccm-linode.yaml
     - contentFrom:
         secret:
           key:  linode-token-region.yaml
