@@ -23,6 +23,8 @@ import (
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/mock"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 func TestValidateObjectStorageBucketScopeParams(t *testing.T) {

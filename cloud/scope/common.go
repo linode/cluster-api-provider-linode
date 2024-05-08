@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/linode/cluster-api-provider-linode/version"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 func CreateLinodeClient(apiKey string) (*linodego.Client, error) {

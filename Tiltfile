@@ -105,7 +105,7 @@ if os.getenv("SKIP_DOCKER_BUILD", "false") != "true":
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
         only=("Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
-        "./api", "./cloud", "./cmd", "./controller", "./util", "./version",),
+        "./api", "./clients", "./cloud", "./cmd", "./controller", "./util", "./version",),
         build_args={"VERSION": os.getenv("VERSION", "")},
     )
 
