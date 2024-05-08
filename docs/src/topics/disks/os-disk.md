@@ -40,7 +40,6 @@ spec:
   template:
     spec:
       image: ""
-      rootPass: Akamaipass123!
       region: us-ord
       type: g6-standard-4
       osDisk:
