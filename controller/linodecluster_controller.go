@@ -126,10 +126,10 @@ func (r *LinodeClusterReconciler) reconcile(
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
 		err := r.reconcileDelete(ctx, logger, clusterScope)
-		if err != nil && !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
+		if err != nil {
 			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
 				logger.Info("re-queuing cluster/nb deletion")
-			
+
 				res = ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}
 
 				return res, nil
