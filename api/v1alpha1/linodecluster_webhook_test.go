@@ -17,23 +17,52 @@ limitations under the License.
 package v1alpha1
 
 import (
-	. "github.com/onsi/ginkgo/v2"
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/linode/cluster-api-provider-linode/mock"
+
+	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
-var _ = Describe("LinodeCluster Webhook", func() {
+func TestValidateLinodeCluster(t *testing.T) {
+	t.Parallel()
 
-	Context("When creating LinodeCluster under Validating Webhook", func() {
-		It("Should deny if a required field is empty", func() {
+	var (
+		cluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "example",
+			},
+		}
+	)
 
-			// TODO(user): Add your logic here
-
-		})
-
-		It("Should admit if all required fields are provided", func() {
-
-			// TODO(user): Add your logic here
-
-		})
-	})
-
-})
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					assert.NoError(t, cluster.validateLinodeCluster(ctx, mck.LinodeClient))
+				}),
+			),
+		),
+		OneOf(
+			Path(Call("invalid region", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
+			})),
+		),
+		Result("error", func(ctx context.Context, mck Mock) {
+			assert.Error(t, cluster.validateLinodeCluster(ctx, mck.LinodeClient))
+		}),
+	)
+}
