@@ -253,6 +253,13 @@ VPCs are not deleted when a cluster is deleted using kubectl. One can run `kubec
 For any issues, please refer to the [troubleshooting guide](../topics/troubleshooting.md).
 ```
 
+### Debugging CAPL Controllers
+CAPL supports using [Delve](https://github.com/go-delve/delve/) to attach a debugger to CAPL. This will start Delve in the
+CAPL container on port `40000` and use Tilt live_reload to rebuild the CAPL Controller on your host and insert it into the container without needing to rebuild the container.
+  ```bash
+  CAPL_DEBUG=true make tilt-cluster
+  ```
+
 ### Automated Testing
 
 #### E2E Testing
