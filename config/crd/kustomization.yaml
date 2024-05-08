@@ -21,7 +21,7 @@ resources:
 patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
-#- path: patches/webhook_in_linodeclusters.yaml
+- path: patches/webhook_in_linodeclusters.yaml
 - path: patches/webhook_in_linodemachines.yaml
 #- path: patches/webhook_in_linodemachinetemplates.yaml
 #- path: patches/webhook_in_linodeclustertemplates.yaml
