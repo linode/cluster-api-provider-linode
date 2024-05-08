@@ -10,13 +10,14 @@ import (
 // LinodeClient is an interface that defines the methods that a Linode client must have to interact with Linode.
 // It defines all the functions that are required to create, delete, and get resources
 // from Linode such as object storage buckets, node balancers, linodes, and VPCs.
-type LinodeMachineClient interface {
+type LinodeClient interface {
 	LinodeNodeBalancerClient
 	LinodeInstanceClient
 	LinodeVPCClient
+	LinodeObjectStorageClient
 }
 
-// LinodeInstanceClient defines the methods that a Linode client must have to interact with Linode's Instance service.
+// LinodeInstanceClient defines the methods that interact with Linode's Instance service.
 type LinodeInstanceClient interface {
 	GetInstanceIPAddresses(ctx context.Context, linodeID int) (*linodego.InstanceIPAddressResponse, error)
 	ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error)
@@ -35,7 +36,7 @@ type LinodeInstanceClient interface {
 	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
 }
 
-// LinodeVPCClient defines the methods that a Linode client must have to interact with Linode's VPC service.
+// LinodeVPCClient defines the methods that interact with Linode's VPC service.
 type LinodeVPCClient interface {
 	GetVPC(ctx context.Context, vpcID int) (*linodego.VPC, error)
 	ListVPCs(ctx context.Context, opts *linodego.ListOptions) ([]linodego.VPC, error)
@@ -43,7 +44,7 @@ type LinodeVPCClient interface {
 	DeleteVPC(ctx context.Context, vpcID int) error
 }
 
-// LinodeNodeBalancerClient defines the methods that a Linode client must have to interact with Linode's Node Balancer service.
+// LinodeNodeBalancerClient defines the methods that interact with Linode's Node Balancer service.
 type LinodeNodeBalancerClient interface {
 	ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) ([]linodego.NodeBalancer, error)
 	CreateNodeBalancer(ctx context.Context, opts linodego.NodeBalancerCreateOptions) (*linodego.NodeBalancer, error)
@@ -53,7 +54,7 @@ type LinodeNodeBalancerClient interface {
 	CreateNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, opts linodego.NodeBalancerNodeCreateOptions) (*linodego.NodeBalancerNode, error)
 }
 
-// LinodeObjectStorageClient defines the methods that a Linode client must have to interact with Linode's Object Storage service.
+// LinodeObjectStorageClient defines the methods that interact with Linode's Object Storage service.
 type LinodeObjectStorageClient interface {
 	GetObjectStorageBucket(ctx context.Context, cluster, label string) (*linodego.ObjectStorageBucket, error)
 	CreateObjectStorageBucket(ctx context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error)

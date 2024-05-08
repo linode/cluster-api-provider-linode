@@ -34,7 +34,7 @@ type VPCScope struct {
 	Client K8sClient
 
 	PatchHelper  *patch.Helper
-	LinodeClient LinodeVPCClient
+	LinodeClient LinodeClient
 	LinodeVPC    *infrav1alpha1.LinodeVPC
 }
 

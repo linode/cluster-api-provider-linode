@@ -43,7 +43,7 @@ type ObjectStorageBucketScope struct {
 	Client       K8sClient
 	Bucket       *infrav1alpha1.LinodeObjectStorageBucket
 	Logger       logr.Logger
-	LinodeClient LinodeObjectStorageClient
+	LinodeClient LinodeClient
 	PatchHelper  *patch.Helper
 }
 

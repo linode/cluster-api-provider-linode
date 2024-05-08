@@ -85,7 +85,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 		args            args
 		expectedErr     error
 		expects         func(k8s *mock.MockK8sClient)
-		clientBuildFunc func(apiKey string) (LinodeObjectStorageClient, error)
+		clientBuildFunc func(apiKey string) (LinodeClient, error)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid ObjectStorageBucketScope",

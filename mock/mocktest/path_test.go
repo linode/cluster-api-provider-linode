@@ -73,7 +73,7 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 		OneOf(
 			Path(
 				Call("underlying exists", func(ctx context.Context, mck Mock) {
-					mck.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
+					mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(&linodego.Instance{ID: 1}, nil)
 				}),
 				Result("no error", func(ctx context.Context, mck Mock) {
 					Expect(contrivedCalls(ctx, mck)).To(Succeed())
@@ -81,7 +81,7 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 			),
 			Path(
 				Call("underlying does not exist", func(ctx context.Context, mck Mock) {
-					mck.MachineClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
+					mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).Return(nil, errors.New("404"))
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					Expect(contrivedCalls(ctx, mck)).NotTo(Succeed())
@@ -93,8 +93,8 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 			pth.run(ctx, Mock{
 				TestReporter: GinkgoT(),
 				MockClients: mock.MockClients{
-					MachineClient: mock.NewMockLinodeMachineClient(mockCtrl),
-					K8sClient:     mock.NewMockK8sClient(mockCtrl),
+					LinodeClient: mock.NewMockLinodeClient(mockCtrl),
+					K8sClient:    mock.NewMockK8sClient(mockCtrl),
 				},
 			})
 		})
@@ -109,8 +109,8 @@ func contrivedCalls(ctx context.Context, mck Mock) error {
 		return err
 	}
 
-	if mck.MachineClient != nil {
-		_, err = mck.MachineClient.CreateInstance(ctx, linodego.InstanceCreateOptions{})
+	if mck.LinodeClient != nil {
+		_, err = mck.LinodeClient.CreateInstance(ctx, linodego.InstanceCreateOptions{})
 		if err != nil {
 			return err
 		}
