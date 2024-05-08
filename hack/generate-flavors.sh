@@ -3,18 +3,28 @@
 set -euo pipefail
 
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
-FLAVORS_DIR="${REPO_ROOT}/templates/flavors"
+STANDARD_ADDONS_DIR="${REPO_ROOT}/templates/addons"
+DISTRO_DIR="${REPO_ROOT}/templates/distros"
 
-for name in $(find "${FLAVORS_DIR}/"* -maxdepth 0 -type d -print0 | xargs -0 -I {} basename {} | grep -v base | grep -v clusterclass-base ); do
-    # clusterctl expects clusterclass not have the "cluster-template" prefix
-    # except for the actual cluster template using the clusterclass
-    if [[ "$name" == clusterclass* ]]; then
-        kustomize build "${FLAVORS_DIR}/${name}" > "${REPO_ROOT}/templates/${name}.yaml"
-	cp "${FLAVORS_DIR}/${name}/cluster-template.yaml" "${REPO_ROOT}/templates/cluster-template-${name}.yaml"
-    else
-        kustomize build "${FLAVORS_DIR}/${name}" > "${REPO_ROOT}/templates/cluster-template-${name}.yaml"
-    fi
+SUPPORTED_DISTROS=(
+    "rke2"
+    "k3s"
+    "kubeadm"
+)
+
+for distro in SUPPORTED_DISTROS; do
+    paths=()
+    kustomize_file_path="kustomization.yaml"
+    paths+=(${DISTRO_DIR}/${distro}/${kustomize_file_path})
+    for addon in $(find "${STANDARD_ADDONS_DIR}/"* -maxdepth 0 -type d -print0 | xargs -0 -I {} basename {}); do
+        paths+=(${STANDARD_ADDONS_DIR}/${addon}/${kustomize_file_path})
+    done
+    spruce merge --fallback-append ${paths} > kustomization.yaml
 done
+
+kustomize build "${STANDARD_ADDONS_DIR}/${addon}" > "${REPO_ROOT}/templates/cluster-template-${distro}-standard.yaml"
+
 
 # move the default template to the default file expected by clusterctl
 mv "${REPO_ROOT}/templates/cluster-template-default.yaml" "${REPO_ROOT}/templates/cluster-template.yaml"
+

@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../default
+  - ../../default
 
 patches:
   - target:
@@ -22,7 +22,6 @@ patches:
               enabled: true
             ui:
               enabled: true
-
   - target:
       kind: HelmChartProxy
       name: .*-linode-cloud-controller-manager
@@ -34,8 +33,6 @@ patches:
             name: "linode-token-region"
           image:
             pullPolicy: IfNotPresent
-
-
   - target:
       kind: LinodeVPC
     patch: |-
@@ -70,3 +67,64 @@ patches:
         labels:
             vxlan: "true"
             vpcless: "true"
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        clusterNetwork:
+          pods:
+            cidrBlocks:
+              - 10.192.0.0/10
+              - fd02::/80
+          services:
+            cidrBlocks:
+              - 10.96.0.0/12
+              - fd03::/108
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      - op: remove
+        path: /metadata/labels/vxlan
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KubeadmControlPlane
+    patch: |-
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlane
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        kubeadmConfigSpec:
+          clusterConfiguration:
+            controllerManager:
+              extraArgs:
+                node-cidr-mask-size-ipv6: "96"
+  - target:
+      kind: HelmChartProxy
+      name: .*-cilium
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          bgpControlPlane:
+            enabled: true
+          ipv6:
+            enabled: true
+          ipam:
+            mode: kubernetes
+          k8s:
+            requireIPv4PodCIDR: true
+          hubble:
+            relay:
+              enabled: true
+            ui:
+              enabled: true

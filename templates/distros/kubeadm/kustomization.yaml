@@ -4,10 +4,6 @@ resources:
   - ../base
   - kubeadmConfigTemplate.yaml
   - kubeadmControlPlane.yaml
-  - ../../addons/cilium
-  - ../../addons/csi-driver-linode
-  - ../../addons/ccm-linode
-  - ../../addons/cluster-resource-set
 patches:
   - target:
       group: cluster.x-k8s.io
