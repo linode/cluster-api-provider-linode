@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -342,7 +343,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
-		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil {
+		if err := machineScope.LinodeClient.BootInstance(ctx, linodeInstance.ID, 0); err != nil && !strings.HasSuffix(err.Error(), "already booted.") {
 			logger.Error(err, "Failed to boot instance")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
