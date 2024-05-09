@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -32,6 +33,7 @@ import (
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
+	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -117,10 +119,22 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						After(getNB).
 						Return(nil, errors.New("create NB error"))
 				}),
-				Result("create nb error", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
-					Expect(err.Error()).To(ContainSubstring("create NB error"))
-				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+					})),
+					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("create NB error"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
 			),
 			Path(
 				Call("cluster is not created because nb was nil", func(ctx context.Context, mck Mock) {
@@ -130,10 +144,22 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						After(getNB).
 						Return(nil, nil)
 				}),
-				Result("created nb is nil", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
-					Expect(err.Error()).To(ContainSubstring("nodeBalancer created was nil"))
-				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+					})),
+					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("nodeBalancer created was nil"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
 			),
 			Path(
 				Call("cluster is not created because nb config was nil", func(ctx context.Context, mck Mock) {
@@ -149,10 +175,22 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						After(getNB).
 						Return(nil, errors.New("nodeBalancer config created was nil"))
 				}),
-				Result("created nb config is nil", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
-					Expect(err.Error()).To(ContainSubstring("nodeBalancer config created was nil"))
-				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+					})),
+					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("nodeBalancer config created was nil"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
 			),
 			Path(
 				Call("cluster is not created because there is no capl cluster", func(ctx context.Context, mck Mock) {
