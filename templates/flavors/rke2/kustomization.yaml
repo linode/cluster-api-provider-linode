@@ -5,7 +5,6 @@ resources:
   - rke2ControlPlane.yaml
   - rke2ConfigTemplate.yaml
   - secret.yaml
-  - ../../addons/cilium
 patches:
   - target:
       group: cluster.x-k8s.io

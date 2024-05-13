@@ -9,7 +9,8 @@ spec:
     kind: LinodeMachineTemplate
     name: ${CLUSTER_NAME}-control-plane
   files:
-    - content: |-
+    - path: /var/lib/rancher/rke2/server/manifests/ccm-linode.yaml
+      content: |-
         apiVersion: helm.cattle.io/v1
         kind: HelmChart
         metadata:
@@ -30,8 +31,74 @@ spec:
               name: "linode-token-region"
             nodeSelector:
               node-role.kubernetes.io/control-plane: "true"
+    - path: /var/lib/rancher/rke2/server/manifests/cilium-policy.yaml
+      content: |
+        apiVersion: "cilium.io/v2"
+        kind: CiliumClusterwideNetworkPolicy
+        metadata:
+          name: "cluster-traffic"
+        spec:
+          description: "allow cluster traffic"
+          nodeSelector: {}
+          ingress:
+            - fromEntities:
+              - cluster
+            - fromCIDR:
+              - 10.0.0.0/8
+            - fromEntities:
+              - world
+              toPorts:
+                - ports:
+                  - port: "22"
+                  - port: "9345"
+                  - port: "6443"
+    - path: /var/lib/rancher/rke2/server/manifests/rke2-cilium-config.yaml
       owner: root:root
-      path: /var/lib/rancher/rke2/server/manifests/ccm-linode.yaml
+      permissions: "0640"
+      content: |-
+        apiVersion: helm.cattle.io/v1
+        kind: HelmChart
+        metadata:
+          name: cilium
+          namespace: kube-system
+        spec:
+          targetNamespace: kube-system
+          version: ${CILIUM_VERSION:=1.15.0}
+          chart: cilium
+          repo: https://helm.cilium.io/
+          bootstrap: true
+          valuesContent: |-
+            bgpControlPlane:
+              enabled: true
+            routingMode: native
+            kubeProxyReplacement: true
+            ipv4NativeRoutingCIDR: 10.0.0.0/8
+            tunnelProtocol: ""
+            enableIPv4Masquerade: true
+            egressMasqueradeInterfaces: eth0
+            policyAuditMode: ${FW_AUDIT_ONLY:=true}
+            hostFirewall:
+              enabled: true
+            extraConfig:
+              allow-localhost: policy
+            k8sServiceHost: 10.0.0.2
+            k8sServicePort: 6443
+            extraArgs:
+              - --direct-routing-device=eth1
+              - --nodeport-addresses=0.0.0.0/0
+            ipam:
+              mode: kubernetes
+            ipv4:
+              enabled: true
+            ipv6:
+              enabled: false
+            k8s:
+              requireIPv4PodCIDR: true
+            hubble:
+              relay:
+                enabled: true
+              ui:
+                enabled: true
     - contentFrom:
         secret:
           key:  linode-token-region.yaml
