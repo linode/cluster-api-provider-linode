@@ -23,6 +23,8 @@ import (
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/mock"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
@@ -83,7 +85,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 		args            args
 		expectedErr     error
 		expects         func(k8s *mock.MockK8sClient)
-		clientBuildFunc func(apiKey string) (LinodeObjectStorageClient, error)
+		clientBuildFunc func(apiKey string) (LinodeClient, error)
 	}{
 		{
 			name: "Success - Pass in valid args and get a valid ObjectStorageBucketScope",

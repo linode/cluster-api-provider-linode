@@ -40,7 +40,7 @@ import (
 )
 
 var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
-	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeVPCClient{})
+	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
 	linodeVPC := infrav1alpha1.LinodeVPC{
 		ObjectMeta: metav1.ObjectMeta{
@@ -66,7 +66,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 	})
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
-		vpcScope.LinodeClient = mck.VPCClient
+		vpcScope.LinodeClient = mck.LinodeClient
 
 		Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
 		vpcScope.LinodeVPC = &linodeVPC
@@ -87,8 +87,8 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 		OneOf(
 			Path(
 				Call("unable to create", func(ctx context.Context, mck Mock) {
-					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{}, nil)
-					mck.VPCClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{}, nil)
+					mck.LinodeClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
 				}),
 				OneOf(
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
@@ -108,8 +108,8 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("able to create", func(ctx context.Context, mck Mock) {
-					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{}, nil)
-					mck.VPCClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{}, nil)
+					mck.LinodeClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(&linodego.VPC{
 						ID:     1,
 						Region: "us-east",
 						Subnets: []linodego.VPCSubnet{
@@ -137,7 +137,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 		OneOf(
 			Path(
 				Call("able to list VPC", func(ctx context.Context, mck Mock) {
-					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{
+					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{
 						{
 							ID:     1,
 							Label:  "vpc1",
@@ -159,7 +159,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("unable to list VPC", func(ctx context.Context, mck Mock) {
-					mck.VPCClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return(nil, errors.New("server error"))
 				}),
 				OneOf(
 					Path(Result("update requeues", func(ctx context.Context, mck Mock) {
@@ -185,7 +185,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 		OneOf(
 			Path(
 				Call("unable to get", func(ctx context.Context, mck Mock) {
-					mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+					mck.LinodeClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
 				}),
 				OneOf(
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
@@ -205,14 +205,14 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("unable to delete", func(ctx context.Context, mck Mock) {
-					getVPC := mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+					getVPC := mck.LinodeClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
 						ID:      1,
 						Label:   "vpc1",
 						Region:  "us-east",
 						Updated: ptr.To(time.Now()),
 						Subnets: []linodego.VPCSubnet{{}},
 					}, nil)
-					mck.VPCClient.EXPECT().DeleteVPC(ctx, gomock.Any()).After(getVPC).Return(errors.New("server error"))
+					mck.LinodeClient.EXPECT().DeleteVPC(ctx, gomock.Any()).After(getVPC).Return(errors.New("server error"))
 				}),
 				OneOf(
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
@@ -232,7 +232,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("with nodes still attached", func(ctx context.Context, mck Mock) {
-					mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+					mck.LinodeClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
 						ID:      1,
 						Label:   "vpc1",
 						Region:  "us-east",
@@ -262,14 +262,14 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("with no nodes attached", func(ctx context.Context, mck Mock) {
-					getVPC := mck.VPCClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+					getVPC := mck.LinodeClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
 						ID:      1,
 						Label:   "vpc1",
 						Region:  "us-east",
 						Updated: ptr.To(time.Now()),
 						Subnets: []linodego.VPCSubnet{{}},
 					}, nil)
-					mck.VPCClient.EXPECT().DeleteVPC(ctx, gomock.Any()).After(getVPC).Return(nil)
+					mck.LinodeClient.EXPECT().DeleteVPC(ctx, gomock.Any()).After(getVPC).Return(nil)
 				}),
 				Result("delete success", func(ctx context.Context, mck Mock) {
 					res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)

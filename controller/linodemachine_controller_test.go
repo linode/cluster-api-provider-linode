@@ -128,7 +128,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	})
 
 	It("creates a worker instance", func(ctx SpecContext) {
-		mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
+		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		listInst := mockLinodeClient.EXPECT().
 			ListInstances(ctx, gomock.Any()).
 			Return([]linodego.Instance{}, nil)
@@ -206,7 +206,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 	Context("fails when a preflight condition is stale", func() {
 		It("can't create an instance in time", func(ctx SpecContext) {
-			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
 				ListInstances(ctx, gomock.Any()).
 				Return([]linodego.Instance{}, nil)
@@ -253,7 +253,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
-			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
 				ListInstances(ctx, gomock.Any()).
 				Return([]linodego.Instance{}, nil)
@@ -390,7 +390,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
-			mockLinodeClient := mock.NewMockLinodeMachineClient(mockCtrl)
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
 				ListInstances(ctx, gomock.Any()).
 				Return([]linodego.Instance{}, nil)

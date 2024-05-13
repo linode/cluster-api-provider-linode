@@ -15,6 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 const bucketDataSecret = `kind: Secret
@@ -41,7 +43,7 @@ type ObjectStorageBucketScope struct {
 	Client       K8sClient
 	Bucket       *infrav1alpha1.LinodeObjectStorageBucket
 	Logger       logr.Logger
-	LinodeClient LinodeObjectStorageClient
+	LinodeClient LinodeClient
 	PatchHelper  *patch.Helper
 }
 

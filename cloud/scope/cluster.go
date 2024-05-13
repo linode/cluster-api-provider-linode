@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
@@ -84,7 +86,7 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 type ClusterScope struct {
 	Client        K8sClient
 	PatchHelper   *patch.Helper
-	LinodeClient  LinodeNodeBalancerClient
+	LinodeClient  LinodeClient
 	Cluster       *clusterv1.Cluster
 	LinodeCluster *infrav1alpha1.LinodeCluster
 }

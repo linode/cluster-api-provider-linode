@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 type MachineScopeParams struct {
@@ -27,7 +29,7 @@ type MachineScope struct {
 	PatchHelper   *patch.Helper
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
-	LinodeClient  LinodeMachineClient
+	LinodeClient  LinodeClient
 	LinodeCluster *infrav1alpha1.LinodeCluster
 	LinodeMachine *infrav1alpha1.LinodeMachine
 }
