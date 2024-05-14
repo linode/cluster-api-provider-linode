@@ -11,7 +11,6 @@ spec:
         nodeName: '{{ ds.meta_data.label }}'
         cisProfile: ${CIS_PROFILE:-"cis-1.23"}
         protectKernelDefaults: true
-      # TODO: use MDS to get public and private IP instead because hostname ordering can't always be assumed
         kubelet:
           extraArgs:
             - "provider-id=linode://{{ ds.meta_data.id }}"

@@ -1,9 +1,11 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../base
-  - kubeadmConfigTemplate.yaml
-  - kubeadmControlPlane.yaml
+  - ../../../infra
+  - rke2ControlPlane.yaml
+  - rke2ConfigTemplate.yaml
+  - secret.yaml
+  - ../../../addons/cilium
 patches:
   - target:
       group: cluster.x-k8s.io
@@ -12,7 +14,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/controlPlaneRef/kind
-        value: KubeadmControlPlane
+        value: RKE2ControlPlane
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
@@ -24,9 +26,6 @@ patches:
         name: ${CLUSTER_NAME}
         labels:
             cni: ${CLUSTER_NAME}-cilium
-            ccm: ${CLUSTER_NAME}-linode
-            csi: ${CLUSTER_NAME}-linode
-            crs: ${CLUSTER_NAME}-crs
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
@@ -34,4 +33,4 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/bootstrap/configRef/kind
-        value: KubeadmConfigTemplate
+        value: RKE2ConfigTemplate
