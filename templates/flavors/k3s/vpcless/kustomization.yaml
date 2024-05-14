@@ -52,13 +52,6 @@ patches:
       - op: remove
         path: /spec/vpcRef
   - target:
-      group: controlplane.cluster.x-k8s.io
-      version: v1beta1
-      kind: KThreesControlPlane
-    patch: |-
-      - op: remove
-        path: /spec/kthreesConfigSpec/initConfiguration/skipPhases
-  - target:
       group: cluster.x-k8s.io
       version: v1beta1
       kind: Cluster
