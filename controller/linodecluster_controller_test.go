@@ -21,6 +21,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -28,12 +30,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/go-logr/logr"
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
-	"github.com/linode/linodego"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
