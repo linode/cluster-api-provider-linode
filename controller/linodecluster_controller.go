@@ -110,14 +110,14 @@ func (r *LinodeClusterReconciler) reconcile(
 ) (res ctrl.Result, reterr error) {
 	res = ctrl.Result{}
 
-	clusterScope.LinodeCluster.Status.Ready = false
-	clusterScope.LinodeCluster.Status.FailureReason = nil
-	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer("")
-
 	// Always close the scope when exiting this function so we can persist any LinodeCluster changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
-		if err := clusterScope.Close(ctx); utilerrors.FilterOut(util.UnwrapError(err), apierrors.IsNotFound) != nil && reterr == nil {
+		// if len(clusterScope.LinodeCluster.Finalizers) == 0 {
+		// 	return
+		// }
+		err := clusterScope.Close(ctx)
+		if utilerrors.FilterOut(util.UnwrapError(err), apierrors.IsNotFound) != nil && reterr == nil {
 			logger.Error(err, "failed to patch LinodeCluster")
 			reterr = err
 		}
@@ -136,18 +136,16 @@ func (r *LinodeClusterReconciler) reconcile(
 			}
 			return res, err
 		}
+		return res, nil
 	}
+
+	clusterScope.LinodeCluster.Status.Ready = false
+	clusterScope.LinodeCluster.Status.FailureReason = nil
+	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer("")
 
 	err := clusterScope.AddFinalizer(ctx)
 	if err != nil {
-		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
-		if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
-			logger.Info("re-queuing cluster/nb finalizer addition")
-
-			res = ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}
-
-			return res, nil
-		}
+		logger.Error(err, "failed to update cluster finalizer")
 		return res, err
 	}
 
@@ -245,6 +243,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	}
 
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
+	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer deleted")
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerConfigID = nil
