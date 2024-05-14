@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Secret
+type: addons.cluster.x-k8s.io/resource-set
+metadata:
+  name: ${CLUSTER_NAME}-cilium-policy
+stringData:
+  cilium-policy.yaml: |-
+    apiVersion: "cilium.io/v2"
+    kind: CiliumClusterwideNetworkPolicy
+    metadata:
+      name: "default-policy"
+    spec:
+      description: "allow cluster intra cluster traffic along with api server traffic"
+      nodeSelector: {}
+      ingress:
+        - fromEntities:
+          - cluster
+        - fromCIDR:
+          - 10.0.0.0/8
+        - fromEntities:
+          - world
+          toPorts:
+            - ports:
+              - port: "6443"
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-cilium-policy
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: ${CLUSTER_NAME}
+  resources:
+    - kind: Secret
+      name: ${CLUSTER_NAME}-cilium-policy
+  strategy: ApplyOnce
+

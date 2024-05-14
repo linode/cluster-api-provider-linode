@@ -5,6 +5,7 @@ resources:
   - kubeadmConfigTemplate.yaml
   - kubeadmControlPlane.yaml
   - ../../addons/cilium
+  - ../../addons/cilium-network-policies
   - ../../addons/csi-driver-linode
   - ../../addons/ccm-linode
   - ../../addons/cluster-resource-set

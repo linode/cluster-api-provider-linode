@@ -10,7 +10,7 @@ stringData:
     metadata:
       name: "default-policy"
     spec:
-      description: "allow cluster intra cluster traffic along with ssh & api server traffic"
+      description: "allow cluster intra cluster traffic along with etcd & api server traffic"
       nodeSelector: {}
       ingress:
         - fromEntities:
@@ -21,7 +21,6 @@ stringData:
             - world
           toPorts:
             - ports:
-                - port: "22"
                 - port: "6443"
                 - port: "2379"
                 - port: "2380"
