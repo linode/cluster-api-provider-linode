@@ -22,16 +22,17 @@ import (
 	"time"
 
 	"go.uber.org/mock/gomock"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
+	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
 	"github.com/linode/linodego"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -39,196 +40,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecycle"), func() {
-// 	nodebalancerID := 1
-// 	controlPlaneEndpointHost := "10.0.0.1"
-// 	controlPlaneEndpointPort := 6443
-// 	clusterName := "cluster-lifecycle"
-// 	clusterNameSpace := "default"
-// 	ownerRef := metav1.OwnerReference{
-// 		Name:       clusterName,
-// 		APIVersion: "cluster.x-k8s.io/v1beta1",
-// 		Kind:       "Cluster",
-// 		UID:        "00000000-000-0000-0000-000000000000",
-// 	}
-// 	ownerRefs := []metav1.OwnerReference{ownerRef}
-// 	metadata := metav1.ObjectMeta{
-// 		Name:            clusterName,
-// 		Namespace:       clusterNameSpace,
-// 		OwnerReferences: ownerRefs,
-// 	}
-// 	linodeCluster := infrav1.LinodeCluster{
-// 		ObjectMeta: metadata,
-// 		Spec: infrav1.LinodeClusterSpec{
-// 			Region: "us-ord",
-// 		},
-// 	}
-
-// 	ctlrSuite := NewControllerSuite(GinkgoT(), mock.MockLinodeNodeBalancerClient{})
-// 	reconciler := LinodeClusterReconciler{}
-// 	cScope := &scope.ClusterScope{}
-// 	clusterKey := client.ObjectKeyFromObject(&linodeCluster)
-
-// 	BeforeAll(func(ctx SpecContext) {
-// 		cScope.Client = k8sClient
-// 		Expect(k8sClient.Create(ctx, &linodeCluster)).To(Succeed())
-// 	})
-
-// 	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
-// 		reconciler.Recorder = mck.Recorder()
-
-// 		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
-// 		cScope.LinodeCluster = &linodeCluster
-
-// 		// Create patch helper with latest state of resource.
-// 		// This is only needed when relying on envtest's k8sClient.
-// 		patchHelper, err := patch.NewHelper(&linodeCluster, k8sClient)
-// 		Expect(err).NotTo(HaveOccurred())
-// 		cScope.PatchHelper = patchHelper
-// 	})
-
-// 	ctlrSuite.Run(
-// 		OneOf(
-// 			Path(
-// 				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, mck Mock) {
-// 					cScope.LinodeClient = mck.NodeBalancerClient
-// 					getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-// 					mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-// 						After(getNB).
-// 						Return(nil, errors.New("create NB error"))
-// 				}),
-// 				OneOf(
-// 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
-// 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-// 						Expect(err).NotTo(HaveOccurred())
-// 						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
-// 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
-// 					})),
-// 					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
-// 						tempTimeout := reconciler.ReconcileTimeout
-// 						reconciler.ReconcileTimeout = time.Nanosecond
-// 						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-// 						Expect(err).To(HaveOccurred())
-// 						Expect(err.Error()).To(ContainSubstring("create NB error"))
-// 						reconciler.ReconcileTimeout = tempTimeout
-// 					})),
-// 				),
-// 			),
-// 			Path(
-// 				Call("cluster is not created because nb was nil", func(ctx context.Context, mck Mock) {
-// 					cScope.LinodeClient = mck.NodeBalancerClient
-// 					getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-// 					mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-// 						After(getNB).
-// 						Return(nil, nil)
-// 				}),
-// 				OneOf(
-// 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
-// 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-// 						Expect(err).NotTo(HaveOccurred())
-// 						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
-// 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
-// 					})),
-// 					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
-// 						tempTimeout := reconciler.ReconcileTimeout
-// 						reconciler.ReconcileTimeout = time.Nanosecond
-// 						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-// 						Expect(err).To(HaveOccurred())
-// 						Expect(err.Error()).To(ContainSubstring("nodeBalancer created was nil"))
-// 						reconciler.ReconcileTimeout = tempTimeout
-// 					})),
-// 				),
-// 			),
-// 			Path(
-// 				Call("cluster is not created because nb config was nil", func(ctx context.Context, mck Mock) {
-// 					cScope.LinodeClient = mck.NodeBalancerClient
-// 					getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-// 					mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-// 						After(getNB).
-// 						Return(&linodego.NodeBalancer{
-// 							ID:   nodebalancerID,
-// 							IPv4: &controlPlaneEndpointHost,
-// 						}, nil)
-// 					mck.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
-// 						After(getNB).
-// 						Return(nil, errors.New("nodeBalancer config created was nil"))
-// 				}),
-// 				OneOf(
-// 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
-// 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-// 						Expect(err).NotTo(HaveOccurred())
-// 						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
-// 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
-// 					})),
-// 					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
-// 						tempTimeout := reconciler.ReconcileTimeout
-// 						reconciler.ReconcileTimeout = time.Nanosecond
-// 						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-// 						Expect(err).To(HaveOccurred())
-// 						Expect(err.Error()).To(ContainSubstring("nodeBalancer config created was nil"))
-// 						reconciler.ReconcileTimeout = tempTimeout
-// 					})),
-// 				),
-// 			),
-// 			Path(
-// 				Call("cluster is not created because there is no capl cluster", func(ctx context.Context, mck Mock) {
-// 					cScope.LinodeClient = mck.NodeBalancerClient
-// 				}),
-// 				Result("no capl cluster error", func(ctx context.Context, mck Mock) {
-// 					reconciler.Client = k8sClient
-// 					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-// 						NamespacedName: client.ObjectKeyFromObject(cScope.LinodeCluster),
-// 					})
-// 					Expect(err).NotTo(HaveOccurred())
-// 					Expect(linodeCluster.Status.Ready).To(BeFalseBecause("failed to get Cluster/no-capl-cluster: clusters.cluster.x-k8s.io \"no-capl-cluster\" not found"))
-// 				}),
-// 			),
-// 			Path(
-// 				Call("cluster is created", func(ctx context.Context, mck Mock) {
-// 					cScope.LinodeClient = mck.NodeBalancerClient
-// 					getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-// 					mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-// 						After(getNB).
-// 						Return(&linodego.NodeBalancer{
-// 							ID:   nodebalancerID,
-// 							IPv4: &controlPlaneEndpointHost,
-// 						}, nil)
-// 					mck.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).After(getNB).Return(&linodego.NodeBalancerConfig{
-// 						Port:           controlPlaneEndpointPort,
-// 						Protocol:       linodego.ProtocolTCP,
-// 						Algorithm:      linodego.AlgorithmRoundRobin,
-// 						Check:          linodego.CheckConnection,
-// 						NodeBalancerID: nodebalancerID,
-// 					}, nil)
-// 				}),
-// 				Result("cluster created", func(ctx context.Context, mck Mock) {
-// 					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
-// 					Expect(err).NotTo(HaveOccurred())
-
-// 					By("checking ready conditions")
-// 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
-// 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
-// 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-// 					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
-// 					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
-
-// 					By("checking NB id")
-// 					Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
-
-// 					By("checking controlPlaneEndpoint/NB host and port")
-// 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
-// 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(controlPlaneEndpointPort)))
-// 				}),
-// 			),
-// 		),
-// 	)
-// })
-
-var _ = Describe("cluster-deletion-lifecycle", Ordered, Label("cluster", "cluster-lifecycle"), func() {
+var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecycle"), func() {
 	nodebalancerID := 1
 	controlPlaneEndpointHost := "10.0.0.1"
 	controlPlaneEndpointPort := 6443
-	clusterName := "cluster-deletion-lifecycle"
+	clusterName := "cluster-lifecycle"
 	clusterNameSpace := "default"
 	ownerRef := metav1.OwnerReference{
 		Name:       clusterName,
@@ -242,7 +58,6 @@ var _ = Describe("cluster-deletion-lifecycle", Ordered, Label("cluster", "cluste
 		Namespace:       clusterNameSpace,
 		OwnerReferences: ownerRefs,
 	}
-
 	linodeCluster := infrav1.LinodeCluster{
 		ObjectMeta: metadata,
 		Spec: infrav1.LinodeClusterSpec{
@@ -252,11 +67,7 @@ var _ = Describe("cluster-deletion-lifecycle", Ordered, Label("cluster", "cluste
 
 	ctlrSuite := NewControllerSuite(GinkgoT(), mock.MockLinodeNodeBalancerClient{})
 	reconciler := LinodeClusterReconciler{}
-
-	cScope := &scope.ClusterScope{
-		LinodeCluster: &linodeCluster,
-	}
-
+	cScope := &scope.ClusterScope{}
 	clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 
 	BeforeAll(func(ctx SpecContext) {
@@ -266,6 +77,7 @@ var _ = Describe("cluster-deletion-lifecycle", Ordered, Label("cluster", "cluste
 
 	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
 		reconciler.Recorder = mck.Recorder()
+
 		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 		cScope.LinodeCluster = &linodeCluster
 
@@ -274,72 +86,139 @@ var _ = Describe("cluster-deletion-lifecycle", Ordered, Label("cluster", "cluste
 		patchHelper, err := patch.NewHelper(&linodeCluster, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
 		cScope.PatchHelper = patchHelper
-
 	})
 
 	ctlrSuite.Run(
-		Once("cluster is deleted", func(ctx context.Context, mck Mock) {
-			cScope.LinodeClient = mck.NodeBalancerClient
-			getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-			mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-				After(getNB).
-				Return(&linodego.NodeBalancer{
-					ID:   nodebalancerID,
-					IPv4: &controlPlaneEndpointHost,
-				}, nil)
-			mck.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).After(getNB).Return(&linodego.NodeBalancerConfig{
-				Port:           controlPlaneEndpointPort,
-				Protocol:       linodego.ProtocolTCP,
-				Algorithm:      linodego.AlgorithmRoundRobin,
-				Check:          linodego.CheckConnection,
-				NodeBalancerID: nodebalancerID,
-			}, nil)
-
-			_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
-			Expect(err).NotTo(HaveOccurred())
-
-			By("checking ready conditions")
-			Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
-			Expect(linodeCluster.Status.Ready).To(BeTrue())
-			Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
-			Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
-
-			By("checking NB id")
-			Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
-
-			By("checking controlPlaneEndpoint/NB host and port")
-			Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
-			Expect(linodeCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(controlPlaneEndpointPort)))
-
-			// Delete the cluster
-			Expect(k8sClient.Delete(ctx, &linodeCluster)).To(Succeed())
-			Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
-
-			// cScope.LinodeCluster.ObjectMeta.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-
-			mck.NodeBalancerClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil)
-
-			res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-
-			Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-			Expect(err).NotTo(HaveOccurred())
-		}),
 		OneOf(
 			Path(
-				Call("cluster is deleted", func(ctx context.Context, mck Mock) {
+				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.NodeBalancerClient
-					mck.NodeBalancerClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil)
+					getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
+					mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(nil, errors.New("create NB error"))
 				}),
-				Result("sucess - delete cluster", func(ctx context.Context, mck Mock) {
-					// print("Before Deletion")
-					// print(&cScope.LinodeCluster)
-					res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-					// print("After Deletion")
-					// print(&cScope.LinodeCluster)
-					Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+					})),
+					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("create NB error"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
+			),
+			Path(
+				Call("cluster is not created because nb was nil", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.NodeBalancerClient
+					getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
+					mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(nil, nil)
+				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+					})),
+					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("nodeBalancer created was nil"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
+			),
+			Path(
+				Call("cluster is not created because nb config was nil", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.NodeBalancerClient
+					getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
+					mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(&linodego.NodeBalancer{
+							ID:   nodebalancerID,
+							IPv4: &controlPlaneEndpointHost,
+						}, nil)
+					mck.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(nil, errors.New("nodeBalancer config created was nil"))
+				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+					})),
+					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("nodeBalancer config created was nil"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
+			),
+			Path(
+				Call("cluster is not created because there is no capl cluster", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.NodeBalancerClient
+				}),
+				Result("no capl cluster error", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{
+						NamespacedName: client.ObjectKeyFromObject(cScope.LinodeCluster),
+					})
 					Expect(err).NotTo(HaveOccurred())
-					k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeCluster), &linodeCluster)
-					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeCluster), &linodeCluster))).To(BeTrue())
+					Expect(linodeCluster.Status.Ready).To(BeFalseBecause("failed to get Cluster/no-capl-cluster: clusters.cluster.x-k8s.io \"no-capl-cluster\" not found"))
+				}),
+			),
+			Path(
+				Call("cluster is created", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.NodeBalancerClient
+					getNB := mck.NodeBalancerClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
+					mck.NodeBalancerClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+						After(getNB).
+						Return(&linodego.NodeBalancer{
+							ID:   nodebalancerID,
+							IPv4: &controlPlaneEndpointHost,
+						}, nil)
+					mck.NodeBalancerClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).After(getNB).Return(&linodego.NodeBalancerConfig{
+						Port:           controlPlaneEndpointPort,
+						Protocol:       linodego.ProtocolTCP,
+						Algorithm:      linodego.AlgorithmRoundRobin,
+						Check:          linodego.CheckConnection,
+						NodeBalancerID: nodebalancerID,
+					}, nil)
+				}),
+				Result("cluster created", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
+					Expect(err).NotTo(HaveOccurred())
+
+					By("checking ready conditions")
+					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
+					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
+					Expect(linodeCluster.Status.Ready).To(BeTrue())
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
+					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+
+					By("checking NB id")
+					Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
+
+					By("checking controlPlaneEndpoint/NB host and port")
+					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
+					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(controlPlaneEndpointPort)))
 				}),
 			),
 		),
