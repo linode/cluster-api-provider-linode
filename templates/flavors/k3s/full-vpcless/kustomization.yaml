@@ -56,10 +56,10 @@ patches:
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: KubeadmControlPlane
+      kind: KThreesControlPlane
     patch: |-
       - op: remove
-        path: /spec/kubeadmConfigSpec/initConfiguration/skipPhases
+        path: /spec/kthreesConfigSpec/initConfiguration/skipPhases
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
@@ -101,14 +101,14 @@ patches:
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: KubeadmControlPlane
+      kind: KThreesControlPlane
     patch: |-
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-      kind: KubeadmControlPlane
+      kind: KThreesControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
-        kubeadmConfigSpec:
+        kthreesConfigSpec:
           clusterConfiguration:
             controllerManager:
               extraArgs:
@@ -187,14 +187,14 @@ patches:
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: KubeadmControlPlane
+      kind: KThreesControlPlane
     patch: |-
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-      kind: KubeadmControlPlane
+      kind: KThreesControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
-        kubeadmConfigSpec:
+        kthreesConfigSpec:
           diskSetup:
             filesystems:
               - label: etcd_data
@@ -206,10 +206,10 @@ patches:
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: KubeadmControlPlane
+      kind: KThreesControlPlane
     patch: |-
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-      kind: KubeadmControlPlane
+      kind: KThreesControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:

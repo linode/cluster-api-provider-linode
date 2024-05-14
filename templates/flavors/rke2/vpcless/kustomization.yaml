@@ -54,10 +54,10 @@ patches:
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: KubeadmControlPlane
+      kind: RKE2ControlPlane
     patch: |-
       - op: remove
-        path: /spec/kubeadmConfigSpec/initConfiguration/skipPhases
+        path: /spec/initConfiguration/skipPhases
   - target:
       group: cluster.x-k8s.io
       version: v1beta1

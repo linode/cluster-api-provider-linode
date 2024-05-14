@@ -38,18 +38,17 @@ patches:
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: KubeadmControlPlane
+      kind: RKE2ControlPlane
     patch: |-
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-      kind: KubeadmControlPlane
+      kind: RKE2ControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
-        kubeadmConfigSpec:
-          clusterConfiguration:
-            controllerManager:
-              extraArgs:
-                node-cidr-mask-size-ipv6: "96"
+        clusterConfiguration:
+          controllerManager:
+            extraArgs:
+              node-cidr-mask-size-ipv6: "96"
   - target:
       kind: HelmChartProxy
       name: .*-cilium
@@ -124,29 +123,28 @@ patches:
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: KubeadmControlPlane
+      kind: RKE2ControlPlane
     patch: |-
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-      kind: KubeadmControlPlane
+      kind: RKE2ControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
-        kubeadmConfigSpec:
-          diskSetup:
-            filesystems:
-              - label: etcd_data
-                filesystem: ext4
-                device: /dev/sdc
-          mounts:
-            - - LABEL=etcd_data
-              - /var/lib/etcd_data
+        diskSetup:
+          filesystems:
+            - label: etcd_data
+              filesystem: ext4
+              device: /dev/sdc
+        mounts:
+          - - LABEL=etcd_data
+            - /var/lib/etcd_data
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: KubeadmControlPlane
+      kind: RKE2ControlPlane
     patch: |-
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-      kind: KubeadmControlPlane
+      kind: RKE2ControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
