@@ -21,13 +21,13 @@ func TestEnsureStackscripts(t *testing.T) {
 		machineScope  *scope.MachineScope
 		want          int
 		expectedError error
-		expects       func(client *mock.MockLinodeMachineClient)
+		expects       func(client *mock.MockLinodeClient)
 	}{
 		{
 			name:         "Success - Successfully get existing StackScript",
 			machineScope: &scope.MachineScope{},
 			want:         1234,
-			expects: func(mockClient *mock.MockLinodeMachineClient) {
+			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().ListStackscripts(gomock.Any(), &linodego.ListOptions{Filter: "{\"label\":\"CAPL-dev\"}"}).Return([]linodego.Stackscript{{
 					Label: "CAPI Test 1",
 					ID:    1234,
@@ -37,7 +37,7 @@ func TestEnsureStackscripts(t *testing.T) {
 		{
 			name:         "Error - failed get existing StackScript",
 			machineScope: &scope.MachineScope{},
-			expects: func(mockClient *mock.MockLinodeMachineClient) {
+			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().ListStackscripts(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed to get StackScript"))
 			},
 			expectedError: fmt.Errorf("failed to get StackScript"),
@@ -46,7 +46,7 @@ func TestEnsureStackscripts(t *testing.T) {
 			name:         "Success - Successfully created StackScript",
 			machineScope: &scope.MachineScope{},
 			want:         56345,
-			expects: func(mockClient *mock.MockLinodeMachineClient) {
+			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().ListStackscripts(gomock.Any(), gomock.Any()).Return(nil, nil)
 				mockClient.EXPECT().CreateStackscript(gomock.Any(), linodego.StackscriptCreateOptions{
 					Label:       "CAPL-dev",
@@ -83,7 +83,7 @@ cloud-init -f /etc/cloud/cloud.cfg.d/100_none.cfg modules --mode=final
 		{
 			name:         "Error - failed create StackScript",
 			machineScope: &scope.MachineScope{},
-			expects: func(mockClient *mock.MockLinodeMachineClient) {
+			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().ListStackscripts(gomock.Any(), gomock.Any()).Return(nil, nil)
 				mockClient.EXPECT().CreateStackscript(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed to create StackScript"))
 			},
@@ -98,7 +98,7 @@ cloud-init -f /etc/cloud/cloud.cfg.d/100_none.cfg modules --mode=final
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockClient := mock.NewMockLinodeMachineClient(ctrl)
+			mockClient := mock.NewMockLinodeClient(ctrl)
 
 			testcase.machineScope.LinodeClient = mockClient
 
