@@ -6,7 +6,7 @@ metadata:
     cluster.x-k8s.io/cluster-name: ($cluster)
 spec:
   region: us-sea
-  type: g5-nanode-1
+  type: g6-nanode-1
 status:
   ready: true
   instanceState: running

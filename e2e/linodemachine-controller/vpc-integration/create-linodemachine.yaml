@@ -28,4 +28,4 @@ spec:
     template:
         spec:
             region: us-sea
-            type: g5-nanode-1
+            type: g6-nanode-1
