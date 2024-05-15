@@ -10,6 +10,7 @@ spec:
     name: ${CLUSTER_NAME}-control-plane
   files:
     - path: /var/lib/rancher/rke2/server/manifests/ccm-linode.yaml
+      owner: root:root
       content: |-
         apiVersion: helm.cattle.io/v1
         kind: HelmChart

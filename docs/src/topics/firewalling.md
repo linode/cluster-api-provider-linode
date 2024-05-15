@@ -26,7 +26,7 @@ By default, the following policies are set to audit mode(without any enforcement
   | Ports | Use-case                 | Allowed clients               |
   |-------|--------------------------|-------------------------------|
   | 6443  | API Server Traffic       | World                         |
-  | 9345  | RKE2 Management Traffic  | All                           |
+  | 9345  | RKE2 Management Traffic  | World                         |
   | *     | In Cluster Communication | Intra Cluster and VPC Traffic |
 
 ## Enabling Firewall Enforcement
