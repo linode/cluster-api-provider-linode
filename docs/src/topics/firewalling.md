@@ -5,7 +5,7 @@ This guide covers how Cilium can be set up to act as a [host firewall](https://d
 ## Default Configuration
 By default, the following policies are set to audit mode(without any enforcement) on CAPL clusters
 
-* Kubeadm based clusters allow rules
+* [Kubeadm](./flavors/default.md) cluster allow rules
 
     | Ports     | Use-case                 | Allowed clients       |
     |-----------|--------------------------|-----------------------|
@@ -14,14 +14,14 @@ By default, the following policies are set to audit mode(without any enforcement
     | *         | In Cluster Communication | Intra Cluster Traffic |
 
 
-* k3s based clusters
+* [k3s](./flavors/k3s.md) cluster allow rules
     
     | Ports | Use-case                 | Allowed clients               |
     |-------|--------------------------|-------------------------------|
     | 6443  | API Server Traffic       | World                         |
     | *     | In Cluster Communication | Intra Cluster and VPC Traffic |
 
-* Kubeadm based clusters
+* [RKE2](./flavors/rke2.md) cluster allow rules
 
   | Ports | Use-case                 | Allowed clients               |
   |-------|--------------------------|-------------------------------|
