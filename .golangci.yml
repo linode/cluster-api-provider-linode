@@ -116,6 +116,9 @@ linters-settings:
     require-explanation: true
     require-specific: true
 
+  varnamelen:
+    min-name-length: 2
+
 linters:
   enable:
     - asasalint
