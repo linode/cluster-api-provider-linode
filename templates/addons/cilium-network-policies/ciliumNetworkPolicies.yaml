@@ -7,15 +7,24 @@ data:
     apiVersion: "cilium.io/v2"
     kind: CiliumClusterwideNetworkPolicy
     metadata:
-      name: "default-policy"
+      name: "default-cluster-policy"
     spec:
-      description: "allow cluster intra cluster traffic along with etcd & api server traffic"
-      nodeSelector: {}
+      description: "allow cluster intra cluster traffic"
+      endpointSelector: {}
       ingress:
         - fromEntities:
             - cluster
         - fromCIDR:
             - 10.0.0.0/8
+    ---
+    apiVersion: "cilium.io/v2"
+    kind: CiliumClusterwideNetworkPolicy
+    metadata:
+      name: "default-external-policy"
+    spec:
+      description: "allow etcd & api server traffic"
+      nodeSelector: {}
+      ingress:
         - fromEntities:
             - world
           toPorts:
