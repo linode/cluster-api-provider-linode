@@ -9,7 +9,7 @@ spec:
   repoURL: https://helm.cilium.io/
   chartName: cilium
   namespace: kube-system
-  version: ${CILIUM_VERSION:=1.15.0}
+  version: ${CILIUM_VERSION:=1.15.4}
   options:
     waitForJobs: true
     wait: true

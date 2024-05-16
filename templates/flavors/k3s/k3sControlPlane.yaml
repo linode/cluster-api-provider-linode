@@ -48,7 +48,7 @@ spec:
             namespace: kube-system
           spec:
             targetNamespace: kube-system
-            version: ${CILIUM_VERSION:=1.15.0}
+            version: ${CILIUM_VERSION:=1.15.4}
             chart: cilium
             repo: https://helm.cilium.io/
             bootstrap: true
