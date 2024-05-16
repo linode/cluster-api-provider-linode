@@ -26,7 +26,6 @@ By default, the following policies are set to audit mode(without any enforcement
   | Ports | Use-case                 | Allowed clients               |
   |-------|--------------------------|-------------------------------|
   | 6443  | API Server Traffic       | World                         |
-  | 9345  | RKE2 Management Traffic  | World                         |
   | *     | In Cluster Communication | Intra Cluster and VPC Traffic |
 
 ## Enabling Firewall Enforcement
@@ -40,7 +39,7 @@ Additional rules can be added to the `default-policy`
 apiVersion: "cilium.io/v2"
 kind: CiliumClusterwideNetworkPolicy
 metadata:
-  name: "default-policy"
+  name: "default-external-policy"
 spec:
   description: "allow cluster intra cluster traffic along api server traffic"
   nodeSelector: {}
@@ -54,7 +53,6 @@ spec:
       toPorts:
         - ports:
             - port: "22" # added for SSH Access to the nodes
-            - port: "9345"
             - port: "6443"
 ```
 Alternatively, additional rules can be added by creating a new policy
