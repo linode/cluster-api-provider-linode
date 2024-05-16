@@ -47,5 +47,5 @@ spec:
   resources:
     - kind: ConfigMap
       name: ${CLUSTER_NAME}-cilium-policy
-  strategy: ApplyOnce
+  strategy: Reconcile
 
