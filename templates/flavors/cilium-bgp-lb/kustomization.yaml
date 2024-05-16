@@ -27,3 +27,73 @@ patches:
           env:
             - name: LINODE_URL
               value: https://api.linode.com/v4beta
+transformers:
+- |
+  apiVersion: builtin
+  kind: ReplacementTransformer
+  metadata:
+    name: clone-bgp
+  replacements:
+  - source:
+      kind: KubeadmConfigTemplate
+      name: ${CLUSTER_NAME}-md-0
+      fieldPath: .spec
+    targets:
+    - select:
+        kind: KubeadmConfigTemplate
+        name: ${CLUSTER_NAME}-md-bgp
+      fieldPaths:
+      - .spec
+      options:
+        create: true
+  - source:
+      kind: LinodeMachineTemplate
+      name: ${CLUSTER_NAME}-md-0
+      fieldPath: .spec
+    targets:
+    - select:
+        kind: LinodeMachineTemplate
+        name: ${CLUSTER_NAME}-md-bgp
+      fieldPaths:
+      - .spec
+      options:
+        create: true
+  - source:
+      kind: MachineDeployment
+      name: ${CLUSTER_NAME}-md-0
+      fieldPath: .spec.template
+    targets:
+    - select:
+        kind: MachineDeployment
+        name: ${CLUSTER_NAME}-md-bgp
+      fieldPaths:
+      - .spec.template
+      options:
+        create: true
+- |-
+  apiVersion: builtin
+  kind: PatchTransformer
+  metadata:
+    name: patch-kubeadmconfig
+  patch: |-
+    - op: add
+      path: /spec/template/spec/joinConfiguration/nodeRegistration/kubeletExtraArgs/node-labels
+      value: cilium-bgp-peering="true"
+  target:
+    kind: KubeadmConfigTemplate
+    name: .*-md-bgp
+- |-
+  apiVersion: builtin
+  kind: PatchTransformer
+  metadata:
+    name: patch-machinedeployment
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/bootstrap/configRef/name
+      value: ${CLUSTER_NAME}-md-bgp
+    - op: replace
+      path: /spec/template/spec/infrastructureRef/name
+      value: ${CLUSTER_NAME}-md-bgp
+  target:
+    kind: MachineDeployment
+    name: .*-md-bgp

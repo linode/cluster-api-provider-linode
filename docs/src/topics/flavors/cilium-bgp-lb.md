@@ -47,10 +47,9 @@ Linode networking and API limitations:
 
 ## Usage
 
-1. (Optional) Set up environment variables
+1. (Optional) Set up environment variable
     ```sh
     # Optional
-    export LINODE_BGP_PEER_MACHINE_TYPE=g6-standard-2
     export BGP_PEER_MACHINE_COUNT=2
     ```
 
