@@ -9,7 +9,7 @@ spec:
   repoURL: https://helm.cilium.io/
   chartName: cilium
   namespace: kube-system
-  version: ${CILIUM_VERSION:=1.15.0}
+  version: ${CILIUM_VERSION:=1.15.4}
   options:
     waitForJobs: true
     wait: true
@@ -23,6 +23,11 @@ spec:
     tunnelProtocol: ""
     enableIPv4Masquerade: true
     egressMasqueradeInterfaces: eth0
+    policyAuditMode: ${FW_AUDIT_ONLY:=true}
+    hostFirewall:
+      enabled: true 
+    extraConfig:
+      allow-localhost: policy
     k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
     k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
     extraArgs:
