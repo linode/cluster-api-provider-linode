@@ -16,6 +16,7 @@ data:
             - cluster
         - fromCIDR:
             - 10.0.0.0/8
+            - 192.168.128.0/17
     ---
     apiVersion: "cilium.io/v2"
     kind: CiliumClusterwideNetworkPolicy
@@ -25,6 +26,10 @@ data:
       description: "allow etcd & api server traffic"
       nodeSelector: {}
       ingress:
+        - fromEntities:
+            - cluster
+        - fromCIDR:
+            - 10.0.0.0/8
         - fromEntities:
             - world
           toPorts:

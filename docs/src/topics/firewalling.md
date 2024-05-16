@@ -57,7 +57,7 @@ spec:
             - port: "9345"
             - port: "6443"
 ```
-additional rules can be added by creating a new policy
+Alternatively, additional rules can be added by creating a new policy
 ```yaml
 apiVersion: "cilium.io/v2"
 kind: CiliumClusterwideNetworkPolicy
