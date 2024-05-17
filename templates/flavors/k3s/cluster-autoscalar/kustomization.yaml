@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../default
+  - ../../../addons/cluster-autoscaler
+
+patches:
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+          cluster-autoscaler: "true"
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: MachineDeployment
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: MachineDeployment
+      metadata:
+        name: ${CLUSTER_NAME}-md-0
+        annotations:
+          cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: ${WORKER_MACHINE_MIN:-"1"}
+          cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: ${WORKER_MACHINE_MAX:-"10"}

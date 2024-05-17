@@ -1,0 +1,154 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../vpcless
+  - ../../../addons/cluster-autoscaler
+  - ../../../addons/etcd-backup-restore
+  - ../../../addons/machine-health-check
+
+
+patches:
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        clusterNetwork:
+          pods:
+            cidrBlocks:
+              - 10.192.0.0/10
+              - fd02::/80
+          services:
+            cidrBlocks:
+              - 10.96.0.0/12
+              - fd03::/108
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      - op: remove
+        path: /metadata/labels/vxlan
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: RKE2ControlPlane
+    patch: |-
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: RKE2ControlPlane
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        clusterConfiguration:
+          controllerManager:
+            extraArgs:
+              node-cidr-mask-size-ipv6: "96"
+  - target:
+      kind: HelmChartProxy
+      name: .*-cilium
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          bgpControlPlane:
+            enabled: true
+          ipv6:
+            enabled: true
+          ipam:
+            mode: kubernetes
+          k8s:
+            requireIPv4PodCIDR: true
+          hubble:
+            relay:
+              enabled: true
+            ui:
+              enabled: true
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+          cluster-autoscaler: "true"
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: MachineDeployment
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: MachineDeployment
+      metadata:
+        name: ${CLUSTER_NAME}-md-0
+        annotations:
+          cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: ${WORKER_MACHINE_MIN:-"1"}
+          cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: ${WORKER_MACHINE_MAX:-"10"}
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+            etcd-backup: "true"
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha1
+      kind: LinodeMachineTemplate
+      name: .*-control-plane
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeMachineTemplate
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        template:
+          spec:
+            dataDisks:
+              sdc:
+                label: etcd_disk
+                size: 10Gi
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: RKE2ControlPlane
+    patch: |-
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: RKE2ControlPlane
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        diskSetup:
+          filesystems:
+            - label: etcd_data
+              filesystem: ext4
+              device: /dev/sdc
+        mounts:
+          - - LABEL=etcd_data
+            - /var/lib/etcd_data
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: RKE2ControlPlane
+    patch: |-
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: RKE2ControlPlane
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        remediationStrategy:
+          maxRetry: 5
+          retryPeriod: 2m
+          minHealthyPeriod: 2h
