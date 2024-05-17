@@ -34,13 +34,13 @@ patches:
       spec:
         agentConfig:
           additionalUserData:
-            data:
-              diskSetup: |-
+            config: |-
+              diskSetup:
                 /dev/sdc:
                   layout: true
-              fs_setup: |-
+              fs_setup:
                 - label: /dev/sdc
                   filesystem: ext4
                   device: /dev/sdc
-              mounts: |-
+              mounts:
                 - ["/dev/sdc", "/var/lib/etcd_data"]
