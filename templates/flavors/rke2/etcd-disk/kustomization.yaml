@@ -32,11 +32,15 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
-        diskSetup:
-          filesystems:
-            - label: etcd_data
-              filesystem: ext4
-              device: /dev/sdc
-        mounts:
-          - - LABEL=etcd_data
-            - /var/lib/etcd_data
+        agentConfig:
+          additionalUserData:
+            data:
+              diskSetup: |
+                /dev/sdc:
+                  layout: true
+              fs_setup: |
+                - label: /dev/sdc
+                  filesystem: ext4
+                  device: /dev/sdc
+              mounts: |
+                - ["/dev/sdc", "/var/lib/etcd_data"]
