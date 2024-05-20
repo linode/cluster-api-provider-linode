@@ -34,6 +34,7 @@ type LinodeInstanceClient interface {
 	GetImage(ctx context.Context, imageID string) (*linodego.Image, error)
 	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
 	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
+	GetType(ctx context.Context, typeID string) (*linodego.LinodeType, error)
 }
 
 // LinodeVPCClient defines the methods that interact with Linode's VPC service.

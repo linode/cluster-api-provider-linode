@@ -4,6 +4,7 @@ resources:
   - ../base
   - k3sControlPlane.yaml
   - k3sConfigTemplate.yaml
+  - ciliumNetworkPolicies.yaml
   - secret.yaml
 patches:
   - target:

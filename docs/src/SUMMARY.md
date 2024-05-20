@@ -23,6 +23,7 @@
     - [Machine Health Checks](./topics/health-checking.md)
     - [Autoscaling](./topics/autoscaling.md)
     - [VPC](./topics/vpc.md)
+    - [Firewalling](./topics/firewalling.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
     - [Testing](./developers/testing.md)
