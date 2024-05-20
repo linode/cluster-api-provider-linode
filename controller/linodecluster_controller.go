@@ -135,8 +135,7 @@ func (r *LinodeClusterReconciler) reconcile(
 		return res, nil
 	}
 
-	err := clusterScope.AddFinalizer(ctx)
-	if err != nil {
+	if err := clusterScope.AddFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to update cluster finalizer")
 		return res, err
 	}
