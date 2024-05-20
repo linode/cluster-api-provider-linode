@@ -45,6 +45,11 @@ const (
 	DefaultVPCControllerWaitForHasNodesDelay = 5 * time.Second
 	// DefaultVPCControllerWaitForHasNodesTimeout is the default timeout if a VPC still has nodes.
 	DefaultVPCControllerWaitForHasNodesTimeout = 20 * time.Minute
+
+	// DefaultClusterControllerReconcileDelay is the default requeue delay when a reconcile operation fails.
+	DefaultClusterControllerReconcileDelay = 5 * time.Second
+	// DefaultClusterControllerReconcileTimeout is the default timeout when reconcile operations fail.
+	DefaultClusterControllerReconcileTimeout = 20 * time.Minute
 )
 
 // DefaultedLoopTimeout will default the timeout if it is zero-valued.

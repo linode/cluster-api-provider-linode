@@ -117,7 +117,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	// Always close the scope when exiting this function so we can persist any LinodeCluster changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
-		if err := clusterScope.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
+		if err := clusterScope.Close(ctx); utilerrors.FilterOut(util.UnwrapError(err), apierrors.IsNotFound) != nil && reterr == nil {
 			logger.Error(err, "failed to patch LinodeCluster")
 			reterr = err
 		}
@@ -125,16 +125,28 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
-		return res, r.reconcileDelete(ctx, logger, clusterScope)
+		if err := r.reconcileDelete(ctx, logger, clusterScope); err != nil {
+			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
+				logger.Info("re-queuing cluster/nb deletion")
+				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			}
+			return res, err
+		}
+		return res, nil
 	}
 
 	if err := clusterScope.AddFinalizer(ctx); err != nil {
+		logger.Error(err, "failed to update cluster finalizer")
 		return res, err
 	}
 
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
+			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
+				logger.Info("re-queuing cluster/nb creation")
+				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			}
 			return res, err
 		}
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Load balancer is ready")
@@ -150,19 +162,21 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(err.Error())
 
-	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
+	reconciler.RecordDecayingCondition(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), err.Error(), reconciler.DefaultTimeout(lcr.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout))
 
 	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
 }
 
 func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	if err := clusterScope.AddCredentialsRefFinalizer(ctx); err != nil {
+		logger.Error(err, "failed to update credentials finalizer")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		return err
 	}
 
 	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
 	if err != nil {
+		logger.Error(err, "failed to create nodebalancer")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		return err
 	}
@@ -177,8 +191,8 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 
 	linodeNBConfig, err := services.CreateNodeBalancerConfig(ctx, clusterScope, logger)
 	if err != nil {
+		logger.Error(err, "failed to create nodebalancer config")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
-
 		return err
 	}
 
@@ -198,6 +212,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 
 		if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+			logger.Error(err, "failed to remove credentials finalizer")
 			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 			return err
 		}
@@ -209,16 +224,19 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 
 	err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
 	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+		logger.Error(err, "failed to delete NodeBalancer")
 		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 		return err
 	}
 
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
+	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer deleted")
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerConfigID = nil
 
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+		logger.Error(err, "failed to remove credentials finalizer")
 		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 		return err
 	}
