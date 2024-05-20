@@ -117,9 +117,6 @@ func (r *LinodeClusterReconciler) reconcile(
 	// Always close the scope when exiting this function so we can persist any LinodeCluster changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
-		// if len(clusterScope.LinodeCluster.Finalizers) == 0 {
-		// 	return
-		// }
 		if err := clusterScope.Close(ctx); utilerrors.FilterOut(util.UnwrapError(err), apierrors.IsNotFound) != nil && reterr == nil {
 			logger.Error(err, "failed to patch LinodeCluster")
 			reterr = err
@@ -128,14 +125,10 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
-		err := r.reconcileDelete(ctx, logger, clusterScope)
-		if err != nil {
+		if err := r.reconcileDelete(ctx, logger, clusterScope); err != nil {
 			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
 				logger.Info("re-queuing cluster/nb deletion")
-
-				res = ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}
-
-				return res, nil
+				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 			}
 			return res, err
 		}
@@ -150,14 +143,10 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
-		err := r.reconcileCreate(ctx, logger, clusterScope)
-		if err != nil {
+		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
 			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
 				logger.Info("re-queuing cluster/nb creation")
-
-				res = ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}
-
-				return res, nil
+				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 			}
 			return res, err
 		}
