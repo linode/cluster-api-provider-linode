@@ -5,7 +5,6 @@ set -euo pipefail
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 FLAVORS_DIR="${REPO_ROOT}/templates/flavors"
 SUPPORTED_DISTROS=(
-    "clusterclass-kubeadm"
     "rke2"
     "k3s"
     "kubeadm"
