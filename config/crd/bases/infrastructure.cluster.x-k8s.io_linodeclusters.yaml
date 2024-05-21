@@ -116,6 +116,9 @@ spec:
               region:
                 description: The Linode Region the LinodeCluster lives in.
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               vpcRef:
                 description: |-
                   ObjectReference contains enough information to let you inspect or modify the referred object.
