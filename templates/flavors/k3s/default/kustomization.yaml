@@ -5,7 +5,7 @@ resources:
   - k3sControlPlane.yaml
   - k3sConfigTemplate.yaml
   - secret.yaml
-  - ../../../addons/ciliumNetworkPolicies.yaml
+  - ../../../addons/cilium-network-policies
 patches:
   - target:
       group: cluster.x-k8s.io
