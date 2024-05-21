@@ -43,7 +43,7 @@ func TestCreateLinodeClient(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := CreateLinodeClient(testCase.apiKey)
+			got, err := CreateLinodeClient(testCase.apiKey, defaultClientTimeout)
 
 			if testCase.expectedErr != nil {
 				assert.EqualError(t, err, testCase.expectedErr.Error())

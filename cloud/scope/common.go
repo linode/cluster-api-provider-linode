@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/linode/linodego"
 	"golang.org/x/oauth2"
@@ -18,7 +19,12 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
-func CreateLinodeClient(apiKey string) (*linodego.Client, error) {
+const (
+	// defaultClientTimeout is the default timeout for a client Linode API call
+	defaultClientTimeout = time.Second * 10
+)
+
+func CreateLinodeClient(apiKey string, timeout time.Duration) (*linodego.Client, error) {
 	if apiKey == "" {
 		return nil, errors.New("missing Linode API key")
 	}
@@ -29,6 +35,7 @@ func CreateLinodeClient(apiKey string) (*linodego.Client, error) {
 		Transport: &oauth2.Transport{
 			Source: tokenSource,
 		},
+		Timeout: timeout,
 	}
 	linodeClient := linodego.NewClient(oauth2Client)
 
