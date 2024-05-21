@@ -6,6 +6,7 @@ resources:
   - rke2ConfigTemplate.yaml
   - secret.yaml
   - ../../../addons/cilium
+  - ../../../addons/cilium-network-policies
 patches:
   - target:
       group: cluster.x-k8s.io

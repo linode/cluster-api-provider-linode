@@ -6,10 +6,10 @@ resources:
 patches:
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1alpha1
       kind: RKE2ControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1alpha1
       kind: RKE2ControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane

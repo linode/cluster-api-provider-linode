@@ -9,7 +9,9 @@ spec:
     kind: LinodeMachineTemplate
     name: ${CLUSTER_NAME}-control-plane
   files:
-    - content: |-
+    - path: /var/lib/rancher/rke2/server/manifests/ccm-linode.yaml
+      owner: root:root
+      content: |-
         apiVersion: helm.cattle.io/v1
         kind: HelmChart
         metadata:
@@ -30,8 +32,6 @@ spec:
               name: "linode-token-region"
             nodeSelector:
               node-role.kubernetes.io/control-plane: "true"
-      owner: root:root
-      path: /var/lib/rancher/rke2/server/manifests/ccm-linode.yaml
     - contentFrom:
         secret:
           key:  linode-token-region.yaml

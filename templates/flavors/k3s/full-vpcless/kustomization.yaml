@@ -7,7 +7,6 @@ resources:
   - ../../../addons/etcd-backup-restore
   - ../../../addons/machine-health-check
 
-
 patches:
   - target:
       kind: HelmChartProxy
