@@ -16,7 +16,7 @@ SUPPORTED_CLUSTERCLASSES=(
 for clusterclass in ${SUPPORTED_CLUSTERCLASSES[@]}; do
     # clusterctl expects clusterclass not have the "cluster-template" prefix
     # except for the actual cluster template using the clusterclass
-    echo "****** Generating clusterclass-kubeadm flavor ******"
+    echo "****** Generating clusterclass-${clusterclass} flavor ******"
     kustomize build "${FLAVORS_DIR}/${clusterclass}" > "${REPO_ROOT}/templates/${clusterclass}.yaml"
     cp "${FLAVORS_DIR}/${clusterclass}/cluster-template.yaml" "${REPO_ROOT}/templates/cluster-template-${clusterclass}.yaml"
 done
@@ -28,3 +28,6 @@ for distro in ${SUPPORTED_DISTROS[@]}; do
         kustomize build "${FLAVORS_DIR}/${distro}/${name}" > "${REPO_ROOT}/templates/cluster-template-${distro}-${name}.yaml"
     done
 done
+
+# move the default template to the default file expected by clusterctl
+mv "${REPO_ROOT}/templates/cluster-template-kubeadm-default.yaml" "${REPO_ROOT}/templates/cluster-template.yaml"

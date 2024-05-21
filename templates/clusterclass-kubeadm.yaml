@@ -1,0 +1,508 @@
+apiVersion: v1
+data:
+  cilium-policy.yaml: |-
+    apiVersion: "cilium.io/v2"
+    kind: CiliumClusterwideNetworkPolicy
+    metadata:
+      name: "default-cluster-policy"
+    spec:
+      description: "allow cluster intra cluster traffic"
+      endpointSelector: {}
+      ingress:
+        - fromEntities:
+            - cluster
+        - fromCIDR:
+            - 10.0.0.0/8
+            - 192.168.128.0/17
+    ---
+    apiVersion: "cilium.io/v2"
+    kind: CiliumClusterwideNetworkPolicy
+    metadata:
+      name: "default-external-policy"
+    spec:
+      description: "allow etcd & api server traffic"
+      nodeSelector: {}
+      ingress:
+        - fromEntities:
+            - cluster
+        - fromCIDR:
+            - 10.0.0.0/8
+        - fromEntities:
+            - world
+          toPorts:
+            - ports:
+                - port: "6443"
+                - port: "2379"
+                - port: "2380"
+kind: ConfigMap
+metadata:
+  name: ${CLUSTER_NAME}-cilium-policy
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    clusterctl.cluster.x-k8s.io/move: "true"
+  name: ${CLUSTER_NAME}-credentials
+stringData:
+  apiToken: ${LINODE_TOKEN}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linode-${CLUSTER_NAME}-crs-0
+stringData:
+  linode-token-region.yaml: |-
+    kind: Secret
+    apiVersion: v1
+    metadata:
+      name: linode-token-region
+      namespace: kube-system
+    stringData:
+      apiToken: ${LINODE_TOKEN}
+      region: ${LINODE_REGION}
+type: addons.cluster.x-k8s.io/resource-set
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: ${CLUSTER_NAME}-cilium
+spec:
+  chartName: cilium
+  clusterSelector:
+    matchLabels:
+      cni: ${CLUSTER_NAME}-cilium
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://helm.cilium.io/
+  valuesTemplate: "bgpControlPlane:\n  enabled: true\nroutingMode: native\nkubeProxyReplacement:
+    true\nipv4NativeRoutingCIDR: 10.0.0.0/8\ntunnelProtocol: \"\"\nenableIPv4Masquerade:
+    true\negressMasqueradeInterfaces: eth0\npolicyAuditMode: ${FW_AUDIT_ONLY:=true}\nhostFirewall:\n
+    \ enabled: true \nextraConfig:\n  allow-localhost: policy\nk8sServiceHost: {{
+    .InfraCluster.spec.controlPlaneEndpoint.host }}\nk8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port
+    }}\nextraArgs:\n- --direct-routing-device=eth1\n- --nodeport-addresses=0.0.0.0/0\nipam:\n
+    \ mode: kubernetes\nipv4:\n  enabled: true\nipv6:\n  enabled: false\nk8s:\n  requireIPv4PodCIDR:
+    true\nhubble:\n  relay:\n    enabled: true\n  ui:\n    enabled: true\n"
+  version: ${CILIUM_VERSION:=1.15.4}
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: ${CLUSTER_NAME}-csi-driver-linode
+spec:
+  chartName: linode-blockstorage-csi-driver
+  clusterSelector:
+    matchLabels:
+      csi: ${CLUSTER_NAME}-linode
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://linode.github.io/linode-blockstorage-csi-driver/
+  valuesTemplate: |
+    secretRef:
+      name: "linode-token-region"
+      apiTokenRef: "apiToken"
+  version: v0.6.3
+---
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: ${CLUSTER_NAME}-linode-cloud-controller-manager
+spec:
+  chartName: ccm-linode
+  clusterSelector:
+    matchLabels:
+      ccm: ${CLUSTER_NAME}-linode
+  namespace: kube-system
+  options:
+    timeout: 5m
+    wait: true
+    waitForJobs: true
+  repoURL: https://linode.github.io/linode-cloud-controller-manager/
+  valuesTemplate: |
+    routeController:
+      vpcName: {{ .InfraCluster.spec.vpcRef.name }}
+      clusterCIDR: 10.0.0.0/8
+      configureCloudRoutes: true
+    secretRef:
+      name: "linode-token-region"
+    image:
+      pullPolicy: IfNotPresent
+  version: ${LINODE_CCM_VERSION:=v0.4.4}
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-cilium-policy
+spec:
+  clusterSelector:
+    matchLabels:
+      cluster: ${CLUSTER_NAME}
+  resources:
+  - kind: ConfigMap
+    name: ${CLUSTER_NAME}-cilium-policy
+  strategy: Reconcile
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta1
+kind: ClusterResourceSet
+metadata:
+  name: ${CLUSTER_NAME}-crs-0
+spec:
+  clusterSelector:
+    matchLabels:
+      crs: ${CLUSTER_NAME}-crs
+  resources:
+  - kind: Secret
+    name: linode-${CLUSTER_NAME}-crs-0
+  strategy: ApplyOnce
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: kubeadm-worker
+spec:
+  template:
+    spec:
+      files:
+      - content: |
+          version = 2
+          imports = ["/etc/containerd/conf.d/*.toml"]
+          [plugins]
+            [plugins."io.containerd.grpc.v1.cri"]
+              sandbox_image = "registry.k8s.io/pause:3.9"
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+              runtime_type = "io.containerd.runc.v2"
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+              SystemdCgroup = true
+        path: /etc/containerd/config.toml
+      - content: |
+          overlay
+          br_netfilter
+        path: /etc/modules-load.d/k8s.conf
+      - content: |
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.ipv4.ip_forward                 = 1
+          net.ipv6.conf.all.forwarding        = 1
+        path: /etc/sysctl.d/k8s.conf
+      - content: |
+          #!/bin/bash
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          mkdir -p -m 755 /etc/apt/keyrings
+          PATCH_VERSION=$${1#[v]}
+          VERSION=$${PATCH_VERSION%.*}
+          curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          apt-get update -y
+          apt-get install -y kubelet=$PATCH_VERSION* kubeadm=$PATCH_VERSION* kubectl=$PATCH_VERSION* containerd
+          apt-mark hold kubelet kubeadm kubectl containerd
+          modprobe overlay
+          modprobe br_netfilter
+          sysctl --system
+          if [ -d "/sys/class/net/eth1" ]; then
+              IPADDR=$(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)
+              sed -i "s/kubeletExtraArgs:/kubeletExtraArgs:\n    node-ip: $IPADDR/g" /run/kubeadm/kubeadm.yaml
+          fi
+        path: /kubeadm-pre-init.sh
+        permissions: "0500"
+      joinConfiguration:
+        nodeRegistration:
+          kubeletExtraArgs:
+            cloud-provider: external
+          name: '{{ ds.meta_data.label }}'
+      preKubeadmCommands:
+      - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
+      - sed -i '/swap/d' /etc/fstab
+      - swapoff -a
+      - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: ClusterClass
+metadata:
+  name: kubeadm
+spec:
+  controlPlane:
+    machineInfrastructure:
+      ref:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        name: kubeadm-control-plane
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlaneTemplate
+      name: kubeadm-control-plane
+  infrastructure:
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      kind: LinodeClusterTemplate
+      name: kubeadm
+  patches:
+  - definitions:
+    - jsonPatches:
+      - op: add
+        path: /spec/template/spec/region
+        valueFrom:
+          variable: region
+      selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeClusterTemplate
+        matchResources:
+          infrastructureCluster: true
+    - jsonPatches:
+      - op: replace
+        path: /spec/template/spec/region
+        valueFrom:
+          variable: region
+      selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        matchResources:
+          controlPlane: true
+    - jsonPatches:
+      - op: replace
+        path: /spec/template/spec/region
+        valueFrom:
+          variable: region
+      selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        matchResources:
+          machineDeploymentClass:
+            names:
+            - default-worker
+    name: region
+  - definitions:
+    - jsonPatches:
+      - op: replace
+        path: /spec/template/spec/type
+        valueFrom:
+          variable: controlPlaneMachineType
+      selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        matchResources:
+          controlPlane: true
+    name: controlPlaneMachineType
+  - definitions:
+    - jsonPatches:
+      - op: replace
+        path: /spec/template/spec/type
+        valueFrom:
+          variable: workerMachineType
+      selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        matchResources:
+          machineDeploymentClass:
+            names:
+            - default-worker
+    name: workerMachineType
+  - definitions:
+    - jsonPatches:
+      - op: replace
+        path: /spec/template/spec/image
+        valueFrom:
+          variable: osImage
+      selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        matchResources:
+          machineDeploymentClass:
+            names:
+            - default-worker
+    - jsonPatches:
+      - op: replace
+        path: /spec/template/spec/image
+        valueFrom:
+          variable: osImage
+      selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeMachineTemplate
+        matchResources:
+          controlPlane: true
+    name: osImage
+  variables:
+  - name: region
+    required: true
+    schema:
+      openAPIV3Schema:
+        default: us-ord
+        type: string
+  - name: controlPlaneMachineType
+    required: true
+    schema:
+      openAPIV3Schema:
+        default: g6-standard-2
+        type: string
+  - name: workerMachineType
+    required: true
+    schema:
+      openAPIV3Schema:
+        default: g6-standard-2
+        type: string
+  - name: osImage
+    required: true
+    schema:
+      openAPIV3Schema:
+        default: linode/ubuntu22.04
+        type: string
+  workers:
+    machineDeployments:
+    - class: default-worker
+      template:
+        bootstrap:
+          ref:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            name: kubeadm-worker
+        infrastructure:
+          ref:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            kind: LinodeMachineTemplate
+            name: kubeadm-worker
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlaneTemplate
+metadata:
+  name: kubeadm-control-plane
+spec:
+  template:
+    spec:
+      kubeadmConfigSpec:
+        clusterConfiguration:
+          apiServer:
+            extraArgs:
+              cloud-provider: external
+          controllerManager:
+            extraArgs:
+              cloud-provider: external
+          etcd:
+            local:
+              dataDir: /var/lib/etcd_data/etcd
+              extraArgs:
+                quota-backend-bytes: "8589934592"
+        files:
+        - content: |
+            version = 2
+            imports = ["/etc/containerd/conf.d/*.toml"]
+            [plugins]
+              [plugins."io.containerd.grpc.v1.cri"]
+                sandbox_image = "registry.k8s.io/pause:3.9"
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+                runtime_type = "io.containerd.runc.v2"
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+                SystemdCgroup = true
+          path: /etc/containerd/config.toml
+        - content: |
+            overlay
+            br_netfilter
+          path: /etc/modules-load.d/k8s.conf
+        - content: |
+            net.bridge.bridge-nf-call-iptables  = 1
+            net.bridge.bridge-nf-call-ip6tables = 1
+            net.ipv4.ip_forward                 = 1
+            net.ipv6.conf.all.forwarding        = 1
+          path: /etc/sysctl.d/k8s.conf
+        - content: |
+            #!/bin/bash
+            set -euo pipefail
+            export DEBIAN_FRONTEND=noninteractive
+            mkdir -p -m 755 /etc/apt/keyrings
+            PATCH_VERSION=$${1#[v]}
+            VERSION=$${PATCH_VERSION%.*}
+            curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+            echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+            apt-get update -y
+            apt-get install -y kubelet=$PATCH_VERSION* kubeadm=$PATCH_VERSION* kubectl=$PATCH_VERSION* containerd
+            apt-mark hold kubelet kubeadm kubectl containerd
+            modprobe overlay
+            modprobe br_netfilter
+            sysctl --system
+            if [ -d "/sys/class/net/eth1" ]; then
+                IPADDR=$(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)
+                sed -i "s/kubeletExtraArgs:/kubeletExtraArgs:\n    node-ip: $IPADDR/g" /run/kubeadm/kubeadm.yaml
+            fi
+          path: /kubeadm-pre-init.sh
+          permissions: "0500"
+        initConfiguration:
+          nodeRegistration:
+            kubeletExtraArgs:
+              cloud-provider: external
+            name: '{{ ds.meta_data.label }}'
+          skipPhases:
+          - addon/kube-proxy
+        joinConfiguration:
+          nodeRegistration:
+            kubeletExtraArgs:
+              cloud-provider: external
+            name: '{{ ds.meta_data.label }}'
+        preKubeadmCommands:
+        - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
+        - sed -i '/swap/d' /etc/fstab
+        - swapoff -a
+        - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeClusterTemplate
+metadata:
+  name: kubeadm
+spec:
+  template:
+    spec:
+      credentialsRef:
+        name: ${CLUSTER_NAME}-credentials
+      region: ${LINODE_REGION}
+      vpcRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: LinodeVPC
+        name: ${VPC_NAME:=${CLUSTER_NAME}}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachineTemplate
+metadata:
+  name: kubeadm-control-plane
+spec:
+  template:
+    spec:
+      authorizedKeys:
+      - ${LINODE_SSH_PUBKEY:nil}
+      image: ${LINODE_OS:="linode/ubuntu22.04"}
+      interfaces:
+      - primary: true
+        purpose: public
+      region: ${LINODE_REGION}
+      type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeMachineTemplate
+metadata:
+  name: kubeadm-worker
+spec:
+  template:
+    spec:
+      authorizedKeys:
+      - ${LINODE_SSH_PUBKEY:nil}
+      image: ${LINODE_OS:="linode/ubuntu22.04"}
+      interfaces:
+      - primary: true
+        purpose: public
+      region: ${LINODE_REGION}
+      type: ${LINODE_MACHINE_TYPE}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodeVPC
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  name: ${VPC_NAME:=${CLUSTER_NAME}}
+spec:
+  region: ${LINODE_REGION}
+  subnets:
+  - ipv4: 10.0.0.0/8
+    label: default
