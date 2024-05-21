@@ -44,10 +44,9 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
-        clusterConfiguration:
-          controllerManager:
-            extraArgs:
-              node-cidr-mask-size-ipv6: "96"
+        serverConfig:
+          ClusterCidr: "10.192.0.0/10,fd02::/80"
+          ServiceCidr: "10.96.0.0/12,fd03::/108"
   - target:
       kind: HelmChartProxy
       name: .*-cilium
