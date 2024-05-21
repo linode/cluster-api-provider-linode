@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -47,8 +48,11 @@ type ObjectStorageBucketScope struct {
 	PatchHelper  *patch.Helper
 }
 
-const AccessKeyNameTemplate = "%s-bucket-details"
-const NumAccessKeys = 2
+const (
+	AccessKeyNameTemplate = "%s-bucket-details"
+	NumAccessKeys         = 2
+	clientTimeout         = 20 * time.Second
+)
 
 func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParams) error {
 	if params.Bucket == nil {
@@ -74,7 +78,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		}
 		apiKey = string(data)
 	}
-	linodeClient, err := CreateLinodeClient(apiKey)
+	linodeClient, err := CreateLinodeClient(apiKey, clientTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
