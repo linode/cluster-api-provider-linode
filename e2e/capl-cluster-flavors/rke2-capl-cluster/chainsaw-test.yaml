@@ -162,6 +162,7 @@ spec:
       try:
         - script:
             content: |
-              rm -f rke2-*.yaml
+              rm -f rke2-cluster.yaml
+              rm -f rke2-kubeconfig.yaml
             check:
               ($error == null): true
