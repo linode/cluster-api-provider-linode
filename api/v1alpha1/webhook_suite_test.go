@@ -114,7 +114,13 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&LinodeCluster{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	err = (&LinodeMachine{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = (&LinodeVPC{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:webhook
