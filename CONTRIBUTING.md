@@ -40,13 +40,13 @@ Tips for a faster merge:
     1. See the [Development Guide](https://linode.github.io/cluster-api-provider-linode/developers/development.html) for more instructions on setting up your environment and testing changes locally.
 2. Submit a pull request.
     1. All PRs titles should start with one of the following prefixes
-         - `fix:` for PRs related to bug fixes and patches
-         - `feat:` for PRs related to new features
-         - `improvement:` for PRs related to improvements of existing features
-         - `test:` for PRs related to tests
-         - `CI:` for PRs related to repo CI improvements
-         - `docs:` for PRs related to documentation updates
-         - `deps:` for PRs related to dependency updates
+         - `[fix]` for PRs related to bug fixes and patches
+         - `[feat]` for PRs related to new features
+         - `[improvement]` for PRs related to improvements of existing features
+         - `[test]` for PRs related to tests
+         - `[CI]` for PRs related to repo CI improvements
+         - `[docs]` for PRs related to documentation updates
+         - `[deps]` for PRs related to dependency updates
    2. if a PR introduces a breaking change it should include `[breaking]` in the title
    3. if a PR introduces a deprecation it should include `[deprecation]` in the title
    4. All code changes must be covered by unit tests and E2E tests.
