@@ -311,7 +311,6 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	linodeVPCMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeVPCList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeVPCs: %w", err)
