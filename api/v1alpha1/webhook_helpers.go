@@ -13,12 +13,14 @@ import (
 
 const (
 	// defaultWebhookTimeout is the default timeout for an admission request
-	defaultWebhookTimeout = time.Minute
+	defaultWebhookTimeout = time.Second * 10
+	// defaultClientTimeout is the default timeout for a client Linode API call
+	defaultClientTimeout = time.Second * 10
 )
 
 var (
 	// defaultLinodeClient is an unauthenticated Linode client
-	defaultLinodeClient = linodego.NewClient(http.DefaultClient)
+	defaultLinodeClient = linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})
 )
 
 func validateRegion(ctx context.Context, client LinodeClient, id string, path *field.Path) *field.Error {
