@@ -1,7 +1,9 @@
 name-template: 'v$NEXT_PATCH_VERSION'
 tag-template: 'v$NEXT_PATCH_VERSION'
+exclude-labels:
+  - ignore-for-release
 categories:
-  - title: ⚠️  Breaking Change
+  - title: ⚠️ Breaking Change
     labels:
       - breaking-change
   - title: 🐛 Bug Fixes
@@ -16,7 +18,7 @@ categories:
   - title: 🧪 Testing Improvements
     labels:
       - testing
-  - title: ⚙️  Repo/CI Improvements
+  - title: ⚙️ Repo/CI Improvements
     labels:
       - repo-ci-improvement
   - title: 📖 Documentation
@@ -31,7 +33,10 @@ categories:
 autolabeler:
   - label: 'breaking-change'
     title:
-      - '/.*:warning:.*/'
+      - '/.*[breaking].*/'
+  - label: 'deprecation'
+    title:
+      - '/.*[deprecation].*/'
   - label: 'bugfix'
     title:
       - '/fix:.+/'
