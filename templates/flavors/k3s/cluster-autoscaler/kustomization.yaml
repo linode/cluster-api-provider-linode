@@ -9,17 +9,6 @@ patches:
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
-      kind: Cluster
-    patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
-      kind: Cluster
-      metadata:
-        name: ${CLUSTER_NAME}
-        labels:
-          cluster-autoscaler: "true"
-  - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
       kind: MachineDeployment
     patch: |-
       apiVersion: cluster.x-k8s.io/v1beta1

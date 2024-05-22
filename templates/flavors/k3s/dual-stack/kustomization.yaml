@@ -24,13 +24,6 @@ patches:
               - 10.96.0.0/12
               - fd03::/108
   - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
-      kind: Cluster
-    patch: |-
-      - op: remove
-        path: /metadata/labels/vxlan
-  - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
       kind: KThreesControlPlane
@@ -40,9 +33,12 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
-        serverConfig:
-          ClusterCidr: "10.192.0.0/10,fd02::/80"
-          ServiceCidr: "10.96.0.0/12,fd03::/108"
+        kthreesConfigSpec:
+          serverConfig:
+            kubeControllerManagerArgs:
+              - "node-cidr-mask-size-ipv6=96"
+            clusterCidr: "10.192.0.0/10,fd02::/80"
+            serviceCidr: "10.96.0.0/12,fd03::/108"
   - target:
       kind: HelmChartProxy
       name: .*-cilium
@@ -63,3 +59,19 @@ patches:
               enabled: true
             ui:
               enabled: true
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KThreesControlPlane
+    patch: |-
+      - op: replace
+        path: /spec/kthreesConfigSpec/preK3sCommands
+        value:
+          - |
+            mkdir -p /etc/rancher/k3s/config.yaml.d/
+            echo -n "kubelet-arg: \"--node-ip=" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+            echo -n "$(ip a s eth0 |grep -E 'inet '  |cut -d' ' -f6|cut -d/ -f1 | grep -E '192.168')" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+            echo ",$(ip a s eth0 |grep -E 'inet6 '  |cut -d' ' -f6|cut -d/ -f1 | grep -vE 'fe80')\"" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+          - sed -i '/swap/d' /etc/fstab
+          - swapoff -a
+          - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname

@@ -2,10 +2,6 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: ${CLUSTER_NAME}
-  labels:
-    cni: ${CLUSTER_NAME}-cilium
-    ccm: ${CLUSTER_NAME}-linode
-    crs: ${CLUSTER_NAME}-crs
 spec:
   clusterNetwork:
     pods:

@@ -58,15 +58,3 @@ patches:
     patch: |-
       - op: remove
         path: /spec/kubeadmConfigSpec/initConfiguration/skipPhases
-  - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
-      kind: Cluster
-    patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
-      kind: Cluster
-      metadata:
-        name: ${CLUSTER_NAME}
-        labels:
-            vxlan: "true"
-            vpcless: "true"

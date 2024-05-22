@@ -29,13 +29,6 @@ patches:
               - 10.96.0.0/12
               - fd03::/108
   - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
-      kind: Cluster
-    patch: |-
-      - op: remove
-        path: /metadata/labels/vxlan
-  - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
       kind: KubeadmControlPlane
@@ -73,17 +66,6 @@ patches:
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
-      kind: Cluster
-    patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
-      kind: Cluster
-      metadata:
-        name: ${CLUSTER_NAME}
-        labels:
-          cluster-autoscaler: "true"
-  - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
       kind: MachineDeployment
     patch: |-
       apiVersion: cluster.x-k8s.io/v1beta1
@@ -93,17 +75,6 @@ patches:
         annotations:
           cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: ${WORKER_MACHINE_MIN:-"1"}
           cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: ${WORKER_MACHINE_MAX:-"10"}
-  - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
-      kind: Cluster
-    patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
-      kind: Cluster
-      metadata:
-        name: ${CLUSTER_NAME}
-        labels:
-            etcd-backup: "true"
   - target:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha1

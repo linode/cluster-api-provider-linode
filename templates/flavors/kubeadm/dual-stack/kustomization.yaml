@@ -24,13 +24,6 @@ patches:
               - 10.96.0.0/12
               - fd03::/108
   - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
-      kind: Cluster
-    patch: |-
-      - op: remove
-        path: /metadata/labels/vxlan
-  - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
       kind: KubeadmControlPlane

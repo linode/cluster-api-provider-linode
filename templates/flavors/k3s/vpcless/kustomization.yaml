@@ -22,7 +22,6 @@ patches:
               enabled: true
             ui:
               enabled: true
-
   - target:
       kind: HelmChartProxy
       name: .*-linode-cloud-controller-manager
@@ -34,8 +33,6 @@ patches:
             name: "linode-token-region"
           image:
             pullPolicy: IfNotPresent
-
-
   - target:
       kind: LinodeVPC
     patch: |-
@@ -52,14 +49,44 @@ patches:
       - op: remove
         path: /spec/vpcRef
   - target:
-      group: cluster.x-k8s.io
+      group: controlplane.cluster.x-k8s.io
       version: v1beta1
-      kind: Cluster
+      kind: KThreesControlPlane
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
-      kind: Cluster
-      metadata:
-        name: ${CLUSTER_NAME}
-        labels:
-            vxlan: "true"
-            vpcless: "true"
+      - op: replace
+        path: /spec/kthreesConfigSpec/preK3sCommands
+        value:
+          - |
+            mkdir -p /etc/rancher/k3s/config.yaml.d/
+            echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+          - sed -i '/swap/d' /etc/fstab
+          - swapoff -a
+          - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+      - op: replace
+        path: /spec/kthreesConfigSpec/files
+        value:
+          - path:  /var/lib/rancher/k3s/server/manifests/ccm-linode.yaml
+            owner: root:root
+            content: |-
+              apiVersion: helm.cattle.io/v1
+              kind: HelmChart
+              metadata:
+                namespace: kube-system
+                name: ccm-linode
+              spec:
+                targetNamespace: kube-system
+                version: ${LINODE_CCM_VERSION:=v0.4.4}
+                chart: ccm-linode
+                repo: https://linode.github.io/linode-cloud-controller-manager/
+                bootstrap: true
+                valuesContent: |-
+                  secretRef:
+                    name: "linode-token-region"
+                  nodeSelector:
+                    node-role.kubernetes.io/control-plane: "true"
+          - contentFrom:
+              secret:
+                key:  linode-token-region.yaml
+                name: linode-${CLUSTER_NAME}-crs-0
+            owner: root:root
+            path: /var/lib/rancher/k3s/server/manifests/linode-token-region.yaml
