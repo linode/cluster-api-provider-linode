@@ -113,6 +113,17 @@ spec:
         - assert:
             cluster: default-cluster
             file: assert-child-cluster-daemonsets.yaml
+      catch:
+        - describe:
+            cluster: default-cluster
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+        - describe:
+            cluster: default-cluster
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
     - name: Delete child cluster
       try:
         - delete:

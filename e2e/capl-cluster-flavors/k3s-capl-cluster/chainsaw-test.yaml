@@ -110,6 +110,17 @@ spec:
         - assert:
             cluster: k3s
             file: assert-child-cluster-daemonsets.yaml
+      catch:
+        - describe:
+            cluster: k3s
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+        - describe:
+            cluster: k3s
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
     - name: Delete child cluster
       try:
         - delete:
