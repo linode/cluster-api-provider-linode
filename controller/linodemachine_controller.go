@@ -38,11 +38,11 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -679,7 +679,12 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	controller, err := ctrl.NewControllerManagedBy(mgr).
+	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeMachineList{}, mgr.GetScheme())
+	if err != nil {
+		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
+	}
+
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeMachine{}).
 		Watches(
 			&clusterv1.Machine{},
@@ -689,20 +694,16 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&infrav1alpha1.LinodeCluster{},
 			handler.EnqueueRequestsFromMapFunc(r.linodeClusterToLinodeMachines(mgr.GetLogger())),
 		).
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
+			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+		).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
-		Build(r)
+		Complete(r)
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
-	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeMachineList{}, mgr.GetScheme())
-	if err != nil {
-		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
-	}
-
-	return controller.Watch(
-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
-		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
-	)
+	return nil
 }
