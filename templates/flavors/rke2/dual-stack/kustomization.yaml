@@ -24,13 +24,6 @@ patches:
               - 10.96.0.0/12
               - fd03::/108
   - target:
-      group: cluster.x-k8s.io
-      version: v1beta1
-      kind: Cluster
-    patch: |-
-      - op: remove
-        path: /metadata/labels/vxlan
-  - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
       kind: RKE2ControlPlane
@@ -47,19 +40,8 @@ patches:
       kind: HelmChartProxy
       name: .*-cilium
     patch: |-
-      - op: replace
+      - op: add
         path: /spec/valuesTemplate
         value: |
-          bgpControlPlane:
-            enabled: true
           ipv6:
             enabled: true
-          ipam:
-            mode: kubernetes
-          k8s:
-            requireIPv4PodCIDR: true
-          hubble:
-            relay:
-              enabled: true
-            ui:
-              enabled: true
