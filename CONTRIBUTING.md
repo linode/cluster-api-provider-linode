@@ -39,19 +39,20 @@ Tips for a faster merge:
 1. Fork the desired repo, develop and test your code changes.
     1. See the [Development Guide](https://linode.github.io/cluster-api-provider-linode/developers/development.html) for more instructions on setting up your environment and testing changes locally.
 2. Submit a pull request.
-    1. All PRs should be labeled with one of the following kinds
-         - `/kind feature` for PRs related to adding new features/tests
-         - `/kind bug` for PRs related to bug fixes and patches
-         - `/kind api-change` for PRs related to adding, removing, or otherwise changing an API
-         - `/kind cleanup` for PRs related to code refactoring and cleanup
-         - `/kind deprecation` for PRs related to a feature/enhancement marked for deprecation.
-         - `/kind design` for PRs related to design proposals
-         - `/kind documentation` for PRs related to documentation
-         - `/kind other` for PRs related to updating dependencies, minor changes or other
-     2. All code changes must be covered by unit tests and E2E tests.
-     3. All new features should come with user documentation.
+    1. All PRs titles should start with one of the following prefixes
+         - `[fix]` for PRs related to bug fixes and patches
+         - `[feat]` for PRs related to new features
+         - `[improvement]` for PRs related to improvements of existing features
+         - `[test]` for PRs related to tests
+         - `[CI]` for PRs related to repo CI improvements
+         - `[docs]` for PRs related to documentation updates
+         - `[deps]` for PRs related to dependency updates
+   2. if a PR introduces a breaking change it should include `[breaking]` in the title
+   3. if a PR introduces a deprecation it should include `[deprecation]` in the title
+   4. All code changes must be covered by unit tests and E2E tests.
+   5. All new features should come with user documentation.
 3. Ensure that commit message(s) are be meaningful and commit history is readable.
-5. All changes must be code reviewed. Refer to the following for code conventions and standards:
+4. All changes must be code reviewed. Refer to the following for code conventions and standards:
     - The official [Kubernetes developer guide](https://github.com/kubernetes/community/tree/master/contributors/devel)
     - [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments) identifies some common style mistakes when writing Go
     - [Uber's Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md) promotes preferred code conventions
