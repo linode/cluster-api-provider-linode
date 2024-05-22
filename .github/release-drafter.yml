@@ -33,31 +33,32 @@ categories:
 autolabeler:
   - label: 'breaking-change'
     title:
-      - '/.*[breaking].+/'
+      - '/.*\[breaking\].+/'
   - label: 'deprecation'
     title:
-      - '/.*[deprecation].+/'
+      - '/.*\[deprecation\].+/'
   - label: 'bugfix'
     title:
-      - '/.*[fix].+/'
+      - '/.*\[fix\].+/'
   - label: 'new-feature'
     title:
-      - '/.*[feat].+/'
+      - '/.*\[feat\].+/'
   - label: 'improvement'
     title:
-      - '/.*[improvement].+/'
+      - '/.*\[improvement\].+/'
   - label: 'testing'
     title:
-      - '/.*[test].+/'
+      - '/.*\[test\].+/'
   - label: 'repo-ci-improvement'
     title:
-      - '/.*[CI].+/'
+      - '/.*\[CI\].+/'
+      - '/.*\[ci\].+/'
   - label: 'documentation'
     title:
-      - '/.*[docs].+/'
+      - '/.*\[docs\].+/'
   - label: 'dependencies'
     title:
-      - '/.*[deps].+/'
+      - '/.*\[deps\].+/'
 
 change-template: '- $TITLE by @$AUTHOR in #$NUMBER'
 no-changes-template: "- No changes"

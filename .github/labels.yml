@@ -26,9 +26,6 @@
 - name: ignore-for-release
   description: PRs you do not want to render in the changelog.
   color: 7b8eac
-- name: do-not-merge
-  description: PRs that should not be merged until the commented issue is resolved.
-  color: eb1515
 # Issue Labels
 - name: enhancement
   description: issues that request a enhancement.
