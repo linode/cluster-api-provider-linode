@@ -84,6 +84,32 @@ spec:
               ($error): ~
               (json_parse($stdout)):
                 results: 2
+    - name: Get child cluster kubeconfig
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+            content: |
+              set -e
+              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > rke2-kubeconfig.yaml
+            check:
+              ($error == null): true
+    - clusters:
+        rke2:
+          kubeconfig: ./rke2-kubeconfig.yaml
+      name: Check child cluster resources
+      try:
+        - assert:
+            cluster: rke2
+            file: assert-child-cluster-deployments.yaml
+        - assert:
+            cluster: rke2
+            file: assert-child-cluster-daemonsets.yaml
     - name: Delete child cluster
       try:
         - delete:
@@ -125,6 +151,6 @@ spec:
       try:
         - script:
             content: |
-              rm -f rke2-cluster.yaml
+              rm -f rke2-*.yaml
             check:
               ($error == null): true

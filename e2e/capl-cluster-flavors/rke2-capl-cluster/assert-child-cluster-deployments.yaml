@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cilium-operator
+  namespace: kube-system
+status:
+  availableReplicas: 2
+  readyReplicas: 2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/part-of: cilium
+  namespace: kube-system
+status:
+  readyReplicas: 1
