@@ -158,6 +158,10 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachine")
 			os.Exit(1)
 		}
+		if err = (&infrastructurev1alpha1.LinodeVPC{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeVPC")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
