@@ -1,20 +1,16 @@
  <!-- If this is your first PR, welcome! Please make sure you read the [contributing guidelines](../CONTRIBUTING.md). -->
-
- <!-- Please label this pull request according to what type of issue you are addressing (see ../CONTRIBUTING.md) -->
-**What type of PR is this?**
-
-<!--
-Add one of the following kinds:
-/kind feature
-/kind bug
-/kind api-change
-/kind cleanup
-/kind deprecation
-/kind design
-/kind documentation
-/kind testing
+<!-- Ensure your PR title complies with the following guidelines
+    1. All PRs titles should start with one of the following prefixes
+         - `[fix]` for PRs related to bug fixes and patches
+         - `[feat]` for PRs related to new features
+         - `[improvement]` for PRs related to improvements of existing features
+         - `[test]` for PRs related to tests
+         - `[CI]` for PRs related to repo CI improvements
+         - `[docs]` for PRs related to documentation updates
+         - `[deps]` for PRs related to dependency updates
+   2. if a PR introduces a breaking change it should include `[breaking]` in the title
+   3. if a PR introduces a deprecation it should include `[deprecation]` in the title
 -->
-
 **What this PR does / why we need it**:
 
 **Which issue(s) this PR fixes** *(optional, in `fixes #<issue number>(, fixes #<issue_number>, ...)` format, will close the issue(s) when PR gets merged)*:
