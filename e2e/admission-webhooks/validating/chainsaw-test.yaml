@@ -1,0 +1,56 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: validating-admission-webhooks
+  # Label to trigger the test on every PR
+  labels:
+    all:
+    webhook:
+spec:
+  bindings:
+    # A short identifier for the E2E test run
+    - name: run
+      value: (join('-', ['e2e', 'validating-webhooks', env('GIT_REF')]))
+    - name: name
+      # Format a generic resource name
+      value: (trim((truncate(($run), `32`)), '-'))
+  template: true
+  steps:
+    - name: Check if CAPL provider resources exist
+      try:
+        - assert:
+            file: assert-capl-resources.yaml
+    - name: Invalid LinodeCluster
+      try:
+        - apply:
+            file: invalid-linodecluster.yaml
+            expect:
+              - check:
+                  ($error != null): true
+                  (contains($error, $name)): true
+    - name: Invalid LinodeMachine
+      try:
+        - apply:
+            file: invalid-linodemachine.yaml
+            expect:
+              - check:
+                  ($error != null): true
+                  (contains($error, $name)): true
+    - name: Invalid LinodeVPC
+      try:
+        - apply:
+            file: invalid-linodevpc.yaml
+            expect:
+              - check:
+                  ($error != null): true
+                  (contains($error, $name)): true
+    - name: Invalid LinodeObjectStorageBucket
+      try:
+        - apply:
+            file: invalid-linodeobjectstoragebucket.yaml
+            expect:
+              - check:
+                  ($error != null): true
+                  (contains($error, $name)): true
