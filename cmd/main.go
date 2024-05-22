@@ -150,6 +150,10 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&infrastructurev1alpha1.LinodeCluster{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
+			os.Exit(1)
+		}
 		if err = (&infrastructurev1alpha1.LinodeMachine{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachine")
 			os.Exit(1)

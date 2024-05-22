@@ -26,6 +26,7 @@ import (
 // LinodeClusterSpec defines the desired state of LinodeCluster
 type LinodeClusterSpec struct {
 	// The Linode Region the LinodeCluster lives in.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
 
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane.
