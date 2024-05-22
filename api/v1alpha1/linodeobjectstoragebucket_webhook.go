@@ -17,11 +17,26 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"slices"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
+)
+
+var (
+	// The capability string indicating a region supports Object Storage: [Object Storage Availability]
+	//
+	// [Object Storage Availability]: https://www.linode.com/docs/products/storage/object-storage/#availability
+	LinodeObjectStorageCapability = "Object Storage"
 )
 
 // log is for logging in this package.
@@ -34,10 +49,8 @@ func (r *LinodeObjectStorageBucket) SetupWebhookWithManager(mgr ctrl.Manager) er
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeobjectstoragebucket,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets,verbs=create;update,versions=v1alpha1,name=vlinodeobjectstoragebucket.kb.io,admissionReviewVersions=v1
+// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable updation and deletion validation.
+//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeobjectstoragebucket,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets,verbs=create,versions=v1alpha1,name=vlinodeobjectstoragebucket.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &LinodeObjectStorageBucket{}
 
@@ -45,8 +58,10 @@ var _ webhook.Validator = &LinodeObjectStorageBucket{}
 func (r *LinodeObjectStorageBucket) ValidateCreate() (admission.Warnings, error) {
 	linodeobjectstoragebucketlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
-	return nil, nil
+	ctx, cancel := context.WithTimeout(context.Background(), defaultWebhookTimeout)
+	defer cancel()
+
+	return nil, r.validateLinodeObjectStorageBucket(ctx, &defaultLinodeClient)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -63,4 +78,32 @@ func (r *LinodeObjectStorageBucket) ValidateDelete() (admission.Warnings, error)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
+}
+
+func (r *LinodeObjectStorageBucket) validateLinodeObjectStorageBucket(ctx context.Context, client LinodeClient) error {
+	var errs field.ErrorList
+
+	if err := r.validateLinodeObjectStorageBucketSpec(ctx, client); err != nil {
+		errs = slices.Concat(errs, err)
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return apierrors.NewInvalid(
+		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageBucket"},
+		r.Name, errs)
+}
+
+func (r *LinodeObjectStorageBucket) validateLinodeObjectStorageBucketSpec(ctx context.Context, client LinodeClient) field.ErrorList {
+	var errs field.ErrorList
+
+	if err := validateObjectStorageCluster(ctx, client, r.Spec.Cluster, field.NewPath("spec").Child("cluster")); err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errs
 }

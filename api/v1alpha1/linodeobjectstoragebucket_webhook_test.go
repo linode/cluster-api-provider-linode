@@ -17,23 +17,74 @@ limitations under the License.
 package v1alpha1
 
 import (
-	. "github.com/onsi/ginkgo/v2"
+	"context"
+	"slices"
+	"testing"
+
+	"github.com/linode/linodego"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/linode/cluster-api-provider-linode/mock"
+
+	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
-var _ = Describe("LinodeObjectStorageBucket Webhook", func() {
+func TestValidateLinodeObjectStorageBucket(t *testing.T) {
+	t.Parallel()
 
-	Context("When creating LinodeObjectStorageBucket under Validating Webhook", func() {
-		It("Should deny if a required field is empty", func() {
+	var (
+		bucket = LinodeObjectStorageBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeObjectStorageBucketSpec{
+				Cluster: "example-1",
+			},
+		}
+		region            = linodego.Region{ID: "test"}
+		capabilities      = []string{LinodeObjectStorageCapability}
+		capabilities_zero = []string{}
+	)
 
-			// TODO(user): Add your logic here
-
-		})
-
-		It("Should admit if all required fields are provided", func() {
-
-			// TODO(user): Add your logic here
-
-		})
-	})
-
-})
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					assert.NoError(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("invalid cluster format", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					bucket := bucket
+					bucket.Spec.Cluster = "invalid"
+					assert.Error(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+				}),
+			),
+			Path(
+				Call("region not supported", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities_zero)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					assert.Error(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+				}),
+			),
+		),
+	)
+}
