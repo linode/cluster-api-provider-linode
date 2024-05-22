@@ -54,6 +54,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
+//nolint:cyclop // main
 func main() {
 	var (
 		// Environment variables
@@ -162,8 +163,6 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeVPC")
 			os.Exit(1)
 		}
-	}
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&infrastructurev1alpha1.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
 			os.Exit(1)
