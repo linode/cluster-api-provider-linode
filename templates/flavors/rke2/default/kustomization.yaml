@@ -19,8 +19,30 @@ patches:
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+            cni: ${CLUSTER_NAME}-cilium
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
       kind: MachineDeployment
     patch: |-
       - op: replace
         path: /spec/template/spec/bootstrap/configRef/kind
         value: RKE2ConfigTemplate
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+            cni: ${CLUSTER_NAME}-cilium
