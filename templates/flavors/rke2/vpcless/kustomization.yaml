@@ -97,3 +97,14 @@ patches:
                 name: linode-${CLUSTER_NAME}-crs-0
             owner: root:root
             path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+            vpcless: "true"
