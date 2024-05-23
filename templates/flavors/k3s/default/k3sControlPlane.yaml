@@ -90,7 +90,7 @@ spec:
         owner: root:root
         contentFrom:
           secret:
-            key:  linode-token-region.yaml
+            key: linode-token-region.yaml
             name: linode-${CLUSTER_NAME}-crs-0
     serverConfig:
       disableComponents:

@@ -10,8 +10,8 @@ spec:
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       interfaces:
-      - purpose: public
-        primary: true
+        - purpose: public
+          primary: true
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - $LINODE_SSH_PUBKEY
@@ -27,8 +27,8 @@ spec:
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       interfaces:
-      - purpose: public
-        primary: true
+        - purpose: public
+          primary: true
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - $LINODE_SSH_PUBKEY
