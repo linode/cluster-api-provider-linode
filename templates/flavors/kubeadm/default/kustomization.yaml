@@ -40,3 +40,47 @@ patches:
             ccm: ${CLUSTER_NAME}-linode
             csi: ${CLUSTER_NAME}-linode
             crs: ${CLUSTER_NAME}-crs
+  - target:
+      version: v1
+      kind: ConfigMap
+      name: ${CLUSTER_NAME}-cilium-policy
+    patch: |-
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: ${CLUSTER_NAME}-cilium-policy
+      data:
+        cilium-policy.yaml: |-
+          apiVersion: "cilium.io/v2"
+          kind: CiliumClusterwideNetworkPolicy
+          metadata:
+            name: "default-cluster-policy"
+          spec:
+            description: "allow cluster intra cluster traffic"
+            endpointSelector: {}
+            ingress:
+              - fromEntities:
+                  - cluster
+              - fromCIDR:
+                  - 10.0.0.0/8
+                  - 192.168.128.0/17
+          ---
+          apiVersion: "cilium.io/v2"
+          kind: CiliumClusterwideNetworkPolicy
+          metadata:
+            name: "default-external-policy"
+          spec:
+            description: "allow etcd & api server traffic"
+            nodeSelector: {}
+            ingress:
+              - fromEntities:
+                  - cluster
+              - fromCIDR:
+                  - 10.0.0.0/8
+              - fromEntities:
+                  - world
+                toPorts:
+                  - ports:
+                      - port: "6443"
+                      - port: "2379"
+                      - port: "2380"

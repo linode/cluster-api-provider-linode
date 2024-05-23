@@ -56,6 +56,20 @@ patches:
       - op: remove
         path: /spec/serverConfig/disableComponents/kubernetesComponents/1
   - target:
+      group: bootstrap.cluster.x-k8s.io
+      version: v1alpha1
+      kind: RKE2ConfigTemplate
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/preRKE2Commands
+        value:
+          - |
+            mkdir -p /etc/rancher/rke2/config.yaml.d/
+            echo "node-ip: $(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
+          - sed -i '/swap/d' /etc/fstab
+          - swapoff -a
+          - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+  - target:
       group: controlplane.cluster.x-k8s.io
       version: v1alpha1
       kind: RKE2ControlPlane

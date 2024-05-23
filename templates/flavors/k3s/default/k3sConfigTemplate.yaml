@@ -8,3 +8,9 @@ spec:
     spec:
       agentConfig:
         nodeName: '{{ ds.meta_data.label }}'
+      preK3sCommands:
+        - |
+          echo "node-ip: $(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+        - sed -i '/swap/d' /etc/fstab
+        - swapoff -a
+        - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
