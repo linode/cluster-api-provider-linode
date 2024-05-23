@@ -1,7 +1,0 @@
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: manager-config
-data:
-  ENABLE_WEBHOOKS: ${ENABLE_WEBHOOKS}

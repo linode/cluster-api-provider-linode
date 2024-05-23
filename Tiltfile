@@ -98,8 +98,6 @@ for resource in manager_yaml:
         resource["stringData"]["apiToken"] = os.getenv("LINODE_TOKEN")
     if resource["kind"] == "CustomResourceDefinition" and resource["spec"]["group"] == "infrastructure.cluster.x-k8s.io":
         resource["metadata"]["labels"]["clusterctl.cluster.x-k8s.io"] = ""
-    if resource["metadata"]["name"] == "capl-manager-config":
-        resource["data"]["ENABLE_WEBHOOKS"] = os.getenv("ENABLE_WEBHOOKS", "true")
 k8s_yaml(encode_yaml_stream(manager_yaml))
 
 if os.getenv("SKIP_DOCKER_BUILD", "false") != "true":
@@ -130,7 +128,6 @@ k8s_resource(
         "capl-manager-rolebinding:clusterrolebinding",
         "capl-proxy-rolebinding:clusterrolebinding",
         "capl-manager-credentials:secret",
-        "capl-manager-config:configmap",
         "capl-serving-cert:certificate",
         "capl-selfsigned-issuer:issuer",
         "capl-validating-webhook-configuration:validatingwebhookconfiguration",
