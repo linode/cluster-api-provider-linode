@@ -34,7 +34,7 @@ spec:
               node-role.kubernetes.io/control-plane: "true"
     - contentFrom:
         secret:
-          key:  linode-token-region.yaml
+          key: linode-token-region.yaml
           name: linode-${CLUSTER_NAME}-crs-0
       owner: root:root
       path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
