@@ -24,10 +24,15 @@ done
 
 for distro in ${SUPPORTED_DISTROS[@]}; do
     for name in $(find "${FLAVORS_DIR}/${distro}/"* -maxdepth 0 -type d -print0 | xargs -0 -I {} basename {}); do
-        echo "****** Generating ${distro}-${name} flavor ******"
-        kustomize build "${FLAVORS_DIR}/${distro}/${name}" > "${REPO_ROOT}/templates/cluster-template-${distro}-${name}.yaml"
+        if [[ ${name} == "default" ]]; then
+            echo "****** Generating ${distro} flavor ******"
+            kustomize build "${FLAVORS_DIR}/${distro}/${name}" > "${REPO_ROOT}/templates/cluster-template-${distro}.yaml"
+        else
+            echo "****** Generating ${distro}-${name} flavor ******"
+            kustomize build "${FLAVORS_DIR}/${distro}/${name}" > "${REPO_ROOT}/templates/cluster-template-${distro}-${name}.yaml"
+        fi
     done
 done
 
 # move the default template to the default file expected by clusterctl
-mv "${REPO_ROOT}/templates/cluster-template-kubeadm-default.yaml" "${REPO_ROOT}/templates/cluster-template.yaml"
+mv "${REPO_ROOT}/templates/cluster-template-kubeadm.yaml" "${REPO_ROOT}/templates/cluster-template.yaml"
