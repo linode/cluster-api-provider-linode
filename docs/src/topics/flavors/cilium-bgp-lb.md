@@ -59,7 +59,7 @@ Linode networking and API limitations:
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1 \
         --infrastructure linode-linode \
-        --flavor cilium-bgp-lb > test-cluster.yaml
+        --flavor kubeadm-cilium-bgp-lb > test-cluster.yaml
     ```
 
 3. Apply cluster yaml
