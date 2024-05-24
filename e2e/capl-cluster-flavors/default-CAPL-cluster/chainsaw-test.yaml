@@ -87,6 +87,43 @@ spec:
               ($error): ~
               (json_parse($stdout)):
                 results: 2
+    - name: Get child cluster kubeconfig
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+            content: |
+              set -e
+              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > default-cluster-kubeconfig.yaml
+            check:
+              ($error == null): true
+    - clusters:
+        default-cluster:
+          kubeconfig: ./default-cluster-kubeconfig.yaml
+      name: Check child cluster resources
+      try:
+        - assert:
+            cluster: default-cluster
+            file: assert-child-cluster-deployments.yaml
+        - assert:
+            cluster: default-cluster
+            file: assert-child-cluster-daemonsets.yaml
+      catch:
+        - describe:
+            cluster: default-cluster
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+        - describe:
+            cluster: default-cluster
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
     - name: Delete child cluster
       try:
         - delete:
@@ -129,5 +166,6 @@ spec:
         - script:
             content: |
               rm -f default-cluster.yaml
+              rm -f default-cluster-kubeconfig.yaml
             check:
               ($error == null): true
