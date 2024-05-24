@@ -1,0 +1,63 @@
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha1
+kind: RKE2ControlPlane
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: LinodeMachineTemplate
+    name: ${CLUSTER_NAME}-control-plane
+  files:
+    - path: /var/lib/rancher/rke2/server/manifests/ccm-linode.yaml
+      owner: root:root
+      content: |-
+        apiVersion: helm.cattle.io/v1
+        kind: HelmChart
+        metadata:
+          namespace: kube-system
+          name: ccm-linode
+        spec:
+          targetNamespace: kube-system
+          version: ${LINODE_CCM_VERSION:=v0.4.4}
+          chart: ccm-linode
+          repo: https://linode.github.io/linode-cloud-controller-manager/
+          bootstrap: true
+          valuesContent: |-
+            routeController:
+              vpcName: ${VPC_NAME:=${CLUSTER_NAME}}
+              clusterCIDR: 10.0.0.0/8
+              configureCloudRoutes: true
+            secretRef:
+              name: "linode-token-region"
+            nodeSelector:
+              node-role.kubernetes.io/control-plane: "true"
+    - contentFrom:
+        secret:
+          key: linode-token-region.yaml
+          name: linode-${CLUSTER_NAME}-crs-0
+      owner: root:root
+      path: /var/lib/rancher/rke2/server/manifests/linode-token-region.yaml
+  registrationMethod: internal-only-ips
+  serverConfig:
+    cni: none
+    cloudProviderName: external
+    disableComponents:
+      pluginComponents:
+        - "rke2-ingress-nginx"
+      kubernetesComponents:
+        - "cloudController"
+        - "kubeProxy"
+  agentConfig:
+    version: ${KUBERNETES_VERSION}
+    nodeName: '{{ ds.meta_data.label }}'
+    cisProfile: ${CIS_PROFILE:-"cis-1.23"}
+    protectKernelDefaults: true
+  preRKE2Commands:
+    - |
+      mkdir -p /etc/rancher/rke2/config.yaml.d/
+      echo "node-ip: $(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
+    - sed -i '/swap/d' /etc/fstab
+    - swapoff -a
+    - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT}

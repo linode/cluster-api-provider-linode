@@ -4,7 +4,7 @@ resources:
   - clusterClass.yaml
   - kubeadmControlPlaneTemplate.yaml
   - linodeClusterTemplate.yaml
-  - ../default
+  - ../kubeadm/default
 
 transformers:
   - replacementTransformer.yaml

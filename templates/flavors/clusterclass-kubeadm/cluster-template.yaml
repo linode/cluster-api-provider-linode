@@ -15,16 +15,16 @@ spec:
     class: kubeadm
     version: ${KUBERNETES_VERSION}
     variables:
-    - name: region
-      value: ${LINODE_REGION}
-    - name: controlPlaneMachineType
-      value: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
-    - name: workerMachineType
-      value: ${LINODE_MACHINE_TYPE}
+      - name: region
+        value: ${LINODE_REGION}
+      - name: controlPlaneMachineType
+        value: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
+      - name: workerMachineType
+        value: ${LINODE_MACHINE_TYPE}
     controlPlane:
       replicas: ${CONTROL_PLANE_MACHINE_COUNT}
     workers:
       machineDeployments:
-      - class: default-worker
-        name: md-0
-        replicas: ${WORKER_MACHINE_COUNT}
+        - class: default-worker
+          name: md-0
+          replicas: ${WORKER_MACHINE_COUNT}
