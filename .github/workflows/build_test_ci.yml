@@ -106,8 +106,8 @@ jobs:
     uses: ./.github/workflows/e2e-test.yaml
     secrets: inherit
     with:
-      e2e-selector: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
-      e2e-flags: ${{ github.ref == 'refs/heads/main' && '--assert-timeout 15m0s' || '' }}
+      e2e-selector: 'all'
+      e2e-flags: '--assert-timeout 15m0s'
 
   docker-build:
     runs-on: ubuntu-latest
