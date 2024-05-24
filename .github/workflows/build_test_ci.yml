@@ -104,7 +104,7 @@ jobs:
     secrets: inherit
     with:
       e2e-selector: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
-      e2e-flags: ${{ github.ref == 'refs/heads/main' && '--assert-timeout 15m0s' || '' }}'
+      e2e-flags: ${{ github.ref == 'refs/heads/main' && '--assert-timeout 15m0s' || '' }}
 
   e2e-matrix:
     needs: changes
