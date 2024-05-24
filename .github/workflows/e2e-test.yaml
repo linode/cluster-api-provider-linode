@@ -54,7 +54,7 @@ jobs:
         uses: step-security/harden-runner@v2
         with:
           disable-sudo: true
-          egress-policy: block
+          egress-policy: audit
           allowed-endpoints: >
             *:6443
             api.linode.com:443
