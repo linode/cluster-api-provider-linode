@@ -34,12 +34,12 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -311,7 +311,12 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	controller, err := ctrl.NewControllerManagedBy(mgr).
+	linodeVPCMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeVPCList{}, mgr.GetScheme())
+	if err != nil {
+		return fmt.Errorf("failed to create mapper for LinodeVPCs: %w", err)
+	}
+
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeVPC{}).
 		WithEventFilter(
 			predicate.And(
@@ -322,19 +327,14 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				predicate.Funcs{
 					DeleteFunc: func(e event.DeleteEvent) bool { return false },
 				},
-			)).Build(r)
+			)).Watches(
+		&clusterv1.Cluster{},
+		handler.EnqueueRequestsFromMapFunc(linodeVPCMapper),
+		builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+	).Complete(r)
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
-	linodeVPCMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeVPCList{}, mgr.GetScheme())
-	if err != nil {
-		return fmt.Errorf("failed to create mapper for LinodeVPCs: %w", err)
-	}
-
-	return controller.Watch(
-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(linodeVPCMapper),
-		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
-	)
+	return nil
 }
