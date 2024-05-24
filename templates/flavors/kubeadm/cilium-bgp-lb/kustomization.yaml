@@ -1,11 +1,71 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../default
+  - ../vpcless
   - machineDeployment.yaml
   - linodeMachineTemplate.yaml
   - kubeadmConfigTemplate.yaml
+
 patches:
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        clusterNetwork:
+          pods:
+            cidrBlocks:
+              - 10.192.0.0/10
+              - fd02::/80
+          services:
+            cidrBlocks:
+              - 10.96.0.0/12
+              - fd03::/108
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KubeadmControlPlane
+    patch: |-
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlane
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        kubeadmConfigSpec:
+          clusterConfiguration:
+            controllerManager:
+              extraArgs:
+                node-cidr-mask-size-ipv6: "96"
+  - target:
+      kind: HelmChartProxy
+      name: .*-cilium
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          bgpControlPlane:
+            enabled: true
+          policyAuditMode: ${FW_AUDIT_ONLY:=true}
+          hostFirewall:
+            enabled: true
+          extraConfig:
+            allow-localhost: policy
+          ipam:
+            mode: kubernetes
+          ipv6:
+            enabled: true
+          k8s:
+            requireIPv4PodCIDR: true
+          hubble:
+            relay:
+              enabled: true
+            ui:
+              enabled: true
   - target:
       kind: HelmChartProxy
       name: .*-linode-cloud-controller-manager
@@ -16,10 +76,6 @@ patches:
           sharedIPLoadBalancing:
             loadBalancerType: cilium-bgp
             bgpNodeSelector: cilium-bgp-peering=true
-          routeController:
-            vpcName: {{ .InfraCluster.spec.vpcRef.name }}
-            clusterCIDR: 10.0.0.0/8
-            configureCloudRoutes: true
           secretRef:
             name: "linode-token-region"
           image:
@@ -28,72 +84,72 @@ patches:
             - name: LINODE_URL
               value: https://api.linode.com/v4beta
 transformers:
-- |
-  apiVersion: builtin
-  kind: ReplacementTransformer
-  metadata:
-    name: clone-bgp
-  replacements:
-  - source:
+  - |
+    apiVersion: builtin
+    kind: ReplacementTransformer
+    metadata:
+      name: clone-bgp
+    replacements:
+      - source:
+          kind: KubeadmConfigTemplate
+          name: ${CLUSTER_NAME}-md-0
+          fieldPath: .spec
+        targets:
+          - select:
+              kind: KubeadmConfigTemplate
+              name: ${CLUSTER_NAME}-md-bgp
+            fieldPaths:
+            - .spec
+            options:
+              create: true
+      - source:
+          kind: LinodeMachineTemplate
+          name: ${CLUSTER_NAME}-md-0
+          fieldPath: .spec
+        targets:
+          - select:
+              kind: LinodeMachineTemplate
+              name: ${CLUSTER_NAME}-md-bgp
+            fieldPaths:
+            - .spec
+            options:
+              create: true
+      - source:
+          kind: MachineDeployment
+          name: ${CLUSTER_NAME}-md-0
+          fieldPath: .spec.template
+        targets:
+          - select:
+              kind: MachineDeployment
+              name: ${CLUSTER_NAME}-md-bgp
+            fieldPaths:
+            - .spec.template
+            options:
+              create: true
+  - |-
+    apiVersion: builtin
+    kind: PatchTransformer
+    metadata:
+      name: patch-kubeadmconfig
+    patch: |-
+      - op: add
+        path: /spec/template/spec/joinConfiguration/nodeRegistration/kubeletExtraArgs/node-labels
+        value: cilium-bgp-peering="true"
+    target:
       kind: KubeadmConfigTemplate
-      name: ${CLUSTER_NAME}-md-0
-      fieldPath: .spec
-    targets:
-    - select:
-        kind: KubeadmConfigTemplate
-        name: ${CLUSTER_NAME}-md-bgp
-      fieldPaths:
-      - .spec
-      options:
-        create: true
-  - source:
-      kind: LinodeMachineTemplate
-      name: ${CLUSTER_NAME}-md-0
-      fieldPath: .spec
-    targets:
-    - select:
-        kind: LinodeMachineTemplate
-        name: ${CLUSTER_NAME}-md-bgp
-      fieldPaths:
-      - .spec
-      options:
-        create: true
-  - source:
+      name: .*-md-bgp
+  - |-
+    apiVersion: builtin
+    kind: PatchTransformer
+    metadata:
+      name: patch-machinedeployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/bootstrap/configRef/name
+        value: ${CLUSTER_NAME}-md-bgp
+      - op: replace
+        path: /spec/template/spec/infrastructureRef/name
+        value: ${CLUSTER_NAME}-md-bgp
+    target:
       kind: MachineDeployment
-      name: ${CLUSTER_NAME}-md-0
-      fieldPath: .spec.template
-    targets:
-    - select:
-        kind: MachineDeployment
-        name: ${CLUSTER_NAME}-md-bgp
-      fieldPaths:
-      - .spec.template
-      options:
-        create: true
-- |-
-  apiVersion: builtin
-  kind: PatchTransformer
-  metadata:
-    name: patch-kubeadmconfig
-  patch: |-
-    - op: add
-      path: /spec/template/spec/joinConfiguration/nodeRegistration/kubeletExtraArgs/node-labels
-      value: cilium-bgp-peering="true"
-  target:
-    kind: KubeadmConfigTemplate
-    name: .*-md-bgp
-- |-
-  apiVersion: builtin
-  kind: PatchTransformer
-  metadata:
-    name: patch-machinedeployment
-  patch: |-
-    - op: replace
-      path: /spec/template/spec/bootstrap/configRef/name
-      value: ${CLUSTER_NAME}-md-bgp
-    - op: replace
-      path: /spec/template/spec/infrastructureRef/name
-      value: ${CLUSTER_NAME}-md-bgp
-  target:
-    kind: MachineDeployment
-    name: .*-md-bgp
+      name: .*-md-bgp
