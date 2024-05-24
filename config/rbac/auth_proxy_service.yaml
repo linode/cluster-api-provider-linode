@@ -9,11 +9,12 @@ metadata:
     app.kubernetes.io/created-by: cluster-api-provider-linode
     app.kubernetes.io/part-of: cluster-api-provider-linode
     app.kubernetes.io/managed-by: kustomize
+    app: capl-metrics
   name: controller-manager-metrics-service
   namespace: system
 spec:
   ports:
-  - name: https
+  - name: metrics
     port: 8443
     protocol: TCP
     targetPort: https
