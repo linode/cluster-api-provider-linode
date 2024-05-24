@@ -152,7 +152,6 @@ e2etest: generate local-release local-deploy chainsaw
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
-	@echo -n "ENABLE_WEBHOOKS=$(ENABLE_WEBHOOKS)" > config/default/.env.manager
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci -f Tiltfile
 
@@ -205,7 +204,6 @@ endif
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt kind clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
-	@echo -n "ENABLE_WEBHOOKS=$(ENABLE_WEBHOOKS)" > config/default/.env.manager
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) up --stream
 

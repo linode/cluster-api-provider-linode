@@ -23,6 +23,6 @@ spec:
       etcd-backup: "true"
       cluster: ${CLUSTER_NAME}
   resources:
-  - kind: Secret
-    name: ${CLUSTER_NAME}-etcd-backup-bucket-details
+    - kind: Secret
+      name: ${CLUSTER_NAME}-etcd-backup-bucket-details
   strategy: ApplyOnce

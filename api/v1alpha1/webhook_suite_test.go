@@ -123,6 +123,9 @@ var _ = BeforeSuite(func() {
 	err = (&LinodeVPC{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:webhook
 
 	go func() {

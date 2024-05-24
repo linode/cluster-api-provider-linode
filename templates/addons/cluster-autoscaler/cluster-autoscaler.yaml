@@ -16,27 +16,26 @@ spec:
         app: ${CLUSTER_NAME}-cluster-autoscaler
     spec:
       containers:
-      - image: registry.k8s.io/autoscaling/cluster-autoscaler:${CLUSTER_AUTOSCALER_VERSION}
-        name: cluster-autoscaler
-        command:
-        - /cluster-autoscaler
-        args:
-        - --cloud-provider=clusterapi
-        - --kubeconfig=/mnt/kubeconfig/value
-        - --clusterapi-cloud-config-authoritative
-        - --node-group-auto-discovery=clusterapi:namespace=${NAMESPACE},clusterName=${CLUSTER_NAME}
-        # See: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#my-cluster-is-below-minimum--above-maximum-number-of-nodes-but-ca-did-not-fix-that-why
-        - --enforce-node-group-min-size
-        volumeMounts:
-        - name: kubeconfig
-          readOnly: true
-          mountPath: /mnt/kubeconfig/
+        - image: registry.k8s.io/autoscaling/cluster-autoscaler:${CLUSTER_AUTOSCALER_VERSION}
+          name: cluster-autoscaler
+          command: [/cluster-autoscaler]
+          args:
+            - --cloud-provider=clusterapi
+            - --kubeconfig=/mnt/kubeconfig/value
+            - --clusterapi-cloud-config-authoritative
+            - --node-group-auto-discovery=clusterapi:namespace=${NAMESPACE},clusterName=${CLUSTER_NAME}
+            # See: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/FAQ.md#my-cluster-is-below-minimum--above-maximum-number-of-nodes-but-ca-did-not-fix-that-why
+            - --enforce-node-group-min-size
+          volumeMounts:
+            - name: kubeconfig
+              readOnly: true
+              mountPath: /mnt/kubeconfig/
       serviceAccountName: ${CLUSTER_NAME}-cluster-autoscaler
       terminationGracePeriodSeconds: 10
       volumes:
-      - name: kubeconfig
-        secret:
-          secretName: ${CLUSTER_NAME}-kubeconfig
+        - name: kubeconfig
+          secret:
+            secretName: ${CLUSTER_NAME}-kubeconfig
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -47,8 +46,8 @@ roleRef:
   kind: Role
   name: ${CLUSTER_NAME}-cluster-autoscaler
 subjects:
-- kind: ServiceAccount
-  name: ${CLUSTER_NAME}-cluster-autoscaler
+  - kind: ServiceAccount
+    name: ${CLUSTER_NAME}-cluster-autoscaler
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -60,19 +59,13 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: ${CLUSTER_NAME}-cluster-autoscaler
 rules:
-- apiGroups:
-  - cluster.x-k8s.io
-  - infrastructure.cluster.x-k8s.io
-  resources:
-  - machinedeployments
-  - machinedeployments/scale
-  - machines
-  - machinesets
-  - machinepools
-  - linodemachinetemplates
-  - linodemachines
-  verbs:
-  - get
-  - list
-  - update
-  - watch
+  - apiGroups: [cluster.x-k8s.io, infrastructure.cluster.x-k8s.io]
+    resources:
+      - machinedeployments
+      - machinedeployments/scale
+      - machines
+      - machinesets
+      - machinepools
+      - linodemachinetemplates
+      - linodemachines
+    verbs: [get, list, update, watch]

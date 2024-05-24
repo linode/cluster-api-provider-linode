@@ -25,7 +25,7 @@ spec:
     egressMasqueradeInterfaces: eth0
     policyAuditMode: ${FW_AUDIT_ONLY:=true}
     hostFirewall:
-      enabled: true 
+      enabled: true
     extraConfig:
       allow-localhost: policy
     k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}

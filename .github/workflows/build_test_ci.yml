@@ -43,6 +43,15 @@ jobs:
              - '!**/**.md'
              - '!docs/**'
 
+  yamllint:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ needs.changes.outputs.src == 'true' }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Validate YAML file
+      run: yamllint templates
+
   go-build-test:
     runs-on: ubuntu-latest
     needs: changes
@@ -63,6 +72,7 @@ jobs:
           storage.googleapis.com:443
           cli.codecov.io:443
           api.codecov.io:443
+          raw.githubusercontent.com:443
 
     - uses: actions/checkout@v4
 

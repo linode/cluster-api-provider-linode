@@ -89,7 +89,7 @@ data:
             - --etcd-connection-timeout=30s
             - --delta-snapshot-period=60s
             - --delta-snapshot-memory-limit=104857600
-            - --compress-snapshots=true        
+            - --compress-snapshots=true
             - --compression-policy=gzip
             - --cacert=/etc/kubernetes/pki/etcd/ca.crt
             - --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt
@@ -147,6 +147,6 @@ spec:
       etcd-backup: "true"
       cluster: ${CLUSTER_NAME}
   resources:
-  - kind: ConfigMap
-    name: ${CLUSTER_NAME}-etcd-backup-restore-addon
+    - kind: ConfigMap
+      name: ${CLUSTER_NAME}-etcd-backup-restore-addon
   strategy: ApplyOnce
