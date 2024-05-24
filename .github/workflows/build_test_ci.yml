@@ -38,10 +38,7 @@ jobs:
         id: filter
         with:
           predicate-quantifier: 'every'
-          filters: |
-            src: 
-             - '!**/**.md'
-             - '!docs/**'
+          filters: .github/filters.yml
 
   yamllint:
     runs-on: ubuntu-latest
@@ -107,7 +104,22 @@ jobs:
     secrets: inherit
     with:
       e2e-selector: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
-      e2e-flags: ${{ github.ref == 'refs/heads/main' && '--assert-timeout 15m0s' || '' }}
+      e2e-flags: ${{ github.ref == 'refs/heads/main' && '--assert-timeout 15m0s' || '' }}'
+
+  e2e-matrix:
+    needs: changes
+    strategy:
+      matrix:
+        flavor: ${{ fromJSON(needs.changes.outputs) }}
+        exclude:
+          - flavor: src
+    uses: ./.github/workflows/e2e-test.yaml
+    if: ${{ github.event.pull_request.draft == false &&  github.ref != 'refs/heads/main' }}
+    secrets: inherit
+    with:
+      e2e-selector: ${{ matrix.flavor }}
+      e2e-flags: ${{ github.ref == 'refs/heads/main' && '--assert-timeout 15m0s' || '' }}'
+
 
   docker-build:
     runs-on: ubuntu-latest

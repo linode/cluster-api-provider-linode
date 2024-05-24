@@ -33,10 +33,7 @@ jobs:
         id: filter
         with:
           predicate-quantifier: 'every'
-          filters: |
-            src: 
-             - '!**/**.md'
-             - '!docs/**'
+          filters: .github/filters.yml
   go-analyze:
     needs: changes
     runs-on: ubuntu-latest
