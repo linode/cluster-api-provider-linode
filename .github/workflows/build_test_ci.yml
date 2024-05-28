@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       # Expose matched filters as job 'src' output variable
-      src: ${{ steps.filter.outputs.src }}
+      paths: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
       - name: Harden Runner
@@ -38,15 +38,12 @@ jobs:
         id: filter
         with:
           predicate-quantifier: 'every'
-          filters: |
-            src: 
-             - '!**/**.md'
-             - '!docs/**'
+          filters: .github/filters.yml
 
   yamllint:
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ needs.changes.outputs.src == 'true' }}
+    if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
     steps:
     - uses: actions/checkout@v4
     - name: Validate YAML file
@@ -55,7 +52,7 @@ jobs:
   go-build-test:
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ needs.changes.outputs.src == 'true' }}
+    if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@v2
@@ -102,17 +99,25 @@ jobs:
 
   e2e-test:
     needs: changes
-    if: ${{ github.event.pull_request.draft == false &&  needs.changes.outputs.src == 'true' }}
+    strategy:
+      matrix:
+        flavor: ${{ fromJSON(needs.changes.outputs.paths) }}
+        exclude:
+          - flavor: src
+        include:
+          - flavor: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
     uses: ./.github/workflows/e2e-test.yaml
+    if: ${{ github.event.pull_request.draft == false &&  contains(fromJSON(needs.changes.outputs.paths), 'src') }}
     secrets: inherit
     with:
-      e2e-selector: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
-      e2e-flags: ${{ github.ref == 'refs/heads/main' && '--assert-timeout 15m0s' || '' }}
+      e2e-selector: ${{ matrix.flavor }}
+      e2e-flags: ${{ matrix.flavor == 'quick' && ''  || '--assert-timeout 15m0s'}}
+
 
   docker-build:
     runs-on: ubuntu-latest
     needs: changes
-    if: ${{ needs.changes.outputs.src == 'true' }}
+    if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@v2
