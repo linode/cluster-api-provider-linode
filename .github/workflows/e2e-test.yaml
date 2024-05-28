@@ -39,7 +39,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: e2e-${{ github.ref }}-${{ inputs.e2e-selector }}
   cancel-in-progress: true
 
 jobs:
