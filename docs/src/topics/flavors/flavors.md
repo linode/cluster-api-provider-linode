@@ -33,7 +33,7 @@ See the [`clusterctl` flavors docs](https://cluster-api.sigs.k8s.io/clusterctl/c
 |                |                            | add-on                                               |
 |                | kubeadm-full               | Installs all non-vpcless based flavors combinations  |
 |                | kubeadm-fullvpcless        | Installs all vpcless based flavors combinations      |
-| k3s            | default                    | Installs Linode infra resources, k3s resources and   |
+| k3s            | k3s                        | Installs Linode infra resources, k3s resources and   |
 |                |                            | cilium network policies                              |
 |                | k3s-cluster-autoscalar     | Installs default along with the cluster autoscalar   |
 |                |                            | add-on                                               |
@@ -44,7 +44,7 @@ See the [`clusterctl` flavors docs](https://cluster-api.sigs.k8s.io/clusterctl/c
 |                |                            | add-on                                               |
 |                | k3s-full                   | Installs all non-vpcless based flavors combinations  |
 |                | k3s-fullvpcless            | Installs all vpcless based flavors combinations      |
-| rke2           | default                    | Installs Linode infra resources, rke2 resources,     |
+| rke2           | rke2                       | Installs Linode infra resources, rke2 resources,     |
 |                |                            | cilium and cilium network policies                   |
 |                | rke2-cluster-autoscalar    | Installs default along with the cluster autoscalar   |
 |                |                            | add-on                                               |
