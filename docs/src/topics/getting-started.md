@@ -36,16 +36,10 @@ to provision the node. If you are using a custom image ensure the [cloud_init](h
 By default, clusters are provisioned within VPC. For Regions which do not have [VPC support](https://www.linode.com/docs/products/networking/vpc/#availability) yet, use the [VPCLess](./flavors/vpcless.md) flavor to have clusters provisioned.
 ```
 
-## Register linode as an infrastructure provider
-1. Add `linode` as an infrastructure provider in `~/.cluster-api/clusterctl.yaml`
-    ```yaml
-    providers:
-       - name: linode-linode
-         url: https://github.com/linode/cluster-api-provider-linode/releases/latest/infrastructure-components.yaml
-         type: InfrastructureProvider
-    ```
-
 ## Install CAPL on your management cluster
+```admonish warning
+The `linode-linode` infrastructure provider requires clusterctl version 1.7.2 or higher
+```
 Install CAPL and enable the helm addon provider which is used by the majority of the CAPL flavors
 ```bash
 clusterctl init --infrastructure linode-linode --addon helm

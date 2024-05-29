@@ -164,13 +164,12 @@ infrastructure-local-linode/v0.0.0
 └── metadata.yaml
 ```
 
-This can then be used with `clusterctl` by adding the following to `~/.clusterctl/cluster-api.yaml`
-(assuming the repo exists in the `$HOME` directory):
+This can then be used with `clusterctl` by adding the following to `~/.cluster-api/clusterctl.yaml`:
 
 ```
 providers:
   - name: local-linode
-    url: ${HOME}/cluster-api-provider-linode/infrastructure-local-linode/v0.0.0/infrastructure-components.yaml
+    url: ${PWD}/infrastructure-local-linode/v0.0.0/infrastructure-components.yaml
     type: InfrastructureProvider
 ```
 
@@ -272,10 +271,6 @@ export INSTALL_RKE2_PROVIDER=true
 export LINODE_REGION=us-sea
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
-
-# IMPORTANT: Set linode, k3s, and rke2 providers in this config file.
-# Find an example at e2e/gha-clusterctl-config.yaml
-export CLUSTERCTL_CONFIG=~/.cluster-api/clusterctl.yaml
 
 make e2etest
 ```
