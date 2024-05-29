@@ -1,9 +1,9 @@
 # etcd-backup-restore
 
 ## Specification
-| CNI    | Default OS   | Installs ClusterClass | Installs etcd backup | IPv4 | IPv6 |
-|--------|--------------|-----------------------|----------------------|------|------|
-| Cilium | Ubuntu 22.04 | No                    | Yes                  | Yes  | No   |
+| Supported Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|-------------------------|--------|--------------|-----------------------|------|------|
+| kubeadm, k3s, rke2      | Cilium | Ubuntu 22.04 | No                    | Yes  | Yes  |
 
 ## Prerequisites
 [Quickstart](../getting-started.md) completed

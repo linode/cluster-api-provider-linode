@@ -4,9 +4,10 @@ This flavor supports provisioning k8s clusters outside of VPC. It uses kubeadm f
 setting up control plane and uses cilium with VXLAN for pod networking.
 
 ## Specification
-| CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
-|--------|--------------|-----------------------|------|------|
-| Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
+| Supported Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|-------------------------|--------|--------------|-----------------------|------|------|
+| kubeadm, k3s, rke2      | Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
+
 ## Prerequisites
 [Quickstart](../getting-started.md) completed
 

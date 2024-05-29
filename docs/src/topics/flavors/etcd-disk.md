@@ -6,9 +6,9 @@ the `quota-backend-bytes` to `8589934592` (8 GiB) per recommendation from
 [the etcd documentation](https://etcd.io/docs/latest/dev-guide/limit/#storage-size-limit).
 
 ## Specification
-| CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
-|--------|--------------|-----------------------|------|------|
-| Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
+| Supported Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|-------------------------|--------|--------------|-----------------------|------|------|
+| kubeadm, rke2           | Cilium | Ubuntu 22.04 | No                    | Yes  | Yes  |
 
 ## Prerequisites
 [Quickstart](../getting-started.md) completed

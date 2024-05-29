@@ -1,8 +1,9 @@
 # Dual-Stack
 ## Specification
-| CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
-|--------|--------------|-----------------------|------|------|
-| Cilium | Ubuntu 22.04 | No                    | Yes  | Yes  |
+| Supported Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|-------------------------|--------|--------------|-----------------------|------|------|
+| kubeadm, k3s            | Cilium | Ubuntu 22.04 | No                    | Yes  | Yes  |
+
 ## Prerequisites
 [Quickstart](../getting-started.md) completed
 ## Usage
