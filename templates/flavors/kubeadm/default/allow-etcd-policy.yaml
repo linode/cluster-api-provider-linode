@@ -14,10 +14,6 @@ data:
       nodeSelector: {}
       ingress:
         - fromEntities:
-            - cluster
-        - fromCIDR:
-            - 10.0.0.0/8
-        - fromEntities:
             - world
           toPorts:
             - ports:
