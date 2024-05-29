@@ -10,7 +10,7 @@ data:
     metadata:
       name: "allow-etcd-policy"
     spec:
-      description: "allow etcd & api server traffic"
+      description: "allow etcd traffic"
       nodeSelector: {}
       ingress:
         - fromEntities:
