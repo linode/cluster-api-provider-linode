@@ -23,7 +23,7 @@ data:
     metadata:
       name: "default-external-policy"
     spec:
-      description: "allow etcd & api server traffic"
+      description: "allow api server traffic"
       nodeSelector: {}
       ingress:
         - fromEntities:
