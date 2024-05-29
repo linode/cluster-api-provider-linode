@@ -39,7 +39,7 @@ spec:
               --kubernetes-version v1.29.1 \
               --infrastructure local-linode:v0.0.0 \
               --control-plane-machine-count 1 --worker-machine-count 1 \
-              --config $CLUSTERCTL_CONFIG > default-cluster.yaml
+              --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > default-cluster.yaml
             check:
               ($error == null): true
     - name: Apply generated cluster yaml

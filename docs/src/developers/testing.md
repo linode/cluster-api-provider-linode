@@ -195,7 +195,7 @@ The e2e tests use the `local-linode` infrastructure provider, this is registered
 ```
 providers:
   - name: local-linode
-    url: ${PWD}/infrastructure-local-linode/v0.0.0/infrastructure-components.yaml
+    url: ${HOME}/cluster-api-provider-linode/infrastructure-local-linode/v0.0.0/infrastructure-components.yaml
     type: InfrastructureProvider
 ```
 
