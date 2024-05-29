@@ -1,0 +1,67 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../default
+  - ../../../addons/konnectivity
+  - allow-konnectivity-port.yaml
+
+patches:
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KubeadmControlPlane
+    patch: |-
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlane
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        kubeadmConfigSpec:
+          preKubeadmCommands:
+            - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
+            - sed -i '/swap/d' /etc/fstab
+            - swapoff -a
+            - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+            - mkdir -p -m 755 /etc/kubernetes/konnectivity
+            - curl -s -L https://raw.githubusercontent.com/rahulait/konnectivity/main/config/egress-selector-configuration.yaml > /etc/kubernetes/konnectivity/egress-selector-configuration.yaml
+          postKubeadmCommands:
+            - curl -s -L https://raw.githubusercontent.com/rahulait/konnectivity/main/scripts/gen-konnectivity-kubeconfig.sh | bash
+          clusterConfiguration:
+            apiServer:
+              extraArgs:
+                egress-selector-config-file: /etc/kubernetes/konnectivity/egress-selector-configuration.yaml
+              extraVolumes:
+              - hostPath: /etc/kubernetes/konnectivity-server
+                mountPath: /etc/kubernetes/konnectivity-server
+                name: konnectivity-uds
+                pathType: DirectoryOrCreate
+                readOnly: false
+              - hostPath: /etc/kubernetes/konnectivity
+                mountPath: /etc/kubernetes/konnectivity
+                name: konnectivity
+                pathType: DirectoryOrCreate
+                readOnly: true
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+          konn: ${CLUSTER_NAME}-konnectivity
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeCluster
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeCluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        network:
+          konnectivity: true

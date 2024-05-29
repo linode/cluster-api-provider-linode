@@ -1,0 +1,19 @@
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: HelmChartProxy
+metadata:
+  name: ${CLUSTER_NAME}-konnectivity
+spec:
+  clusterSelector:
+    matchLabels:
+      konn: "${CLUSTER_NAME}-konnectivity"
+  repoURL: https://rahulait.github.io/konnectivity/
+  chartName: konnectivity
+  namespace: kube-system
+  version: ${KONNECTIVITY_VERSION:=0.0.0}
+  options:
+    waitForJobs: true
+    wait: true
+    timeout: 5m
+  valuesTemplate: |
+    proxyServerHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
+    serverCount: ${CONTROL_PLANE_MACHINE_COUNT}
