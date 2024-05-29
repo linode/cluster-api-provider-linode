@@ -31,7 +31,6 @@ Supported CAPL flavors
 |                |                            | add-on                                               |
 |                | kubeadm-full               | Installs all non-vpcless based flavors combinations  |
 |                | kubeadm-fullvpcless        | Installs all vpcless based flavors combinations      |
-|----------------|----------------------------|------------------------------------------------------|
 | k3s            | default                    | Installs Linode infra resources, k3s resources and   |
 |                |                            | cilium network policies                              |
 |                | kubeadm-cluster-autoscalar | Installs default along with the cluster autoscalar   |
@@ -43,7 +42,6 @@ Supported CAPL flavors
 |                |                            | add-on                                               |
 |                | kubeadm-full               | Installs all non-vpcless based flavors combinations  |
 |                | kubeadm-fullvpcless        | Installs all vpcless based flavors combinations      |
-|----------------|----------------------------|------------------------------------------------------|
 | rke2           | default                    | Installs Linode infra resources, rke2 resources,     |
 |                |                            | cilium and cilium network policies                   |
 |                | kubeadm-cluster-autoscalar | Installs default along with the cluster autoscalar   |
@@ -56,4 +54,3 @@ Supported CAPL flavors
 |                |                            | add-on                                               |
 |                | kubeadm-full               | Installs all non-vpcless based flavors combinations  |
 |                | kubeadm-fullvpcless        | Installs all vpcless based flavors combinations      |
-|----------------|----------------------------|------------------------------------------------------|
