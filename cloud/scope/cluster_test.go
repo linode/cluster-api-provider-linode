@@ -30,7 +30,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
@@ -49,7 +49,7 @@ func TestValidateClusterScopeParams(t *testing.T) {
 			args{
 				params: ClusterScopeParams{
 					Cluster:       &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 				},
 			},
 			false,
@@ -75,7 +75,7 @@ func TestValidateClusterScopeParams(t *testing.T) {
 			"Invalid ClusterScopeParams - no Cluster in ClusterScopeParams",
 			args{
 				params: ClusterScopeParams{
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 				},
 			},
 			true,
@@ -96,7 +96,7 @@ func TestClusterScopeMethods(t *testing.T) {
 	t.Parallel()
 	type fields struct {
 		Cluster       *clusterv1.Cluster
-		LinodeCluster *infrav1alpha1.LinodeCluster
+		LinodeCluster *infrav1alpha2.LinodeCluster
 	}
 
 	tests := []struct {
@@ -108,7 +108,7 @@ func TestClusterScopeMethods(t *testing.T) {
 			name: "Success - finalizer should be added to the Linode Cluster object",
 			fields: fields{
 				Cluster: &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 					},
@@ -117,7 +117,7 @@ func TestClusterScopeMethods(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(2)
 				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -127,17 +127,17 @@ func TestClusterScopeMethods(t *testing.T) {
 			name: "AddFinalizer error - finalizer should not be added to the Linode Cluster object. Function returns nil since it was already present",
 			fields: fields{
 				Cluster: &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-cluster",
-						Finalizers: []string{infrav1alpha1.GroupVersion.String()},
+						Finalizers: []string{infrav1alpha2.GroupVersion.String()},
 					},
 				},
 			},
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(1)
 			},
@@ -171,7 +171,7 @@ func TestClusterScopeMethods(t *testing.T) {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
-			if cScope.LinodeCluster.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
+			if cScope.LinodeCluster.Finalizers[0] != infrav1alpha2.GroupVersion.String() {
 				t.Errorf("Finalizer was not added")
 			}
 		})
@@ -196,14 +196,14 @@ func TestNewClusterScope(t *testing.T) {
 				apiKey: "test-key",
 				params: ClusterScopeParams{
 					Cluster:       &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 				},
 			},
 			expectedError: nil,
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
@@ -215,8 +215,8 @@ func TestNewClusterScope(t *testing.T) {
 				params: ClusterScopeParams{
 					Client:  nil,
 					Cluster: &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{
-						Spec: infrav1alpha1.LinodeClusterSpec{
+					LinodeCluster: &infrav1alpha2.LinodeCluster{
+						Spec: infrav1alpha2.LinodeClusterSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Name:      "example",
 								Namespace: "test",
@@ -229,7 +229,7 @@ func TestNewClusterScope(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -258,7 +258,7 @@ func TestNewClusterScope(t *testing.T) {
 				apiKey: "test-key",
 				params: ClusterScopeParams{
 					Cluster:       &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 				},
 			},
 			expectedError: fmt.Errorf("failed to init patch helper:"),
@@ -273,8 +273,8 @@ func TestNewClusterScope(t *testing.T) {
 				params: ClusterScopeParams{
 					Client:  nil,
 					Cluster: &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{
-						Spec: infrav1alpha1.LinodeClusterSpec{
+					LinodeCluster: &infrav1alpha2.LinodeCluster{
+						Spec: infrav1alpha2.LinodeClusterSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Name:      "example",
 								Namespace: "test",
@@ -294,7 +294,7 @@ func TestNewClusterScope(t *testing.T) {
 				apiKey: "",
 				params: ClusterScopeParams{
 					Cluster:       &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 				},
 			},
 			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
@@ -331,7 +331,7 @@ func TestClusterAddCredentialsRefFinalizer(t *testing.T) {
 	t.Parallel()
 	type fields struct {
 		Cluster       *clusterv1.Cluster
-		LinodeCluster *infrav1alpha1.LinodeCluster
+		LinodeCluster *infrav1alpha2.LinodeCluster
 	}
 
 	tests := []struct {
@@ -343,11 +343,11 @@ func TestClusterAddCredentialsRefFinalizer(t *testing.T) {
 			name: "Success - finalizer should be added to the Linode Cluster credentials Secret",
 			fields: fields{
 				Cluster: &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
 						CredentialsRef: &corev1.SecretReference{
 							Name:      "example",
 							Namespace: "test",
@@ -358,7 +358,7 @@ func TestClusterAddCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -382,7 +382,7 @@ func TestClusterAddCredentialsRefFinalizer(t *testing.T) {
 			name: "No-op - no Linode Cluster credentials Secret",
 			fields: fields{
 				Cluster: &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 					},
@@ -391,7 +391,7 @@ func TestClusterAddCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
@@ -432,7 +432,7 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 	t.Parallel()
 	type fields struct {
 		Cluster       *clusterv1.Cluster
-		LinodeCluster *infrav1alpha1.LinodeCluster
+		LinodeCluster *infrav1alpha2.LinodeCluster
 	}
 
 	tests := []struct {
@@ -444,11 +444,11 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 			name: "Success - finalizer should be removed from the Linode Cluster credentials Secret",
 			fields: fields{
 				Cluster: &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
 						CredentialsRef: &corev1.SecretReference{
 							Name:      "example",
 							Namespace: "test",
@@ -459,7 +459,7 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -483,7 +483,7 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 			name: "No-op - no Linode Cluster credentials Secret",
 			fields: fields{
 				Cluster: &clusterv1.Cluster{},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 					},
@@ -492,7 +492,7 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},

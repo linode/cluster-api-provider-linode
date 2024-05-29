@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 

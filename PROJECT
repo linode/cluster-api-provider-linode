@@ -5,6 +5,7 @@
 domain: cluster.x-k8s.io
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: cluster-api-provider-linode
 repo: github.com/linode/cluster-api-provider-linode
 resources:
@@ -15,7 +16,7 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: LinodeCluster
-  path: github.com/linode/cluster-api-provider-linode/api/v1alpha1
+  path: github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
@@ -27,7 +28,7 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: LinodeMachine
-  path: github.com/linode/cluster-api-provider-linode/api/v1alpha1
+  path: github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
@@ -38,7 +39,7 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: LinodeClusterTemplate
-  path: github.com/linode/cluster-api-provider-linode/api/v1alpha1
+  path: github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -46,7 +47,7 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: LinodeMachineTemplate
-  path: github.com/linode/cluster-api-provider-linode/api/v1alpha1
+  path: github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -55,7 +56,7 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: LinodeVPC
-  path: github.com/linode/cluster-api-provider-linode/api/v1alpha1
+  path: github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
@@ -67,9 +68,20 @@ resources:
   domain: cluster.x-k8s.io
   group: infrastructure
   kind: LinodeObjectStorageBucket
-  path: github.com/linode/cluster-api-provider-linode/api/v1alpha1
+  path: github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: LinodeCluster
+  path: github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2
+  version: v1alpha2
+  webhooks:
+    conversion: true
     webhookVersion: v1
 version: "3"

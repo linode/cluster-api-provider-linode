@@ -31,7 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1"
+	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2"
 	controller2 "github.com/linode/cluster-api-provider-linode/controller"
 	"github.com/linode/cluster-api-provider-linode/version"
 
@@ -51,6 +52,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(infrastructurev1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

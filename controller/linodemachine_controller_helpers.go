@@ -37,7 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -199,7 +200,7 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
 		defer cancel()
 
-		linodeCluster, ok := o.(*infrav1alpha1.LinodeCluster)
+		linodeCluster, ok := o.(*infrav1alpha2.LinodeCluster)
 		if !ok {
 			logger.Info("Failed to cast object to Cluster")
 

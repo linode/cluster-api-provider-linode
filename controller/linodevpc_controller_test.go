@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"

@@ -18,7 +18,8 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -41,7 +42,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 				params: MachineScopeParams{
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
@@ -71,7 +72,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 				params: MachineScopeParams{
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 				},
 			},
 			true,
@@ -81,7 +82,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 			args{
 				params: MachineScopeParams{
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
@@ -92,7 +93,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 			args{
 				params: MachineScopeParams{
 					Cluster:       &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				},
 			},
@@ -134,7 +135,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{
 						ObjectMeta: metav1.ObjectMeta{
 							Finalizers: []string{infrav1alpha1.GroupVersion.String()},
@@ -157,7 +158,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
-						LinodeCluster: &infrav1alpha1.LinodeCluster{},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{},
 						LinodeMachine: &infrav1alpha1.LinodeMachine{},
 					})
 					require.NoError(t, err)
@@ -175,7 +176,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
-						LinodeCluster: &infrav1alpha1.LinodeCluster{},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{},
 						LinodeMachine: &infrav1alpha1.LinodeMachine{},
 					})
 					require.NoError(t, err)
@@ -202,7 +203,7 @@ func TestNewMachineScope(t *testing.T) {
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				})
 				require.ErrorContains(t, err, "failed to create linode client")
@@ -217,7 +218,7 @@ func TestNewMachineScope(t *testing.T) {
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
-						LinodeCluster: &infrav1alpha1.LinodeCluster{},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{},
 						LinodeMachine: &infrav1alpha1.LinodeMachine{
 							Spec: infrav1alpha1.LinodeMachineSpec{
 								CredentialsRef: &corev1.SecretReference{
@@ -249,7 +250,7 @@ func TestNewMachineScope(t *testing.T) {
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
-						LinodeCluster: &infrav1alpha1.LinodeCluster{},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{},
 						LinodeMachine: &infrav1alpha1.LinodeMachine{},
 					})
 					require.ErrorContains(t, err, "failed to init patch helper")
@@ -274,7 +275,7 @@ func TestNewMachineScope(t *testing.T) {
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{},
 				})
 				require.NoError(t, err)
@@ -287,7 +288,7 @@ func TestNewMachineScope(t *testing.T) {
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{
 						Spec: infrav1alpha1.LinodeMachineSpec{
 							CredentialsRef: &corev1.SecretReference{
@@ -305,8 +306,8 @@ func TestNewMachineScope(t *testing.T) {
 					Client:  mck.K8sClient,
 					Cluster: &clusterv1.Cluster{},
 					Machine: &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{
-						Spec: infrav1alpha1.LinodeClusterSpec{
+					LinodeCluster: &infrav1alpha2.LinodeCluster{
+						Spec: infrav1alpha2.LinodeClusterSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Name:      "example",
 								Namespace: "test",
@@ -473,7 +474,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: testcase.fields.LinodeMachine,
 				},
 			)
@@ -566,7 +567,7 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha1.LinodeCluster{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: testcase.fields.LinodeMachine,
 				},
 			)

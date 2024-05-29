@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
@@ -34,7 +34,7 @@ import (
 type ClusterScopeParams struct {
 	Client        K8sClient
 	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1alpha1.LinodeCluster
+	LinodeCluster *infrav1alpha2.LinodeCluster
 }
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
@@ -88,7 +88,7 @@ type ClusterScope struct {
 	PatchHelper   *patch.Helper
 	LinodeClient  LinodeClient
 	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1alpha1.LinodeCluster
+	LinodeCluster *infrav1alpha2.LinodeCluster
 }
 
 // PatchObject persists the cluster configuration and status.
@@ -104,7 +104,7 @@ func (s *ClusterScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *ClusterScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.LinodeCluster, infrav1alpha1.GroupVersion.String()) {
+	if controllerutil.AddFinalizer(s.LinodeCluster, infrav1alpha2.GroupVersion.String()) {
 		return s.Close(ctx)
 	}
 

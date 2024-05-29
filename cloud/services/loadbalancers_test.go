@@ -13,7 +13,8 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
@@ -30,13 +31,13 @@ func TestCreateNodeBalancer(t *testing.T) {
 		{
 			name: "Success - Create NodeBalancer",
 			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
 						},
 					},
@@ -55,13 +56,13 @@ func TestCreateNodeBalancer(t *testing.T) {
 		{
 			name: "Success - List NodeBalancers returns one nodebalancer and we return that",
 			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
 						},
 					},
@@ -85,13 +86,13 @@ func TestCreateNodeBalancer(t *testing.T) {
 		{
 			name: "Error - List NodeBalancers returns one nodebalancer but there is a nodebalancer conflict",
 			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
 						},
 					},
@@ -116,13 +117,13 @@ func TestCreateNodeBalancer(t *testing.T) {
 		{
 			name: "Error - List NodeBalancers returns an error",
 			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
 						},
 					},
@@ -136,13 +137,13 @@ func TestCreateNodeBalancer(t *testing.T) {
 		{
 			name: "Error - Create NodeBalancer returns an error",
 			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
 						},
 					},
@@ -194,20 +195,20 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 			name: "Success - Create NodeBalancerConfig using default LB port",
 			clusterScope: &scope.ClusterScope{
 				LinodeClient: nil,
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
 						},
 					},
 				},
 			},
 			expectedConfig: &linodego.NodeBalancerConfig{
-				Port:           defaultLBPort,
+				Port:           defaultApiserverLBPort,
 				Protocol:       linodego.ProtocolTCP,
 				Algorithm:      linodego.AlgorithmRoundRobin,
 				Check:          linodego.CheckConnection,
@@ -215,7 +216,7 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
-					Port:           defaultLBPort,
+					Port:           defaultApiserverLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -227,15 +228,15 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 			name: "Success - Create NodeBalancerConfig using assigned LB port",
 			clusterScope: &scope.ClusterScope{
 				LinodeClient: nil,
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
-							NodeBalancerID:   ptr.To(1234),
-							LoadBalancerPort: 80,
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:            ptr.To(1234),
+							ApiserverLoadBalancerPort: 80,
 						},
 					},
 				},
@@ -261,20 +262,20 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 			name: "Error - CreateNodeBalancerConfig() returns and error",
 			clusterScope: &scope.ClusterScope{
 				LinodeClient: nil,
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
 						},
 					},
 				},
 			},
 			expectedConfig: &linodego.NodeBalancerConfig{
-				Port:           defaultLBPort,
+				Port:           defaultApiserverLBPort,
 				Protocol:       linodego.ProtocolTCP,
 				Algorithm:      linodego.AlgorithmRoundRobin,
 				Check:          linodego.CheckConnection,
@@ -300,12 +301,12 @@ func TestCreateNodeBalancerConfig(t *testing.T) {
 
 			testcase.expects(MockLinodeClient)
 
-			got, err := CreateNodeBalancerConfig(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := CreateNodeBalancerConfigs(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
 				assert.NotEmpty(t, got)
-				assert.Equal(t, testcase.expectedConfig, got)
+				assert.Equal(t, testcase.expectedConfig, got[0])
 			}
 		})
 	}
@@ -332,16 +333,16 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						},
 					},
 				},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
-							NodeBalancerID:       ptr.To(1234),
-							NodeBalancerConfigID: nil,
-							LoadBalancerPort:     6443,
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: nil,
+							ApiserverLoadBalancerPort:     6443,
 						},
 					},
 				},
@@ -493,15 +494,15 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						UID:  "test-uid",
 					},
 				},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
-							NodeBalancerID:       ptr.To(1234),
-							NodeBalancerConfigID: ptr.To(5678),
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(5678),
 						},
 					},
 				},
@@ -546,15 +547,15 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						UID:  "test-uid",
 					},
 				},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
-						Network: infrav1alpha1.NetworkSpec{
-							NodeBalancerID:       ptr.To(1234),
-							NodeBalancerConfigID: ptr.To(5678),
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(5678),
 						},
 					},
 				},
@@ -653,12 +654,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						InstanceID: ptr.To(123),
 					},
 				},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
 						ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: ""},
 					},
 				},
@@ -686,16 +687,16 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						InstanceID: ptr.To(123),
 					},
 				},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
 						ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
-						Network: infrav1alpha1.NetworkSpec{
-							NodeBalancerID:       ptr.To(1234),
-							NodeBalancerConfigID: ptr.To(5678),
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(5678),
 						},
 					},
 				},
@@ -725,16 +726,16 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						InstanceID: ptr.To(123),
 					},
 				},
-				LinodeCluster: &infrav1alpha1.LinodeCluster{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeClusterSpec{
+					Spec: infrav1alpha2.LinodeClusterSpec{
 						ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
-						Network: infrav1alpha1.NetworkSpec{
-							NodeBalancerID:       ptr.To(1234),
-							NodeBalancerConfigID: ptr.To(5678),
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(5678),
 						},
 					},
 				},

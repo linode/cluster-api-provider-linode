@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"

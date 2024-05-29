@@ -13,7 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
@@ -440,7 +441,7 @@ func Test_toFinalizer(t *testing.T) {
 				Version: infrav1alpha1.GroupVersion.Version,
 				Kind:    "LinodeCluster",
 			},
-			&infrav1alpha1.LinodeCluster{
+			&infrav1alpha2.LinodeCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "example",
@@ -455,7 +456,7 @@ func Test_toFinalizer(t *testing.T) {
 				Version: infrav1alpha1.GroupVersion.Version,
 				Kind:    "LinodeCluster",
 			},
-			&infrav1alpha1.LinodeCluster{
+			&infrav1alpha2.LinodeCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "example",
 					// NOTE: Fake a cluster resource by setting Namespace to the default value
