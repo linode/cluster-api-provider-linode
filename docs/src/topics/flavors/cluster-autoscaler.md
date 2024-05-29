@@ -5,9 +5,9 @@ Autoscaler](https://www.github.com/kubernetes/autoscaler/tree/master/cluster-aut
 
 ## Specification
 
-| Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
-|---------------|--------|--------------|-----------------------|------|------|
-| Kubeadm       | Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
+| CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|--------|--------------|-----------------------|------|------|
+| Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
 
 ## Prerequisites
 

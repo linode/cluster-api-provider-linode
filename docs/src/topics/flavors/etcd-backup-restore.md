@@ -1,9 +1,9 @@
 # etcd-backup-restore
 
 ## Specification
-| Control Plane | CNI    | Default OS   | Installs ClusterClass | Installs etcd backup | IPv4 | IPv6 |
-|---------------|--------|--------------|-----------------------|----------------------|------|------|
-| Kubeadm       | Cilium | Ubuntu 22.04 | No                    | Yes                  | Yes  | No   |
+| CNI    | Default OS   | Installs ClusterClass | Installs etcd backup | IPv4 | IPv6 |
+|--------|--------------|-----------------------|----------------------|------|------|
+| Cilium | Ubuntu 22.04 | No                    | Yes                  | Yes  | No   |
 
 ## Prerequisites
 [Quickstart](../getting-started.md) completed
@@ -13,7 +13,7 @@
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1 \
         --infrastructure linode-linode \
-        --flavor etcd-backup-restore > test-cluster.yaml
+        --flavor <distro>-etcd-backup-restore > test-cluster.yaml
     ```
 2. Apply cluster yaml
     ```bash
