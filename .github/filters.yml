@@ -1,6 +1,5 @@
 src:
  - '!**/**.md'
- - '!docs/**'
 
 kubeadm:
   - templates/flavors/kubeadm/default/*
