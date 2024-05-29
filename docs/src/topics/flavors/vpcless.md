@@ -21,7 +21,7 @@ supported in this flavor and it uses VXLAN for pod to pod communication.
     ```bash
     clusterctl generate cluster test-cluster \
         --infrastructure linode-linode \
-        --flavor <distro>-vpcless > test-cluster.yaml
+        --flavor <controlplane>-vpcless > test-cluster.yaml
     ```
 2. Apply cluster yaml
     ```bash

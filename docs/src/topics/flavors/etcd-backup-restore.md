@@ -13,7 +13,7 @@
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1 \
         --infrastructure linode-linode \
-        --flavor <distro>-etcd-backup-restore > test-cluster.yaml
+        --flavor <controlplane>-etcd-backup-restore > test-cluster.yaml
     ```
 2. Apply cluster yaml
     ```bash

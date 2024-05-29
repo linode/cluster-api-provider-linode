@@ -34,7 +34,7 @@ Autoscaler](https://www.github.com/kubernetes/autoscaler/tree/master/cluster-aut
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1 \
         --infrastructure linode-linode \
-        --flavor cluster-autoscaler > test-cluster.yaml
+        --flavor <controlplane>-cluster-autoscaler > test-cluster.yaml
     ```
 
 3. Apply cluster yaml
