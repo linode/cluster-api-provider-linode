@@ -118,3 +118,15 @@ patches:
         annotations:
           cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: ${WORKER_MACHINE_MIN:-"1"}
           cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: ${WORKER_MACHINE_MAX:-"10"}
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+          cluster-autoscaler: "true"
+          etcd-backup: "true"
