@@ -2,7 +2,6 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  creationTimestamp: null
   name: rke2-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
@@ -39,7 +38,7 @@ spec:
               --flavor rke2 --kubernetes-version v1.29.1+rke2r1 \
               --infrastructure local-linode:v0.0.0 \
               --control-plane-machine-count 1 --worker-machine-count 1 \
-              --config $CLUSTERCTL_CONFIG> rke2-cluster.yaml
+              --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > rke2-cluster.yaml
             check:
               ($error == null): true
     - name: Apply generated cluster yaml

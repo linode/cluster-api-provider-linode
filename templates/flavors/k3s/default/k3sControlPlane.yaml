@@ -15,29 +15,6 @@ spec:
         content: |
           flannel-backend: none
           disable-network-policy: true
-      - path: /var/lib/rancher/k3s/server/manifests/ccm-linode.yaml
-        owner: root:root
-        content: |-
-          apiVersion: helm.cattle.io/v1
-          kind: HelmChart
-          metadata:
-            namespace: kube-system
-            name: ccm-linode
-          spec:
-            targetNamespace: kube-system
-            version: ${LINODE_CCM_VERSION:=v0.4.4}
-            chart: ccm-linode
-            repo: https://linode.github.io/linode-cloud-controller-manager/
-            bootstrap: true
-            valuesContent: |-
-              routeController:
-                vpcName: ${VPC_NAME:=${CLUSTER_NAME}}
-                clusterCIDR: 10.0.0.0/8
-                configureCloudRoutes: true
-              secretRef:
-                name: "linode-token-region"
-              nodeSelector:
-                node-role.kubernetes.io/control-plane: "true"
       - path: /var/lib/rancher/k3s/server/manifests/cilium.yaml
         owner: root:root
         content: |-
@@ -86,12 +63,6 @@ spec:
                   enabled: true
                 ui:
                   enabled: true
-      - path: /var/lib/rancher/k3s/server/manifests/linode-token-region.yaml
-        owner: root:root
-        contentFrom:
-          secret:
-            key: linode-token-region.yaml
-            name: linode-${CLUSTER_NAME}-crs-0
     serverConfig:
       disableComponents:
         - servicelb

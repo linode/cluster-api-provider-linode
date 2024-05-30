@@ -37,7 +37,6 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          predicate-quantifier: 'every'
           filters: .github/filters.yml
 
   yamllint:
@@ -100,6 +99,7 @@ jobs:
   e2e-test:
     needs: changes
     strategy:
+      fail-fast: false
       matrix:
         flavor: ${{ fromJSON(needs.changes.outputs.paths) }}
         exclude:

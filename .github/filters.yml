@@ -1,9 +1,9 @@
 src:
  - '!**/**.md'
- - '!docs/**'
 
 kubeadm:
   - templates/flavors/kubeadm/default/*
+  - e2e/capl-cluster-flavors/kubeadm-capl-cluster/*
 kubeadm_cluster-autoscaler:
   - templates/flavors/kubeadm/cluster-autoscaler/*
 kubeadm_dual-stack:
@@ -23,6 +23,7 @@ kubeadm_vpcless:
 
 k3s:
   - templates/flavors/k3s/default/*
+  - e2e/capl-cluster-flavors/k3s-capl-cluster/*
 k3s_cluster-autoscaler:
   - templates/flavors/k3s/cluster-autoscaler/*
 k3s_dual-stack:
@@ -40,6 +41,7 @@ k3s_vpcless:
 
 rke2:
   - templates/flavors/rke2/default/*
+  - e2e/capl-cluster-flavors/rke2-capl-cluster/*
 rke2_cluster-autoscaler:
   - templates/flavors/rke2/cluster-autoscaler/*
 rke2_etcd-backup-restore:
