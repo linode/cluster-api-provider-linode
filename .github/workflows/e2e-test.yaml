@@ -47,10 +47,8 @@ jobs:
     name: ${{ format('{0}-e2e-tests', inputs.e2e-selector) }}
     runs-on: ubuntu-latest
     env:
-      VALID_SELECTORS: "quick,flavors,k3s,rke2,default-cluster,linodecluster,linodemachine,linodeobj,linodevpc,all"
       GITHUB_TOKEN: ${{ secrets.github_token }}
       LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
-    if: ${{ contains(fromJSON(env.VALID_SELECTORS), inputs.e2e-selector) }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
