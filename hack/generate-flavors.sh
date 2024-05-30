@@ -13,6 +13,11 @@ SUPPORTED_CLUSTERCLASSES=(
     "clusterclass-kubeadm"
 )
 
+declare -A CERT_HOSTPATH=( ["rke2"]="/var/lib/rancher/rke2/server/tls" ["k3s"]="/var/lib/rancher/k3s/server/tls" ["kubeadm"]="/etc/kubernetes/pki")
+declare -A CACERT=( ["rke2"]="server-ca.crt" ["k3s"]="server-ca.crt" ["kubeadm"]="ca.crt")
+declare -A CERT=( ["rke2"]="server-client.crt" ["k3s"]="server-client.crt" ["kubeadm"]="healthcheck-client.crt")
+declare -A KEY=( ["rke2"]="server-client.key" ["k3s"]="server-client.key" ["kubeadm"]="healthcheck-client.key")
+
 for clusterclass in ${SUPPORTED_CLUSTERCLASSES[@]}; do
     # clusterctl expects clusterclass not have the "cluster-template" prefix
     # except for the actual cluster template using the clusterclass
@@ -30,6 +35,9 @@ for distro in ${SUPPORTED_DISTROS[@]}; do
         else
             echo "****** Generating ${distro}-${name} flavor ******"
             kustomize build "${FLAVORS_DIR}/${distro}/${name}" > "${REPO_ROOT}/templates/cluster-template-${distro}-${name}.yaml"
+            if grep -Fq "etcd-backup-restore" "${REPO_ROOT}/templates/cluster-template-${distro}-${name}.yaml"; then
+                sed -i -e "s|\${CERTPATH}|${CERT_HOSTPATH[$distro]}|g; s|\${CACERTFILE}|${CACERT[$distro]}|g; s|\${CERTFILE}|${CERT[$distro]}|g; s|\${KEYFILE}|${KEY[$distro]}|g" "${REPO_ROOT}/templates/cluster-template-${distro}-${name}.yaml"
+            fi
         fi
     done
 done

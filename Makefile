@@ -94,7 +94,7 @@ generate-mock: mockgen ## Generate mocks for the Linode API client.
 
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
-	./hack/generate-flavors.sh
+	bash hack/generate-flavors.sh
 
 .PHONY: check-gen-diff
 check-gen-diff:
