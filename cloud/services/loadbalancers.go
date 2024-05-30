@@ -78,7 +78,6 @@ func CreateNodeBalancerConfigs(
 	clusterScope *scope.ClusterScope,
 	logger logr.Logger,
 ) ([]*linodego.NodeBalancerConfig, error) {
-
 	nbConfigs := []*linodego.NodeBalancerConfig{}
 	apiLBPort := defaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {

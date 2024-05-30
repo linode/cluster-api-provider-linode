@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"errors"
+
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/infrastructure/v1alpha2"
@@ -8,7 +10,10 @@ import (
 
 // ConvertTo converts this LinodeCluster to the Hub version (v1alpha2).
 func (src *LinodeCluster) ConvertTo(dstRaw conversion.Hub) error {
-	dst := dstRaw.(*infrastructurev1alpha2.LinodeCluster)
+	dst, ok := dstRaw.(*infrastructurev1alpha2.LinodeCluster)
+	if !ok {
+		return errors.New("failed to convert LinodeCluster version from v1alpha1 to v1alpha2")
+	}
 
 	network := src.Spec.Network
 	dst.Spec.Network = infrastructurev1alpha2.NetworkSpec{
@@ -41,7 +46,10 @@ func (src *LinodeCluster) ConvertTo(dstRaw conversion.Hub) error {
 
 // ConvertFrom converts from the Hub version (v1alpha2) to this version.
 func (dst *LinodeCluster) ConvertFrom(srcRaw conversion.Hub) error {
-	src := srcRaw.(*infrastructurev1alpha2.LinodeCluster)
+	src, ok := srcRaw.(*infrastructurev1alpha2.LinodeCluster)
+	if !ok {
+		return errors.New("failed to convert LinodeCluster version from v1alpha2 to v1alpha1")
+	}
 
 	dst.Spec.Network.LoadBalancerPort = src.Spec.Network.ApiserverLoadBalancerPort
 	dst.Spec.Network.LoadBalancerType = src.Spec.Network.LoadBalancerType
