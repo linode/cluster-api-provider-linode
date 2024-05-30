@@ -38,3 +38,18 @@ patches:
       - op: replace
         path: /spec/template/spec/bootstrap/configRef/kind
         value: KThreesConfigTemplate
+  - target:
+      kind: HelmChartProxy
+      name: .*-linode-cloud-controller-manager
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          routeController:
+            vpcName: ${VPC_NAME:=${CLUSTER_NAME}}
+            clusterCIDR: 10.0.0.0/8
+            configureCloudRoutes: true
+          secretRef:
+            name: "linode-token-region"
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
