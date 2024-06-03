@@ -6,7 +6,7 @@ and [LB IPAM](https://docs.cilium.io/en/stable/network/lb-ipam/) support.
 
 With this flavor, Services exposed via `type: LoadBalancer` automatically get
 assigned an `ExternalIP` provisioned as a shared IP through the
-[linode-CCM](https://github.com/linode/linode-cloud-controller-manager/blob/shared-ip/README.md#shared-ip-load-balancing),
+[linode-CCM](https://github.com/linode/linode-cloud-controller-manager?tab=readme-ov-file#shared-ip-load-balancing),
 which is deployed with the necessary settings to perform shared IP load-balancing.
 
 ```admonish warning
