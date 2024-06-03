@@ -38,6 +38,9 @@ patches:
               - label: etcd_data
                 filesystem: ext4
                 device: /dev/sdc
+            partitions:
+              - device: /dev/sdc
+                layout: true
           mounts:
-            - - LABEL=etcd_data
+            - - /dev/sdc
               - /var/lib/etcd_data
