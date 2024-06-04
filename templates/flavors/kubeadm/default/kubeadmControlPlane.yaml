@@ -29,9 +29,6 @@ spec:
           if [ -d "/sys/class/net/eth1" ]; then
               IPADDR=$(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)
               sed -i "s/kubeletExtraArgs:/kubeletExtraArgs:\n    node-ip: $IPADDR/g" /run/kubeadm/kubeadm.yaml
-          else
-              IPADDR=$(hostname -I | grep -oE 192\.168\.[0-9]+\.[0-9]+)
-              sed -i "s/kubeletExtraArgs:/kubeletExtraArgs:\n    node-ip: $IPADDR/g" /run/kubeadm/kubeadm.yaml
           fi
         permissions: "0500"
     preKubeadmCommands:
