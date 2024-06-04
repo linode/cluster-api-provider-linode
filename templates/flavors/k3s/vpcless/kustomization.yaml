@@ -71,3 +71,38 @@ patches:
         name: ${CLUSTER_NAME}
         labels:
             vpcless: "true"
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KThreesControlPlane
+    patch: |-
+      - op: replace
+        path: /spec/kthreesConfigSpec/files/1/content
+        value: |-
+          apiVersion: helm.cattle.io/v1
+          kind: HelmChart
+          metadata:
+            name: cilium
+            namespace: kube-system
+          spec:
+            targetNamespace: kube-system
+            version: ${CILIUM_VERSION:=1.15.4}
+            chart: cilium
+            repo: https://helm.cilium.io/
+            bootstrap: true
+            valuesContent: |-
+              bgpControlPlane:
+                enabled: true
+              ipam:
+                mode: kubernetes
+              ipv4:
+                enabled: true
+              ipv6:
+                enabled: false
+              k8s:
+                requireIPv4PodCIDR: true
+              hubble:
+                relay:
+                  enabled: true
+                ui:
+                  enabled: true
