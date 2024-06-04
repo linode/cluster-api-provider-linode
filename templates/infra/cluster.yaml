@@ -15,6 +15,6 @@ spec:
     kind: REPLACEME
     name: ${CLUSTER_NAME}-control-plane
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
     kind: LinodeCluster
     name: ${CLUSTER_NAME}

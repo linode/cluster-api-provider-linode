@@ -41,7 +41,7 @@ spec:
             file: assert-linodecluster.yaml
       catch:
         - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeCluster
     - name: Check if the nodebalancer exists
       try:
