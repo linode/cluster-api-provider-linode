@@ -93,6 +93,11 @@ patches:
             valuesContent: |-
               bgpControlPlane:
                 enabled: true
+              policyAuditMode: ${FW_AUDIT_ONLY:=true}
+              hostFirewall:
+                enabled: true
+              extraConfig:
+                allow-localhost: policy
               ipam:
                 mode: kubernetes
               ipv4:
