@@ -52,6 +52,11 @@ patches:
         value: |
           bgpControlPlane:
             enabled: true
+          policyAuditMode: ${FW_AUDIT_ONLY:=true}
+          hostFirewall:
+            enabled: true
+          extraConfig:
+            allow-localhost: policy
           ipv6:
             enabled: true
           ipam:
