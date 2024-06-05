@@ -8,12 +8,6 @@ spec:
     spec:
       containers:
       - name: manager
-        env:
-        - name: ENABLE_WEBHOOKS
-          valueFrom:
-            configMapKeyRef:
-              name: manager-config
-              key: ENABLE_WEBHOOKS
         ports:
         - containerPort: 9443
           name: webhook-server

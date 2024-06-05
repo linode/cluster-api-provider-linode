@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultLBPort = 6443
+	defaultApiserverLBPort = 6443
 )
 
 // CreateNodeBalancer creates a new NodeBalancer if one doesn't exist
@@ -71,37 +71,36 @@ func CreateNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	return linodeNB, nil
 }
 
-// CreateNodeBalancerConfig creates NodeBalancer config if it does not exist
-func CreateNodeBalancerConfig(
+// CreateNodeBalancerConfigs creates NodeBalancer configs if it does not exist
+func CreateNodeBalancerConfigs(
 	ctx context.Context,
 	clusterScope *scope.ClusterScope,
 	logger logr.Logger,
-) (*linodego.NodeBalancerConfig, error) {
-	var linodeNBConfig *linodego.NodeBalancerConfig
-	var err error
-
-	lbPort := defaultLBPort
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
-		lbPort = clusterScope.LinodeCluster.Spec.Network.LoadBalancerPort
+) ([]*linodego.NodeBalancerConfig, error) {
+	nbConfigs := []*linodego.NodeBalancerConfig{}
+	apiLBPort := defaultApiserverLBPort
+	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
+		apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
 	}
-	createConfig := linodego.NodeBalancerConfigCreateOptions{
-		Port:      lbPort,
+	apiserverCreateConfig := linodego.NodeBalancerConfigCreateOptions{
+		Port:      apiLBPort,
 		Protocol:  linodego.ProtocolTCP,
 		Algorithm: linodego.AlgorithmRoundRobin,
 		Check:     linodego.CheckConnection,
 	}
 
-	if linodeNBConfig, err = clusterScope.LinodeClient.CreateNodeBalancerConfig(
+	apiserverLinodeNBConfig, err := clusterScope.LinodeClient.CreateNodeBalancerConfig(
 		ctx,
 		*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
-		createConfig,
-	); err != nil {
+		apiserverCreateConfig,
+	)
+	if err != nil {
 		logger.Info("Failed to create Linode NodeBalancer config", "error", err.Error())
-
 		return nil, err
 	}
+	nbConfigs = append(nbConfigs, apiserverLinodeNBConfig)
 
-	return linodeNBConfig, nil
+	return nbConfigs, nil
 }
 
 // AddNodeToNB adds a backend Node on the Node Balancer configuration
@@ -129,12 +128,12 @@ func AddNodeToNB(
 		return err
 	}
 
-	lbPort := defaultLBPort
-	if machineScope.LinodeCluster.Spec.Network.LoadBalancerPort != 0 {
-		lbPort = machineScope.LinodeCluster.Spec.Network.LoadBalancerPort
+	apiserverLBPort := defaultApiserverLBPort
+	if machineScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
+		apiserverLBPort = machineScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
 	}
 
-	if machineScope.LinodeCluster.Spec.Network.NodeBalancerConfigID == nil {
+	if machineScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
 		err := errors.New("nil NodeBalancer Config ID")
 		logger.Error(err, "config ID for NodeBalancer is nil")
 
@@ -144,16 +143,15 @@ func AddNodeToNB(
 	_, err = machineScope.LinodeClient.CreateNodeBalancerNode(
 		ctx,
 		*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
-		*machineScope.LinodeCluster.Spec.Network.NodeBalancerConfigID,
+		*machineScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID,
 		linodego.NodeBalancerNodeCreateOptions{
 			Label:   machineScope.Cluster.Name,
-			Address: fmt.Sprintf("%s:%d", addresses.IPv4.Private[0].Address, lbPort),
+			Address: fmt.Sprintf("%s:%d", addresses.IPv4.Private[0].Address, apiserverLBPort),
 			Mode:    linodego.ModeAccept,
 		},
 	)
 	if err != nil {
 		logger.Error(err, "Failed to update Node Balancer")
-
 		return err
 	}
 
@@ -180,7 +178,7 @@ func DeleteNodeFromNB(
 	err := machineScope.LinodeClient.DeleteNodeBalancerNode(
 		ctx,
 		*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
-		*machineScope.LinodeCluster.Spec.Network.NodeBalancerConfigID,
+		*machineScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID,
 		*machineScope.LinodeMachine.Spec.InstanceID,
 	)
 	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {

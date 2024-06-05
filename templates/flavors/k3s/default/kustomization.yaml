@@ -1,0 +1,55 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../infra
+  - k3sControlPlane.yaml
+  - k3sConfigTemplate.yaml
+  - ../../../addons/cilium-network-policies
+  - ../../../addons/csi-driver-linode
+  - ../../../addons/ccm-linode
+  - ../../../addons/cluster-resource-set
+patches:
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      - op: replace
+        path: /spec/controlPlaneRef/kind
+        value: KThreesControlPlane
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+          ccm: ${CLUSTER_NAME}-linode
+          csi: ${CLUSTER_NAME}-linode
+          crs: ${CLUSTER_NAME}-crs
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: MachineDeployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/bootstrap/configRef/kind
+        value: KThreesConfigTemplate
+  - target:
+      kind: HelmChartProxy
+      name: .*-linode-cloud-controller-manager
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          routeController:
+            vpcName: ${VPC_NAME:=${CLUSTER_NAME}}
+            clusterCIDR: 10.0.0.0/8
+            configureCloudRoutes: true
+          secretRef:
+            name: "linode-token-region"
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"

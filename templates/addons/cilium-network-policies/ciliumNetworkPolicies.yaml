@@ -23,7 +23,7 @@ data:
     metadata:
       name: "default-external-policy"
     spec:
-      description: "allow etcd & api server traffic"
+      description: "allow api server traffic"
       nodeSelector: {}
       ingress:
         - fromEntities:
@@ -35,8 +35,6 @@ data:
           toPorts:
             - ports:
                 - port: "6443"
-                - port: "2379"
-                - port: "2380"
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet

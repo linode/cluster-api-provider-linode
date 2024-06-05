@@ -1,0 +1,113 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../vpcless
+
+patches:
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        clusterNetwork:
+          pods:
+            cidrBlocks:
+              - 10.192.0.0/10
+              - fd02::/80
+          services:
+            cidrBlocks:
+              - 10.96.0.0/12
+              - fd03::/108
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KThreesControlPlane
+    patch: |-
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KThreesControlPlane
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        kthreesConfigSpec:
+          serverConfig:
+            kubeControllerManagerArgs:
+              - "node-cidr-mask-size-ipv6=96"
+            clusterCidr: "10.192.0.0/10,fd02::/80"
+            serviceCidr: "10.96.0.0/12,fd03::/108"
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KThreesControlPlane
+    patch: |-
+      - op: replace
+        path: /spec/kthreesConfigSpec/files/1/content
+        value: |-
+          apiVersion: helm.cattle.io/v1
+          kind: HelmChart
+          metadata:
+            name: cilium
+            namespace: kube-system
+          spec:
+            targetNamespace: kube-system
+            version: ${CILIUM_VERSION:=1.15.4}
+            chart: cilium
+            repo: https://helm.cilium.io/
+            bootstrap: true
+            valuesContent: |-
+              bgpControlPlane:
+                enabled: true
+              policyAuditMode: ${FW_AUDIT_ONLY:=true}
+              hostFirewall:
+                enabled: true
+              extraConfig:
+                allow-localhost: policy
+              ipam:
+                mode: kubernetes
+              ipv4:
+                enabled: true
+              ipv6:
+                enabled: true
+              k8s:
+                requireIPv4PodCIDR: true
+              hubble:
+                relay:
+                  enabled: true
+                ui:
+                  enabled: true
+  - target:
+      group: controlplane.cluster.x-k8s.io
+      version: v1beta1
+      kind: KThreesControlPlane
+    patch: |-
+      - op: replace
+        path: /spec/kthreesConfigSpec/preK3sCommands
+        value:
+          - |
+            mkdir -p /etc/rancher/k3s/config.yaml.d/
+            echo -n "kubelet-arg: \"--node-ip=" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+            echo -n "$(ip a s eth0 |grep -E 'inet '  |cut -d' ' -f6|cut -d/ -f1 | grep -E '192.168')" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+            echo ",$(ip a s eth0 |grep -E 'inet6 '  |cut -d' ' -f6|cut -d/ -f1 | grep -vE 'fe80')\"" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+          - sed -i '/swap/d' /etc/fstab
+          - swapoff -a
+          - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+  - target:
+      group: bootstrap.cluster.x-k8s.io
+      version: v1beta1
+      kind: KThreesConfigTemplate
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/preK3sCommands
+        value:
+          - |
+            mkdir -p /etc/rancher/k3s/config.yaml.d/
+            echo -n "kubelet-arg: \"--node-ip=" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+            echo -n "$(ip a s eth0 |grep -E 'inet '  |cut -d' ' -f6|cut -d/ -f1 | grep -E '192.168')" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+            echo ",$(ip a s eth0 |grep -E 'inet6 '  |cut -d' ' -f6|cut -d/ -f1 | grep -vE 'fe80')\"" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+          - sed -i '/swap/d' /etc/fstab
+          - swapoff -a
+          - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname

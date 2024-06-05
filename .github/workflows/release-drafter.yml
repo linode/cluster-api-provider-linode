@@ -1,13 +1,10 @@
 name: Release Drafter
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - master
-  pull_request:
-    types: [opened, reopened, synchronize]
-  pull_request_target:
-   types: [opened, reopened, synchronize]
+      - main
 
 permissions:
   contents: read

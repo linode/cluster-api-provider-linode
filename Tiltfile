@@ -1,9 +1,14 @@
 load("ext://k8s_attach", "k8s_attach")
 load("ext://helm_resource", "helm_resource", "helm_repo")
 load("ext://namespace", "namespace_create")
+load("ext://restart_process", "docker_build_with_restart")
 update_settings(k8s_upsert_timeout_secs=60)
 
-helm_repo("capi-operator-repo", "https://kubernetes-sigs.github.io/cluster-api-operator",labels=["helm-repos"])
+helm_repo(
+    "capi-operator-repo",
+    "https://kubernetes-sigs.github.io/cluster-api-operator",
+    labels=["helm-repos"],
+)
 helm_repo("jetstack-repo", "https://charts.jetstack.io", labels=["helm-repos"])
 helm_resource(
     "cert-manager",
@@ -92,17 +97,52 @@ if os.getenv("INSTALL_RKE2_PROVIDER", "false") == "true":
         labels=["CAPI"],
     )
 
+capl_deps = ["capi-controller-manager"]
+debug = os.getenv("CAPL_DEBUG", "false")
+# debug setting
+if debug == "true":
+    local_resource(
+        "capl-compile",
+        'GOOS=linux CGO_ENABLED=0 go build -gcflags "-N -l" -ldflags="-X github.com/linode/cluster-api-provider-linode/version.version=$VERSION" -a -o bin/manager ./cmd/main.go',
+        deps=["./main.go", "./start.go", "vendor", "go.mod", "go.sum", "./api",  "./cloud", "./cmd", "./controller",
+            "./util", "./version",],
+        labels=["CAPL"],
+    )
+    docker_build_with_restart(
+        "docker.io/linode/cluster-api-provider-linode",
+        context=".",
+        dockerfile_contents="""FROM golang:1.22
+        RUN go install github.com/go-delve/delve/cmd/dlv@latest
+        COPY bin/manager /manager
+        WORKDIR /""",
+        only=("bin/manager"),
+        build_args={"VERSION": os.getenv("VERSION", "")},
+        entrypoint="$GOPATH/bin/dlv --listen=:40000 --continue --accept-multiclient --api-version=2 --headless=true exec /manager",
+        live_update=[
+            sync("./bin/manager", "/manager"),
+        ],
+    )
+    capl_deps.append("capl-compile")
+
 manager_yaml = decode_yaml_stream(kustomize("config/default"))
 for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":
         resource["stringData"]["apiToken"] = os.getenv("LINODE_TOKEN")
-    if resource["kind"] == "CustomResourceDefinition" and resource["spec"]["group"] == "infrastructure.cluster.x-k8s.io":
+    if (
+        resource["kind"] == "CustomResourceDefinition"
+        and resource["spec"]["group"] == "infrastructure.cluster.x-k8s.io"
+    ):
         resource["metadata"]["labels"]["clusterctl.cluster.x-k8s.io"] = ""
-    if resource["metadata"]["name"] == "capl-manager-config":
-        resource["data"]["ENABLE_WEBHOOKS"] = os.getenv("ENABLE_WEBHOOKS", "true")
+    if (
+        resource["kind"] == "Deployment"
+        and resource["metadata"]["name"] == "capl-controller-manager"
+    ):
+        resource["spec"]["template"]["spec"].pop("securityContext")
+        for container in resource["spec"]["template"]["spec"]["containers"]:
+            container.pop("securityContext")
 k8s_yaml(encode_yaml_stream(manager_yaml))
 
-if os.getenv("SKIP_DOCKER_BUILD", "false") != "true":
+if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":
     docker_build(
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
@@ -130,11 +170,11 @@ k8s_resource(
         "capl-manager-rolebinding:clusterrolebinding",
         "capl-proxy-rolebinding:clusterrolebinding",
         "capl-manager-credentials:secret",
-        "capl-manager-config:configmap",
         "capl-serving-cert:certificate",
         "capl-selfsigned-issuer:issuer",
         "capl-validating-webhook-configuration:validatingwebhookconfiguration",
     ],
-    resource_deps=["capi-controller-manager"],
+    port_forwards=["40000:40000"],
+    resource_deps=capl_deps,
     labels=["CAPL"],
 )

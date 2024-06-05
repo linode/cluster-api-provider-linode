@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -60,11 +61,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		},
 	}
 
-	linodeCluster := infrav1alpha1.LinodeCluster{
-		Spec: infrav1alpha1.LinodeClusterSpec{
-			Network: infrav1alpha1.NetworkSpec{
-				NodeBalancerID:       ptr.To(1),
-				NodeBalancerConfigID: ptr.To(2),
+	linodeCluster := infrav1alpha2.LinodeCluster{
+		Spec: infrav1alpha2.LinodeClusterSpec{
+			Network: infrav1alpha2.NetworkSpec{
+				NodeBalancerID:                ptr.To(1),
+				ApiserverNodeBalancerConfigID: ptr.To(2),
 			},
 		},
 	}

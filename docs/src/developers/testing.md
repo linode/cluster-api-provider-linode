@@ -189,6 +189,16 @@ For e2e tests CAPL uses the [Chainsaw project](https://kyverno.github.io/chainsa
 spin up a cluster with the CAPL controllers installed and then uses `chainsaw-test.yaml` files to drive e2e testing.
 
 All test live in the e2e folder with a directory structure of `e2e/${COMPONENT}/${TEST_NAME}`
+
+### Environment Setup
+The e2e tests use the `local-linode` infrastructure provider, this is registered by adding the following to `~/.cluster-api/clusterctl.yaml`:
+```
+providers:
+  - name: local-linode
+    url: ${HOME}/cluster-api-provider-linode/infrastructure-local-linode/v0.0.0/infrastructure-components.yaml
+    type: InfrastructureProvider
+```
+
 ### Running Tests
 In order to run e2e tests run the following commands: 
 ```bash
@@ -198,10 +208,6 @@ export INSTALL_RKE2_PROVIDER=true
 export LINODE_REGION=us-sea
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
-
-# IMPORTANT: Set linode, k3s, and rke2 providers in this config file.
-# Find an example at e2e/gha-clusterctl-config.yaml
-export CLUSTERCTL_CONFIG=~/.cluster-api/clusterctl.yaml
 
 make e2etest
 ```
@@ -219,18 +225,18 @@ make e2etest E2E_SELECTOR='flavors' E2E_FLAGS='--assert-timeout 10m0s'
 
 There are other selectors you can use to invoke specfic tests. Please look at the table below for all the selectors available:
 
-| Tests                            | Selector          |
-|----------------------------------|-------------------|
-| All Tests                        | `all`             |
-| All Controllers                  | `quick`           |
-| All Flavors (default, k3s, rke2) | `flavors`         |
-| K3S Cluster                      | `k3s`             | 
-| RKE2 Cluster                     | `rke2`            |
-| Default (kubeadm) Cluster        | `default-cluster` |
-| Linode Cluster Controller        | `linodecluster`   |
-| Linode Machine Controller        | `linodemachine`   |
-| Linode Obj Controller            | `linodeobj`       | 
-| Linode VPC Controller            | `linodevpc`       | 
+| Tests                            | Selector        |
+|----------------------------------|-----------------|
+| All Tests                        | `all`           |
+| All Controllers                  | `quick`         |
+| All Flavors (default, k3s, rke2) | `flavors`       |
+| K3S Cluster                      | `k3s`           | 
+| RKE2 Cluster                     | `rke2`          |
+| Default (kubeadm) Cluster        | `kubeadm`       |
+| Linode Cluster Controller        | `linodecluster` |
+| Linode Machine Controller        | `linodemachine` |
+| Linode Obj Controller            | `linodeobj`     | 
+| Linode VPC Controller            | `linodevpc`     | 
 
 *Note: For any flavor e2e tests, please set the required env variables*
 

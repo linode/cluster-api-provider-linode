@@ -89,11 +89,11 @@ data:
             - --etcd-connection-timeout=30s
             - --delta-snapshot-period=60s
             - --delta-snapshot-memory-limit=104857600
-            - --compress-snapshots=true        
+            - --compress-snapshots=true
             - --compression-policy=gzip
-            - --cacert=/etc/kubernetes/pki/etcd/ca.crt
-            - --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt
-            - --key=/etc/kubernetes/pki/etcd/healthcheck-client.key
+            - --cacert=${CERTPATH}/etcd/${CACERTFILE}
+            - --cert=${CERTPATH}/etcd/${CERTFILE}
+            - --key=${CERTPATH}/etcd/${KEYFILE}
             image: ${ETCDBR_IMAGE:-europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl:v0.28.0}
             securityContext:
               allowPrivilegeEscalation: false
@@ -119,7 +119,7 @@ data:
                   name: etcd-backup
                   key: "bucket_name"
             volumeMounts:
-            - mountPath: /etc/kubernetes/pki
+            - mountPath: ${CERTPATH}
               name: k8s-certs
               readOnly: true
             - name: data-volume
@@ -128,7 +128,7 @@ data:
           hostNetwork: true
           volumes:
           - hostPath:
-              path: /etc/kubernetes/pki
+              path: ${CERTPATH}
               type: DirectoryOrCreate
             name: k8s-certs
           - name: data-volume
@@ -147,6 +147,6 @@ spec:
       etcd-backup: "true"
       cluster: ${CLUSTER_NAME}
   resources:
-  - kind: ConfigMap
-    name: ${CLUSTER_NAME}-etcd-backup-restore-addon
+    - kind: ConfigMap
+      name: ${CLUSTER_NAME}-etcd-backup-restore-addon
   strategy: ApplyOnce

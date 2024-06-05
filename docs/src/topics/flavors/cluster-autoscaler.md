@@ -5,9 +5,9 @@ Autoscaler](https://www.github.com/kubernetes/autoscaler/tree/master/cluster-aut
 
 ## Specification
 
-| Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
-|---------------|--------|--------------|-----------------------|------|------|
-| Kubeadm       | Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
+| Supported Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
+|-------------------------|--------|--------------|-----------------------|------|------|
+| kubeadm, k3s, rke2      | Cilium | Ubuntu 22.04 | No                    | Yes  | Yes  |
 
 ## Prerequisites
 
@@ -34,7 +34,7 @@ Autoscaler](https://www.github.com/kubernetes/autoscaler/tree/master/cluster-aut
     clusterctl generate cluster test-cluster \
         --kubernetes-version v1.29.1 \
         --infrastructure linode-linode \
-        --flavor cluster-autoscaler > test-cluster.yaml
+        --flavor <controlplane>-cluster-autoscaler > test-cluster.yaml
     ```
 
 3. Apply cluster yaml

@@ -4,7 +4,7 @@
     "ctlptl@latest",
     "docker@latest",
     "go-tools@latest",
-    "go@1.22",
+    "go@1.22.2",
     "golangci-lint@latest",
     "govulncheck@latest",
     "husky@latest",

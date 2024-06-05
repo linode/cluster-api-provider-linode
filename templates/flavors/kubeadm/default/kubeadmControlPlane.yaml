@@ -1,0 +1,63 @@
+---
+kind: KubeadmControlPlane
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+  machineTemplate:
+    infrastructureRef:
+      kind: LinodeMachineTemplate
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      name: ${CLUSTER_NAME}-control-plane
+  kubeadmConfigSpec:
+    files:
+      - path: /kubeadm-pre-init.sh
+        content: |
+          #!/bin/bash
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          mkdir -p -m 755 /etc/apt/keyrings
+          PATCH_VERSION=$${1#[v]}
+          VERSION=$${PATCH_VERSION%.*}
+          curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/869bcdad9cf7daae533023c7869f62683d2a7f47/scripts/add-kubeadm-required-files.sh | bash
+          curl -fsSL "https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/Release.key" | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v$VERSION/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          apt-get update -y
+          apt-get install -y kubelet=$PATCH_VERSION* kubeadm=$PATCH_VERSION* kubectl=$PATCH_VERSION* containerd
+          apt-mark hold kubelet kubeadm kubectl containerd
+          if [ -d "/sys/class/net/eth1" ]; then
+              IPADDR=$(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)
+              sed -i "s/kubeletExtraArgs:/kubeletExtraArgs:\n    node-ip: $IPADDR/g" /run/kubeadm/kubeadm.yaml
+          fi
+        permissions: "0500"
+    preKubeadmCommands:
+      - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
+      - sed -i '/swap/d' /etc/fstab
+      - swapoff -a
+      - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+    clusterConfiguration:
+      etcd:
+        local:
+          dataDir: /var/lib/etcd_data/etcd
+          extraArgs:
+            quota-backend-bytes: "8589934592"
+      apiServer:
+        extraArgs:
+          cloud-provider: external
+      controllerManager:
+        extraArgs:
+          cloud-provider: external
+    initConfiguration:
+      skipPhases:
+        - addon/kube-proxy
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+        name: '{{ ds.meta_data.label }}'
+    joinConfiguration:
+      nodeRegistration:
+        kubeletExtraArgs:
+          cloud-provider: external
+        name: '{{ ds.meta_data.label }}'
+  version: "${KUBERNETES_VERSION}"

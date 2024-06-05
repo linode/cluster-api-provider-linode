@@ -5,7 +5,7 @@ REGISTRY            ?= docker.io/linode
 IMAGE_NAME          ?= cluster-api-provider-linode
 CONTROLLER_IMAGE    ?= $(REGISTRY)/$(IMAGE_NAME)
 TAG                 ?= dev
-ENVTEST_K8S_VERSION := 1.28.0
+ENVTEST_K8S_VERSION := 1.30.0
 VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 GIT_REF             ?= $(shell git rev-parse --short HEAD)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
@@ -94,7 +94,7 @@ generate-mock: mockgen ## Generate mocks for the Linode API client.
 
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
-	./hack/generate-flavors.sh
+	bash hack/generate-flavors.sh
 
 .PHONY: check-gen-diff
 check-gen-diff:
@@ -152,7 +152,6 @@ e2etest: generate local-release local-deploy chainsaw
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
-	@echo -n "ENABLE_WEBHOOKS=$(ENABLE_WEBHOOKS)" > config/default/.env.manager
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci -f Tiltfile
 
@@ -205,7 +204,6 @@ endif
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt kind clusterctl
 	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
-	@echo -n "ENABLE_WEBHOOKS=$(ENABLE_WEBHOOKS)" > config/default/.env.manager
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) up --stream
 
@@ -310,17 +308,17 @@ GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
 
 ## Tool Versions
-KUSTOMIZE_VERSION        ?= v5.1.1
-CTLPTL_VERSION           ?= v0.8.25
-CLUSTERCTL_VERSION       ?= v1.5.3
-KUBEBUILDER_VERSION      ?= v3.14.1
+KUSTOMIZE_VERSION        ?= v5.4.1
+CTLPTL_VERSION           ?= v0.8.29
+CLUSTERCTL_VERSION       ?= v1.7.2
+KUBEBUILDER_VERSION      ?= v3.15.1
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
-TILT_VERSION             ?= 0.33.6
-KIND_VERSION             ?= 0.20.0
-CHAINSAW_VERSION         ?= v0.1.9
+TILT_VERSION             ?= 0.33.10
+KIND_VERSION             ?= 0.23.0
+CHAINSAW_VERSION         ?= v0.2.2
 HUSKY_VERSION            ?= v0.2.16
 NILAWAY_VERSION          ?= latest
-GOVULNC_VERSION          ?= v1.0.1
+GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
 
 .PHONY: tools
@@ -401,3 +399,4 @@ $(GOVULNC): $(LOCALBIN)
 mockgen: $(MOCKGEN) ## Download mockgen locally if necessary.
 $(MOCKGEN): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
+

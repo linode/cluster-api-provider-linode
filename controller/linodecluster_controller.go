@@ -33,12 +33,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -66,7 +67,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	defer cancel()
 
 	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.NamespacedName.String())
-	linodeCluster := &infrav1alpha1.LinodeCluster{}
+	linodeCluster := &infrav1alpha2.LinodeCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeCluster); err != nil {
 		logger.Info("Failed to fetch Linode cluster", "error", err.Error())
 
@@ -189,18 +190,18 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = &linodeNB.ID
 
-	linodeNBConfig, err := services.CreateNodeBalancerConfig(ctx, clusterScope, logger)
+	configs, err := services.CreateNodeBalancerConfigs(ctx, clusterScope, logger)
 	if err != nil {
 		logger.Error(err, "failed to create nodebalancer config")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		return err
 	}
 
-	clusterScope.LinodeCluster.Spec.Network.NodeBalancerConfigID = util.Pointer(linodeNBConfig.ID)
+	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = util.Pointer(configs[0].ID)
 
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: *linodeNB.IPv4,
-		Port: int32(linodeNBConfig.Port),
+		Port: int32(configs[0].Port),
 	}
 
 	return nil
@@ -216,7 +217,10 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 			return err
 		}
-		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
+		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String())
+		if controllerutil.ContainsFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String()) {
+			controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
+		}
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "NodeBalancerIDMissing", "NodeBalancer ID is missing, nothing to do")
 
 		return nil
@@ -233,31 +237,36 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer deleted")
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
-	clusterScope.LinodeCluster.Spec.Network.NodeBalancerConfigID = nil
+	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
 
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")
 		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 		return err
 	}
-	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
+	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String())
+	if controllerutil.ContainsFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
+	}
 
 	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	controller, err := ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1alpha1.LinodeCluster{}).
+	err := ctrl.NewControllerManagedBy(mgr).
+		For(&infrav1alpha2.LinodeCluster{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
-		Build(r)
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(
+				kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha2.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha2.LinodeCluster{}),
+			),
+			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+		).Complete(r)
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
-	return controller.Watch(
-		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
-		handler.EnqueueRequestsFromMapFunc(kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha1.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha1.LinodeCluster{})),
-		predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger()),
-	)
+	return nil
 }

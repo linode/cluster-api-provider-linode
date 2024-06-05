@@ -164,8 +164,7 @@ infrastructure-local-linode/v0.0.0
 └── metadata.yaml
 ```
 
-This can then be used with `clusterctl` by adding the following to `~/.clusterctl/cluster-api.yaml`
-(assuming the repo exists in the `$HOME` directory):
+This can then be used with `clusterctl` by adding the following to `~/.cluster-api/clusterctl.yaml`:
 
 ```
 providers:
@@ -253,6 +252,13 @@ VPCs are not deleted when a cluster is deleted using kubectl. One can run `kubec
 For any issues, please refer to the [troubleshooting guide](../topics/troubleshooting.md).
 ```
 
+### Debugging CAPL Controllers
+CAPL supports using [Delve](https://github.com/go-delve/delve/) to attach a debugger to CAPL. This will start Delve in the
+CAPL container on port `40000` and use Tilt live_reload to rebuild the CAPL Controller on your host and insert it into the container without needing to rebuild the container.
+  ```bash
+  CAPL_DEBUG=true make tilt-cluster
+  ```
+
 ### Automated Testing
 
 #### E2E Testing
@@ -265,10 +271,6 @@ export INSTALL_RKE2_PROVIDER=true
 export LINODE_REGION=us-sea
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
-
-# IMPORTANT: Set linode, k3s, and rke2 providers in this config file.
-# Find an example at e2e/gha-clusterctl-config.yaml
-export CLUSTERCTL_CONFIG=~/.cluster-api/clusterctl.yaml
 
 make e2etest
 ```

@@ -39,7 +39,7 @@ spec:
               --flavor k3s --kubernetes-version v1.29.1+k3s2 \
               --infrastructure local-linode:v0.0.0 \
               --control-plane-machine-count 1 --worker-machine-count 1 \
-              --config $CLUSTERCTL_CONFIG > k3s-cluster.yaml
+              --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > k3s-cluster.yaml
             check:
               ($error == null): true
     - name: Apply generated cluster yaml
@@ -84,6 +84,43 @@ spec:
               ($error): ~
               (json_parse($stdout)):
                 results: 2
+    - name: Get child cluster kubeconfig
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+            content: |
+              set -e
+              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > k3s-kubeconfig.yaml
+            check:
+              ($error == null): true
+    - clusters:
+        k3s:
+          kubeconfig: ./k3s-kubeconfig.yaml
+      name: Check child cluster resources
+      try:
+        - assert:
+            cluster: k3s
+            file: assert-child-cluster-deployments.yaml
+        - assert:
+            cluster: k3s
+            file: assert-child-cluster-daemonsets.yaml
+      catch:
+        - describe:
+            cluster: k3s
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+        - describe:
+            cluster: k3s
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
     - name: Delete child cluster
       try:
         - delete:
@@ -126,5 +163,6 @@ spec:
         - script:
             content: |
               rm -f k3s-cluster.yaml
+              rm -f k3s-kubeconfig.yaml
             check:
               ($error == null): true

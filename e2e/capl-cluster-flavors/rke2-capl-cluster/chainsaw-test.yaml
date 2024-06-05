@@ -2,7 +2,6 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  creationTimestamp: null
   name: rke2-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
@@ -39,7 +38,7 @@ spec:
               --flavor rke2 --kubernetes-version v1.29.1+rke2r1 \
               --infrastructure local-linode:v0.0.0 \
               --control-plane-machine-count 1 --worker-machine-count 1 \
-              --config $CLUSTERCTL_CONFIG> rke2-cluster.yaml
+              --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > rke2-cluster.yaml
             check:
               ($error == null): true
     - name: Apply generated cluster yaml
@@ -84,6 +83,43 @@ spec:
               ($error): ~
               (json_parse($stdout)):
                 results: 2
+    - name: Get child cluster kubeconfig
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+            content: |
+              set -e
+              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > rke2-kubeconfig.yaml
+            check:
+              ($error == null): true
+    - clusters:
+        rke2:
+          kubeconfig: ./rke2-kubeconfig.yaml
+      name: Check child cluster resources
+      try:
+        - assert:
+            cluster: rke2
+            file: assert-child-cluster-deployments.yaml
+        - assert:
+            cluster: rke2
+            file: assert-child-cluster-daemonsets.yaml
+      catch:
+        - describe:
+            cluster: rke2
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+        - describe:
+            cluster: rke2
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
     - name: Delete child cluster
       try:
         - delete:
@@ -126,5 +162,6 @@ spec:
         - script:
             content: |
               rm -f rke2-cluster.yaml
+              rm -f rke2-kubeconfig.yaml
             check:
               ($error == null): true

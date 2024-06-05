@@ -39,7 +39,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: e2e-${{ github.ref }}-${{ inputs.e2e-selector }}
   cancel-in-progress: true
 
 jobs:
@@ -54,8 +54,9 @@ jobs:
         uses: step-security/harden-runner@v2
         with:
           disable-sudo: true
-          egress-policy: block
+          egress-policy: audit
           allowed-endpoints: >
+            *:6443
             api.linode.com:443
             api.github.com:443
             github.com:443
@@ -114,6 +115,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: logs
+          name: ${{ inputs.e2e-selector }}-logs
           path: .logs/*
           overwrite: true
