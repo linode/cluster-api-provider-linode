@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -58,9 +58,9 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		Namespace:       clusterNameSpace,
 		OwnerReferences: ownerRefs,
 	}
-	linodeCluster := infrav1.LinodeCluster{
+	linodeCluster := infrav1alpha2.LinodeCluster{
 		ObjectMeta: metadata,
-		Spec: infrav1.LinodeClusterSpec{
+		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
 		},
 	}
@@ -242,11 +242,11 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 		OwnerReferences: ownerRefs,
 	}
 
-	linodeCluster := infrav1.LinodeCluster{
+	linodeCluster := infrav1alpha2.LinodeCluster{
 		ObjectMeta: metadata,
-		Spec: infrav1.LinodeClusterSpec{
+		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
-			Network: infrav1.NetworkSpec{
+			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID: &nodebalancerID,
 			},
 		},

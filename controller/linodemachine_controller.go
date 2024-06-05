@@ -45,6 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -142,7 +143,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Client:        r.Client,
 			Cluster:       cluster,
 			Machine:       machine,
-			LinodeCluster: &infrav1alpha1.LinodeCluster{},
+			LinodeCluster: &infrav1alpha2.LinodeCluster{},
 			LinodeMachine: linodeMachine,
 		},
 	)
