@@ -19,6 +19,8 @@ patches:
             name: "linode-token-region"
           image:
             pullPolicy: IfNotPresent
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
   - target:
       kind: LinodeVPC
     patch: |-
