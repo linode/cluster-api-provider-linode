@@ -10,23 +10,16 @@ assigned an `ExternalIP` provisioned as a shared IP through the
 which is deployed with the necessary settings to perform shared IP load-balancing.
 
 ```admonish warning
-There are several important caveats to load balancing support based on current
+There are a couple important caveats to load balancing support based on current
 Linode networking and API limitations:
 
-1. **Services with external IPv6 addresses are not reachable**
-
-   While it is possible on a dual-stack cluster to use Cilium's LB IPAM and
-   BGP Control Plane features to automatically assign a IPv6 address to a
-   Service, this address will not be accessible outside the cluster since
-   Cilium will try to advertise a /128 address that gets filtered on the routing
-   tables for the BGP routers.
-2. **Ingress traffic will not be split between BGP peer nodes**
+1. **Ingress traffic will not be split between BGP peer nodes**
 
    [Equal-Cost Multi-Path (ECMP)](https://en.wikipedia.org/wiki/Equal-cost_multi-path_routing)
    is not supported on the BGP routers so ingress traffic will not be split between each
    BGP Node in the cluster. One Node will be actively receiving traffic and the other(s)
    will act as standby(s). 
-3. **Customer support is required to use this feature at this time**
+2. **Customer support is required to use this feature at this time**
 
    Since this uses additional IPv4 addresses on the nodes participating in Cilium's
    BGPPeeringPolicy, you need to [contact our Support team](https://www.linode.com/support/)
@@ -34,11 +27,20 @@ Linode networking and API limitations:
 
 ```
 
+```admonish note
+Dual-stack support is enabled for clusters using this flavor since IPv6 is used for router
+and neighbor solicitation.
+
+Without enabling dual-stack support, the IPv6 traffic is blocked if the Cilium host firewall
+is enabled (which it is by default in CAPL), even if there are no configured `CiliumClusterWideNetworkPolicies`
+or the policy is set to audit (default) instead of enforce (see [https://github.com/cilium/cilium/issues/27484](https://github.com/cilium/cilium/issues/27484)). More information about firewalling can be found on the [Firewalling](../firewalling.md) page.
+```
+
 ## Specification
 
 | Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
 |---------------|--------|--------------|-----------------------|------|------|
-| Kubeadm       | Cilium | Ubuntu 22.04 | No                    | Yes  | No   |
+| Kubeadm       | Cilium | Ubuntu 22.04 | No                    | Yes  | Yes  |
 
 
 ## Prerequisites
