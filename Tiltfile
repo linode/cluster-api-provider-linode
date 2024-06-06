@@ -178,3 +178,26 @@ k8s_resource(
     resource_deps=capl_deps,
     labels=["CAPL"],
 )
+
+if os.getenv("CAPL_MONITORING", "false") == "true":
+    # Install the prometheus stack - Just prometheus, kube-state-metrics and grafana
+    helm_repo("prometheus-community", "https://prometheus-community.github.io/helm-charts", labels=["helm-repos"])
+    helm_resource(
+        "prometheus",
+        "prometheus-community/kube-prometheus-stack",
+        namespace="monitoring",
+        flags=["--create-namespace", "--values=./hack/observability/prometheus/values.yaml"],
+        resource_deps=["prometheus-community", "capl-controller-manager", "capi-controller-manager"],
+        labels=["CAPL-Monitoring"],
+    )
+
+    # Create the prometheus service monitor and grafana dashboard
+    k8s_yaml("./hack/observability/prometheus/monitor.yaml")
+    k8s_yaml("./hack/observability/grafana/controller-runtime-dashboard.yaml")
+
+    k8s_resource(
+        new_name="capl-monitoring",
+        objects=[ "capl-controller-manager-metrics-monitor:ServiceMonitor:capl-system", "grafana-dashboards:ConfigMap:monitoring"],
+        resource_deps=["prometheus"],
+        labels=["CAPL-Monitoring"],
+    )
