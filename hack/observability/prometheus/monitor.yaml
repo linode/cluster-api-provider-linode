@@ -10,7 +10,6 @@ metadata:
     app.kubernetes.io/component: metrics
     app.kubernetes.io/created-by: cluster-api-provider-linode
     app.kubernetes.io/part-of: cluster-api-provider-linode
-    app.kubernetes.io/managed-by: kustomize
     app: capl-metrics
   name: capl-controller-manager-metrics-monitor
   namespace: capl-system
