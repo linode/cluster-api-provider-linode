@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	defaultApiserverLBPort = 6443
+	defaultApiserverLBPort    = 6443
+	defaultKonnectivityLBPort = 8132
 )
 
 // CreateNodeBalancer creates a new NodeBalancer if one doesn't exist
@@ -100,6 +101,33 @@ func CreateNodeBalancerConfigs(
 	}
 	nbConfigs = append(nbConfigs, apiserverLinodeNBConfig)
 
+	// return if konnectivity should not be configured
+	if !clusterScope.LinodeCluster.Spec.Network.Konnectivity {
+		return nbConfigs, nil
+	}
+
+	konnLBPort := defaultKonnectivityLBPort
+	if clusterScope.LinodeCluster.Spec.Network.KonnectivityLoadBalancerPort != 0 {
+		konnLBPort = clusterScope.LinodeCluster.Spec.Network.KonnectivityLoadBalancerPort
+	}
+	konnectivityCreateConfig := linodego.NodeBalancerConfigCreateOptions{
+		Port:      konnLBPort,
+		Protocol:  linodego.ProtocolTCP,
+		Algorithm: linodego.AlgorithmRoundRobin,
+		Check:     linodego.CheckConnection,
+	}
+
+	konnectivityLinodeNBConfig, err := clusterScope.LinodeClient.CreateNodeBalancerConfig(
+		ctx,
+		*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		konnectivityCreateConfig,
+	)
+	if err != nil {
+		logger.Info("Failed to create Linode NodeBalancer config", "error", err.Error())
+		return nil, err
+	}
+	nbConfigs = append(nbConfigs, konnectivityLinodeNBConfig)
+
 	return nbConfigs, nil
 }
 
@@ -155,6 +183,38 @@ func AddNodeToNB(
 		return err
 	}
 
+	// return if konnectivity should not be configured
+	if !machineScope.LinodeCluster.Spec.Network.Konnectivity {
+		return nil
+	}
+
+	konnectivityLBPort := defaultKonnectivityLBPort
+	if machineScope.LinodeCluster.Spec.Network.KonnectivityLoadBalancerPort != 0 {
+		konnectivityLBPort = machineScope.LinodeCluster.Spec.Network.KonnectivityLoadBalancerPort
+	}
+
+	if machineScope.LinodeCluster.Spec.Network.KonnectivityNodeBalancerConfigID == nil {
+		err := errors.New("nil NodeBalancer Config ID")
+		logger.Error(err, "config ID for NodeBalancer is nil")
+
+		return err
+	}
+
+	_, err = machineScope.LinodeClient.CreateNodeBalancerNode(
+		ctx,
+		*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		*machineScope.LinodeCluster.Spec.Network.KonnectivityNodeBalancerConfigID,
+		linodego.NodeBalancerNodeCreateOptions{
+			Label:   machineScope.Cluster.Name,
+			Address: fmt.Sprintf("%s:%d", addresses.IPv4.Private[0].Address, konnectivityLBPort),
+			Mode:    linodego.ModeAccept,
+		},
+	)
+	if err != nil {
+		logger.Error(err, "Failed to update Node Balancer")
+		return err
+	}
+
 	return nil
 }
 
@@ -184,6 +244,21 @@ func DeleteNodeFromNB(
 	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 		logger.Error(err, "Failed to update Node Balancer")
 
+		return err
+	}
+
+	if !machineScope.LinodeCluster.Spec.Network.Konnectivity {
+		return nil
+	}
+
+	err = machineScope.LinodeClient.DeleteNodeBalancerNode(
+		ctx,
+		*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		*machineScope.LinodeCluster.Spec.Network.KonnectivityNodeBalancerConfigID,
+		*machineScope.LinodeMachine.Spec.InstanceID,
+	)
+	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+		logger.Error(err, "Failed to update Node Balancer")
 		return err
 	}
 

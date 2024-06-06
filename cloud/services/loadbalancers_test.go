@@ -39,6 +39,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
+							Konnectivity:   true,
 						},
 					},
 				},
@@ -237,8 +238,10 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:            ptr.To(1234),
-							ApiserverLoadBalancerPort: 80,
+							NodeBalancerID:               ptr.To(1234),
+							Konnectivity:                 true,
+							ApiserverLoadBalancerPort:    80,
+							KonnectivityLoadBalancerPort: 90,
 						},
 					},
 				},
@@ -251,10 +254,24 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 					Check:          linodego.CheckConnection,
 					NodeBalancerID: 1234,
 				},
+				{
+					Port:           90,
+					Protocol:       linodego.ProtocolTCP,
+					Algorithm:      linodego.AlgorithmRoundRobin,
+					Check:          linodego.CheckConnection,
+					NodeBalancerID: 1234,
+				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
 					Port:           80,
+					Protocol:       linodego.ProtocolTCP,
+					Algorithm:      linodego.AlgorithmRoundRobin,
+					Check:          linodego.CheckConnection,
+					NodeBalancerID: 1234,
+				}, nil)
+				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
+					Port:           90,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -274,6 +291,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID: ptr.To(1234),
+							Konnectivity:   true,
 						},
 					},
 				},
@@ -286,9 +304,61 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 					Check:          linodego.CheckConnection,
 					NodeBalancerID: 1234,
 				},
+				{
+					Port:           defaultKonnectivityLBPort,
+					Protocol:       linodego.ProtocolTCP,
+					Algorithm:      linodego.AlgorithmRoundRobin,
+					Check:          linodego.CheckConnection,
+					NodeBalancerID: 1234,
+				},
 			},
 			expectedError: fmt.Errorf("error creating NodeBalancerConfig"),
 			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error creating NodeBalancerConfig"))
+			},
+		},
+		{
+			name: "Error - CreateNodeBalancerConfig() returns an error when creating nbconfig for konnectivity",
+			clusterScope: &scope.ClusterScope{
+				LinodeClient: nil,
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID: ptr.To(1234),
+							Konnectivity:   true,
+						},
+					},
+				},
+			},
+			expectedConfigs: []*linodego.NodeBalancerConfig{
+				{
+					Port:           defaultApiserverLBPort,
+					Protocol:       linodego.ProtocolTCP,
+					Algorithm:      linodego.AlgorithmRoundRobin,
+					Check:          linodego.CheckConnection,
+					NodeBalancerID: 1234,
+				},
+				{
+					Port:           defaultKonnectivityLBPort,
+					Protocol:       linodego.ProtocolTCP,
+					Algorithm:      linodego.AlgorithmRoundRobin,
+					Check:          linodego.CheckConnection,
+					NodeBalancerID: 1234,
+				},
+			},
+			expectedError: fmt.Errorf("error creating NodeBalancerConfig"),
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
+					Port:           defaultApiserverLBPort,
+					Protocol:       linodego.ProtocolTCP,
+					Algorithm:      linodego.AlgorithmRoundRobin,
+					Check:          linodego.CheckConnection,
+					NodeBalancerID: 1234,
+				}, nil)
 				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error creating NodeBalancerConfig"))
 			},
 		},
@@ -373,6 +443,64 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						},
 					},
 				}, nil)
+			},
+		},
+		{
+			name: "Error - KonnectivityNodeBalancerConfigID is not set",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                   ptr.To(1234),
+							ApiserverNodeBalancerConfigID:    ptr.To(5678),
+							ApiserverLoadBalancerPort:        defaultApiserverLBPort,
+							Konnectivity:                     true,
+							KonnectivityNodeBalancerConfigID: nil,
+							KonnectivityLoadBalancerPort:     defaultKonnectivityLBPort,
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha1.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+				},
+			},
+			expectedError: fmt.Errorf("nil NodeBalancer Config ID"),
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Private: []*linodego.InstanceIP{
+							{
+								Address: "1.2.3.4",
+							},
+						},
+					},
+				}, nil)
+				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerNode{}, nil)
 			},
 		},
 		{
@@ -507,8 +635,10 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                   ptr.To(1234),
+							ApiserverNodeBalancerConfigID:    ptr.To(5678),
+							Konnectivity:                     true,
+							KonnectivityNodeBalancerConfigID: ptr.To(1111),
 						},
 					},
 				},
@@ -532,7 +662,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						},
 					},
 				}, nil)
-				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerNode{}, nil)
+				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(2).Return(&linodego.NodeBalancerNode{}, nil)
 			},
 		},
 		{
@@ -701,13 +831,16 @@ func TestDeleteNodeFromNB(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                   ptr.To(1234),
+							ApiserverNodeBalancerConfigID:    ptr.To(5678),
+							Konnectivity:                     true,
+							KonnectivityNodeBalancerConfigID: ptr.To(4444),
 						},
 					},
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -748,6 +881,49 @@ func TestDeleteNodeFromNB(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("error deleting node from NodeBalancer"),
 			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error deleting node from NodeBalancer"))
+			},
+		},
+		{
+			name: "Error - Deleting Konnectivity Node from NodeBalancer",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha1.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                   ptr.To(1234),
+							ApiserverNodeBalancerConfigID:    ptr.To(5678),
+							Konnectivity:                     true,
+							KonnectivityNodeBalancerConfigID: ptr.To(4444),
+						},
+					},
+				},
+			},
+			expectedError: fmt.Errorf("error deleting node from NodeBalancer"),
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error deleting node from NodeBalancer"))
 			},
 		},

@@ -119,6 +119,20 @@ type NetworkSpec struct {
 	// apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer fonfig.
 	// +optional
 	ApiserverNodeBalancerConfigID *int `json:"apiserverNodeBalancerConfigID,omitempty"`
+	// Konnectivity flag tells whether or not the cluster is configured to use konnectivity.
+	// If omitted, default value is false.
+	// +kubebuilder:validation:Type=boolean
+	// +optional
+	Konnectivity bool `json:"konnectivity,omitempty"`
+	// konnectivityLoadBalancerPort used by the konnectivity server. It must be valid ports range (1-65535).
+	// If omitted, default value is 8132.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +optional
+	KonnectivityLoadBalancerPort int `json:"konnectivityLoadBalancerPort,omitempty"`
+	// konnectivityNodeBalancerConfigID is the config ID of konnectivity server NodeBalancer config.
+	// +optional
+	KonnectivityNodeBalancerConfigID *int `json:"konnectivityNodeBalancerConfigID,omitempty"`
 }
 
 // +kubebuilder:object:root=true

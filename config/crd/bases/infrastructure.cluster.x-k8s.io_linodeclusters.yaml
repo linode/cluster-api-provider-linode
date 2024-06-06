@@ -340,6 +340,22 @@ spec:
                     description: apiserverNodeBalancerConfigID is the config ID of
                       api server NodeBalancer fonfig.
                     type: integer
+                  konnectivity:
+                    description: |-
+                      Konnectivity flag tells whether or not the cluster is configured to use konnectivity.
+                      If omitted, default value is false.
+                    type: boolean
+                  konnectivityLoadBalancerPort:
+                    description: |-
+                      konnectivityLoadBalancerPort used by the konnectivity server. It must be valid ports range (1-65535).
+                      If omitted, default value is 8132.
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  konnectivityNodeBalancerConfigID:
+                    description: konnectivityNodeBalancerConfigID is the config ID
+                      of konnectivity server NodeBalancer config.
+                    type: integer
                   loadBalancerType:
                     description: LoadBalancerType is the type of load balancer to
                       use, defaults to NodeBalancer if not otherwise set

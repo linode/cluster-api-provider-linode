@@ -22,6 +22,8 @@ kubeadm_vpcless:
   - templates/flavors/kubeadm/vpcless/*
 kubeadm_cilium_bgp_lb:
   - templates/flavors/kubeadm/cilium-bgp-lb/*
+kubeadm_konnectivity:
+  - templates/flavors/kubeadm/konnectivity/*
 
 k3s:
   - templates/flavors/k3s/default/*

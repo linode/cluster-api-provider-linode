@@ -43,6 +43,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 				Region: "example",
 				Network: NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
+					Konnectivity:     true,
 				},
 			},
 		}
