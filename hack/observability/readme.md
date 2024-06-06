@@ -22,3 +22,7 @@ Once the monitoring stack is up and running, you can access the Grafana dashboar
 kubectl port-forward -n monitoring svc/prometheus-prometheus 9090:9090
 kubectl port-forward -n monitoring svc/grafana 8080:80
 ```
+
+### Grafana
+
+After port-forwarding, you can access the Grafana dashboard by navigating to http://localhost:8080. The default username and password are `admin` and `capl-operator` respectively.
