@@ -192,8 +192,7 @@ if os.getenv("CAPL_MONITORING", "false") == "true":
     )
 
     # Create the prometheus service monitor and grafana dashboard
-    k8s_yaml("./hack/observability/prometheus/monitor.yaml")
-    k8s_yaml("./hack/observability/grafana/controller-runtime-dashboard.yaml")
+    k8s_yaml(kustomize("config/prometheus"))
 
     k8s_resource(
         new_name="capl-monitoring",
