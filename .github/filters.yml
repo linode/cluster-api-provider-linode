@@ -20,6 +20,8 @@ kubeadm_self-healing:
   - templates/flavors/kubeadm/self-healing/*
 kubeadm_vpcless:
   - templates/flavors/kubeadm/vpcless/*
+kubeadm_cilium_bgp_lb:
+  - templates/flavors/kubeadm/cilium-bgp-lb/*
 
 k3s:
   - templates/flavors/k3s/default/*
