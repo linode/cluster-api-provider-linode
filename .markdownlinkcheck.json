@@ -1,7 +1,8 @@
 {
     "ignorePatterns": [
         { "pattern": "^https://www.linode.com" },
-        { "pattern": "^https://linode.com" }
+        { "pattern": "^https://linode.com" },
+        { "pattern": "^http://localhost" }
     ],
     "timeout": "5s",
     "retryOn429": true,

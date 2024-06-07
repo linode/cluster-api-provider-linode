@@ -11,16 +11,20 @@ metadata:
     app.kubernetes.io/created-by: cluster-api-provider-linode
     app.kubernetes.io/part-of: cluster-api-provider-linode
     app.kubernetes.io/managed-by: kustomize
-  name: controller-manager-metrics-monitor
-  namespace: system
+    app: capl-metrics
+  name: capl-controller-manager-metrics-monitor
+  namespace: capl-system
 spec:
   endpoints:
     - path: /metrics
-      port: https
+      port: metrics
       scheme: https
       bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
         insecureSkipVerify: true
+  namespaceSelector:
+    matchNames:
+    - capl-system
   selector:
     matchLabels:
       control-plane: controller-manager
