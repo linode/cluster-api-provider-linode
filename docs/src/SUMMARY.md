@@ -11,6 +11,7 @@
       - [Etcd-disk](./topics/flavors/etcd-disk.md)
       - [ClusterClass kubeadm](./topics/flavors/clusterclass-kubeadm.md)
       - [Cluster Autoscaler](./topics/flavors/cluster-autoscaler.md)
+      - [Cilium BGP LB (kubeadm)](./topics/flavors/cilium-bgp-lb.md)
       - [k3s](./topics/flavors/k3s.md)
       - [rke2](./topics/flavors/rke2.md)
       - [vpcless](./topics/flavors/vpcless.md)
