@@ -21,10 +21,6 @@ spec:
             apt-get update -y
             apt-get install -y kubelet=$PATCH_VERSION* kubeadm=$PATCH_VERSION* kubectl=$PATCH_VERSION* containerd
             apt-mark hold kubelet kubeadm kubectl containerd
-            if [ -d "/sys/class/net/eth1" ]; then
-                IPADDR=$(ip a s eth1 |grep 'inet ' |cut -d' ' -f6|cut -d/ -f1)
-                sed -i "s/kubeletExtraArgs:/kubeletExtraArgs:\n    node-ip: $IPADDR/g" /run/kubeadm/kubeadm.yaml
-            fi
           permissions: "0500"
       preKubeadmCommands:
         - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
