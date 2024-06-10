@@ -6,6 +6,7 @@ toolchain go1.22.2
 
 require (
 	github.com/go-logr/logr v1.4.2
+	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
 	github.com/linode/linodego v1.34.0
 	github.com/onsi/ginkgo/v2 v2.19.0
@@ -14,7 +15,7 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/mock v0.4.0
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
-	golang.org/x/mod v0.17.0
+	golang.org/x/mod v0.18.0
 	golang.org/x/oauth2 v0.20.0
 	k8s.io/api v0.30.1
 	k8s.io/apimachinery v0.30.1
@@ -44,7 +45,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240424215950-a892ee059fd6 // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
