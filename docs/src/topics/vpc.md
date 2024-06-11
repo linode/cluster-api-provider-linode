@@ -4,12 +4,12 @@ This guide covers how [VPC](https://www.linode.com/docs/products/networking/vpc/
 
 ## Default configuration
 Each linode within a cluster gets provisioned with two interfaces:
-1. eth0 (for public and nodebalancer traffic)
-2. eth1 (connected to VPC, for pod-to-pod traffic)
+1. eth0 (connected to VPC, for pod-to-pod traffic and public traffic)
+2. eth1 (for nodebalancer traffic)
 
 Key facts about VPC network configuration:
 1. VPCs are provisioned with a private subnet 10.0.0.0/8.
-2. All pod-to-pod communication happens over the VPC interface (eth1).
+2. All pod-to-pod communication happens over the VPC interface (eth0).
 3. We assign a pod CIDR of range 10.192.0.0/10 for pod-to-pod communication.
 3. By default, cilium is configured with [native routing](https://docs.cilium.io/en/stable/network/concepts/routing/#native-routing)
 4. [Kubernetes host-scope IPAM mode](https://docs.cilium.io/en/stable/network/concepts/ipam/kubernetes/) is used to assign pod CIDRs to nodes. We run [linode CCM](https://github.com/linode/linode-cloud-controller-manager) with [route-controller enabled](https://github.com/linode/linode-cloud-controller-manager?tab=readme-ov-file#routes) which automatically adds/updates routes within VPC when pod cidrs are added/updated by k8s. This enables pod-to-pod traffic to be routable within the VPC.

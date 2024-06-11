@@ -99,11 +99,6 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 			return nil, err
 		}
 
-		// set primary to be false for other interfaces
-		for i := range createConfig.Interfaces {
-			createConfig.Interfaces[i].Primary = false
-		}
-
 		// add VPC interface as first interface
 		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
 	}
