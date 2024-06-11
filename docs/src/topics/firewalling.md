@@ -10,9 +10,11 @@ By default, the following policies are set to audit mode(without any enforcement
     | Ports     | Use-case                 | Allowed clients       |
     |-----------|--------------------------|-----------------------|
     | 6443      | API Server Traffic       | World                 |
-    | 2379-2380 | Etcd Traffic             | World                 |
     | *         | In Cluster Communication | Intra Cluster Traffic |
 
+```admonish note
+For kubeadm clusters running outside of VPC, ports 2379 and 2380 are also allowed for etcd-traffic.
+```
 
 * [k3s](./flavors/k3s.md) cluster allow rules
     

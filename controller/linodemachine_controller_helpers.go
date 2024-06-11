@@ -31,6 +31,7 @@ import (
 	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -89,15 +90,17 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 		createConfig.RootPass = uuid.NewString()
 	}
 
-	// if vpc, attach additional interface to linode (eth1)
+	// if vpc, attach additional interface as eth0 to linode
 	if machineScope.LinodeCluster.Spec.VPCRef != nil {
-		iface, err := r.getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
+		iface, err := r.getVPCInterfaceConfig(ctx, machineScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get VPC interface config")
 
 			return nil, err
 		}
-		createConfig.Interfaces = append(createConfig.Interfaces, *iface)
+
+		// add VPC interface as first interface
+		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
 	}
 
 	return createConfig, nil
@@ -266,7 +269,7 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 	return result, nil
 }
 
-func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, existingIfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
 	name := machineScope.LinodeCluster.Spec.VPCRef.Name
 	namespace := machineScope.LinodeCluster.Spec.VPCRef.Namespace
 	if namespace == "" {
@@ -289,14 +292,6 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 		logger.Info("LinodeVPC is not available")
 
 		return nil, errors.New("vpc is not available")
-	}
-
-	hasPrimary := false
-	for i := range existingIfaces {
-		if existingIfaces[i].Primary {
-			hasPrimary = true
-			break
-		}
 	}
 
 	var subnetID int
@@ -325,8 +320,11 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 
 	return &linodego.InstanceConfigInterfaceCreateOptions{
 		Purpose:  linodego.InterfacePurposeVPC,
-		Primary:  !hasPrimary,
+		Primary:  true,
 		SubnetID: &subnetID,
+		IPv4: &linodego.VPCIPv4{
+			NAT1To1: ptr.To(("any")),
+		},
 	}, nil
 }
 

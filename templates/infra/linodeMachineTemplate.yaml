@@ -11,7 +11,6 @@ spec:
       region: ${LINODE_REGION}
       interfaces:
         - purpose: public
-          primary: true
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - ${LINODE_SSH_PUBKEY}
@@ -28,7 +27,6 @@ spec:
       region: ${LINODE_REGION}
       interfaces:
         - purpose: public
-          primary: true
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - ${LINODE_SSH_PUBKEY}

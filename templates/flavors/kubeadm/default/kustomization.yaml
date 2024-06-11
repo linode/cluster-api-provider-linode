@@ -4,7 +4,6 @@ resources:
   - ../../../infra
   - kubeadmConfigTemplate.yaml
   - kubeadmControlPlane.yaml
-  - allow-etcd-policy.yaml
   - ../../../addons/cilium
   - ../../../addons/cilium-network-policies
   - ../../../addons/csi-driver-linode
