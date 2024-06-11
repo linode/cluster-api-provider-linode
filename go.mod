@@ -16,7 +16,7 @@ require (
 	go.uber.org/mock v0.4.0
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	golang.org/x/mod v0.18.0
-	golang.org/x/oauth2 v0.20.0
+	golang.org/x/oauth2 v0.21.0
 	k8s.io/api v0.30.1
 	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.1
