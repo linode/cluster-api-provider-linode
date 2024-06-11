@@ -239,12 +239,16 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 		return err
 	}
 
-	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha1.GroupVersion.String()) {
+	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha1.ObjectStorageBucketFinalizer) {
 		err := errors.New("failed to remove finalizer from bucket; unable to delete")
 		bScope.Logger.Error(err, "controllerutil.RemoveFinalizer")
 		r.setFailure(bScope, err)
 
 		return err
+	}
+	// TODO: remove this check and removal later
+	if controllerutil.ContainsFinalizer(bScope.Bucket, infrav1alpha1.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha1.GroupVersion.String())
 	}
 
 	r.Recorder.Event(bScope.Bucket, clusterv1.DeletedReason, "Revoked", "Object storage keys revoked")

@@ -232,7 +232,7 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 	return nil
 }
 
-//nolint:nestif // As simple as possible.
+//nolint:nestif,gocognit // As simple as possible.
 func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) (ctrl.Result, error) {
 	logger.Info("deleting VPC")
 
@@ -304,7 +304,11 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		return ctrl.Result{}, err
 	}
 
-	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha1.GroupVersion.String())
+	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha1.VPCFinalizer)
+	// TODO: remove this check and removal later
+	if controllerutil.ContainsFinalizer(vpcScope.LinodeVPC, infrav1alpha1.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha1.GroupVersion.String())
+	}
 
 	return ctrl.Result{}, nil
 }

@@ -642,7 +642,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 			logger.Error(err, "Failed to update credentials secret")
 			return err
 		}
-		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
+		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.MachineFinalizer)
 
 		return nil
 	}
@@ -673,7 +673,11 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		logger.Error(err, "Failed to update credentials secret")
 		return err
 	}
-	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
+	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.MachineFinalizer)
+	// TODO: remove this check and removal later
+	if controllerutil.ContainsFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
+	}
 
 	return nil
 }

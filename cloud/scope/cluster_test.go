@@ -130,7 +130,7 @@ func TestClusterScopeMethods(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-cluster",
-						Finalizers: []string{infrav1alpha2.GroupVersion.String()},
+						Finalizers: []string{infrav1alpha2.ClusterFinalizer},
 					},
 				},
 			},
@@ -171,7 +171,7 @@ func TestClusterScopeMethods(t *testing.T) {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
-			if cScope.LinodeCluster.Finalizers[0] != infrav1alpha2.GroupVersion.String() {
+			if cScope.LinodeCluster.Finalizers[0] != infrav1alpha2.ClusterFinalizer {
 				t.Errorf("Finalizer was not added")
 			}
 		})
