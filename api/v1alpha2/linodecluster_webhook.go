@@ -74,6 +74,7 @@ func (r *LinodeCluster) ValidateDelete() (admission.Warnings, error) {
 }
 
 func (r *LinodeCluster) validateLinodeCluster(ctx context.Context, client LinodeClient) error {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
 	if err := r.validateLinodeClusterSpec(ctx, client); err != nil {
@@ -89,6 +90,7 @@ func (r *LinodeCluster) validateLinodeCluster(ctx context.Context, client Linode
 }
 
 func (r *LinodeCluster) validateLinodeClusterSpec(ctx context.Context, client LinodeClient) field.ErrorList {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
 	if err := validateRegion(ctx, client, r.Spec.Region, field.NewPath("spec").Child("region")); err != nil {

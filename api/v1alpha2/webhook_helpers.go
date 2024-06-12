@@ -26,6 +26,8 @@ import (
 	"github.com/linode/linodego"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
+
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
@@ -36,9 +38,16 @@ const (
 	defaultClientTimeout = time.Second * 10
 )
 
+func mkptr[T any](v T) *T {
+	return &v
+}
+
 var (
 	// defaultLinodeClient is an unauthenticated Linode client
-	defaultLinodeClient = linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})
+	defaultLinodeClient = linodeclient.NewLinodeClientWithTracing(
+		mkptr(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
+		"github.com/linode/cluster-api-provider-linode",
+	)
 )
 
 func validateRegion(ctx context.Context, client LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {

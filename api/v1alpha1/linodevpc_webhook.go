@@ -113,6 +113,7 @@ func (r *LinodeVPC) ValidateDelete() (admission.Warnings, error) {
 }
 
 func (r *LinodeVPC) validateLinodeVPC(ctx context.Context, client LinodeClient) error {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
 	if err := r.validateLinodeVPCSpec(ctx, client); err != nil {
@@ -128,6 +129,7 @@ func (r *LinodeVPC) validateLinodeVPC(ctx context.Context, client LinodeClient) 
 }
 
 func (r *LinodeVPC) validateLinodeVPCSpec(ctx context.Context, client LinodeClient) field.ErrorList {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
 	if err := validateRegion(ctx, client, r.Spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {

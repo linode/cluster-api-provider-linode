@@ -11,6 +11,8 @@ import (
 	"github.com/linode/linodego"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
+
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
@@ -21,12 +23,20 @@ const (
 	defaultClientTimeout = time.Second * 10
 )
 
+func mkptr[T any](v T) *T {
+	return &v
+}
+
 var (
 	// defaultLinodeClient is an unauthenticated Linode client
-	defaultLinodeClient = linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})
+	defaultLinodeClient = linodeclient.NewLinodeClientWithTracing(
+		mkptr(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
+		"github.com/linode/cluster-api-provider-linode",
+	)
 )
 
 func validateRegion(ctx context.Context, client LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	region, err := client.GetRegion(ctx, id)
 	if err != nil {
 		return field.NotFound(path, id)
@@ -42,6 +52,7 @@ func validateRegion(ctx context.Context, client LinodeClient, id string, path *f
 }
 
 func validateLinodeType(ctx context.Context, client LinodeClient, id string, path *field.Path) (*linodego.LinodeType, *field.Error) {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	plan, err := client.GetType(ctx, id)
 	if err != nil {
 		return nil, field.NotFound(path, id)
@@ -61,6 +72,7 @@ func validateLinodeType(ctx context.Context, client LinodeClient, id string, pat
 // [Clusters List]: https://www.linode.com/docs/api/object-storage/#clusters-list
 // [Cluster View]: https://www.linode.com/docs/api/object-storage/#cluster-view
 func validateObjectStorageCluster(ctx context.Context, client LinodeClient, id string, path *field.Path) *field.Error {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	//nolint:gocritic // prefer no escapes
 	cexp := regexp.MustCompile("^(([[:lower:]]+-)*[[:lower:]]+)-[[:digit:]]+$")
 	if !cexp.MatchString(id) {
