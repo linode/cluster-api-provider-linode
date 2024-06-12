@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
   - ../default
   - ../../../addons/konnectivity
-  - allow-konnectivity-port.yaml
 
 patches:
   - target:
@@ -66,3 +65,55 @@ patches:
         network:
           additionalPorts:
           - port: 8132
+  - target:
+      kind: ConfigMap
+      name: .*-cilium-policy
+    patch: |-
+      - op: replace
+        path: /data/cilium-policy.yaml
+        value: |-
+          apiVersion: "cilium.io/v2"
+          kind: CiliumClusterwideNetworkPolicy
+          metadata:
+            name: "default-cluster-policy"
+          spec:
+            description: "allow cluster intra cluster traffic"
+            endpointSelector: {}
+            ingress:
+              - fromEntities:
+                  - cluster
+              - fromCIDR:
+                  - 10.0.0.0/8
+                  - 192.168.128.0/17
+          ---
+          apiVersion: "cilium.io/v2"
+          kind: CiliumClusterwideNetworkPolicy
+          metadata:
+            name: "default-external-policy"
+          spec:
+            description: "allow api server traffic"
+            nodeSelector: {}
+            ingress:
+              - fromEntities:
+                  - cluster
+              - fromCIDR:
+                  - 10.0.0.0/8
+              - fromEntities:
+                  - world
+                toPorts:
+                  - ports:
+                      - port: "6443"
+          ---
+          apiVersion: "cilium.io/v2"
+          kind: CiliumClusterwideNetworkPolicy
+          metadata:
+            name: "allow-konnectivity-policy"
+          spec:
+            description: "allow incoming connections to konnectivity-server from everywhere"
+            nodeSelector: {}
+            ingress:
+              - fromEntities:
+                  - world
+                toPorts:
+                  - ports:
+                      - port: "8132"
