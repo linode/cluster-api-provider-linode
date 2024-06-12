@@ -17,11 +17,17 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
+	"sync"
+	"time"
 
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -35,6 +41,8 @@ import (
 	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	controller2 "github.com/linode/cluster-api-provider-linode/controller"
+	"github.com/linode/cluster-api-provider-linode/observability/tracing"
+	"github.com/linode/cluster-api-provider-linode/observability/wrappers/reconciler"
 	"github.com/linode/cluster-api-provider-linode/version"
 
 	_ "go.uber.org/automaxprocs"
@@ -47,6 +55,13 @@ import (
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+)
+
+const (
+	controllerName = "cluster-api-privider-linode.linode.com"
+	gracePeriod    = 5 * time.Second
+	envK8sNodeName = "K8S_NODE_NAME"
+	envK8sPodName  = "K8S_POD_NAME"
 )
 
 func init() {
@@ -114,41 +129,56 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller2.LinodeClusterReconciler{
-		Client:           mgr.GetClient(),
-		Recorder:         mgr.GetEventRecorderFor("LinodeClusterReconciler"),
-		WatchFilterValue: clusterWatchFilter,
-		LinodeApiKey:     linodeToken,
-	}).SetupWithManager(mgr); err != nil {
+	if err = reconciler.NewReconcilerWithTracing(
+		&controller2.LinodeClusterReconciler{
+			Client:           mgr.GetClient(),
+			Recorder:         mgr.GetEventRecorderFor("LinodeClusterReconciler"),
+			WatchFilterValue: clusterWatchFilter,
+			LinodeApiKey:     linodeToken,
+		},
+		"github.com/linode/cluster-api-provider-linode",
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
 		os.Exit(1)
 	}
-	if err = (&controller2.LinodeMachineReconciler{
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-		Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
-		WatchFilterValue: machineWatchFilter,
-		LinodeApiKey:     linodeToken,
-	}).SetupWithManager(mgr); err != nil {
+
+	if err = reconciler.NewReconcilerWithTracing(
+		&controller2.LinodeMachineReconciler{
+			Client:           mgr.GetClient(),
+			Scheme:           mgr.GetScheme(),
+			Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
+			WatchFilterValue: machineWatchFilter,
+			LinodeApiKey:     linodeToken,
+		},
+		"github.com/linode/cluster-api-provider-linode",
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
 	}
-	if err = (&controller2.LinodeVPCReconciler{
-		Client:           mgr.GetClient(),
-		Recorder:         mgr.GetEventRecorderFor("LinodeVPCReconciler"),
-		WatchFilterValue: clusterWatchFilter,
-		LinodeApiKey:     linodeToken,
-	}).SetupWithManager(mgr); err != nil {
+
+	if err = reconciler.NewReconcilerWithTracing(
+		&controller2.LinodeVPCReconciler{
+			Client:           mgr.GetClient(),
+			Recorder:         mgr.GetEventRecorderFor("LinodeVPCReconciler"),
+			WatchFilterValue: clusterWatchFilter,
+			LinodeApiKey:     linodeToken,
+		},
+		"github.com/linode/cluster-api-provider-linode",
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)
 	}
-	if err = (&controller2.LinodeObjectStorageBucketReconciler{
-		Client:           mgr.GetClient(),
-		Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-		Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
-		WatchFilterValue: objectStorageBucketWatchFilter,
-		LinodeApiKey:     linodeToken,
-	}).SetupWithManager(mgr); err != nil {
+
+	if err = reconciler.NewReconcilerWithTracing(
+		&controller2.LinodeObjectStorageBucketReconciler{
+			Client:           mgr.GetClient(),
+			Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
+			Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
+			WatchFilterValue: objectStorageBucketWatchFilter,
+			LinodeApiKey:     linodeToken,
+		},
+		"github.com/linode/cluster-api-provider-linode",
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
@@ -166,8 +196,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	ctx := ctrl.SetupSignalHandler()
+
+	// closure for mgr.Start, so we defers are running
+	run := func(ctx context.Context) error {
+		o11yShutdown := setupObservabillity(ctx)
+		defer o11yShutdown()
+
+		setupLog.Info("starting manager")
+		return mgr.Start(ctx)
+	}
+
+	if err := run(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
@@ -194,5 +234,59 @@ func setupWebhooks(mgr manager.Manager) {
 	if err = (&infrastructurev1alpha1.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
 		os.Exit(1)
+	}
+}
+
+func setupObservabillity(ctx context.Context) func() {
+	node := os.Getenv(envK8sNodeName)
+	pod := os.Getenv(envK8sPodName)
+
+	res := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.ServiceName(controllerName),
+		semconv.ServiceVersion(version.GetVersion()),
+		semconv.K8SPodName(pod),
+		semconv.K8SNodeName(node),
+	)
+
+	tracingShutdown, err := tracing.Setup(ctx, res)
+	if err != nil {
+		setupLog.Error(err, "failed to setup tracing")
+	}
+
+	attrs := []any{}
+
+	for _, kv := range os.Environ() {
+		k, v, ok := strings.Cut(kv, "=")
+		if ok && strings.HasPrefix(k, "OTEL_") {
+			attrs = append(attrs, k, v)
+		}
+	}
+
+	setupLog.Info("opentelemetry configuration applied",
+		attrs...,
+	)
+
+	return func() {
+		timeout := 25 * time.Second //nolint:mnd // 2.5x default OTLP timeout
+
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+		defer cancel()
+
+		wg := &sync.WaitGroup{}
+
+		if tracingShutdown != nil {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				if err := tracingShutdown(ctx); err != nil {
+					setupLog.Error(err, "failed to shutdown tracing")
+				}
+			}()
+		}
+
+		wg.Wait()
 	}
 }
