@@ -23,9 +23,9 @@ patches:
             - swapoff -a
             - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
             - mkdir -p -m 755 /etc/kubernetes/konnectivity
-            - curl -s -L https://raw.githubusercontent.com/linode/konnectivity/main/config/egress-selector-configuration.yaml > /etc/kubernetes/konnectivity/egress-selector-configuration.yaml
+            - curl -s -L https://raw.githubusercontent.com/linode/konnectivity/876b00f976975833929723ad9e247d0c124124bd/config/egress-selector-configuration.yaml > /etc/kubernetes/konnectivity/egress-selector-configuration.yaml
           postKubeadmCommands:
-            - curl -s -L https://raw.githubusercontent.com/linode/konnectivity/main/scripts/gen-konnectivity-kubeconfig.sh | bash
+            - curl -s -L https://raw.githubusercontent.com/linode/konnectivity/876b00f976975833929723ad9e247d0c124124bd/scripts/gen-konnectivity-kubeconfig.sh | bash
           clusterConfiguration:
             apiServer:
               extraArgs:
