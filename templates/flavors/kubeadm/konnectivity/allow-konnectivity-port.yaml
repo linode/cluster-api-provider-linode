@@ -16,6 +16,7 @@ data:
             - world
           toPorts:
             - ports:
+                - port: "6443"
                 - port: "8132"
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1

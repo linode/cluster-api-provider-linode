@@ -59,7 +59,7 @@ func TestConvertTo(t *testing.T) {
 				NodeBalancerID:                ptr.To(1234),
 				ApiserverLoadBalancerPort:     12345,
 				ApiserverNodeBalancerConfigID: ptr.To(2345),
-				Konnectivity:                  false,
+				AdditionalPorts:               []infrav1alpha2.LinodeNBPortConfig{},
 			},
 			ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
 			Region:               "test-region",
@@ -95,13 +95,16 @@ func TestConvertFrom(t *testing.T) {
 		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Network: infrav1alpha2.NetworkSpec{
-				LoadBalancerType:                 "test-type",
-				NodeBalancerID:                   ptr.To(1234),
-				ApiserverLoadBalancerPort:        12345,
-				ApiserverNodeBalancerConfigID:    ptr.To(2345),
-				Konnectivity:                     true,
-				KonnectivityLoadBalancerPort:     2222,
-				KonnectivityNodeBalancerConfigID: ptr.To(1111),
+				LoadBalancerType:              "test-type",
+				NodeBalancerID:                ptr.To(1234),
+				ApiserverLoadBalancerPort:     12345,
+				ApiserverNodeBalancerConfigID: ptr.To(2345),
+				AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
+					{
+						Port:                 8132,
+						NodeBalancerConfigID: ptr.To(1111),
+					},
+				},
 			},
 			ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
 			Region:               "test-region",

@@ -64,4 +64,5 @@ patches:
         name: ${CLUSTER_NAME}
       spec:
         network:
-          konnectivity: true
+          additionalPorts:
+          - port: 8132

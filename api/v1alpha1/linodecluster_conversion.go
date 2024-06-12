@@ -36,13 +36,11 @@ func (src *LinodeCluster) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Spec
 	dst.Spec.Network = infrastructurev1alpha2.NetworkSpec{
-		LoadBalancerType:                 src.Spec.Network.LoadBalancerType,
-		ApiserverLoadBalancerPort:        src.Spec.Network.LoadBalancerPort,
-		NodeBalancerID:                   src.Spec.Network.NodeBalancerID,
-		ApiserverNodeBalancerConfigID:    src.Spec.Network.NodeBalancerConfigID,
-		Konnectivity:                     false,
-		KonnectivityLoadBalancerPort:     0,
-		KonnectivityNodeBalancerConfigID: nil,
+		LoadBalancerType:              src.Spec.Network.LoadBalancerType,
+		ApiserverLoadBalancerPort:     src.Spec.Network.LoadBalancerPort,
+		NodeBalancerID:                src.Spec.Network.NodeBalancerID,
+		ApiserverNodeBalancerConfigID: src.Spec.Network.NodeBalancerConfigID,
+		AdditionalPorts:               make([]infrastructurev1alpha2.LinodeNBPortConfig, 0),
 	}
 	dst.Spec.ControlPlaneEndpoint = src.Spec.ControlPlaneEndpoint
 	dst.Spec.Region = src.Spec.Region

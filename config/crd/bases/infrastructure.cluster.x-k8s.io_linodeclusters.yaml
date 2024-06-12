@@ -329,6 +329,25 @@ spec:
                 description: NetworkSpec encapsulates all things related to Linode
                   network.
                 properties:
+                  additionalPorts:
+                    description: additionalPorts contains list of ports to be configured
+                      with NodeBalancer.
+                    items:
+                      properties:
+                        nodeBalancerConfigID:
+                          description: nodeBalancerConfigID is the config ID of port's
+                            NodeBalancer config.
+                          type: integer
+                        port:
+                          description: port configured on the NodeBalancer. It must
+                            be valid port range (1-65535).
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                      required:
+                      - port
+                      type: object
+                    type: array
                   apiserverLoadBalancerPort:
                     description: |-
                       apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
@@ -338,23 +357,7 @@ spec:
                     type: integer
                   apiserverNodeBalancerConfigID:
                     description: apiserverNodeBalancerConfigID is the config ID of
-                      api server NodeBalancer fonfig.
-                    type: integer
-                  konnectivity:
-                    description: |-
-                      Konnectivity flag tells whether or not the cluster is configured to use konnectivity.
-                      If omitted, default value is false.
-                    type: boolean
-                  konnectivityLoadBalancerPort:
-                    description: |-
-                      konnectivityLoadBalancerPort used by the konnectivity server. It must be valid ports range (1-65535).
-                      If omitted, default value is 8132.
-                    maximum: 65535
-                    minimum: 1
-                    type: integer
-                  konnectivityNodeBalancerConfigID:
-                    description: konnectivityNodeBalancerConfigID is the config ID
-                      of konnectivity server NodeBalancer config.
+                      api server NodeBalancer config.
                     type: integer
                   loadBalancerType:
                     description: LoadBalancerType is the type of load balancer to
