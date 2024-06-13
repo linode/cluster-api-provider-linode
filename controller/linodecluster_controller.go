@@ -198,6 +198,15 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 	}
 
 	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = util.Pointer(configs[0].ID)
+	additionalPorts := make([]infrav1alpha2.LinodeNBPortConfig, 0)
+	for _, config := range configs[1:] {
+		portConfig := infrav1alpha2.LinodeNBPortConfig{
+			Port:                 config.Port,
+			NodeBalancerConfigID: &config.ID,
+		}
+		additionalPorts = append(additionalPorts, portConfig)
+	}
+	clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = additionalPorts
 
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: *linodeNB.IPv4,
@@ -235,6 +244,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
 	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
+	clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = []infrav1alpha2.LinodeNBPortConfig{}
 
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")

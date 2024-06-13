@@ -15,6 +15,7 @@
       - [k3s](./topics/flavors/k3s.md)
       - [rke2](./topics/flavors/rke2.md)
       - [vpcless](./topics/flavors/vpcless.md)
+      - [konnectivity (kubeadm)](./topics/flavors/konnectivity.md)
     - [Etcd](./topics/etcd.md)
     - [Backups](./topics/backups.md)
     - [Multi-Tenancy](./topics/multi-tenancy.md)

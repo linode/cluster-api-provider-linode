@@ -31,6 +31,7 @@ See the [`clusterctl` flavors docs](https://cluster-api.sigs.k8s.io/clusterctl/c
 |                | kubeadm-dualstack          | Installs vpcless and enables IPv6 along with IPv4    |
 |                | kubeadm-self-healing       | Installs default along with the machine-health-check |
 |                |                            | add-on                                               |
+|                | kubeadm-konnectivity       | Installs and configures konnectivity within cluster  |
 |                | kubeadm-full               | Installs all non-vpcless based flavors combinations  |
 |                | kubeadm-fullvpcless        | Installs all vpcless based flavors combinations      |
 | k3s            | k3s                        | Installs Linode infra resources, k3s resources and   |
