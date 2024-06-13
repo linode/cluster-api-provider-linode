@@ -22,7 +22,7 @@ spec:
             cd $${DOWNLOAD_DIR}
             curl -L --remote-name-all https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet}
             chmod +x {kubeadm,kubelet}
-            curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/788018085cedd6534452feccfbeb942face3339d/scripts/add-kubeadm-required-files.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/e54a83afa86b34e08efe09f5de69bc40978942d3/scripts/add-kubeadm-required-files.sh | bash
           permissions: "0500"
       preKubeadmCommands:
         - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
