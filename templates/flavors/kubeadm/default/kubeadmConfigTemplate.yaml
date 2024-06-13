@@ -11,23 +11,18 @@ spec:
           content: |
             #!/bin/bash
             set -euo pipefail
-            PATCH_VERSION=$${1#[v]}
-            VERSION=$${PATCH_VERSION%.*}
-            curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/869bcdad9cf7daae533023c7869f62683d2a7f47/scripts/add-kubeadm-required-files.sh | bash
-
             export DEBIAN_FRONTEND=noninteractive
             apt-get update -y
             apt-get install -y containerd socat conntrack
 
+            PATCH_VERSION=$${1#[v]}
+            VERSION=$${PATCH_VERSION%.*}
             DOWNLOAD_DIR="/usr/local/bin"
             curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$${VERSION}.0/crictl-v$${VERSION}.0-linux-amd64.tar.gz" | tar -C $$DOWNLOAD_DIR -xz
             cd $${DOWNLOAD_DIR}
             curl -L --remote-name-all https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet}
             chmod +x {kubeadm,kubelet}
-            curl -sSL https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubelet/kubelet.service | sed "s:/usr/bin:$${DOWNLOAD_DIR}:g" | tee /usr/lib/systemd/system/kubelet.service
-            mkdir -p /usr/lib/systemd/system/kubelet.service.d
-            curl -sSL https://raw.githubusercontent.com/kubernetes/release/v0.16.2/cmd/krel/templates/latest/kubeadm/10-kubeadm.conf | sed "s:/usr/bin:$${DOWNLOAD_DIR}:g" | tee /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+            curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/788018085cedd6534452feccfbeb942face3339d/scripts/add-kubeadm-required-files.sh | bash
           permissions: "0500"
       preKubeadmCommands:
         - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
