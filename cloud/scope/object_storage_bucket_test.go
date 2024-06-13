@@ -249,7 +249,7 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 			name: "Failure - finalizer should not be added to the Bucket object. Function returns nil since it was already present",
 			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
-					Finalizers: []string{infrav1alpha1.GroupVersion.String()},
+					Finalizers: []string{infrav1alpha1.ObjectStorageBucketFinalizer},
 				},
 			},
 			expects: func(mock *mock.MockK8sClient) {
@@ -289,7 +289,7 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
-			if objScope.Bucket.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
+			if objScope.Bucket.Finalizers[0] != infrav1alpha1.ObjectStorageBucketFinalizer {
 				t.Errorf("Finalizer was not added")
 			}
 		})

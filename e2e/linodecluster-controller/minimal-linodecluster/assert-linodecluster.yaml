@@ -3,7 +3,7 @@ kind: LinodeCluster
 metadata:
   name: ($cluster)
   finalizers:
-    - infrastructure.cluster.x-k8s.io/v1alpha2
+    - linodecluster.infrastructure.cluster.x-k8s.io
 spec:
   region: us-sea
 status:

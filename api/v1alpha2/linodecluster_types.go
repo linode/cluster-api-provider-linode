@@ -23,6 +23,12 @@ import (
 	"sigs.k8s.io/cluster-api/errors"
 )
 
+const (
+	// ClusterFinalizer allows ReconcileLinodeCluster to clean up Linode resources associated
+	// with LinodeCluster before removing it from the apiserver.
+	ClusterFinalizer = "linodecluster.infrastructure.cluster.x-k8s.io"
+)
+
 // LinodeClusterSpec defines the desired state of LinodeCluster
 type LinodeClusterSpec struct {
 	// The Linode Region the LinodeCluster lives in.

@@ -217,10 +217,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 			return err
 		}
-		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String())
-		if controllerutil.ContainsFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String()) {
-			controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
-		}
+		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.ClusterFinalizer)
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "NodeBalancerIDMissing", "NodeBalancer ID is missing, nothing to do")
 
 		return nil
@@ -244,9 +241,13 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 		return err
 	}
-	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String())
+	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.ClusterFinalizer)
+	// TODO: remove these checks and removals later
 	if controllerutil.ContainsFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String()) {
 		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
+	}
+	if controllerutil.ContainsFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String())
 	}
 
 	return nil
