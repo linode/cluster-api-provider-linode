@@ -23,6 +23,12 @@ import (
 	"sigs.k8s.io/cluster-api/errors"
 )
 
+const (
+	// ClusterFinalizer allows ReconcileLinodeCluster to clean up Linode resources associated
+	// with LinodeCluster before removing it from the apiserver.
+	ClusterFinalizer = "linodecluster.infrastructure.cluster.x-k8s.io"
+)
+
 // LinodeClusterSpec defines the desired state of LinodeCluster
 type LinodeClusterSpec struct {
 	// The Linode Region the LinodeCluster lives in.
@@ -110,9 +116,22 @@ type NetworkSpec struct {
 	// NodeBalancerID is the id of NodeBalancer.
 	// +optional
 	NodeBalancerID *int `json:"nodeBalancerID,omitempty"`
-	// apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer fonfig.
+	// apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer config.
 	// +optional
 	ApiserverNodeBalancerConfigID *int `json:"apiserverNodeBalancerConfigID,omitempty"`
+	// additionalPorts contains list of ports to be configured with NodeBalancer.
+	// +optional
+	AdditionalPorts []LinodeNBPortConfig `json:"additionalPorts,omitempty"`
+}
+
+type LinodeNBPortConfig struct {
+	// port configured on the NodeBalancer. It must be valid port range (1-65535).
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port"`
+	// nodeBalancerConfigID is the config ID of port's NodeBalancer config.
+	// +optional
+	NodeBalancerConfigID *int `json:"nodeBalancerConfigID,omitempty"`
 }
 
 // +kubebuilder:object:root=true

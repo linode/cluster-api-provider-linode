@@ -233,7 +233,7 @@ func TestVPCScopeMethods(t *testing.T) {
 			LinodeVPC: &infrav1alpha1.LinodeVPC{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-vpc",
-					Finalizers: []string{infrav1alpha1.GroupVersion.String()},
+					Finalizers: []string{infrav1alpha1.VPCFinalizer},
 				},
 			},
 			expects: func(mock *mock.MockK8sClient) {
@@ -273,7 +273,7 @@ func TestVPCScopeMethods(t *testing.T) {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
-			if vScope.LinodeVPC.Finalizers[0] != infrav1alpha1.GroupVersion.String() {
+			if vScope.LinodeVPC.Finalizers[0] != infrav1alpha1.VPCFinalizer {
 				t.Errorf("Finalizer was not added")
 			}
 		})

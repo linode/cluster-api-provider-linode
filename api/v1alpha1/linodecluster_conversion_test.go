@@ -59,6 +59,7 @@ func TestConvertTo(t *testing.T) {
 				NodeBalancerID:                ptr.To(1234),
 				ApiserverLoadBalancerPort:     12345,
 				ApiserverNodeBalancerConfigID: ptr.To(2345),
+				AdditionalPorts:               []infrav1alpha2.LinodeNBPortConfig{},
 			},
 			ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
 			Region:               "test-region",
@@ -98,6 +99,12 @@ func TestConvertFrom(t *testing.T) {
 				NodeBalancerID:                ptr.To(1234),
 				ApiserverLoadBalancerPort:     12345,
 				ApiserverNodeBalancerConfigID: ptr.To(2345),
+				AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
+					{
+						Port:                 8132,
+						NodeBalancerConfigID: ptr.To(1111),
+					},
+				},
 			},
 			ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
 			Region:               "test-region",

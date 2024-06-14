@@ -110,7 +110,7 @@ func (s *ObjectStorageBucketScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.Bucket, infrav1alpha1.GroupVersion.String()) {
+	if controllerutil.AddFinalizer(s.Bucket, infrav1alpha1.ObjectStorageBucketFinalizer) {
 		return s.Close(ctx)
 	}
 
