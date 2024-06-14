@@ -9,8 +9,8 @@ package reconciler
 import (
 	"context"
 
+	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,15 +20,13 @@ import (
 // ReconcilerWithTracing implements wrappers.Reconciler interface instrumented with opentracing spans
 type ReconcilerWithTracing struct {
 	wrappers.Reconciler
-	_instance      string
 	_spanDecorator func(span trace.Span, params, results map[string]interface{})
 }
 
 // NewReconcilerWithTracing returns ReconcilerWithTracing
-func NewReconcilerWithTracing(base wrappers.Reconciler, instance string, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) ReconcilerWithTracing {
+func NewReconcilerWithTracing(base wrappers.Reconciler, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) ReconcilerWithTracing {
 	d := ReconcilerWithTracing{
 		Reconciler: base,
-		_instance:  instance,
 	}
 
 	if len(spanDecorator) > 0 && spanDecorator[0] != nil {
@@ -40,7 +38,7 @@ func NewReconcilerWithTracing(base wrappers.Reconciler, instance string, spanDec
 
 // Create implements wrappers.Reconciler
 func (_d ReconcilerWithTracing) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "wrappers.Reconciler.Create")
+	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Create")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -63,7 +61,7 @@ func (_d ReconcilerWithTracing) Create(ctx context.Context, obj client.Object, o
 
 // Delete implements wrappers.Reconciler
 func (_d ReconcilerWithTracing) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "wrappers.Reconciler.Delete")
+	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Delete")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -86,7 +84,7 @@ func (_d ReconcilerWithTracing) Delete(ctx context.Context, obj client.Object, o
 
 // DeleteAllOf implements wrappers.Reconciler
 func (_d ReconcilerWithTracing) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "wrappers.Reconciler.DeleteAllOf")
+	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.DeleteAllOf")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -109,7 +107,7 @@ func (_d ReconcilerWithTracing) DeleteAllOf(ctx context.Context, obj client.Obje
 
 // Get implements wrappers.Reconciler
 func (_d ReconcilerWithTracing) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "wrappers.Reconciler.Get")
+	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Get")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -133,7 +131,7 @@ func (_d ReconcilerWithTracing) Get(ctx context.Context, key client.ObjectKey, o
 
 // List implements wrappers.Reconciler
 func (_d ReconcilerWithTracing) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "wrappers.Reconciler.List")
+	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.List")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -156,7 +154,7 @@ func (_d ReconcilerWithTracing) List(ctx context.Context, list client.ObjectList
 
 // Patch implements wrappers.Reconciler
 func (_d ReconcilerWithTracing) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "wrappers.Reconciler.Patch")
+	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Patch")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -180,7 +178,7 @@ func (_d ReconcilerWithTracing) Patch(ctx context.Context, obj client.Object, pa
 
 // Reconcile implements wrappers.Reconciler
 func (_d ReconcilerWithTracing) Reconcile(ctx context.Context, req ctrl.Request) (r1 ctrl.Result, err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "wrappers.Reconciler.Reconcile")
+	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Reconcile")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -203,7 +201,7 @@ func (_d ReconcilerWithTracing) Reconcile(ctx context.Context, req ctrl.Request)
 
 // Update implements wrappers.Reconciler
 func (_d ReconcilerWithTracing) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) (err error) {
-	ctx, _span := otel.Tracer(_d._instance).Start(ctx, "wrappers.Reconciler.Update")
+	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Update")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{

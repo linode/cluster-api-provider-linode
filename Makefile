@@ -378,7 +378,7 @@ $(CHAINSAW): $(CACHE_BIN)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
-$(ENVTEST): $(LOCALBIN)
+$(ENVTEST): $(CACHE_BIN)
 	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: husky
@@ -405,6 +405,6 @@ $(MOCKGEN): $(LOCALBIN)
 
 .PHONY: gowrap
 gowrap: $(GOWRAP) ## Download gowrap locally if necessary.
-$(GOWRAP): $(GOWRAP)
-	GOBIN=$(LOCALBIN) go install github.com/hexdigest/gowrap@$(GOWRAP_VERSION)
+$(GOWRAP): $(CACHE_BIN)
+	GOBIN=$(CACHE_BIN) go install github.com/hexdigest/gowrap/cmd/gowrap@$(GOWRAP_VERSION)
 
