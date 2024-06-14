@@ -60,7 +60,6 @@ func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (L
 
 	return linodeclient.NewLinodeClientWithTracing(
 		&linodeClient,
-		"github.com/linode/cluster-api-provider-linode",
 	), nil
 }
 

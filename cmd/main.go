@@ -136,7 +136,6 @@ func main() {
 			WatchFilterValue: clusterWatchFilter,
 			LinodeApiKey:     linodeToken,
 		},
-		"github.com/linode/cluster-api-provider-linode",
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
 		os.Exit(1)
@@ -150,7 +149,6 @@ func main() {
 			WatchFilterValue: machineWatchFilter,
 			LinodeApiKey:     linodeToken,
 		},
-		"github.com/linode/cluster-api-provider-linode",
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
@@ -163,7 +161,6 @@ func main() {
 			WatchFilterValue: clusterWatchFilter,
 			LinodeApiKey:     linodeToken,
 		},
-		"github.com/linode/cluster-api-provider-linode",
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)
@@ -177,7 +174,6 @@ func main() {
 			WatchFilterValue: objectStorageBucketWatchFilter,
 			LinodeApiKey:     linodeToken,
 		},
-		"github.com/linode/cluster-api-provider-linode",
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)

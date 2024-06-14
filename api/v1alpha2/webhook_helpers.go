@@ -46,7 +46,6 @@ var (
 	// defaultLinodeClient is an unauthenticated Linode client
 	defaultLinodeClient = linodeclient.NewLinodeClientWithTracing(
 		mkptr(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
-		"github.com/linode/cluster-api-provider-linode",
 	)
 )
 
