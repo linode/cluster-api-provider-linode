@@ -11,28 +11,8 @@ spec:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
       name: ${CLUSTER_NAME}-control-plane
   kubeadmConfigSpec:
-    files:
-      - path: /kubeadm-pre-init.sh
-        content: |
-          #!/bin/bash
-          set -euo pipefail
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update -y
-          apt-get install -y containerd socat conntrack
-
-          PATCH_VERSION=$${1#[v]}
-          VERSION=$${PATCH_VERSION%.*}
-          DOWNLOAD_DIR="/usr/local/bin"
-          curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v$${VERSION}.0/crictl-v$${VERSION}.0-linux-amd64.tar.gz" | tar -C $$DOWNLOAD_DIR -xz
-          cd $${DOWNLOAD_DIR}
-          curl -L --remote-name-all https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/{kubeadm,kubelet}
-          chmod +x {kubeadm,kubelet}
-          curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/e54a83afa86b34e08efe09f5de69bc40978942d3/scripts/add-kubeadm-required-files.sh | bash
-        permissions: "0500"
     preKubeadmCommands:
-      - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
-      - sed -i '/swap/d' /etc/fstab
-      - swapoff -a
+      - curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/f713c596f21e2744d33be633682aff9dfcdc0418/scripts/pre-kubeadminit.sh | bash -s ${KUBERNETES_VERSION}
       - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
     clusterConfiguration:
       etcd:

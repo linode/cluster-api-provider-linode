@@ -70,4 +70,17 @@ ExecStart=
 ExecStart=/usr/local/bin/kubelet \$KUBELET_KUBECONFIG_ARGS \$KUBELET_CONFIG_ARGS \$KUBELET_KUBEADM_ARGS \$KUBELET_EXTRA_ARGS
 EOF
 
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sed -i '/swap/d' /etc/fstab
+swapoff -a
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y containerd socat conntrack
+
+PATCH_VERSION=${1#[v]}
+VERSION=${PATCH_VERSION%.*}
+curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${VERSION}.0/crictl-v${VERSION}.0-linux-amd64.tar.gz" | tar -C /usr/local/bin -xz
+cd /usr/local/bin
+curl -L --remote-name-all https://dl.k8s.io/release/$1/bin/linux/amd64/{kubeadm,kubelet}
+curl -LO "https://dl.k8s.io/release/v${VERSION}.0/bin/linux/amd64/kubectl"
+chmod +x {kubeadm,kubelet,kubectl}
