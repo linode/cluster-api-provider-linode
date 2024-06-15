@@ -58,7 +58,7 @@ var (
 )
 
 const (
-	controllerName = "cluster-api-privider-linode.linode.com"
+	controllerName = "cluster-api-provider-linode.linode.com"
 	gracePeriod    = 5 * time.Second
 	envK8sNodeName = "K8S_NODE_NAME"
 	envK8sPodName  = "K8S_POD_NAME"
