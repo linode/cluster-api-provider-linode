@@ -375,32 +375,17 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
-		if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
-			if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
-				logger.Error(err, "Failed to add instance to Node Balancer backend")
+		if err := r.addMachineToLB(ctx, logger, machineScope); err != nil {
+			logger.Error(err, "Failed to add machine to LB")
 
-				if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-					ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
-					reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-					return ctrl.Result{}, err
-				}
-
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+				return ctrl.Result{}, err
 			}
-		} else {
-			if err := services.AddIPToDNS(ctx, logger, machineScope); err != nil {
-				logger.Error(err, "Failed to add instance to DNS entry")
 
-				if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-					ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
-					reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-					return ctrl.Result{}, err
-				}
-
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
-			}
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
-
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
 	}
 
@@ -428,6 +413,24 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
 
 	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) addMachineToLB(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+) error {
+	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
+		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
+			return err
+		}
+	} else {
+		if err := services.AddIPToDNS(ctx, logger, machineScope); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *LinodeMachineReconciler) configureDisks(

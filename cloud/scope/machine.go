@@ -53,7 +53,7 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(ctx context.Context, apiKey string, dnsKey string, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}

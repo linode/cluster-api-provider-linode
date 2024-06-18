@@ -46,6 +46,10 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
+const (
+	defaultApiserverPort = 6443
+)
+
 // LinodeClusterReconciler reconciles a LinodeCluster object
 type LinodeClusterReconciler struct {
 	client.Client
@@ -179,7 +183,7 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 		domainName := clusterScope.LinodeCluster.ObjectMeta.Name + "-" + clusterScope.LinodeCluster.Spec.Network.DNSUniqueIdentifier + "." + clusterScope.LinodeCluster.Spec.Network.DNSRootDomain
 		clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 			Host: domainName,
-			Port: int32(6443),
+			Port: int32(defaultApiserverPort),
 		}
 	} else {
 		linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)

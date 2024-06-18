@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/linodego"
 	kutil "sigs.k8s.io/cluster-api/util"
+
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 )
 
 // AddIPToDNS creates domain record for machine public ip
@@ -18,7 +18,6 @@ func AddIPToDNS(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) error {
-
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
 		return nil
@@ -40,11 +39,16 @@ func AddIPToDNS(
 
 	// Check if record exists for this IP and name combo
 	domainHostname := machineScope.LinodeCluster.ObjectMeta.Name + "-" + machineScope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
-	filterNew, _ := json.Marshal(map[string]interface{}{"name": domainHostname, "target": publicIP})
-
-	domainRecords, err := machineScope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filterNew)))
+	filter, err := json.Marshal(map[string]interface{}{"name": domainHostname, "target": publicIP})
 	if err != nil {
-		return fmt.Errorf("unable to get current DNS record from API: %s", err)
+		logger.Error(err, "Failed to marshal domain filter")
+		return err
+	}
+
+	domainRecords, err := machineScope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
+	if err != nil {
+		logger.Error(err, "unable to get current DNS record from API")
+		return err
 	}
 
 	// If record doesnt exist, create it else update it
@@ -104,11 +108,16 @@ func DeleteIPFromDNS(
 
 	// Check if record exists for this IP and name combo
 	domainHostname := machineScope.LinodeCluster.ObjectMeta.Name + "-" + machineScope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
-	filterNew, _ := json.Marshal(map[string]interface{}{"name": domainHostname, "target": publicIP})
-
-	domainRecords, err := machineScope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filterNew)))
+	filter, err := json.Marshal(map[string]interface{}{"name": domainHostname, "target": publicIP})
 	if err != nil {
-		return fmt.Errorf("unable to get current DNS record from API: %s", err)
+		logger.Error(err, "Failed to marshal domain filter")
+		return err
+	}
+
+	domainRecords, err := machineScope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
+	if err != nil {
+		logger.Error(err, "unable to get current DNS record from API")
+		return err
 	}
 
 	// If domain record exists, delete it
@@ -129,7 +138,6 @@ func GetMachinePublicIP(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) (string, error) {
-
 	// Get the public IP that was assigned
 	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
 	if err != nil {
@@ -153,7 +161,6 @@ func GetDomainID(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) (int, error) {
-
 	// Get domainID from domain name
 	rootDomain := machineScope.LinodeCluster.Spec.Network.DNSRootDomain
 	filter, err := json.Marshal(map[string]interface{}{"domain": rootDomain})
@@ -174,5 +181,4 @@ func GetDomainID(
 	}
 
 	return domains[0].ID, nil
-
 }
