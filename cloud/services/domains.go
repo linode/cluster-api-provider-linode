@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -26,29 +27,25 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	// Get the public IP that was assigned
 	publicIP, err := GetMachinePublicIP(ctx, logger, mscope)
 	if err != nil {
-		logger.Error(err, "Failed to get public IP of machine")
-		return err
+		return fmt.Errorf("failed to get public IP of machine: %w", err)
 	}
 
 	// Get domainID from domain name
 	domainID, err := GetDomainID(ctx, logger, mscope)
 	if err != nil {
-		logger.Error(err, "Failed to get domain ID")
-		return err
+		return fmt.Errorf("failed to get domain ID: %w", err)
 	}
 
 	// Check if record exists for this IP and name combo
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 	filter, err := json.Marshal(map[string]interface{}{"name": domainHostname, "target": publicIP})
 	if err != nil {
-		logger.Error(err, "Failed to marshal domain filter")
-		return err
+		return fmt.Errorf("failed to marshal domain filter: %w", err)
 	}
 
 	domainRecords, err := mscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
 	if err != nil {
-		logger.Error(err, "unable to get current DNS record from API")
-		return err
+		return fmt.Errorf("unable to get current DNS record from API: %w", err)
 	}
 
 	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
@@ -65,8 +62,7 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 		}
 
 		if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(ctx, domainID, recordReq); err != nil {
-			logger.Error(err, "Failed to create domain record")
-			return err
+			return fmt.Errorf("failed to create domain record: %w", err)
 		}
 		return nil
 	}
@@ -82,8 +78,7 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 		domainRecords[0].ID,
 		recordReq,
 	); err != nil {
-		logger.Error(err, "Failed to update domain record")
-		return err
+		return fmt.Errorf("failed to update domain record: %w", err)
 	}
 	return nil
 }
@@ -99,37 +94,32 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	// Get the public IP that was assigned
 	publicIP, err := GetMachinePublicIP(ctx, logger, mscope)
 	if err != nil {
-		logger.Error(err, "Failed to get public IP of machine")
-		return err
+		return fmt.Errorf("failed to get public IP of machine: %w", err)
 	}
 
 	// Get domainID from domain name
 	domainID, err := GetDomainID(ctx, logger, mscope)
 	if err != nil {
-		logger.Error(err, "Failed to get domain ID")
-		return err
+		return fmt.Errorf("failed to get domain ID: %w", err)
 	}
 
 	// Check if record exists for this IP and name combo
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 	filter, err := json.Marshal(map[string]interface{}{"name": domainHostname, "target": publicIP})
 	if err != nil {
-		logger.Error(err, "Failed to marshal domain filter")
-		return err
+		return fmt.Errorf("failed to marshal domain filter: %w", err)
 	}
 
 	domainRecords, err := mscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
 	if err != nil {
-		logger.Error(err, "unable to get current DNS record from API")
-		return err
+		return fmt.Errorf("unable to get current DNS record from API: %w", err)
 	}
 
 	// If domain record exists, delete it
 	if domainRecords != nil {
 		err := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID)
 		if err != nil {
-			logger.Error(err, "Failed to delete domain record")
-			return err
+			return fmt.Errorf("failed to delete domain record: %w", err)
 		}
 	}
 
@@ -155,8 +145,7 @@ func GetMachinePublicIP(ctx context.Context, mscope *scope.MachineScope) (string
 	// Get the public IP that was assigned
 	addresses, err := mscope.LinodeClient.GetInstanceIPAddresses(ctx, *mscope.LinodeMachine.Spec.InstanceID)
 	if err != nil {
-		logger.Error(err, "Failed get instance IP addresses")
-		return "", err
+		return "", fmt.Errorf("failed to get ip address of the instance: %w", err)
 	}
 	if len(addresses.IPv4.Public) == 0 {
 		err := errors.New("no public IP address")
@@ -173,19 +162,14 @@ func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
 	rootDomain := mscope.LinodeCluster.Spec.Network.DNSRootDomain
 	filter, err := json.Marshal(map[string]string{"domain": rootDomain})
 	if err != nil {
-		logger.Error(err, "Failed to marshal domain filter")
-		return 0, err
+		return fmt.Errorf("failed to marshal domain filter: %w", err)
 	}
-
 	domains, err := mscope.LinodeDomainsClient.ListDomains(ctx, linodego.NewListOptions(0, string(filter)))
-
 	if err != nil {
-		logger.Error(err, "Failed to list matching domains")
-		return 0, err
+		return 0, fmt.Errorf("failed to list domains: %w", err)
 	}
 	if len(domains) != 1 || domains[0].Domain != rootDomain {
-		logger.Error(err, "Failed to retrieve Linode Domain")
-		return 0, err
+		return 0, fmt.Errorf("domain not found in list of domains: %w", err)
 	}
 
 	return domains[0].ID, nil
