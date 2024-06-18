@@ -79,20 +79,15 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 	}
 
 	if credentialRef != nil {
-		credSecret, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace)
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-
 		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, ok := credSecret.Data["apiToken"]
-		if !ok {
-			return nil, fmt.Errorf("no apiToken key in credentials secret")
+		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "apiToken")
+		if err != nil {
+			return nil, fmt.Errorf("error get data for key apiToken")
 		}
 		apiKey = string(apiToken)
 
-		dnsToken, ok := credSecret.Data["dnsToken"]
-		if !ok {
+		dnsToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "dnsToken")
+		if err != nil {
 			dnsToken = apiToken
 		}
 		dnsKey = string(dnsToken)

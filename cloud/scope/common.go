@@ -44,13 +44,17 @@ func CreateLinodeClient(apiKey string, timeout time.Duration) (*linodego.Client,
 	return &linodeClient, nil
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
+func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {
 	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return nil, err
 	}
+	data, ok := credSecret.Data[key]
+	if !ok {
+		return nil, fmt.Errorf("no %s key in credentials secret", key)
+	}
 
-	return credSecret, nil
+	return data, nil
 }
 
 func addCredentialsFinalizer(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
