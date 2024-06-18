@@ -204,7 +204,16 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 			return err
 		}
 
-		clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = util.Pointer(configs[0].ID)
+    clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = util.Pointer(configs[0].ID)
+    additionalPorts := make([]infrav1alpha2.LinodeNBPortConfig, 0)
+    for _, config := range configs[1:] {
+      portConfig := infrav1alpha2.LinodeNBPortConfig{
+        Port:                 config.Port,
+        NodeBalancerConfigID: &config.ID,
+      }
+      additionalPorts = append(additionalPorts, portConfig)
+    }
+    clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = additionalPorts
 
 		clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 			Host: *linodeNB.IPv4,
@@ -225,10 +234,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 			return err
 		}
-		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String())
-		if controllerutil.ContainsFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String()) {
-			controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
-		}
+		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.ClusterFinalizer)
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "NodeBalancerIDMissing", "NodeBalancer ID is missing, nothing to do")
 
 		return nil
@@ -246,15 +252,20 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
 	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
+	clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = []infrav1alpha2.LinodeNBPortConfig{}
 
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")
 		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 		return err
 	}
-	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String())
+	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.ClusterFinalizer)
+	// TODO: remove these checks and removals later
 	if controllerutil.ContainsFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String()) {
 		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha1.GroupVersion.String())
+	}
+	if controllerutil.ContainsFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.GroupVersion.String())
 	}
 
 	return nil

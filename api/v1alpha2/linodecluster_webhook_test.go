@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
 
@@ -43,6 +44,12 @@ func TestValidateLinodeCluster(t *testing.T) {
 				Region: "example",
 				Network: NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
+					AdditionalPorts: []LinodeNBPortConfig{
+						{
+							Port:                 8132,
+							NodeBalancerConfigID: ptr.To(1234),
+						},
+					},
 				},
 			},
 		}

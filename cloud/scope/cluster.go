@@ -108,7 +108,7 @@ func (s *ClusterScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *ClusterScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.LinodeCluster, infrav1alpha2.GroupVersion.String()) {
+	if controllerutil.AddFinalizer(s.LinodeCluster, infrav1alpha2.ClusterFinalizer) {
 		return s.Close(ctx)
 	}
 

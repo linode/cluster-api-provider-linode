@@ -22,8 +22,11 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+const (
+	// ObjectStorageBucketFinalizer allows ReconcileLinodeObjectStorageBucket to clean up Linode resources associated
+	// with LinodeObjectStorageBucket before removing it from the apiserver.
+	ObjectStorageBucketFinalizer = "linodeobjectstoragebucket.infrastructure.cluster.x-k8s.io"
+)
 
 // LinodeObjectStorageBucketSpec defines the desired state of LinodeObjectStorageBucket
 type LinodeObjectStorageBucketSpec struct {

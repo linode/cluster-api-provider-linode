@@ -103,7 +103,7 @@ func (s *VPCScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *VPCScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.LinodeVPC, infrav1alpha1.GroupVersion.String()) {
+	if controllerutil.AddFinalizer(s.LinodeVPC, infrav1alpha1.VPCFinalizer) {
 		return s.Close(ctx)
 	}
 
