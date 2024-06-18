@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	kutil "sigs.k8s.io/cluster-api/util"
 
@@ -18,20 +17,19 @@ var dnsTTLSec = 30
 
 // AddIPToDNS creates domain record for machine public ip
 func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
-	logger := logr.FromContextOrDiscard(ctx)
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
 		return nil
 	}
 
 	// Get the public IP that was assigned
-	publicIP, err := GetMachinePublicIP(ctx, logger, mscope)
+	publicIP, err := GetMachinePublicIP(ctx, mscope)
 	if err != nil {
 		return fmt.Errorf("failed to get public IP of machine: %w", err)
 	}
 
 	// Get domainID from domain name
-	domainID, err := GetDomainID(ctx, logger, mscope)
+	domainID, err := GetDomainID(ctx, mscope)
 	if err != nil {
 		return fmt.Errorf("failed to get domain ID: %w", err)
 	}
@@ -85,20 +83,19 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 
 // DeleteNodeFromNB removes a backend Node from the Node Balancer configuration
 func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
-	logger := logr.FromContextOrDiscard(ctx)
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
 		return nil
 	}
 
 	// Get the public IP that was assigned
-	publicIP, err := GetMachinePublicIP(ctx, logger, mscope)
+	publicIP, err := GetMachinePublicIP(ctx, mscope)
 	if err != nil {
 		return fmt.Errorf("failed to get public IP of machine: %w", err)
 	}
 
 	// Get domainID from domain name
-	domainID, err := GetDomainID(ctx, logger, mscope)
+	domainID, err := GetDomainID(ctx, mscope)
 	if err != nil {
 		return fmt.Errorf("failed to get domain ID: %w", err)
 	}
@@ -135,9 +132,8 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 
 // GetMachinePublicIP gets the machines public IP
 func GetMachinePublicIP(ctx context.Context, mscope *scope.MachineScope) (string, error) {
-	logger := logr.FromContextOrDiscard(ctx)
 	// Verify instance id is not nil
-	if *mscope.LinodeMachine.Spec.InstanceID == nil {
+	if mscope.LinodeMachine.Spec.InstanceID == nil {
 		err := errors.New("instance ID is nil. cant get machine's public ip")
 		return "", err
 	}
@@ -157,12 +153,11 @@ func GetMachinePublicIP(ctx context.Context, mscope *scope.MachineScope) (string
 
 // GetDomainID gets the domains linode id
 func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
-	logger := logr.FromContextOrDiscard(ctx)
 	// Get domainID from domain name
 	rootDomain := mscope.LinodeCluster.Spec.Network.DNSRootDomain
 	filter, err := json.Marshal(map[string]string{"domain": rootDomain})
 	if err != nil {
-		return fmt.Errorf("failed to marshal domain filter: %w", err)
+		return 0, fmt.Errorf("failed to marshal domain filter: %w", err)
 	}
 	domains, err := mscope.LinodeDomainsClient.ListDomains(ctx, linodego.NewListOptions(0, string(filter)))
 	if err != nil {

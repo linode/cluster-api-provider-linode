@@ -207,8 +207,10 @@ func (r *LinodeMachineReconciler) reconcile(
 			Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
 		}
 
-		if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); client.IgnoreNotFound(err) != nil {
-			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
+		if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
+			if err = client.IgnoreNotFound(err); err != nil {
+				return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
+			}
 		}
 
 		err = r.reconcileDelete(ctx, logger, machineScope)
@@ -221,8 +223,10 @@ func (r *LinodeMachineReconciler) reconcile(
 		Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
 	}
 
-	if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); client.IgnoreNotFound(err) != nil {
-		return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
+	if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
+		if err = client.IgnoreNotFound(err); err != nil {
+			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
+		}
 	}
 
 	// Update
@@ -417,7 +421,7 @@ func (r *LinodeMachineReconciler) addMachineToLB(
 			return err
 		}
 	} else {
-		if err := services.AddIPToDNS(ctx, logger, machineScope); err != nil {
+		if err := services.AddIPToDNS(ctx, machineScope); err != nil {
 			return err
 		}
 	}
@@ -677,7 +681,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 			return err
 		}
 	} else {
-		if err := services.DeleteIPFromDNS(ctx, logger, machineScope); err != nil {
+		if err := services.DeleteIPFromDNS(ctx, machineScope); err != nil {
 			logger.Error(err, "Failed to remove IP from DNS")
 			return err
 		}
