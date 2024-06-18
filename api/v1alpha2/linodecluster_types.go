@@ -117,6 +117,11 @@ type NetworkSpec struct {
 	// If not set, CAPL will create a unique identifier for you
 	// +optional
 	DNSUniqueIdentifier string `json:"dnsUniqueIdentifier,omitempty"`
+	// DNSTTLSec is the TTL for the domain record
+	// Ignored if the LoadBalancerType is set to anything other than dns
+	// If not set, defaults to 30
+	// +optional
+	DNSTTLSec int `json:"dnsTTLsec,omitempty"`
 	// apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
 	// If omitted, default value is 6443.
 	// +kubebuilder:validation:Minimum=1

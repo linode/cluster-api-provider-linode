@@ -61,9 +61,10 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
 		apiToken, ok := data.Data["apiToken"]
 		if !ok {
-			return nil, fmt.Errorf("no apiToken key in credentials secrets")
+			return nil, fmt.Errorf("no apiToken key in credentials secrets %s/%s", params.LinodeCluster.Spec.CredentialsRef.Namespace, params.LinodeCluster.Spec.CredentialsRef.Name)
 		}
 		apiKey = string(apiToken)
 	}

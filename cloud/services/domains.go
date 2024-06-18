@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 )
+
+var dnsTTLSec = 30
 
 // AddIPToDNS creates domain record for machine public ip
 func AddIPToDNS(
@@ -51,12 +54,17 @@ func AddIPToDNS(
 		return err
 	}
 
+	if machineScope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
+		dnsTTLSec = machineScope.LinodeCluster.Spec.Network.DNSTTLSec
+	}
+
 	// If record doesnt exist, create it else update it
 	if domainRecords == nil {
 		recordReq := linodego.DomainRecordCreateOptions{
 			Type:   "A",
 			Name:   domainHostname,
 			Target: publicIP,
+			TTLSec: dnsTTLSec,
 		}
 
 		_, err := machineScope.LinodeDomainsClient.CreateDomainRecord(ctx, domainID, recordReq)
@@ -69,6 +77,7 @@ func AddIPToDNS(
 			Type:   "A",
 			Name:   domainHostname,
 			Target: publicIP,
+			TTLSec: dnsTTLSec,
 		}
 
 		_, err := machineScope.LinodeDomainsClient.UpdateDomainRecord(ctx, domainID, domainRecords[0].ID, recordReq)
@@ -128,6 +137,13 @@ func DeleteIPFromDNS(
 			return err
 		}
 	}
+
+	if machineScope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
+		dnsTTLSec = machineScope.LinodeCluster.Spec.Network.DNSTTLSec
+	}
+
+	// Wait for TTL to expire
+	time.Sleep(time.Duration(dnsTTLSec) * time.Second)
 
 	return nil
 }
