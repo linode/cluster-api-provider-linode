@@ -142,7 +142,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	// Create
-	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
+	if (clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "") || (clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns") {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
 			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
 				logger.Info("re-queuing cluster/nb creation")
@@ -175,33 +175,41 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 		return err
 	}
 
-	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
-	if err != nil {
-		logger.Error(err, "failed to create nodebalancer")
-		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
-		return err
-	}
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
+		domainName := clusterScope.LinodeCluster.ObjectMeta.Name + "-" + clusterScope.LinodeCluster.Spec.Network.DNSUniqueIdentifier + "." + clusterScope.LinodeCluster.Spec.Network.DNSRootDomain
+		clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+			Host: domainName,
+			Port: int32(6443),
+		}
+	} else {
+		linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
+		if err != nil {
+			logger.Error(err, "failed to create nodebalancer")
+			setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+			return err
+		}
 
-	if linodeNB == nil {
-		err = fmt.Errorf("nodeBalancer created was nil")
-		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
-		return err
-	}
+		if linodeNB == nil {
+			err = fmt.Errorf("nodeBalancer created was nil")
+			setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+			return err
+		}
 
-	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = &linodeNB.ID
+		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = &linodeNB.ID
 
-	configs, err := services.CreateNodeBalancerConfigs(ctx, clusterScope, logger)
-	if err != nil {
-		logger.Error(err, "failed to create nodebalancer config")
-		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
-		return err
-	}
+		configs, err := services.CreateNodeBalancerConfigs(ctx, clusterScope, logger)
+		if err != nil {
+			logger.Error(err, "failed to create nodebalancer config")
+			setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+			return err
+		}
 
-	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = util.Pointer(configs[0].ID)
+		clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = util.Pointer(configs[0].ID)
 
-	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
-		Host: *linodeNB.IPv4,
-		Port: int32(configs[0].Port),
+		clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+			Host: *linodeNB.IPv4,
+			Port: int32(configs[0].Port),
+		}
 	}
 
 	return nil

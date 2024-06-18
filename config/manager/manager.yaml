@@ -42,48 +42,53 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-      - command:
-        - /manager
-        args:
-        - --leader-elect
-        image: controller:latest
-        env:
-        - name: LINODE_TOKEN
-          valueFrom:
-             secretKeyRef:
-               name: token
-               key: LINODE_TOKEN
-        - name: LINODE_API_VERSION
-          value: v4beta
-        name: manager
-        securityContext:
-          readOnlyRootFilesystem: true
-          allowPrivilegeEscalation: false
-          runAsUser: 65532
-          runAsGroup: 65532
-          capabilities:
-            drop:
-              - "ALL"
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        # TODO(user): Configure the resources accordingly based on the project requirements.
-        # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-        resources:
-          limits:
-            cpu: 500m
-            memory: 128Mi
-          requests:
-            cpu: 10m
-            memory: 64Mi
+        - command:
+            - /manager
+          args:
+            - --leader-elect
+          image: controller:latest
+          env:
+            - name: LINODE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: capl-manager-credentials
+                  key: LINODE_TOKEN
+            - name: LINODE_DNS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: capl-manager-credentials
+                  key: LINODE_DNS_TOKEN
+            - name: LINODE_API_VERSION
+              value: v4beta
+          name: manager
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsUser: 65532
+            runAsGroup: 65532
+            capabilities:
+              drop:
+                - "ALL"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          # TODO(user): Configure the resources accordingly based on the project requirements.
+          # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 64Mi
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

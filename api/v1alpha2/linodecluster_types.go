@@ -98,9 +98,19 @@ func (lm *LinodeCluster) SetConditions(conditions clusterv1.Conditions) {
 // NetworkSpec encapsulates Linode networking resources.
 type NetworkSpec struct {
 	// LoadBalancerType is the type of load balancer to use, defaults to NodeBalancer if not otherwise set
-	// +kubebuilder:validation:Enum=NodeBalancer
+	// +kubebuilder:validation:Enum=NodeBalancer;dns
 	// +optional
 	LoadBalancerType string `json:"loadBalancerType,omitempty"`
+	// DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
+	// Ignored if the LoadBalancerType is set to anything other than dns
+	// +optional
+	DNSRootDomain string `json:"dnsRootDomain,omitempty"`
+	// DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
+	// DNS record
+	// Ignored if the LoadBalancerType is set to anything other than dns
+	// If not set, CAPL will create a unique identifier for you
+	// +optional
+	DNSUniqueIdentifier string `json:"dnsUniqueIdentifier,omitempty"`
 	// apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
 	// If omitted, default value is 6443.
 	// +kubebuilder:validation:Minimum=1

@@ -91,6 +91,7 @@ type LinodeMachineReconciler struct {
 	client.Client
 	Recorder         record.EventRecorder
 	LinodeApiKey     string
+	LinodeDNSApiKey  string
 	WatchFilterValue string
 	Scheme           *runtime.Scheme
 	ReconcileTimeout time.Duration
@@ -139,6 +140,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	machineScope, err := scope.NewMachineScope(
 		ctx,
 		r.LinodeApiKey,
+		r.LinodeDNSApiKey,
 		scope.MachineScopeParams{
 			Client:        r.Client,
 			Cluster:       cluster,
@@ -199,6 +201,19 @@ func (r *LinodeMachineReconciler) reconcile(
 	// Delete
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = cerrs.DeleteMachineError
+
+		linodeClusterKey := client.ObjectKey{
+			Namespace: machineScope.LinodeMachine.Namespace,
+			Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
+		}
+
+		if err = r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
+			if err = client.IgnoreNotFound(err); err != nil {
+				logger.Error(err, "Failed to fetch Linode cluster")
+			}
+
+			return
+		}
 
 		err = r.reconcileDelete(ctx, logger, machineScope)
 
@@ -360,16 +375,30 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
-		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
-			logger.Error(err, "Failed to add instance to Node Balancer backend")
+		if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
+			if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
+				logger.Error(err, "Failed to add instance to Node Balancer backend")
 
-			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-				return ctrl.Result{}, err
+				if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+					ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
+					reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+					return ctrl.Result{}, err
+				}
+
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 			}
+		} else {
+			if err := services.AddIPToDNS(ctx, logger, machineScope); err != nil {
+				logger.Error(err, "Failed to add instance to DNS entry")
 
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+				if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+					ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
+					reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+					return ctrl.Result{}, err
+				}
+
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			}
 		}
 
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
@@ -647,10 +676,16 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		return nil
 	}
 
-	if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
-		logger.Error(err, "Failed to remove node from Node Balancer backend")
-
-		return err
+	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
+		if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
+			logger.Error(err, "Failed to remove node from Node Balancer backend")
+			return err
+		}
+	} else {
+		if err := services.DeleteIPFromDNS(ctx, logger, machineScope); err != nil {
+			logger.Error(err, "Failed to remove IP from DNS")
+			return err
+		}
 	}
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {

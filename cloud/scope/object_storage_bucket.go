@@ -76,7 +76,11 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		if err != nil {
 			return nil, fmt.Errorf("credentials from cluster secret ref: %w", err)
 		}
-		apiKey = string(data)
+		apiToken, ok := data.Data["apiToken"]
+		if !ok {
+			return nil, fmt.Errorf("no apiToken key in credentials secret")
+		}
+		apiKey = string(apiToken)
 	}
 	linodeClient, err := CreateLinodeClient(apiKey, clientTimeout)
 	if err != nil {

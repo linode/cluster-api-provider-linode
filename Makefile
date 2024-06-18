@@ -151,7 +151,6 @@ e2etest: generate local-release local-deploy chainsaw
 	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
-	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci -f Tiltfile
 
@@ -203,7 +202,6 @@ endif
 
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt kind clusterctl
-	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) up --stream
 

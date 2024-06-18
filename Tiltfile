@@ -128,6 +128,7 @@ manager_yaml = decode_yaml_stream(kustomize("config/default"))
 for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":
         resource["stringData"]["apiToken"] = os.getenv("LINODE_TOKEN")
+        resource["stringData"]["dnsToken"] = os.getenv("LINODE_DNS_TOKEN")
     if (
         resource["kind"] == "CustomResourceDefinition"
         and resource["spec"]["group"] == "infrastructure.cluster.x-k8s.io"

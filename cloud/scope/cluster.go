@@ -61,7 +61,11 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(data)
+		apiToken, ok := data.Data["apiToken"]
+		if !ok {
+			return nil, fmt.Errorf("no apiToken key in credentials secrets")
+		}
+		apiKey = string(apiToken)
 	}
 	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout)
 	if err != nil {
