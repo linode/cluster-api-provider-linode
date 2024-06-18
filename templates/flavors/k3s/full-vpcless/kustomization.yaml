@@ -145,9 +145,7 @@ patches:
         value:
           - |
             mkdir -p /etc/rancher/k3s/config.yaml.d/
-            echo -n "kubelet-arg: \"--node-ip=" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
-            echo -n "$(ip a s eth0 |grep -E 'inet '  |cut -d' ' -f6|cut -d/ -f1 | grep -E '192.168')" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
-            echo ",$(ip a s eth0 |grep -E 'inet6 '  |cut -d' ' -f6|cut -d/ -f1 | grep -vE 'fe80')\"" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+            echo "node-ip: $(ip a s eth0 |grep -E 'inet '  |cut -d' ' -f6|cut -d/ -f1 | grep -E '192.168'),$(ip a s eth0 |grep -E 'inet6 '  |cut -d' ' -f6|cut -d/ -f1 | grep -vE 'fe80')" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
           - sed -i '/swap/d' /etc/fstab
           - swapoff -a
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
@@ -161,9 +159,7 @@ patches:
         value:
           - |
             mkdir -p /etc/rancher/k3s/config.yaml.d/
-            echo -n "kubelet-arg: \"--node-ip=" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
-            echo -n "$(ip a s eth0 |grep -E 'inet '  |cut -d' ' -f6|cut -d/ -f1 | grep -E '192.168')" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
-            echo ",$(ip a s eth0 |grep -E 'inet6 '  |cut -d' ' -f6|cut -d/ -f1 | grep -vE 'fe80')\"" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
+            echo "node-ip: $(ip a s eth0 |grep -E 'inet '  |cut -d' ' -f6|cut -d/ -f1 | grep -E '192.168'),$(ip a s eth0 |grep -E 'inet6 '  |cut -d' ' -f6|cut -d/ -f1 | grep -vE 'fe80')" >> /etc/rancher/k3s/config.yaml.d/capi-config.yaml
           - sed -i '/swap/d' /etc/fstab
           - swapoff -a
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
