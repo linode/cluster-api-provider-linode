@@ -207,12 +207,8 @@ func (r *LinodeMachineReconciler) reconcile(
 			Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
 		}
 
-		if err = r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
-			if err = client.IgnoreNotFound(err); err != nil {
-				logger.Error(err, "Failed to fetch Linode cluster")
-			}
-
-			return
+		if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); client.IgnoreNotFound(err) != nil {
+			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
 		}
 
 		err = r.reconcileDelete(ctx, logger, machineScope)
@@ -225,12 +221,8 @@ func (r *LinodeMachineReconciler) reconcile(
 		Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
 	}
 
-	if err = r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			logger.Error(err, "Failed to fetch Linode cluster")
-		}
-
-		return
+	if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
 	}
 
 	// Update

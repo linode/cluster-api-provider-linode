@@ -60,8 +60,8 @@ func init() {
 func main() {
 	var (
 		// Environment variables
-		linodeToken    string = os.Getenv("LINODE_TOKEN")
-		linodeDNSToken string = os.Getenv("LINODE_DNS_TOKEN")
+		linodeToken    = os.Getenv("LINODE_TOKEN")
+		linodeDNSToken = os.Getenv("LINODE_DNS_TOKEN")
 
 		machineWatchFilter             string
 		clusterWatchFilter             string
