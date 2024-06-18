@@ -146,6 +146,12 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 // GetMachinePublicIP gets the machines public IP
 func GetMachinePublicIP(ctx context.Context, mscope *scope.MachineScope) (string, error) {
 	logger := logr.FromContextOrDiscard(ctx)
+	// Verify instance id is not nil
+	if *mscope.LinodeMachine.Spec.InstanceID == nil {
+		err := errors.New("instance ID is nil. cant get machine's public ip")
+		return "", err
+	}
+
 	// Get the public IP that was assigned
 	addresses, err := mscope.LinodeClient.GetInstanceIPAddresses(ctx, *mscope.LinodeMachine.Spec.InstanceID)
 	if err != nil {
