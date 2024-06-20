@@ -91,7 +91,7 @@ type LinodeMachineReconciler struct {
 	client.Client
 	Recorder         record.EventRecorder
 	LinodeApiKey     string
-	LinodeDNSApiKey  string
+	LinodeDNSAPIKey  string
 	WatchFilterValue string
 	Scheme           *runtime.Scheme
 	ReconcileTimeout time.Duration
@@ -140,7 +140,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	machineScope, err := scope.NewMachineScope(
 		ctx,
 		r.LinodeApiKey,
-		r.LinodeDNSApiKey,
+		r.LinodeDNSAPIKey,
 		scope.MachineScopeParams{
 			Client:        r.Client,
 			Cluster:       cluster,

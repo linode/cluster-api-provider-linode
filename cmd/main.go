@@ -133,7 +133,7 @@ func main() {
 		Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
 		WatchFilterValue: machineWatchFilter,
 		LinodeApiKey:     linodeToken,
-		LinodeDNSApiKey:  linodeDNSToken,
+		LinodeDNSAPIKey:  linodeDNSToken,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
