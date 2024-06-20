@@ -11,12 +11,14 @@ import (
 	kutil "sigs.k8s.io/cluster-api/util"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
-
-var dnsTTLSec = 30
 
 // AddIPToDNS creates domain record for machine public ip
 func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
+
+	dnsTTLSec := rutil.DefaultDNSTTLSec
+
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
 		return nil
@@ -83,6 +85,8 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 
 // DeleteNodeFromNB removes a backend Node from the Node Balancer configuration
 func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
+	dnsTTLSec := rutil.DefaultDNSTTLSec
+
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
 		return nil

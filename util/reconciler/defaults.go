@@ -50,6 +50,9 @@ const (
 	DefaultClusterControllerReconcileDelay = 5 * time.Second
 	// DefaultClusterControllerReconcileTimeout is the default timeout when reconcile operations fail.
 	DefaultClusterControllerReconcileTimeout = 20 * time.Minute
+
+	// DefaultDNSTTLSec is the default TTL used for DNS entries for api server loadbalancing
+	DefaultDNSTTLSec = 30
 )
 
 // DefaultedLoopTimeout will default the timeout if it is zero-valued.

@@ -359,6 +359,12 @@ spec:
                     description: apiserverNodeBalancerConfigID is the config ID of
                       api server NodeBalancer config.
                     type: integer
+                  dnsProvider:
+                    description: |-
+                      DNSProvider is provider who manages the domain
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                      If not set, defaults linode dns
+                    type: integer
                   dnsRootDomain:
                     description: |-
                       DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint

@@ -86,8 +86,8 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		}
 		apiKey = string(apiToken)
 
-		dnsToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "dnsToken")
-		if err != nil || dnsToken == nil {
+		dnsToken, _ := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "dnsToken")
+		if string(dnsToken) == "" {
 			dnsToken = apiToken
 		}
 		dnsKey = string(dnsToken)
