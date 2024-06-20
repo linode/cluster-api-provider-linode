@@ -16,7 +16,6 @@ import (
 
 // AddIPToDNS creates domain record for machine public ip
 func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
-
 	dnsTTLSec := rutil.DefaultDNSTTLSec
 
 	// Check if instance is a control plane node
