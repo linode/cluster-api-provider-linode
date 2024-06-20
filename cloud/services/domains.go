@@ -164,7 +164,7 @@ func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
 		return 0, fmt.Errorf("failed to list domains: %w", err)
 	}
 	if len(domains) != 1 || domains[0].Domain != rootDomain {
-		return 0, fmt.Errorf("domain not found in list of domains: %w", err)
+		return 0, fmt.Errorf("domain %s not found in list of domains owned by this account", rootDomain)
 	}
 
 	return domains[0].ID, nil
