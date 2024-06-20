@@ -75,7 +75,7 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
 		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.Bucket.Spec.CredentialsRef, params.Bucket.GetNamespace(), "apiToken")
 		if err != nil {
-			return nil, fmt.Errorf("error get data for key apiToken")
+			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
 		apiKey = string(apiToken)
 	}

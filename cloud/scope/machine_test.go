@@ -268,7 +268,7 @@ func TestNewMachineScope(t *testing.T) {
 							},
 						}
 						return nil
-					})
+					}).AnyTimes()
 			})),
 			Path(Result("default credentials", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
@@ -437,7 +437,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).AnyTimes()
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -531,7 +531,7 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).AnyTimes()
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},

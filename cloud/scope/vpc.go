@@ -64,7 +64,7 @@ func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VP
 		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
 		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeVPC.Spec.CredentialsRef, params.LinodeVPC.GetNamespace(), "apiToken")
 		if err != nil {
-			return nil, fmt.Errorf("error get data for key apiToken")
+			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
 		apiKey = string(apiToken)
 	}

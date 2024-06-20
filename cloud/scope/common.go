@@ -49,12 +49,12 @@ func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentia
 	if err != nil {
 		return nil, err
 	}
-	data, ok := credSecret.Data[key]
+	rawData, ok := credSecret.Data[key]
 	if !ok {
-		return nil, fmt.Errorf("no %s key in credentials secret", key)
+		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", key, credentialsRef.Namespace, credentialsRef.Name)
 	}
 
-	return data, nil
+	return rawData, nil
 }
 
 func addCredentialsFinalizer(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
