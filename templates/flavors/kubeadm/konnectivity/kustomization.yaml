@@ -99,7 +99,7 @@ patches:
               - fromCIDR:
                   - 10.0.0.0/8
               - fromEntities:
-                  - world
+                  - all
                 toPorts:
                   - ports:
                       - port: "6443"
@@ -113,7 +113,7 @@ patches:
             nodeSelector: {}
             ingress:
               - fromEntities:
-                  - world
+                  - all
                 toPorts:
                   - ports:
                       - port: "8132"

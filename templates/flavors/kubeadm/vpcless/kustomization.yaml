@@ -2,7 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../default
-  - allow-etcd-policy.yaml
 
 patches:
   - target:
@@ -41,6 +40,60 @@ patches:
           image:
             pullPolicy: IfNotPresent
 
+  - target:
+      kind: ConfigMap
+      name: .*-cilium-policy
+    patch: |-
+      - op: replace
+        path: /data/cilium-policy.yaml
+        value: |-
+          apiVersion: "cilium.io/v2"
+          kind: CiliumClusterwideNetworkPolicy
+          metadata:
+            name: "default-cluster-policy"
+          spec:
+            description: "allow cluster intra cluster traffic"
+            endpointSelector: {}
+            ingress:
+              - fromEntities:
+                  - cluster
+              - fromCIDR:
+                  - 10.0.0.0/8
+                  - 192.168.128.0/17
+          ---
+          apiVersion: "cilium.io/v2"
+          kind: CiliumClusterwideNetworkPolicy
+          metadata:
+            name: "default-external-policy"
+          spec:
+            description: "allow api server traffic"
+            nodeSelector: {}
+            ingress:
+              - fromEntities:
+                  - cluster
+              - fromCIDR:
+                  - 10.0.0.0/8
+                  - 192.168.128.0/17
+              - fromEntities:
+                  - all
+                toPorts:
+                  - ports:
+                      - port: "6443"
+          ---
+          apiVersion: "cilium.io/v2"
+          kind: CiliumClusterwideNetworkPolicy
+          metadata:
+            name: "allow-etcd-policy"
+          spec:
+            description: "allow etcd traffic"
+            nodeSelector: {}
+            ingress:
+              - fromEntities:
+                  - all
+                toPorts:
+                  - ports:
+                    - port: "2379"
+                    - port: "2380"
 
   - target:
       kind: LinodeVPC
