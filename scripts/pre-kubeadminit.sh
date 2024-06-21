@@ -79,8 +79,19 @@ apt-get install -y containerd socat conntrack
 
 PATCH_VERSION=${1#[v]}
 VERSION=${PATCH_VERSION%.*}
-curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${VERSION}.0/crictl-v${VERSION}.0-linux-amd64.tar.gz" | tar -C /usr/local/bin -xz
+PROXY_CRI_TOOLS_URL=${2}
+PROXY_K8S_RELEASE_URL=${3}
+if [[ ${PROXY_CRI_TOOLS_URL} == "" ]] ; then
+  curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${VERSION}.0/crictl-v${VERSION}.0-linux-amd64.tar.gz" | tar -C /usr/local/bin -xz
+else
+  curl -kL "${PROXY_CRI_TOOLS_URL}/v${VERSION}.0/crictl-v${VERSION}.0-linux-amd64.tar.gz" | tar -C /usr/local/bin -xz
+fi
 cd /usr/local/bin
-curl -L --remote-name-all https://dl.k8s.io/release/$1/bin/linux/amd64/{kubeadm,kubelet}
-curl -LO "https://dl.k8s.io/release/v${VERSION}.0/bin/linux/amd64/kubectl"
+if [[ ${PROXY_K8S_RELEASE_URL} == "" ]] ; then
+  curl -L --remote-name-all https://dl.k8s.io/release/${1}/bin/linux/amd64/{kubeadm,kubelet}
+  curl -LO "https://dl.k8s.io/release/v${VERSION}.0/bin/linux/amd64/kubectl"
+else
+  curl -kL --remote-name-all ${PROXY_K8S_RELEASE_URL}/${1}/bin/linux/amd64/{kubeadm,kubelet}
+  curl -kLO "${PROXY_K8S_RELEASE_URL}/v${VERSION}.0/bin/linux/amd64/kubectl"
+fi
 chmod +x {kubeadm,kubelet,kubectl}

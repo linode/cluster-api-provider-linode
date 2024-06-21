@@ -7,7 +7,7 @@ spec:
   template:
     spec:
       preKubeadmCommands:
-        - curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/1981a4934753c10bfe9042c0b24ed4d02392ee0e/scripts/pre-kubeadminit.sh | bash -s ${KUBERNETES_VERSION}
+        - curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/1de37588527107a250106c0e98ca14d68d12baeb/scripts/pre-kubeadminit.sh | bash -s ${KUBERNETES_VERSION} ${PROXY_CRI_TOOLS_URL:=""} ${PROXY_K8S_RELEASE_URL:=""}
         - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
       joinConfiguration:
         nodeRegistration:
