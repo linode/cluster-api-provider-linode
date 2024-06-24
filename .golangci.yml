@@ -154,7 +154,6 @@ linters:
     # - goerr113
     - gofmt
     - goimports
-    - gomnd
     # - gocyclo
     - goprintffuncname
     - gosec
@@ -165,6 +164,7 @@ linters:
     - maintidx
     - makezero
     - misspell
+    - mnd
     - nestif
     - nilerr
     - nilnil

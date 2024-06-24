@@ -81,6 +81,7 @@ func (r *LinodeObjectStorageBucket) ValidateDelete() (admission.Warnings, error)
 }
 
 func (r *LinodeObjectStorageBucket) validateLinodeObjectStorageBucket(ctx context.Context, client LinodeClient) error {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
 	if err := r.validateLinodeObjectStorageBucketSpec(ctx, client); err != nil {
@@ -96,6 +97,7 @@ func (r *LinodeObjectStorageBucket) validateLinodeObjectStorageBucket(ctx contex
 }
 
 func (r *LinodeObjectStorageBucket) validateLinodeObjectStorageBucketSpec(ctx context.Context, client LinodeClient) field.ErrorList {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
 	if err := validateObjectStorageCluster(ctx, client, r.Spec.Cluster, field.NewPath("spec").Child("cluster")); err != nil {

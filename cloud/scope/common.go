@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
 	"github.com/linode/cluster-api-provider-linode/version"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
@@ -24,7 +25,19 @@ const (
 	defaultClientTimeout = time.Second * 10
 )
 
-func CreateLinodeClient(apiKey string, timeout time.Duration) (*linodego.Client, error) {
+type Option struct {
+	set func(client *linodego.Client)
+}
+
+func WithRetryCount(c int) Option {
+	return Option{
+		set: func(client *linodego.Client) {
+			client.SetRetryCount(c)
+		},
+	}
+}
+
+func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (LinodeClient, error) {
 	if apiKey == "" {
 		return nil, errors.New("missing Linode API key")
 	}
@@ -41,7 +54,13 @@ func CreateLinodeClient(apiKey string, timeout time.Duration) (*linodego.Client,
 
 	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
-	return &linodeClient, nil
+	for _, opt := range opts {
+		opt.set(&linodeClient)
+	}
+
+	return linodeclient.NewLinodeClientWithTracing(
+		&linodeClient,
+	), nil
 }
 
 func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
