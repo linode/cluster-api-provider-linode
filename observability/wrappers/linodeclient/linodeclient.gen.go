@@ -58,6 +58,30 @@ func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int
 	return _d.LinodeClient.BootInstance(ctx, linodeID, configID)
 }
 
+// CreateDomainRecord implements clients.LinodeClient
+func (_d LinodeClientWithTracing) CreateDomainRecord(ctx context.Context, domainID int, recordReq linodego.DomainRecordCreateOptions) (dp1 *linodego.DomainRecord, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateDomainRecord")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":       ctx,
+				"domainID":  domainID,
+				"recordReq": recordReq}, map[string]interface{}{
+				"dp1": dp1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.CreateDomainRecord(ctx, domainID, recordReq)
+}
+
 // CreateInstance implements clients.LinodeClient
 func (_d LinodeClientWithTracing) CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (ip1 *linodego.Instance, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateInstance")
@@ -267,6 +291,29 @@ func (_d LinodeClientWithTracing) CreateVPC(ctx context.Context, opts linodego.V
 		_span.End()
 	}()
 	return _d.LinodeClient.CreateVPC(ctx, opts)
+}
+
+// DeleteDomainRecord implements clients.LinodeClient
+func (_d LinodeClientWithTracing) DeleteDomainRecord(ctx context.Context, domainID int, domainRecordID int) (err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteDomainRecord")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":            ctx,
+				"domainID":       domainID,
+				"domainRecordID": domainRecordID}, map[string]interface{}{
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.DeleteDomainRecord(ctx, domainID, domainRecordID)
 }
 
 // DeleteInstance implements clients.LinodeClient
@@ -590,6 +637,53 @@ func (_d LinodeClientWithTracing) GetVPC(ctx context.Context, vpcID int) (vp1 *l
 	return _d.LinodeClient.GetVPC(ctx, vpcID)
 }
 
+// ListDomainRecords implements clients.LinodeClient
+func (_d LinodeClientWithTracing) ListDomainRecords(ctx context.Context, domainID int, opts *linodego.ListOptions) (da1 []linodego.DomainRecord, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListDomainRecords")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":      ctx,
+				"domainID": domainID,
+				"opts":     opts}, map[string]interface{}{
+				"da1": da1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListDomainRecords(ctx, domainID, opts)
+}
+
+// ListDomains implements clients.LinodeClient
+func (_d LinodeClientWithTracing) ListDomains(ctx context.Context, opts *linodego.ListOptions) (da1 []linodego.Domain, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListDomains")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":  ctx,
+				"opts": opts}, map[string]interface{}{
+				"da1": da1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListDomains(ctx, opts)
+}
+
 // ListInstanceConfigs implements clients.LinodeClient
 func (_d LinodeClientWithTracing) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) (ia1 []linodego.InstanceConfig, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListInstanceConfigs")
@@ -728,6 +822,31 @@ func (_d LinodeClientWithTracing) ResizeInstanceDisk(ctx context.Context, linode
 		_span.End()
 	}()
 	return _d.LinodeClient.ResizeInstanceDisk(ctx, linodeID, diskID, size)
+}
+
+// UpdateDomainRecord implements clients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateDomainRecord(ctx context.Context, domainID int, domainRecordID int, recordReq linodego.DomainRecordUpdateOptions) (dp1 *linodego.DomainRecord, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateDomainRecord")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":            ctx,
+				"domainID":       domainID,
+				"domainRecordID": domainRecordID,
+				"recordReq":      recordReq}, map[string]interface{}{
+				"dp1": dp1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq)
 }
 
 // UpdateInstanceConfig implements clients.LinodeClient
