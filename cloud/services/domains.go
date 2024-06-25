@@ -148,11 +148,11 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, h
 
 	// If record doesnt exist, create it else update it
 	if domainRecords == nil {
-		if err := CreateDomainRecord(ctx, mscope, hostname, target, ttl, recordType, domainID); err != nil {
+		if err := CreateDomainRecord(ctx, mscope, hostname, target, ttl, domainID, recordType); err != nil {
 			return fmt.Errorf("failed to create domain record: %w", err)
 		}
 	} else {
-		if err := UpdateDomainRecord(ctx, mscope, hostname, target, ttl, recordType, domainID, domainRecords[0].ID); err != nil {
+		if err := UpdateDomainRecord(ctx, mscope, hostname, target, ttl, domainID, domainRecords[0].ID, recordType); err != nil {
 			return fmt.Errorf("failed to update domain record: %w", err)
 		}
 	}
