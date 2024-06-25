@@ -100,8 +100,8 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 	linodeDomainsClient, err := CreateLinodeClient(dnsKey, defaultClientTimeout,
-    WithRetryCount(0),
-  )
+		WithRetryCount(0),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
