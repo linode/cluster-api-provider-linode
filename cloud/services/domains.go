@@ -147,7 +147,7 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, h
 	}
 
 	// If record doesnt exist, create it else update it
-	if domainRecords == nil {
+	if len(domainRecords) == 0 {
 		if err := CreateDomainRecord(ctx, mscope, hostname, target, ttl, domainID, recordType); err != nil {
 			return fmt.Errorf("failed to create domain record: %w", err)
 		}
@@ -172,7 +172,7 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	}
 
 	// If domain record exists, delete it
-	if domainRecords != nil {
+	if len(domainRecords) != 0 {
 		err := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID)
 		if err != nil {
 			return fmt.Errorf("failed to delete domain record: %w", err)
