@@ -40,13 +40,13 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
 	// Create/Update the A record for this IP and name combo
-	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, "A", domainID); err != nil {
+	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, "A"); err != nil {
 		return fmt.Errorf("failed to create/update A domain record: %w", err)
 	}
 
 	// Create/Update the TXT record for this IP and name combo
 	target := "owner:" + mscope.LinodeCluster.Name + ",ip:" + publicIP
-	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, target, dnsTTLSec, "TXT", domainID); err != nil {
+	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, target, dnsTTLSec, domainID, "TXT"); err != nil {
 		return fmt.Errorf("failed to create/update TXT domain record: %w", err)
 	}
 
@@ -79,13 +79,13 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
 	// Delete A record
-	if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, "A", domainID); err != nil {
+	if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, "A"); err != nil {
 		return fmt.Errorf("failed to delete A domain record: %w", err)
 	}
 
 	// Delete TXT record
 	target := "owner:" + mscope.LinodeCluster.Name + ",ip:" + publicIP
-	if err := DeleteDomainRecord(ctx, mscope, domainHostname, target, dnsTTLSec, "TXT", domainID); err != nil {
+	if err := DeleteDomainRecord(ctx, mscope, domainHostname, target, dnsTTLSec, domainID, "TXT"); err != nil {
 		return fmt.Errorf("failed to delete A domain record: %w", err)
 	}
 
@@ -134,7 +134,7 @@ func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
 	return domains[0].ID, nil
 }
 
-func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname string, target string, ttl int, recordType linodego.DomainRecordType, domainID int) error {
+func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname, target string, ttl, domainID int, recordType linodego.DomainRecordType) error {
 	// Check if domain record exists for this IP and name combo
 	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": target, "type": recordType})
 	if err != nil {
@@ -159,7 +159,7 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, h
 	return nil
 }
 
-func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname string, target string, ttl int, recordType linodego.DomainRecordType, domainID int) error {
+func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname, target string, ttl, domainID int, recordType linodego.DomainRecordType) error {
 	// Check if domain record exists for this IP and name combo
 	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": target, "type": recordType})
 	if err != nil {
@@ -181,7 +181,7 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	return nil
 }
 
-func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname string, target string, ttl int, recordType linodego.DomainRecordType, domainID int) error {
+func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname, target string, ttl, domainID int, recordType linodego.DomainRecordType) error {
 	recordReq := linodego.DomainRecordCreateOptions{
 		Type:   recordType,
 		Name:   hostname,
@@ -195,7 +195,7 @@ func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	return nil
 }
 
-func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname string, target string, ttl int, recordType linodego.DomainRecordType, domainID int, domainRecordID int) error {
+func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname, target string, ttl, domainID, domainRecordID int, recordType linodego.DomainRecordType) error {
 	recordReq := linodego.DomainRecordUpdateOptions{
 		Type:   recordType,
 		Name:   hostname,
