@@ -85,7 +85,8 @@ generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate-code
-generate-code: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate-code: controller-gen gowrap ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+	go generate ./...
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: generate-mock
@@ -304,6 +305,7 @@ HUSKY          ?= $(LOCALBIN)/husky
 NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
+GOWRAP         ?= $(CACHE_BIN)/gowrap
 
 ## Tool Versions
 KUSTOMIZE_VERSION        ?= v5.4.1
@@ -318,9 +320,10 @@ HUSKY_VERSION            ?= v0.2.16
 NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
+GOWRAP_VERSION           ?= latest
 
 .PHONY: tools
-tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN)
+tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
 
 
 .PHONY: kustomize
@@ -373,7 +376,7 @@ $(CHAINSAW): $(CACHE_BIN)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
-$(ENVTEST): $(LOCALBIN)
+$(ENVTEST): $(CACHE_BIN)
 	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 .PHONY: husky
@@ -397,4 +400,9 @@ $(GOVULNC): $(LOCALBIN)
 mockgen: $(MOCKGEN) ## Download mockgen locally if necessary.
 $(MOCKGEN): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
+
+.PHONY: gowrap
+gowrap: $(GOWRAP) ## Download gowrap locally if necessary.
+$(GOWRAP): $(CACHE_BIN)
+	GOBIN=$(CACHE_BIN) go install github.com/hexdigest/gowrap/cmd/gowrap@$(GOWRAP_VERSION)
 

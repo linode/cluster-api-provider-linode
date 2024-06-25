@@ -94,6 +94,7 @@ func (r *LinodeMachine) ValidateDelete() (admission.Warnings, error) {
 }
 
 func (r *LinodeMachine) validateLinodeMachine(ctx context.Context, client LinodeClient) error {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
 	if err := r.validateLinodeMachineSpec(ctx, client); err != nil {
@@ -109,6 +110,7 @@ func (r *LinodeMachine) validateLinodeMachine(ctx context.Context, client Linode
 }
 
 func (r *LinodeMachine) validateLinodeMachineSpec(ctx context.Context, client LinodeClient) field.ErrorList {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
 	if err := validateRegion(ctx, client, r.Spec.Region, field.NewPath("spec").Child("region")); err != nil {

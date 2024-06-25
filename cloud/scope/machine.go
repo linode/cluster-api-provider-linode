@@ -93,16 +93,18 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		dnsKey = string(dnsToken)
 	}
 
-	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout)
+	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout,
+		WithRetryCount(0),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
-	linodeClient.SetRetryCount(0)
-	linodeDomainsClient, err := CreateLinodeClient(dnsKey, defaultClientTimeout)
+	linodeDomainsClient, err := CreateLinodeClient(dnsKey, defaultClientTimeout,
+    WithRetryCount(0),
+  )
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
-	linodeDomainsClient.SetRetryCount(0)
 
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {

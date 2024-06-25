@@ -18,6 +18,7 @@ COPY api/ api/
 COPY clients/ clients/
 COPY controller/ controller/
 COPY cloud/ cloud/
+COPY observability/ observability/
 COPY util/ util/
 COPY version/ version/
 
@@ -34,5 +35,8 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65532:65532
+
+# By default disable traces exporter
+ENV OTEL_TRACES_EXPORTER=none
 
 ENTRYPOINT ["/manager"]
