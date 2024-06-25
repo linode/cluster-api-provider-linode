@@ -14,9 +14,12 @@ import (
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-// AddIPToDNS creates domain record for machine public ip
+// AddIPToDNS creates the A and TXT record for the machine
 func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	dnsTTLSec := rutil.DefaultDNSTTLSec
+	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
+		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSTTLSec
+	}
 
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
@@ -34,57 +37,28 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	if err != nil {
 		return fmt.Errorf("failed to get domain ID: %w", err)
 	}
-
-	// Check if record exists for this IP and name combo
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
-	filter, err := json.Marshal(map[string]interface{}{"name": domainHostname, "target": publicIP})
-	if err != nil {
-		return fmt.Errorf("failed to marshal domain filter: %w", err)
+
+	// Create/Update the A record for this IP and name combo
+	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, "A", domainID); err != nil {
+		return fmt.Errorf("failed to create/update A domain record: %w", err)
 	}
 
-	domainRecords, err := mscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
-	if err != nil {
-		return fmt.Errorf("unable to get current DNS record from API: %w", err)
+	// Create/Update the TXT record for this IP and name combo
+	target := "owner:" + mscope.LinodeCluster.Name + ",ip:" + publicIP
+	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, target, dnsTTLSec, "TXT", domainID); err != nil {
+		return fmt.Errorf("failed to create/update TXT domain record: %w", err)
 	}
 
-	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
-		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSTTLSec
-	}
-
-	// If record doesnt exist, create it else update it
-	if domainRecords == nil {
-		recordReq := linodego.DomainRecordCreateOptions{
-			Type:   "A",
-			Name:   domainHostname,
-			Target: publicIP,
-			TTLSec: dnsTTLSec,
-		}
-
-		if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(ctx, domainID, recordReq); err != nil {
-			return fmt.Errorf("failed to create domain record: %w", err)
-		}
-		return nil
-	}
-	recordReq := linodego.DomainRecordUpdateOptions{
-		Type:   "A",
-		Name:   domainHostname,
-		Target: publicIP,
-		TTLSec: dnsTTLSec,
-	}
-	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(
-		ctx,
-		domainID,
-		domainRecords[0].ID,
-		recordReq,
-	); err != nil {
-		return fmt.Errorf("failed to update domain record: %w", err)
-	}
 	return nil
 }
 
-// DeleteNodeFromNB removes a backend Node from the Node Balancer configuration
+// DeleteIPFromDNS deletes the A and TXT record for the machine
 func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	dnsTTLSec := rutil.DefaultDNSTTLSec
+	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
+		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSTTLSec
+	}
 
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
@@ -102,29 +76,17 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	if err != nil {
 		return fmt.Errorf("failed to get domain ID: %w", err)
 	}
-
-	// Check if record exists for this IP and name combo
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
-	filter, err := json.Marshal(map[string]interface{}{"name": domainHostname, "target": publicIP})
-	if err != nil {
-		return fmt.Errorf("failed to marshal domain filter: %w", err)
+
+	// Delete A record
+	if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, "A", domainID); err != nil {
+		return fmt.Errorf("failed to delete A domain record: %w", err)
 	}
 
-	domainRecords, err := mscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
-	if err != nil {
-		return fmt.Errorf("unable to get current DNS record from API: %w", err)
-	}
-
-	// If domain record exists, delete it
-	if domainRecords != nil {
-		err := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID)
-		if err != nil {
-			return fmt.Errorf("failed to delete domain record: %w", err)
-		}
-	}
-
-	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
-		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSTTLSec
+	// Delete TXT record
+	target := "owner:" + mscope.LinodeCluster.Name + ",ip:" + publicIP
+	if err := DeleteDomainRecord(ctx, mscope, domainHostname, target, dnsTTLSec, "TXT", domainID); err != nil {
+		return fmt.Errorf("failed to delete A domain record: %w", err)
 	}
 
 	// Wait for TTL to expire
@@ -156,7 +118,6 @@ func GetMachinePublicIP(ctx context.Context, mscope *scope.MachineScope) (string
 
 // GetDomainID gets the domains linode id
 func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
-	// Get domainID from domain name
 	rootDomain := mscope.LinodeCluster.Spec.Network.DNSRootDomain
 	filter, err := json.Marshal(map[string]string{"domain": rootDomain})
 	if err != nil {
@@ -171,4 +132,79 @@ func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
 	}
 
 	return domains[0].ID, nil
+}
+
+func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname string, target string, ttl int, recordType linodego.DomainRecordType, domainID int) error {
+	// Check if domain record exists for this IP and name combo
+	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": target, "type": recordType})
+	if err != nil {
+		return fmt.Errorf("failed to marshal domain filter: %w", err)
+	}
+
+	domainRecords, err := mscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
+	if err != nil {
+		return fmt.Errorf("unable to get current DNS record from API: %w", err)
+	}
+
+	// If record doesnt exist, create it else update it
+	if domainRecords == nil {
+		if err := CreateDomainRecord(ctx, mscope, hostname, target, ttl, recordType, domainID); err != nil {
+			return fmt.Errorf("failed to create domain record: %w", err)
+		}
+	} else {
+		if err := UpdateDomainRecord(ctx, mscope, hostname, target, ttl, recordType, domainID, domainRecords[0].ID); err != nil {
+			return fmt.Errorf("failed to update domain record: %w", err)
+		}
+	}
+	return nil
+}
+
+func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname string, target string, ttl int, recordType linodego.DomainRecordType, domainID int) error {
+	// Check if domain record exists for this IP and name combo
+	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": target, "type": recordType})
+	if err != nil {
+		return fmt.Errorf("failed to marshal domain filter: %w", err)
+	}
+
+	domainRecords, err := mscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
+	if err != nil {
+		return fmt.Errorf("unable to get current DNS record from API: %w", err)
+	}
+
+	// If domain record exists, delete it
+	if domainRecords != nil {
+		err := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID)
+		if err != nil {
+			return fmt.Errorf("failed to delete domain record: %w", err)
+		}
+	}
+	return nil
+}
+
+func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname string, target string, ttl int, recordType linodego.DomainRecordType, domainID int) error {
+	recordReq := linodego.DomainRecordCreateOptions{
+		Type:   recordType,
+		Name:   hostname,
+		Target: target,
+		TTLSec: ttl,
+	}
+
+	if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(ctx, domainID, recordReq); err != nil {
+		return fmt.Errorf("failed to create domain record of type A: %w", err)
+	}
+	return nil
+}
+
+func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname string, target string, ttl int, recordType linodego.DomainRecordType, domainID int, domainRecordID int) error {
+	recordReq := linodego.DomainRecordUpdateOptions{
+		Type:   recordType,
+		Name:   hostname,
+		Target: target,
+		TTLSec: ttl,
+	}
+
+	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq); err != nil {
+		return fmt.Errorf("failed to create domain record of type A: %w", err)
+	}
+	return nil
 }
