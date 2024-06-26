@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,8 +47,10 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Create/Update the TXT record for this IP and name combo
-	target := "owner:" + mscope.LinodeCluster.Name + ",ip:" + publicIP
-	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, target, dnsTTLSec, domainID, "TXT"); err != nil {
+	machineNameHash := md5.New()
+	machineNameHash.Write([]byte(mscope.LinodeMachine.Name))
+	txtRecordValueString := hex.EncodeToString(machineNameHash.Sum(nil))
+	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
 		return fmt.Errorf("failed to create/update TXT domain record: %w", err)
 	}
 
@@ -84,9 +88,11 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Delete TXT record
-	target := "owner:" + mscope.LinodeCluster.Name + ",ip:" + publicIP
-	if err := DeleteDomainRecord(ctx, mscope, domainHostname, target, dnsTTLSec, domainID, "TXT"); err != nil {
-		return fmt.Errorf("failed to delete A domain record: %w", err)
+	machineNameHash := md5.New()
+	machineNameHash.Write([]byte(mscope.LinodeMachine.Name))
+	txtRecordValueString := hex.EncodeToString(machineNameHash.Sum(nil))
+	if err := DeleteDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
+		return fmt.Errorf("failed to delete TXT domain record: %w", err)
 	}
 
 	// Wait for TTL to expire
@@ -146,15 +152,26 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, h
 		return fmt.Errorf("unable to get current DNS record from API: %w", err)
 	}
 
-	// If record doesnt exist, create it else update it
+	// If record doesnt exist, create it
 	if len(domainRecords) == 0 {
 		if err := CreateDomainRecord(ctx, mscope, hostname, target, ttl, domainID, recordType); err != nil {
 			return fmt.Errorf("failed to create domain record: %w", err)
 		}
-	} else {
-		if err := UpdateDomainRecord(ctx, mscope, hostname, target, ttl, domainID, domainRecords[0].ID, recordType); err != nil {
-			return fmt.Errorf("failed to update domain record: %w", err)
+		return nil
+	}
+
+	// If record exists, update it
+	if len(domainRecords) != 0 && recordType == "A" {
+		isOwner, err := IsDomainRecordOwner(ctx, mscope, hostname, target, domainID)
+		if err != nil {
+			return fmt.Errorf("while updating domain record, failed to get domain record owner: %w", err)
 		}
+		if !isOwner {
+			return fmt.Errorf("the domain record is not owned by this entity. wont update")
+		}
+	}
+	if err := UpdateDomainRecord(ctx, mscope, hostname, target, ttl, domainID, domainRecords[0].ID, recordType); err != nil {
+		return fmt.Errorf("failed to update domain record: %w", err)
 	}
 	return nil
 }
@@ -173,9 +190,21 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 
 	// If domain record exists, delete it
 	if len(domainRecords) != 0 {
-		err := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID)
-		if err != nil {
-			return fmt.Errorf("failed to delete domain record: %w", err)
+
+		if recordType == "A" {
+			machineNameHash := md5.New()
+			machineNameHash.Write([]byte(mscope.LinodeMachine.Name))
+			txtRecordValueString := hex.EncodeToString(machineNameHash.Sum(nil))
+			isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, "owner:"+txtRecordValueString, domainID)
+			if ownerErr != nil {
+				return fmt.Errorf("while deleting domain record, failed to get domain record owner: %w", ownerErr)
+			}
+			if !isOwner {
+				return fmt.Errorf("the domain record is not owned by this entity. wont delete")
+			}
+		}
+		if deleteErr := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID); deleteErr != nil {
+			return fmt.Errorf("failed to delete domain record: %w", deleteErr)
 		}
 	}
 	return nil
@@ -190,7 +219,7 @@ func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	}
 
 	if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(ctx, domainID, recordReq); err != nil {
-		return fmt.Errorf("failed to create domain record of type A: %w", err)
+		return fmt.Errorf("failed to create domain record of type %s: %w", recordType, err)
 	}
 	return nil
 }
@@ -204,7 +233,27 @@ func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	}
 
 	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq); err != nil {
-		return fmt.Errorf("failed to create domain record of type A: %w", err)
+		return fmt.Errorf("failed to update domain record of type %s: %w", recordType, err)
 	}
 	return nil
+}
+
+func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostname, target string, domainID int) (bool, error) {
+	// Check if domain record exists
+	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": target, "type": "TXT"})
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal domain filter: %w", err)
+	}
+
+	domainRecords, err := mscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
+	if err != nil {
+		return false, fmt.Errorf("unable to get current DNS record from API: %w", err)
+	}
+
+	// If record exists, update it
+	if len(domainRecords) == 0 {
+		return false, fmt.Errorf("no txt record %s found with value %s for machine %s", hostname, target, mscope.LinodeMachine.Name)
+	}
+
+	return true, nil
 }
