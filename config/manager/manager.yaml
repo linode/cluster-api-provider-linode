@@ -60,6 +60,14 @@ spec:
                   key: LINODE_DNS_TOKEN
             - name: LINODE_API_VERSION
               value: v4beta
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           name: manager
           securityContext:
             readOnlyRootFilesystem: true
