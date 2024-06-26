@@ -47,9 +47,7 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Create/Update the TXT record for this IP and name combo
-	machineNameHash := md5.New()
-	machineNameHash.Write([]byte(mscope.LinodeMachine.Name))
-	txtRecordValueString := hex.EncodeToString(machineNameHash.Sum(nil))
+	txtRecordValueString := CreateMD5HashOfString(mscope.LinodeMachine.Name)
 	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
 		return fmt.Errorf("failed to create/update TXT domain record: %w", err)
 	}
@@ -88,9 +86,7 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Delete TXT record
-	machineNameHash := md5.New()
-	machineNameHash.Write([]byte(mscope.LinodeMachine.Name))
-	txtRecordValueString := hex.EncodeToString(machineNameHash.Sum(nil))
+	txtRecordValueString := CreateMD5HashOfString(mscope.LinodeMachine.Name)
 	if err := DeleteDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
 		return fmt.Errorf("failed to delete TXT domain record: %w", err)
 	}
@@ -192,9 +188,7 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	if len(domainRecords) != 0 {
 
 		if recordType == "A" {
-			machineNameHash := md5.New()
-			machineNameHash.Write([]byte(mscope.LinodeMachine.Name))
-			txtRecordValueString := hex.EncodeToString(machineNameHash.Sum(nil))
+			txtRecordValueString := CreateMD5HashOfString(mscope.LinodeMachine.Name)
 			isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, "owner:"+txtRecordValueString, domainID)
 			if ownerErr != nil {
 				return fmt.Errorf("while deleting domain record, failed to get domain record owner: %w", ownerErr)
@@ -256,4 +250,10 @@ func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostna
 	}
 
 	return true, nil
+}
+
+func CreateMD5HashOfString(stringToConvert string) string {
+	machineNameHash := md5.New()
+	machineNameHash.Write([]byte(stringToConvert))
+	return hex.EncodeToString(machineNameHash.Sum(nil))
 }
