@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -184,22 +184,26 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 		return fmt.Errorf("unable to get current DNS record from API: %w", err)
 	}
 
-	// If domain record exists, delete it
-	if len(domainRecords) != 0 {
+	// Nothing to do if records dont exist
+	if len(domainRecords) == 0 {
+		return nil
+	}
 
-		if recordType == "A" {
-			txtRecordValueString := CreateMD5HashOfString(mscope.LinodeMachine.Name)
-			isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, "owner:"+txtRecordValueString, domainID)
-			if ownerErr != nil {
-				return fmt.Errorf("while deleting domain record, failed to get domain record owner: %w", ownerErr)
-			}
-			if !isOwner {
-				return fmt.Errorf("the domain record is not owned by this entity. wont delete")
-			}
+	// If record is A type, verify ownership
+	if recordType == "A" {
+		txtRecordValueString := CreateMD5HashOfString(mscope.LinodeMachine.Name)
+		isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, "owner:"+txtRecordValueString, domainID)
+		if ownerErr != nil {
+			return fmt.Errorf("while deleting domain record, failed to get domain record owner: %w", ownerErr)
 		}
-		if deleteErr := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID); deleteErr != nil {
-			return fmt.Errorf("failed to delete domain record: %w", deleteErr)
+		if !isOwner {
+			return fmt.Errorf("the domain record is not owned by this entity. wont delete")
 		}
+	}
+
+	// Delete record
+	if deleteErr := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID); deleteErr != nil {
+		return fmt.Errorf("failed to delete domain record: %w", deleteErr)
 	}
 	return nil
 }
@@ -253,7 +257,7 @@ func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostna
 }
 
 func CreateMD5HashOfString(stringToConvert string) string {
-	machineNameHash := md5.New()
+	machineNameHash := sha256.New()
 	machineNameHash.Write([]byte(stringToConvert))
 	return hex.EncodeToString(machineNameHash.Sum(nil))
 }
