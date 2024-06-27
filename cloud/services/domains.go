@@ -108,8 +108,15 @@ func GetMachinePublicIP(ctx context.Context, mscope *scope.MachineScope) (string
 	// Get the public IP that was assigned
 	addresses, err := mscope.LinodeClient.GetInstanceIPAddresses(ctx, *mscope.LinodeMachine.Spec.InstanceID)
 	if err != nil {
-		return "", fmt.Errorf("failed to get ip address of the instance: %w", err)
+		return "", fmt.Errorf("failed to get ip addresses of the instance: %w", err)
 	}
+
+	for labelName, labelValue := range mscope.LinodeCluster.Labels {
+		if labelName == "ipv6" && labelValue == "enabled" {
+			return addresses.IPv6.SLAAC.Address, nil
+		}
+	}
+
 	if len(addresses.IPv4.Public) == 0 {
 		err := errors.New("no public IP address")
 		return "", err
