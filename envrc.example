@@ -1,0 +1,31 @@
+# Automatically sets up your devbox environment whenever you cd into this
+# directory via our direnv integration:
+
+eval "$(devbox generate direnv --print-envrc)"
+
+# check out https://www.jetpack.io/devbox/docs/ide_configuration/direnv/
+# for more details
+
+# For the manamgement cluster
+export LINODE_TOKEN=""
+export INSTALL_RKE2_PROVIDER="" # true/false
+export INSTALL_K3S_PROVIDER="" # true/false
+export CLUSTER_AUTOSCALER_VERSION=v1.29.0
+
+# Set Up CAPL Cluster details
+export CLUSTER_NAME=""
+export LINODE_REGION="" # us-ord
+export LINODE_CONTROL_PLANE_MACHINE_TYPE="" # g6-standard-2
+export LINODE_MACHINE_TYPE="" # g6-standard-2
+
+# To set up etcd backup and restore
+export OBJ_BUCKET_REGION="" # us-ord-1
+export ETCDBR_IMAGE="" # docker.io/amoldeodhar/etcdbrctl:a7fc188f71977deabce6e4b2284e145d78000c30
+export SSE_KEY="" # cdQdZ3PrKgm5vmqxeqwQCuAWJ7pPVyHg
+
+# To add SSH key to the CAPL cluster nodes
+export LINODE_SSH_PUBKEY=""
+
+# For DNS based LoadBalancing
+export DNS_ROOT_DOMAIN="" # example.com
+export DNS_UNIQUE_ID="" # abc123

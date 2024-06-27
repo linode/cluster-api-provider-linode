@@ -63,16 +63,14 @@ func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (L
 	), nil
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
+func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {
 	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-	rawData, ok := credSecret.Data["apiToken"]
+	rawData, ok := credSecret.Data[key]
 	if !ok {
-		return nil, fmt.Errorf("no apiToken key in credentials secret %s/%s", credentialsRef.Namespace, credentialsRef.Name)
+		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", key, credentialsRef.Namespace, credentialsRef.Name)
 	}
 
 	return rawData, nil

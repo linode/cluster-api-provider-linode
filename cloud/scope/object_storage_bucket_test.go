@@ -182,7 +182,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 					Logger: &logr.Logger{},
 				},
 			},
-			expectedErr: fmt.Errorf("credentials from cluster secret ref: get credentials secret test/example: failed to get secret"),
+			expectedErr: fmt.Errorf("credentials from secret ref: get credentials secret test/example: failed to get secret"),
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
 			},

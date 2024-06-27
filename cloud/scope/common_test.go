@@ -174,7 +174,7 @@ func TestGetCredentialDataFromRef(t *testing.T) {
 			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testCase.args.funcBehavior)
 
 			// Call getCredentialDataFromRef using the mock client
-			got, err := getCredentialDataFromRef(context.Background(), mockClient, testCase.args.providedCredentialsRef, "default")
+			got, err := getCredentialDataFromRef(context.Background(), mockClient, testCase.args.providedCredentialsRef, "default", "apiToken")
 
 			// Check that the function returned the expected result
 			if testCase.expectedError != "" {

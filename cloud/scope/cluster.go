@@ -57,11 +57,12 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 
 	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
 	if params.LinodeCluster.Spec.CredentialsRef != nil {
-		data, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeCluster.Spec.CredentialsRef, params.LinodeCluster.GetNamespace())
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeCluster.Spec.CredentialsRef, params.LinodeCluster.GetNamespace(), "apiToken")
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(data)
+		apiKey = string(apiToken)
 	}
 	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout)
 	if err != nil {

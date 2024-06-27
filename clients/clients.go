@@ -15,6 +15,7 @@ type LinodeClient interface {
 	LinodeInstanceClient
 	LinodeVPCClient
 	LinodeObjectStorageClient
+	LinodeDNSClient
 }
 
 // LinodeInstanceClient defines the methods that interact with Linode's Instance service.
@@ -62,6 +63,15 @@ type LinodeObjectStorageClient interface {
 	GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error)
 	CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)
 	DeleteObjectStorageKey(ctx context.Context, keyID int) error
+}
+
+// LinodeDNSClient defines the methods that interact with Linode's Domains service.
+type LinodeDNSClient interface {
+	CreateDomainRecord(ctx context.Context, domainID int, recordReq linodego.DomainRecordCreateOptions) (*linodego.DomainRecord, error)
+	UpdateDomainRecord(ctx context.Context, domainID int, domainRecordID int, recordReq linodego.DomainRecordUpdateOptions) (*linodego.DomainRecord, error)
+	ListDomainRecords(ctx context.Context, domainID int, opts *linodego.ListOptions) ([]linodego.DomainRecord, error)
+	ListDomains(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Domain, error)
+	DeleteDomainRecord(ctx context.Context, domainID int, domainRecordID int) error
 }
 
 type K8sClient interface {

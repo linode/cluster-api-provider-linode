@@ -91,6 +91,7 @@ type LinodeMachineReconciler struct {
 	client.Client
 	Recorder         record.EventRecorder
 	LinodeApiKey     string
+	LinodeDNSAPIKey  string
 	WatchFilterValue string
 	Scheme           *runtime.Scheme
 	ReconcileTimeout time.Duration
@@ -139,6 +140,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	machineScope, err := scope.NewMachineScope(
 		ctx,
 		r.LinodeApiKey,
+		r.LinodeDNSAPIKey,
 		scope.MachineScopeParams{
 			Client:        r.Client,
 			Cluster:       cluster,
@@ -200,6 +202,17 @@ func (r *LinodeMachineReconciler) reconcile(
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = cerrs.DeleteMachineError
 
+		linodeClusterKey := client.ObjectKey{
+			Namespace: machineScope.LinodeMachine.Namespace,
+			Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
+		}
+
+		if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
+			if err = client.IgnoreNotFound(err); err != nil {
+				return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
+			}
+		}
+
 		err = r.reconcileDelete(ctx, logger, machineScope)
 
 		return
@@ -210,12 +223,10 @@ func (r *LinodeMachineReconciler) reconcile(
 		Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
 	}
 
-	if err = r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
+	if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
-			logger.Error(err, "Failed to fetch Linode cluster")
+			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
 		}
-
-		return
 	}
 
 	// Update
@@ -360,8 +371,8 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
-		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
-			logger.Error(err, "Failed to add instance to Node Balancer backend")
+		if err := r.addMachineToLB(ctx, logger, machineScope); err != nil {
+			logger.Error(err, "Failed to add machine to LB")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
@@ -371,7 +382,6 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
-
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
 	}
 
@@ -399,6 +409,24 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
 
 	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) addMachineToLB(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+) error {
+	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
+		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
+			return err
+		}
+	} else {
+		if err := services.AddIPToDNS(ctx, machineScope); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *LinodeMachineReconciler) configureDisks(
@@ -647,10 +675,16 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		return nil
 	}
 
-	if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
-		logger.Error(err, "Failed to remove node from Node Balancer backend")
-
-		return err
+	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
+		if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
+			logger.Error(err, "Failed to remove node from Node Balancer backend")
+			return err
+		}
+	} else {
+		if err := services.DeleteIPFromDNS(ctx, machineScope); err != nil {
+			logger.Error(err, "Failed to remove IP from DNS")
+			return err
+		}
 	}
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {

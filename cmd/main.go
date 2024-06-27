@@ -75,7 +75,8 @@ func init() {
 func main() {
 	var (
 		// Environment variables
-		linodeToken string = os.Getenv("LINODE_TOKEN")
+		linodeToken    = os.Getenv("LINODE_TOKEN")
+		linodeDNSToken = os.Getenv("LINODE_DNS_TOKEN")
 
 		machineWatchFilter             string
 		clusterWatchFilter             string
@@ -104,6 +105,9 @@ func main() {
 	if linodeToken == "" {
 		setupLog.Error(errors.New("failed to get LINODE_TOKEN environment variable"), "unable to start operator")
 		os.Exit(1)
+	}
+	if linodeDNSToken == "" {
+		linodeDNSToken = linodeToken
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -148,6 +152,7 @@ func main() {
 			Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
 			WatchFilterValue: machineWatchFilter,
 			LinodeApiKey:     linodeToken,
+			LinodeDNSAPIKey:  linodeDNSToken,
 		},
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")

@@ -61,11 +61,12 @@ func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VP
 
 	// Override the controller credentials with ones from the VPC's Secret reference (if supplied).
 	if params.LinodeVPC.Spec.CredentialsRef != nil {
-		data, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeVPC.Spec.CredentialsRef, params.LinodeVPC.GetNamespace())
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeVPC.Spec.CredentialsRef, params.LinodeVPC.GetNamespace(), "apiToken")
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(data)
+		apiKey = string(apiToken)
 	}
 	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout,
 		WithRetryCount(0),

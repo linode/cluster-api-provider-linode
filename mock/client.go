@@ -58,6 +58,21 @@ func (mr *MockLinodeClientMockRecorder) BootInstance(ctx, linodeID, configID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BootInstance", reflect.TypeOf((*MockLinodeClient)(nil).BootInstance), ctx, linodeID, configID)
 }
 
+// CreateDomainRecord mocks base method.
+func (m *MockLinodeClient) CreateDomainRecord(ctx context.Context, domainID int, recordReq linodego.DomainRecordCreateOptions) (*linodego.DomainRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDomainRecord", ctx, domainID, recordReq)
+	ret0, _ := ret[0].(*linodego.DomainRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateDomainRecord indicates an expected call of CreateDomainRecord.
+func (mr *MockLinodeClientMockRecorder) CreateDomainRecord(ctx, domainID, recordReq any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDomainRecord", reflect.TypeOf((*MockLinodeClient)(nil).CreateDomainRecord), ctx, domainID, recordReq)
+}
+
 // CreateInstance mocks base method.
 func (m *MockLinodeClient) CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error) {
 	m.ctrl.T.Helper()
@@ -191,6 +206,20 @@ func (m *MockLinodeClient) CreateVPC(ctx context.Context, opts linodego.VPCCreat
 func (mr *MockLinodeClientMockRecorder) CreateVPC(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPC", reflect.TypeOf((*MockLinodeClient)(nil).CreateVPC), ctx, opts)
+}
+
+// DeleteDomainRecord mocks base method.
+func (m *MockLinodeClient) DeleteDomainRecord(ctx context.Context, domainID, domainRecordID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteDomainRecord", ctx, domainID, domainRecordID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteDomainRecord indicates an expected call of DeleteDomainRecord.
+func (mr *MockLinodeClientMockRecorder) DeleteDomainRecord(ctx, domainID, domainRecordID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDomainRecord", reflect.TypeOf((*MockLinodeClient)(nil).DeleteDomainRecord), ctx, domainID, domainRecordID)
 }
 
 // DeleteInstance mocks base method.
@@ -398,6 +427,36 @@ func (mr *MockLinodeClientMockRecorder) GetVPC(ctx, vpcID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVPC", reflect.TypeOf((*MockLinodeClient)(nil).GetVPC), ctx, vpcID)
 }
 
+// ListDomainRecords mocks base method.
+func (m *MockLinodeClient) ListDomainRecords(ctx context.Context, domainID int, opts *linodego.ListOptions) ([]linodego.DomainRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDomainRecords", ctx, domainID, opts)
+	ret0, _ := ret[0].([]linodego.DomainRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDomainRecords indicates an expected call of ListDomainRecords.
+func (mr *MockLinodeClientMockRecorder) ListDomainRecords(ctx, domainID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDomainRecords", reflect.TypeOf((*MockLinodeClient)(nil).ListDomainRecords), ctx, domainID, opts)
+}
+
+// ListDomains mocks base method.
+func (m *MockLinodeClient) ListDomains(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Domain, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDomains", ctx, opts)
+	ret0, _ := ret[0].([]linodego.Domain)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDomains indicates an expected call of ListDomains.
+func (mr *MockLinodeClientMockRecorder) ListDomains(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDomains", reflect.TypeOf((*MockLinodeClient)(nil).ListDomains), ctx, opts)
+}
+
 // ListInstanceConfigs mocks base method.
 func (m *MockLinodeClient) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error) {
 	m.ctrl.T.Helper()
@@ -485,6 +544,21 @@ func (m *MockLinodeClient) ResizeInstanceDisk(ctx context.Context, linodeID, dis
 func (mr *MockLinodeClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
+}
+
+// UpdateDomainRecord mocks base method.
+func (m *MockLinodeClient) UpdateDomainRecord(ctx context.Context, domainID, domainRecordID int, recordReq linodego.DomainRecordUpdateOptions) (*linodego.DomainRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDomainRecord", ctx, domainID, domainRecordID, recordReq)
+	ret0, _ := ret[0].(*linodego.DomainRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDomainRecord indicates an expected call of UpdateDomainRecord.
+func (mr *MockLinodeClientMockRecorder) UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomainRecord", reflect.TypeOf((*MockLinodeClient)(nil).UpdateDomainRecord), ctx, domainID, domainRecordID, recordReq)
 }
 
 // UpdateInstanceConfig mocks base method.
@@ -1050,6 +1124,103 @@ func (m *MockLinodeObjectStorageClient) GetObjectStorageKey(ctx context.Context,
 func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageKey(ctx, keyID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageKey", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageKey), ctx, keyID)
+}
+
+// MockLinodeDNSClient is a mock of LinodeDNSClient interface.
+type MockLinodeDNSClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockLinodeDNSClientMockRecorder
+}
+
+// MockLinodeDNSClientMockRecorder is the mock recorder for MockLinodeDNSClient.
+type MockLinodeDNSClientMockRecorder struct {
+	mock *MockLinodeDNSClient
+}
+
+// NewMockLinodeDNSClient creates a new mock instance.
+func NewMockLinodeDNSClient(ctrl *gomock.Controller) *MockLinodeDNSClient {
+	mock := &MockLinodeDNSClient{ctrl: ctrl}
+	mock.recorder = &MockLinodeDNSClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLinodeDNSClient) EXPECT() *MockLinodeDNSClientMockRecorder {
+	return m.recorder
+}
+
+// CreateDomainRecord mocks base method.
+func (m *MockLinodeDNSClient) CreateDomainRecord(ctx context.Context, domainID int, recordReq linodego.DomainRecordCreateOptions) (*linodego.DomainRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateDomainRecord", ctx, domainID, recordReq)
+	ret0, _ := ret[0].(*linodego.DomainRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateDomainRecord indicates an expected call of CreateDomainRecord.
+func (mr *MockLinodeDNSClientMockRecorder) CreateDomainRecord(ctx, domainID, recordReq any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDomainRecord", reflect.TypeOf((*MockLinodeDNSClient)(nil).CreateDomainRecord), ctx, domainID, recordReq)
+}
+
+// DeleteDomainRecord mocks base method.
+func (m *MockLinodeDNSClient) DeleteDomainRecord(ctx context.Context, domainID, domainRecordID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteDomainRecord", ctx, domainID, domainRecordID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteDomainRecord indicates an expected call of DeleteDomainRecord.
+func (mr *MockLinodeDNSClientMockRecorder) DeleteDomainRecord(ctx, domainID, domainRecordID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDomainRecord", reflect.TypeOf((*MockLinodeDNSClient)(nil).DeleteDomainRecord), ctx, domainID, domainRecordID)
+}
+
+// ListDomainRecords mocks base method.
+func (m *MockLinodeDNSClient) ListDomainRecords(ctx context.Context, domainID int, opts *linodego.ListOptions) ([]linodego.DomainRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDomainRecords", ctx, domainID, opts)
+	ret0, _ := ret[0].([]linodego.DomainRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDomainRecords indicates an expected call of ListDomainRecords.
+func (mr *MockLinodeDNSClientMockRecorder) ListDomainRecords(ctx, domainID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDomainRecords", reflect.TypeOf((*MockLinodeDNSClient)(nil).ListDomainRecords), ctx, domainID, opts)
+}
+
+// ListDomains mocks base method.
+func (m *MockLinodeDNSClient) ListDomains(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Domain, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDomains", ctx, opts)
+	ret0, _ := ret[0].([]linodego.Domain)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDomains indicates an expected call of ListDomains.
+func (mr *MockLinodeDNSClientMockRecorder) ListDomains(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDomains", reflect.TypeOf((*MockLinodeDNSClient)(nil).ListDomains), ctx, opts)
+}
+
+// UpdateDomainRecord mocks base method.
+func (m *MockLinodeDNSClient) UpdateDomainRecord(ctx context.Context, domainID, domainRecordID int, recordReq linodego.DomainRecordUpdateOptions) (*linodego.DomainRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDomainRecord", ctx, domainID, domainRecordID, recordReq)
+	ret0, _ := ret[0].(*linodego.DomainRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDomainRecord indicates an expected call of UpdateDomainRecord.
+func (mr *MockLinodeDNSClientMockRecorder) UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomainRecord", reflect.TypeOf((*MockLinodeDNSClient)(nil).UpdateDomainRecord), ctx, domainID, domainRecordID, recordReq)
 }
 
 // MockK8sClient is a mock of K8sClient interface.

@@ -121,7 +121,7 @@ gosec: ## Run gosec against code.
 
 .PHONY: lint
 lint: ## Run lint against code.
-	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:v1.57.2 golangci-lint run -c .golangci.yml --fix
+	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:v1.59.1 golangci-lint run -c .golangci.yml --fix
 
 .PHONY: nilcheck
 nilcheck: nilaway ## Run nil check against code.
@@ -152,7 +152,6 @@ e2etest: generate local-release local-deploy chainsaw
 	GIT_REF=$(GIT_REF) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
-	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci -f Tiltfile
 
@@ -204,7 +203,6 @@ endif
 
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt kind clusterctl
-	@echo -n "LINODE_TOKEN=$(LINODE_TOKEN)" > config/default/.env.linode
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) up --stream
 

@@ -225,6 +225,86 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 	)
 })
 
+var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lifecycle-dns"), func() {
+	controlPlaneEndpointHost := "cluster-lifecycle-dns-abc123.lkedevs.net"
+	controlPlaneEndpointPort := 6443
+	clusterName := "cluster-lifecycle-dns"
+	clusterNameSpace := "default"
+	ownerRef := metav1.OwnerReference{
+		Name:       clusterName,
+		APIVersion: "cluster.x-k8s.io/v1beta1",
+		Kind:       "Cluster",
+		UID:        "00000000-000-0000-0000-000000000000",
+	}
+	ownerRefs := []metav1.OwnerReference{ownerRef}
+	metadata := metav1.ObjectMeta{
+		Name:            clusterName,
+		Namespace:       clusterNameSpace,
+		OwnerReferences: ownerRefs,
+	}
+
+	linodeCluster := infrav1alpha2.LinodeCluster{
+		ObjectMeta: metadata,
+		Spec: infrav1alpha2.LinodeClusterSpec{
+			Region: "us-ord",
+			Network: infrav1alpha2.NetworkSpec{
+				LoadBalancerType:    "dns",
+				DNSRootDomain:       "lkedevs.net",
+				DNSUniqueIdentifier: "abc123",
+				DNSTTLSec:           30,
+			},
+		},
+	}
+
+	ctlrSuite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
+	reconciler := LinodeClusterReconciler{}
+	cScope := &scope.ClusterScope{}
+	clusterKey := client.ObjectKeyFromObject(&linodeCluster)
+
+	BeforeAll(func(ctx SpecContext) {
+		cScope.Client = k8sClient
+		Expect(k8sClient.Create(ctx, &linodeCluster)).To(Succeed())
+	})
+
+	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+
+		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
+		cScope.LinodeCluster = &linodeCluster
+
+		// Create patch helper with latest state of resource.
+		// This is only needed when relying on envtest's k8sClient.
+		patchHelper, err := patch.NewHelper(&linodeCluster, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		cScope.PatchHelper = patchHelper
+	})
+
+	ctlrSuite.Run(
+		OneOf(
+			Path(
+				Call("cluster with dns loadbalancing is created", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+				}),
+				Result("cluster created", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
+					Expect(err).NotTo(HaveOccurred())
+
+					By("checking ready conditions")
+					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
+					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
+					Expect(linodeCluster.Status.Ready).To(BeTrue())
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
+					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+
+					By("checking controlPlaneEndpoint/NB host and port")
+					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
+					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(controlPlaneEndpointPort)))
+				}),
+			),
+		),
+	)
+})
+
 var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), func() {
 	nodebalancerID := 1
 	clusterName := "cluster-delete"

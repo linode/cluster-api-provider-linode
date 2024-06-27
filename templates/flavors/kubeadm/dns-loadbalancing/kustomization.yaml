@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../default
+
+patches:
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeCluster
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeCluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        network:
+          loadBalancerType: dns
+          dnsRootDomain: ${DNS_ROOT_DOMAIN}
+          dnsUniqueIdentifier: ${DNS_UNIQUE_ID}
+  - target:
+      kind: Secret
+      name: linode-${CLUSTER_NAME}-crs-0
+    patch: |-
+      apiVersion: v1
+      kind: Secret
+      type: addons.cluster.x-k8s.io/resource-set
+      metadata:
+        name: linode-${CLUSTER_NAME}-crs-0
+      stringData:
+        linode-token-region.yaml: |-
+          kind: Secret
+          apiVersion: v1
+          metadata:
+            name: linode-token-region
+            namespace: kube-system
+          stringData:
+            apiToken: ${LINODE_TOKEN}
+            region: ${LINODE_REGION}
+            dnsToken: ${LINODE_DNS_TOKEN:-""}

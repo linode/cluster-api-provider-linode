@@ -26,13 +26,14 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client        K8sClient
-	PatchHelper   *patch.Helper
-	Cluster       *clusterv1.Cluster
-	Machine       *clusterv1.Machine
-	LinodeClient  LinodeClient
-	LinodeCluster *infrav1alpha2.LinodeCluster
-	LinodeMachine *infrav1alpha1.LinodeMachine
+	Client              K8sClient
+	PatchHelper         *patch.Helper
+	Cluster             *clusterv1.Cluster
+	Machine             *clusterv1.Machine
+	LinodeClient        LinodeClient
+	LinodeDomainsClient LinodeClient
+	LinodeCluster       *infrav1alpha2.LinodeCluster
+	LinodeMachine       *infrav1alpha1.LinodeMachine
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
@@ -52,7 +53,7 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(ctx context.Context, apiKey string, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -78,13 +79,27 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 	}
 
 	if credentialRef != nil {
-		data, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace)
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "apiToken")
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(data)
+		apiKey = string(apiToken)
+
+		dnsToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "dnsToken")
+		if err != nil || len(dnsToken) == 0 {
+			dnsToken = apiToken
+		}
+		dnsKey = string(dnsToken)
 	}
+
 	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout,
+		WithRetryCount(0),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
+	linodeDomainsClient, err := CreateLinodeClient(dnsKey, defaultClientTimeout,
 		WithRetryCount(0),
 	)
 	if err != nil {
@@ -97,13 +112,14 @@ func NewMachineScope(ctx context.Context, apiKey string, params MachineScopePara
 	}
 
 	return &MachineScope{
-		Client:        params.Client,
-		PatchHelper:   helper,
-		Cluster:       params.Cluster,
-		Machine:       params.Machine,
-		LinodeClient:  linodeClient,
-		LinodeCluster: params.LinodeCluster,
-		LinodeMachine: params.LinodeMachine,
+		Client:              params.Client,
+		PatchHelper:         helper,
+		Cluster:             params.Cluster,
+		Machine:             params.Machine,
+		LinodeClient:        linodeClient,
+		LinodeDomainsClient: linodeDomainsClient,
+		LinodeCluster:       params.LinodeCluster,
+		LinodeMachine:       params.LinodeMachine,
 	}, nil
 }
 
