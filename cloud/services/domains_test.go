@@ -70,6 +70,11 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -137,6 +142,11 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -199,6 +209,11 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -274,6 +289,11 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -335,6 +355,11 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -454,9 +479,12 @@ func TestAddIPToDNS(t *testing.T) {
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{},
 					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{},
+					},
 				}, nil).AnyTimes()
 			},
-			expectedError: fmt.Errorf("failed to get public IP of machine: no public IP address"),
+			expectedError: fmt.Errorf("no public address"),
 		},
 		{
 			name: "Error - failure in getting domain",
@@ -501,6 +529,11 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -556,6 +589,11 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -608,7 +646,7 @@ func TestAddIPToDNS(t *testing.T) {
 				},
 			},
 			expects:       func(mockClient *mock.MockLinodeClient) {},
-			expectedError: fmt.Errorf("failed to get public IP of machine: instance ID is nil. cant get machine's public ip"),
+			expectedError: fmt.Errorf("instance ID is nil. cant get machine's public ip"),
 		},
 	}
 	for _, tt := range tests {
@@ -687,6 +725,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -756,6 +799,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -829,56 +877,6 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			expectedError: fmt.Errorf("failed to get public ipv4 ip address"),
 		},
 		{
-			name: "Error - no public ip set",
-			machineScope: &scope.MachineScope{
-				Machine: &clusterv1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-						Labels: map[string]string{
-							clusterv1.MachineControlPlaneLabel: "true",
-						},
-					},
-				},
-				Cluster: &clusterv1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-				},
-				LinodeCluster: &infrav1alpha2.LinodeCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha2.LinodeClusterSpec{
-						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
-						},
-					},
-				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
-					},
-				},
-			},
-			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
-					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{},
-					},
-				}, nil).AnyTimes()
-			},
-			expectedError: fmt.Errorf("failed to get public IP of machine: no public IP address"),
-		},
-		{
 			name: "Error - failure in getting domain",
 			machineScope: &scope.MachineScope{
 				Machine: &clusterv1.Machine{
@@ -921,6 +919,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
@@ -976,6 +979,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(&linodego.InstanceIPAddressResponse{
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
 					IPv4: &linodego.InstanceIPv4Response{
 						Public: []*linodego.InstanceIP{
 							{
