@@ -13,8 +13,6 @@ patches:
       kind: LinodeCluster
       metadata:
         name: ${CLUSTER_NAME}
-        labels:
-            ipv6: enabled
       spec:
         network:
           loadBalancerType: dns

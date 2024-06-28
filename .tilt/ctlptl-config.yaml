@@ -8,5 +8,3 @@ kindV1Alpha4Cluster:
   nodes:
     - role: control-plane
       image: kindest/node:v1.29.2
-  networking:
-    ipFamily: dual
