@@ -41,8 +41,17 @@ By default, clusters are provisioned within VPC. For Regions which do not have [
 The `linode-linode` infrastructure provider requires clusterctl version 1.7.2 or higher
 ```
 Install CAPL and enable the helm addon provider which is used by the majority of the CAPL flavors
+
 ```bash
 clusterctl init --infrastructure linode-linode --addon helm
+# Fetching providers
+# Installing cert-manager Version="v1.14.5"
+# Waiting for cert-manager to be available...
+# Installing Provider="cluster-api" Version="v1.7.3" TargetNamespace="capi-system"
+# Installing Provider="bootstrap-kubeadm" Version="v1.7.3" TargetNamespace="capi-kubeadm-bootstrap-system"
+# Installing Provider="control-plane-kubeadm" Version="v1.7.3" TargetNamespace="capi-kubeadm-control-plane-system"
+# Installing Provider="infrastructure-linode-linode" Version="v0.4.0" TargetNamespace="capl-system"
+# Installing Provider="addon-helm" Version="v0.2.4" TargetNamespace="caaph-system"
 ```
 
 ## Deploying your first cluster
