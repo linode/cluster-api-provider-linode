@@ -50,7 +50,7 @@ func (r *LinodeObjectStorageBucket) SetupWebhookWithManager(mgr ctrl.Manager) er
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable updation and deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeobjectstoragebucket,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets,verbs=create,versions=v1alpha1,name=vlinodeobjectstoragebucket.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeobjectstoragebucket,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets,verbs=create,versions=v1alpha1,name=v1alpha1.linodeobjectstoragebucket.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &LinodeObjectStorageBucket{}
 
