@@ -215,7 +215,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 			},
 			expectedConfigs: []*linodego.NodeBalancerConfig{
 				{
-					Port:           defaultApiserverLBPort,
+					Port:           DefaultApiserverLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -224,7 +224,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
-					Port:           defaultApiserverLBPort,
+					Port:           DefaultApiserverLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -312,7 +312,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 			},
 			expectedConfigs: []*linodego.NodeBalancerConfig{
 				{
-					Port:           defaultApiserverLBPort,
+					Port:           DefaultApiserverLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -355,7 +355,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 			},
 			expectedConfigs: []*linodego.NodeBalancerConfig{
 				{
-					Port:           defaultApiserverLBPort,
+					Port:           DefaultApiserverLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -372,7 +372,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 			expectedError: fmt.Errorf("error creating NodeBalancerConfig"),
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
-					Port:           defaultApiserverLBPort,
+					Port:           DefaultApiserverLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -437,7 +437,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						Network: infrav1alpha2.NetworkSpec{
 							NodeBalancerID:                ptr.To(1234),
 							ApiserverNodeBalancerConfigID: nil,
-							ApiserverLoadBalancerPort:     defaultApiserverLBPort,
+							ApiserverLoadBalancerPort:     DefaultApiserverLBPort,
 						},
 					},
 				},
