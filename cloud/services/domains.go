@@ -107,7 +107,7 @@ func GetMachinePublicIPs(ctx context.Context, mscope *scope.MachineScope) ([]map
 	if mscope.LinodeMachine.Status.Addresses == nil {
 		return nil, fmt.Errorf("no addresses available on the LinodeMachine resource")
 	}
-	var IPsToReturn []map[string]string
+	IPsToReturn := make([]map[string]string, 0, 2) //nolint:mnd // Max 2 IPs(1 IPv4 and 1 IPv6)
 	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
 		publicIPs := make(map[string]string)
 		if IPs.Type == "ExternalIP" {
@@ -116,9 +116,6 @@ func GetMachinePublicIPs(ctx context.Context, mscope *scope.MachineScope) ([]map
 			} else {
 				publicIPs["IPv6"] = IPs.Address
 			}
-		}
-		if publicIPs == nil {
-			return nil, fmt.Errorf("no public addresses available on the LinodeMachine resource")
 		}
 		IPsToReturn = append(IPsToReturn, publicIPs)
 	}
