@@ -107,8 +107,7 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 func GetMachinePublicIPs(ctx context.Context, mscope *scope.MachineScope) (map[string]string, error) {
 	// Verify instance id is not nil
 	if mscope.LinodeMachine.Spec.InstanceID == nil {
-		err := errors.New("instance ID is nil. cant get machine's public ip")
-		return nil, err
+		return nil, errors.New("instance ID is nil. cant get machine's public ip")
 	}
 
 	// Get the public IP that was assigned
@@ -118,8 +117,11 @@ func GetMachinePublicIPs(ctx context.Context, mscope *scope.MachineScope) (map[s
 	}
 
 	if len(addresses.IPv4.Public) == 0 || addresses.IPv6 == nil {
-		err := errors.New("no public address")
-		return nil, err
+		return nil, errors.New("no public address")
+	}
+
+	if addresses.IPv6.SLAAC == nil {
+		return nil, errors.New("no SLAAC address")
 	}
 
 	return map[string]string{"IPv4": addresses.IPv4.Public[0].Address, "IPv6": addresses.IPv6.SLAAC.Address}, nil
