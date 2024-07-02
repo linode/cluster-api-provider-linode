@@ -7,10 +7,10 @@ By default, the following policies are set to audit mode(without any enforcement
 
 * [Kubeadm](./flavors/default.md) cluster allow rules
 
-    | Ports     | Use-case                 | Allowed clients       |
-    |-----------|--------------------------|-----------------------|
-    | 6443      | API Server Traffic       | World                 |
-    | *         | In Cluster Communication | Intra Cluster Traffic |
+    | Ports                   | Use-case                 | Allowed clients       |
+    |-------------------------|--------------------------|-----------------------|
+    | ${APISERVER_PORT:=6443} | API Server Traffic       | World                 |
+    | *                       | In Cluster Communication | Intra Cluster Traffic |
 
 ```admonish note
 For kubeadm clusters running outside of VPC, ports 2379 and 2380 are also allowed for etcd-traffic.
@@ -18,17 +18,17 @@ For kubeadm clusters running outside of VPC, ports 2379 and 2380 are also allowe
 
 * [k3s](./flavors/k3s.md) cluster allow rules
     
-    | Ports | Use-case                 | Allowed clients               |
-    |-------|--------------------------|-------------------------------|
-    | 6443  | API Server Traffic       | World                         |
-    | *     | In Cluster Communication | Intra Cluster and VPC Traffic |
+    | Ports                   | Use-case                 | Allowed clients               |
+    |-------------------------|--------------------------|-------------------------------|
+    | ${APISERVER_PORT:=6443} | API Server Traffic       | World                         |
+    | *                       | In Cluster Communication | Intra Cluster and VPC Traffic |
 
 * [RKE2](./flavors/rke2.md) cluster allow rules
 
-  | Ports | Use-case                 | Allowed clients               |
-  |-------|--------------------------|-------------------------------|
-  | 6443  | API Server Traffic       | World                         |
-  | *     | In Cluster Communication | Intra Cluster and VPC Traffic |
+    | Ports                   | Use-case                 | Allowed clients               |
+    |-------------------------|--------------------------|-------------------------------|
+    | ${APISERVER_PORT:=6443} | API Server Traffic       | World                         |
+    | *                       | In Cluster Communication | Intra Cluster and VPC Traffic |
 
 ## Enabling Firewall Enforcement
 In order to turn the cilium network policy from audit to enforce mode use the environment variable `FW_AUDIT_ONLY=false`
@@ -55,7 +55,7 @@ spec:
       toPorts:
         - ports:
             - port: "22" # added for SSH Access to the nodes
-            - port: "6443"
+            - port: "${APISERVER_PORT:=6443}"
 ```
 Alternatively, additional rules can be added by creating a new policy
 ```yaml

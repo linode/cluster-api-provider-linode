@@ -38,14 +38,14 @@ spec:
               tunnelProtocol: ""
               enableIPv4Masquerade: true
               k8sServiceHost: 10.0.0.2
-              k8sServicePort: 6443
+              k8sServicePort: ${APISERVER_PORT:=6443}
               policyAuditMode: ${FW_AUDIT_ONLY:=true}
               hostFirewall:
                 enabled: true
               extraConfig:
                 allow-localhost: policy
               k8sServiceHost: 10.0.0.2
-              k8sServicePort: 6443
+              k8sServicePort: ${APISERVER_PORT:=6443}
               extraArgs:
                 - --nodeport-addresses=0.0.0.0/0
               ipam:
