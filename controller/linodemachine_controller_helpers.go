@@ -124,6 +124,11 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 		ips = append(ips, clusterv1.MachineAddress{Address: addresses.IPv4.Public[0].Address, Type: clusterv1.MachineExternalIP})
 	}
 
+	// check if a node has public ip and store it
+	if addresses.IPv6.SLAAC != nil {
+		ips = append(ips, clusterv1.MachineAddress{Address: addresses.IPv6.SLAAC.Address, Type: clusterv1.MachineExternalIP})
+	}
+
 	// Iterate over interfaces in config and find VPC specific ips
 	for _, iface := range configs[0].Interfaces {
 		if iface.VPCID != nil && iface.IPv4.VPC != "" {
