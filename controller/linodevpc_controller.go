@@ -348,7 +348,7 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 		&clusterv1.Cluster{},
 		handler.EnqueueRequestsFromMapFunc(linodeVPCMapper),
 		builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
-	).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r))
+	).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
@@ -357,5 +357,5 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 }
 
 func (r *LinodeVPCReconciler) TracedClient() client.Client {
-	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client)
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
 }

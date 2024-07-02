@@ -282,7 +282,7 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager,
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeObjectStorageBucketMapper),
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
-		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r))
+		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
@@ -291,5 +291,5 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager,
 }
 
 func (r *LinodeObjectStorageBucketReconciler) TracedClient() client.Client {
-	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client)
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
 }

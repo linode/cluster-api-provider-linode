@@ -45,7 +45,9 @@ func (_d RuntimeClientWithTracing) Create(ctx context.Context, obj client.Object
 				"obj":  obj,
 				"opts": opts}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -68,7 +70,9 @@ func (_d RuntimeClientWithTracing) Delete(ctx context.Context, obj client.Object
 				"obj":  obj,
 				"opts": opts}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -91,7 +95,9 @@ func (_d RuntimeClientWithTracing) DeleteAllOf(ctx context.Context, obj client.O
 				"obj":  obj,
 				"opts": opts}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -115,7 +121,9 @@ func (_d RuntimeClientWithTracing) Get(ctx context.Context, key client.ObjectKey
 				"obj":  obj,
 				"opts": opts}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -138,7 +146,9 @@ func (_d RuntimeClientWithTracing) List(ctx context.Context, list client.ObjectL
 				"list": list,
 				"opts": opts}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -162,7 +172,9 @@ func (_d RuntimeClientWithTracing) Patch(ctx context.Context, obj client.Object,
 				"patch": patch,
 				"opts":  opts}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -185,7 +197,9 @@ func (_d RuntimeClientWithTracing) Update(ctx context.Context, obj client.Object
 				"obj":  obj,
 				"opts": opts}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),

@@ -45,7 +45,9 @@ func (_d RuntimeReconcilerWithTracing) Reconcile(ctx context.Context, r1 reconci
 				"r1":  r1}, map[string]interface{}{
 				"r2":  r2,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),

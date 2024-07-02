@@ -71,7 +71,9 @@ func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int
 				"linodeID": linodeID,
 				"configID": configID}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -95,7 +97,9 @@ func (_d LinodeClientWithTracing) CreateDomainRecord(ctx context.Context, domain
 				"recordReq": recordReq}, map[string]interface{}{
 				"dp1": dp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -118,7 +122,9 @@ func (_d LinodeClientWithTracing) CreateInstance(ctx context.Context, opts linod
 				"opts": opts}, map[string]interface{}{
 				"ip1": ip1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -142,7 +148,9 @@ func (_d LinodeClientWithTracing) CreateInstanceDisk(ctx context.Context, linode
 				"opts":     opts}, map[string]interface{}{
 				"ip1": ip1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -165,7 +173,9 @@ func (_d LinodeClientWithTracing) CreateNodeBalancer(ctx context.Context, opts l
 				"opts": opts}, map[string]interface{}{
 				"np1": np1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -189,7 +199,9 @@ func (_d LinodeClientWithTracing) CreateNodeBalancerConfig(ctx context.Context, 
 				"opts":           opts}, map[string]interface{}{
 				"np1": np1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -214,7 +226,9 @@ func (_d LinodeClientWithTracing) CreateNodeBalancerNode(ctx context.Context, no
 				"opts":           opts}, map[string]interface{}{
 				"np1": np1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -237,7 +251,9 @@ func (_d LinodeClientWithTracing) CreateObjectStorageBucket(ctx context.Context,
 				"opts": opts}, map[string]interface{}{
 				"op1": op1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -260,7 +276,9 @@ func (_d LinodeClientWithTracing) CreateObjectStorageKey(ctx context.Context, op
 				"opts": opts}, map[string]interface{}{
 				"op1": op1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -308,7 +326,9 @@ func (_d LinodeClientWithTracing) CreateStackscript(ctx context.Context, opts li
 				"opts": opts}, map[string]interface{}{
 				"sp1": sp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -331,7 +351,9 @@ func (_d LinodeClientWithTracing) CreateVPC(ctx context.Context, opts linodego.V
 				"opts": opts}, map[string]interface{}{
 				"vp1": vp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -354,7 +376,9 @@ func (_d LinodeClientWithTracing) DeleteDomainRecord(ctx context.Context, domain
 				"domainID":       domainID,
 				"domainRecordID": domainRecordID}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -376,7 +400,9 @@ func (_d LinodeClientWithTracing) DeleteInstance(ctx context.Context, linodeID i
 				"ctx":      ctx,
 				"linodeID": linodeID}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -398,7 +424,9 @@ func (_d LinodeClientWithTracing) DeleteNodeBalancer(ctx context.Context, nodeba
 				"ctx":            ctx,
 				"nodebalancerID": nodebalancerID}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -422,7 +450,9 @@ func (_d LinodeClientWithTracing) DeleteNodeBalancerNode(ctx context.Context, no
 				"configID":       configID,
 				"nodeID":         nodeID}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -444,7 +474,9 @@ func (_d LinodeClientWithTracing) DeleteObjectStorageKey(ctx context.Context, ke
 				"ctx":   ctx,
 				"keyID": keyID}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -490,7 +522,9 @@ func (_d LinodeClientWithTracing) DeleteVPC(ctx context.Context, vpcID int) (err
 				"ctx":   ctx,
 				"vpcID": vpcID}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -513,7 +547,9 @@ func (_d LinodeClientWithTracing) GetImage(ctx context.Context, imageID string) 
 				"imageID": imageID}, map[string]interface{}{
 				"ip1": ip1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -536,7 +572,9 @@ func (_d LinodeClientWithTracing) GetInstance(ctx context.Context, linodeID int)
 				"linodeID": linodeID}, map[string]interface{}{
 				"ip1": ip1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -560,7 +598,9 @@ func (_d LinodeClientWithTracing) GetInstanceDisk(ctx context.Context, linodeID 
 				"diskID":   diskID}, map[string]interface{}{
 				"ip1": ip1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -583,7 +623,9 @@ func (_d LinodeClientWithTracing) GetInstanceIPAddresses(ctx context.Context, li
 				"linodeID": linodeID}, map[string]interface{}{
 				"ip1": ip1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -606,7 +648,9 @@ func (_d LinodeClientWithTracing) GetNodeBalancer(ctx context.Context, nodebalan
 				"nodebalancerID": nodebalancerID}, map[string]interface{}{
 				"np1": np1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -630,7 +674,9 @@ func (_d LinodeClientWithTracing) GetNodeBalancerConfig(ctx context.Context, nod
 				"configID":       configID}, map[string]interface{}{
 				"np1": np1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -654,7 +700,9 @@ func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, re
 				"label":    label}, map[string]interface{}{
 				"op1": op1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -677,7 +725,9 @@ func (_d LinodeClientWithTracing) GetObjectStorageKey(ctx context.Context, keyID
 				"keyID": keyID}, map[string]interface{}{
 				"op1": op1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -725,7 +775,9 @@ func (_d LinodeClientWithTracing) GetRegion(ctx context.Context, regionID string
 				"regionID": regionID}, map[string]interface{}{
 				"rp1": rp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -748,7 +800,9 @@ func (_d LinodeClientWithTracing) GetType(ctx context.Context, typeID string) (l
 				"typeID": typeID}, map[string]interface{}{
 				"lp1": lp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -771,7 +825,9 @@ func (_d LinodeClientWithTracing) GetVPC(ctx context.Context, vpcID int) (vp1 *l
 				"vpcID": vpcID}, map[string]interface{}{
 				"vp1": vp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -795,7 +851,9 @@ func (_d LinodeClientWithTracing) ListDomainRecords(ctx context.Context, domainI
 				"opts":     opts}, map[string]interface{}{
 				"da1": da1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -818,7 +876,9 @@ func (_d LinodeClientWithTracing) ListDomains(ctx context.Context, opts *linodeg
 				"opts": opts}, map[string]interface{}{
 				"da1": da1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -842,7 +902,9 @@ func (_d LinodeClientWithTracing) ListInstanceConfigs(ctx context.Context, linod
 				"opts":     opts}, map[string]interface{}{
 				"ia1": ia1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -865,7 +927,9 @@ func (_d LinodeClientWithTracing) ListInstances(ctx context.Context, opts *linod
 				"opts": opts}, map[string]interface{}{
 				"ia1": ia1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -913,7 +977,9 @@ func (_d LinodeClientWithTracing) ListStackscripts(ctx context.Context, opts *li
 				"opts": opts}, map[string]interface{}{
 				"sa1": sa1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -936,7 +1002,9 @@ func (_d LinodeClientWithTracing) ListVPCs(ctx context.Context, opts *linodego.L
 				"opts": opts}, map[string]interface{}{
 				"va1": va1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -960,7 +1028,9 @@ func (_d LinodeClientWithTracing) ResizeInstanceDisk(ctx context.Context, linode
 				"diskID":   diskID,
 				"size":     size}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -1011,7 +1081,9 @@ func (_d LinodeClientWithTracing) UpdateDomainRecord(ctx context.Context, domain
 				"recordReq":      recordReq}, map[string]interface{}{
 				"dp1": dp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -1036,7 +1108,9 @@ func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, lino
 				"opts":     opts}, map[string]interface{}{
 				"ip1": ip1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
