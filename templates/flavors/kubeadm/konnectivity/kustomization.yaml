@@ -62,7 +62,7 @@ patches:
       spec:
         network:
           additionalPorts:
-          - port: 8132
+          - port: ${KONNECTIVITY_PORT:=8132}
   - target:
       kind: ConfigMap
       name: .*-cilium-policy
@@ -114,4 +114,4 @@ patches:
                   - all
                 toPorts:
                   - ports:
-                      - port: "8132"
+                      - port: "${KONNECTIVITY_PORT:=8132}"

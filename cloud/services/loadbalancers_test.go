@@ -41,7 +41,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 							NodeBalancerID: ptr.To(1234),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
-									Port:                 8132,
+									Port:                 DefaultKonnectivityLBPort,
 									NodeBalancerConfigID: ptr.To(1234),
 								},
 							},
@@ -302,7 +302,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 							NodeBalancerID: ptr.To(1234),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
-									Port:                 8132,
+									Port:                 DefaultKonnectivityLBPort,
 									NodeBalancerConfigID: ptr.To(1234),
 								},
 							},
@@ -319,7 +319,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 					NodeBalancerID: 1234,
 				},
 				{
-					Port:           defaultKonnectivityLBPort,
+					Port:           DefaultKonnectivityLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -345,7 +345,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 							NodeBalancerID: ptr.To(1234),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
-									Port:                 8132,
+									Port:                 DefaultKonnectivityLBPort,
 									NodeBalancerConfigID: ptr.To(1234),
 								},
 							},
@@ -362,7 +362,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 					NodeBalancerID: 1234,
 				},
 				{
-					Port:           defaultKonnectivityLBPort,
+					Port:           DefaultKonnectivityLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
 					Check:          linodego.CheckConnection,
@@ -600,7 +600,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 							ApiserverNodeBalancerConfigID: ptr.To(5678),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
-									Port:                 8132,
+									Port:                 DefaultKonnectivityLBPort,
 									NodeBalancerConfigID: ptr.To(1234),
 								},
 							},
@@ -800,7 +800,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 							ApiserverNodeBalancerConfigID: ptr.To(5678),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
-									Port:                 8132,
+									Port:                 DefaultKonnectivityLBPort,
 									NodeBalancerConfigID: ptr.To(1234),
 								},
 							},
@@ -886,7 +886,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 							ApiserverNodeBalancerConfigID: ptr.To(5678),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
-									Port:                 8132,
+									Port:                 DefaultKonnectivityLBPort,
 									NodeBalancerConfigID: ptr.To(1234),
 								},
 							},

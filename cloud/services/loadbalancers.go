@@ -17,7 +17,7 @@ import (
 
 const (
 	DefaultApiserverLBPort    = 6443
-	defaultKonnectivityLBPort = 8132
+	DefaultKonnectivityLBPort = 8132
 )
 
 // CreateNodeBalancer creates a new NodeBalancer if one doesn't exist
