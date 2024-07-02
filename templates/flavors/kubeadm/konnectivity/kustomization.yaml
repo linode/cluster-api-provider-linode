@@ -18,9 +18,7 @@ patches:
       spec:
         kubeadmConfigSpec:
           preKubeadmCommands:
-            - /kubeadm-pre-init.sh ${KUBERNETES_VERSION}
-            - sed -i '/swap/d' /etc/fstab
-            - swapoff -a
+            - curl -fsSL https://raw.githubusercontent.com/linode/cluster-api-provider-linode/1981a4934753c10bfe9042c0b24ed4d02392ee0e/scripts/pre-kubeadminit.sh | bash -s ${KUBERNETES_VERSION}
             - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
             - mkdir -p -m 755 /etc/kubernetes/konnectivity
             - curl -s -L https://raw.githubusercontent.com/linode/konnectivity/876b00f976975833929723ad9e247d0c124124bd/config/egress-selector-configuration.yaml > /etc/kubernetes/konnectivity/egress-selector-configuration.yaml
