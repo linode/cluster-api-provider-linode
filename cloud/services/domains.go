@@ -31,7 +31,7 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Get the public IP that was assigned
-	publicIPs, err := GetMachinePublicIPs(ctx, mscope)
+	publicIPs, err := getMachinePublicIPs(ctx, mscope)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Create/Update the TXT record for this IP and name combo
-	txtRecordValueString := CreateSHA256HashOfString(mscope.LinodeMachine.Name)
+	txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
 	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Get the public IP that was assigned
-	publicIPs, err := GetMachinePublicIPs(ctx, mscope)
+	publicIPs, err := getMachinePublicIPs(ctx, mscope)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Delete TXT record
-	txtRecordValueString := CreateSHA256HashOfString(mscope.LinodeMachine.Name)
+	txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
 	if err := DeleteDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
 		return err
 	}
@@ -103,8 +103,8 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	return nil
 }
 
-// GetMachinePublicIPs gets the machines public IP
-func GetMachinePublicIPs(ctx context.Context, mscope *scope.MachineScope) (map[string]string, error) {
+// getMachinePublicIPs gets the machines public IP
+func getMachinePublicIPs(ctx context.Context, mscope *scope.MachineScope) (map[string]string, error) {
 	// Verify instance id is not nil
 	if mscope.LinodeMachine.Spec.InstanceID == nil {
 		return nil, errors.New("instance ID is nil. cant get machine's public ip")
@@ -200,7 +200,7 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 
 	// If record is A type, verify ownership
 	if recordType != "TXT" {
-		txtRecordValueString := CreateSHA256HashOfString(mscope.LinodeMachine.Name)
+		txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
 		isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, "owner:"+txtRecordValueString, domainID)
 		if ownerErr != nil {
 			return ownerErr
@@ -265,7 +265,7 @@ func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostna
 	return true, nil
 }
 
-func CreateSHA256HashOfString(stringToConvert string) string {
+func createSHA256HashOfString(stringToConvert string) string {
 	machineNameHash := sha256.New()
 	machineNameHash.Write([]byte(stringToConvert))
 	return hex.EncodeToString(machineNameHash.Sum(nil))
