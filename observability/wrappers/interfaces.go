@@ -17,20 +17,14 @@ limitations under the License.
 package wrappers
 
 import (
-	"context"
-
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-type Reconciler interface {
-	client.Reader
-	client.Writer
-	client.StatusClient
-	client.SubResourceClientConstructor
+type RuntimeReconciler interface {
+	reconcile.Reconciler
+}
 
-	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
-	SetupWithManager(mgr manager.Manager, options controller.Options) error
+type RuntimeClient interface {
+	client.Client
 }

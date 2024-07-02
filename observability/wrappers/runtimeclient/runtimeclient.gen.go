@@ -2,9 +2,9 @@
 // template: ../../../hack/templates/opentelemetry.go.gotpl
 // gowrap: http://github.com/hexdigest/gowrap
 
-package reconciler
+package runtimeclient
 
-//go:generate gowrap gen -p github.com/linode/cluster-api-provider-linode/observability/wrappers -i Reconciler -t ../../../hack/templates/opentelemetry.go.gotpl -o reconciler.gen.go -l ""
+//go:generate gowrap gen -p github.com/linode/cluster-api-provider-linode/observability/wrappers -i RuntimeClient -t ../../../hack/templates/opentelemetry.go.gotpl -o runtimeclient.gen.go -l ""
 
 import (
 	"context"
@@ -13,20 +13,19 @@ import (
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ReconcilerWithTracing implements wrappers.Reconciler interface instrumented with opentracing spans
-type ReconcilerWithTracing struct {
-	wrappers.Reconciler
+// RuntimeClientWithTracing implements wrappers.RuntimeClient interface instrumented with opentracing spans
+type RuntimeClientWithTracing struct {
+	wrappers.RuntimeClient
 	_spanDecorator func(span trace.Span, params, results map[string]interface{})
 }
 
-// NewReconcilerWithTracing returns ReconcilerWithTracing
-func NewReconcilerWithTracing(base wrappers.Reconciler, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) ReconcilerWithTracing {
-	d := ReconcilerWithTracing{
-		Reconciler: base,
+// NewRuntimeClientWithTracing returns RuntimeClientWithTracing
+func NewRuntimeClientWithTracing(base wrappers.RuntimeClient, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) RuntimeClientWithTracing {
+	d := RuntimeClientWithTracing{
+		RuntimeClient: base,
 	}
 
 	if len(spanDecorator) > 0 && spanDecorator[0] != nil {
@@ -36,9 +35,9 @@ func NewReconcilerWithTracing(base wrappers.Reconciler, spanDecorator ...func(sp
 	return d
 }
 
-// Create implements wrappers.Reconciler
-func (_d ReconcilerWithTracing) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Create")
+// Create implements wrappers.RuntimeClient
+func (_d RuntimeClientWithTracing) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) (err error) {
+	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Create")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -56,12 +55,12 @@ func (_d ReconcilerWithTracing) Create(ctx context.Context, obj client.Object, o
 
 		_span.End()
 	}()
-	return _d.Reconciler.Create(ctx, obj, opts...)
+	return _d.RuntimeClient.Create(ctx, obj, opts...)
 }
 
-// Delete implements wrappers.Reconciler
-func (_d ReconcilerWithTracing) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Delete")
+// Delete implements wrappers.RuntimeClient
+func (_d RuntimeClientWithTracing) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) (err error) {
+	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Delete")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -79,12 +78,12 @@ func (_d ReconcilerWithTracing) Delete(ctx context.Context, obj client.Object, o
 
 		_span.End()
 	}()
-	return _d.Reconciler.Delete(ctx, obj, opts...)
+	return _d.RuntimeClient.Delete(ctx, obj, opts...)
 }
 
-// DeleteAllOf implements wrappers.Reconciler
-func (_d ReconcilerWithTracing) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.DeleteAllOf")
+// DeleteAllOf implements wrappers.RuntimeClient
+func (_d RuntimeClientWithTracing) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) (err error) {
+	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.DeleteAllOf")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -102,12 +101,12 @@ func (_d ReconcilerWithTracing) DeleteAllOf(ctx context.Context, obj client.Obje
 
 		_span.End()
 	}()
-	return _d.Reconciler.DeleteAllOf(ctx, obj, opts...)
+	return _d.RuntimeClient.DeleteAllOf(ctx, obj, opts...)
 }
 
-// Get implements wrappers.Reconciler
-func (_d ReconcilerWithTracing) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Get")
+// Get implements wrappers.RuntimeClient
+func (_d RuntimeClientWithTracing) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) (err error) {
+	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Get")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -126,12 +125,12 @@ func (_d ReconcilerWithTracing) Get(ctx context.Context, key client.ObjectKey, o
 
 		_span.End()
 	}()
-	return _d.Reconciler.Get(ctx, key, obj, opts...)
+	return _d.RuntimeClient.Get(ctx, key, obj, opts...)
 }
 
-// List implements wrappers.Reconciler
-func (_d ReconcilerWithTracing) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.List")
+// List implements wrappers.RuntimeClient
+func (_d RuntimeClientWithTracing) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) (err error) {
+	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.List")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -149,12 +148,12 @@ func (_d ReconcilerWithTracing) List(ctx context.Context, list client.ObjectList
 
 		_span.End()
 	}()
-	return _d.Reconciler.List(ctx, list, opts...)
+	return _d.RuntimeClient.List(ctx, list, opts...)
 }
 
-// Patch implements wrappers.Reconciler
-func (_d ReconcilerWithTracing) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Patch")
+// Patch implements wrappers.RuntimeClient
+func (_d RuntimeClientWithTracing) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) (err error) {
+	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Patch")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -173,35 +172,12 @@ func (_d ReconcilerWithTracing) Patch(ctx context.Context, obj client.Object, pa
 
 		_span.End()
 	}()
-	return _d.Reconciler.Patch(ctx, obj, patch, opts...)
+	return _d.RuntimeClient.Patch(ctx, obj, patch, opts...)
 }
 
-// Reconcile implements wrappers.Reconciler
-func (_d ReconcilerWithTracing) Reconcile(ctx context.Context, req ctrl.Request) (r1 ctrl.Result, err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Reconcile")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx": ctx,
-				"req": req}, map[string]interface{}{
-				"r1":  r1,
-				"err": err})
-		} else if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.Reconciler.Reconcile(ctx, req)
-}
-
-// Update implements wrappers.Reconciler
-func (_d ReconcilerWithTracing) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.Reconciler.Update")
+// Update implements wrappers.RuntimeClient
+func (_d RuntimeClientWithTracing) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) (err error) {
+	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Update")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -219,5 +195,5 @@ func (_d ReconcilerWithTracing) Update(ctx context.Context, obj client.Object, o
 
 		_span.End()
 	}()
-	return _d.Reconciler.Update(ctx, obj, opts...)
+	return _d.RuntimeClient.Update(ctx, obj, opts...)
 }

@@ -46,7 +46,9 @@ func (_d LinodeClientWithTracing) AssignPlacementGroupLinodes(ctx context.Contex
 				"options": options}, map[string]interface{}{
 				"pp1": pp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -281,7 +283,9 @@ func (_d LinodeClientWithTracing) CreatePlacementGroup(ctx context.Context, opts
 				"opts": opts}, map[string]interface{}{
 				"pp1": pp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -462,7 +466,9 @@ func (_d LinodeClientWithTracing) DeletePlacementGroup(ctx context.Context, id i
 				"ctx": ctx,
 				"id":  id}, map[string]interface{}{
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -694,7 +700,9 @@ func (_d LinodeClientWithTracing) GetPlacementGroup(ctx context.Context, id int)
 				"id":  id}, map[string]interface{}{
 				"pp1": pp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -880,7 +888,9 @@ func (_d LinodeClientWithTracing) ListPlacementGroups(ctx context.Context, optio
 				"options": options}, map[string]interface{}{
 				"pa1": pa1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -974,7 +984,9 @@ func (_d LinodeClientWithTracing) UnassignPlacementGroupLinodes(ctx context.Cont
 				"options": options}, map[string]interface{}{
 				"pp1": pp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),
@@ -1048,7 +1060,9 @@ func (_d LinodeClientWithTracing) UpdatePlacementGroup(ctx context.Context, id i
 				"options": options}, map[string]interface{}{
 				"pp1": pp1,
 				"err": err})
-		} else if err != nil {
+		}
+
+		if err != nil {
 			_span.RecordError(err)
 			_span.SetAttributes(
 				attribute.String("event", "error"),

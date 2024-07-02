@@ -180,7 +180,7 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 }
 
 func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
-	machine, err := kutil.GetOwnerMachine(ctx, r.Client, linodeMachine.ObjectMeta)
+	machine, err := kutil.GetOwnerMachine(ctx, r.TracedClient(), linodeMachine.ObjectMeta)
 	if err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch owner machine")
@@ -212,7 +212,7 @@ func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMac
 }
 
 func (r *LinodeMachineReconciler) getClusterFromMetadata(ctx context.Context, machine clusterv1.Machine, log logr.Logger) (*clusterv1.Cluster, error) {
-	cluster, err := kutil.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
+	cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), machine.ObjectMeta)
 	if err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch cluster by label")
@@ -254,7 +254,7 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 			return nil
 		}
 
-		cluster, err := kutil.GetOwnerCluster(ctx, r.Client, linodeCluster.ObjectMeta)
+		cluster, err := kutil.GetOwnerCluster(ctx, r.TracedClient(), linodeCluster.ObjectMeta)
 		switch {
 		case apierrors.IsNotFound(err) || cluster == nil:
 			logger.Info("Cluster for LinodeCluster not found, skipping mapping")
@@ -281,7 +281,7 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 	labels := map[string]string{clusterv1.ClusterNameLabel: name}
 
 	machineList := clusterv1.MachineList{}
-	if err := r.Client.List(ctx, &machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+	if err := r.TracedClient().List(ctx, &machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		return nil, err
 	}
 

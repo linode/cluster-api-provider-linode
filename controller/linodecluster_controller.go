@@ -43,6 +43,8 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
+	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
+	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -69,13 +71,13 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.NamespacedName.String())
 	linodeCluster := &infrav1alpha2.LinodeCluster{}
-	if err := r.Client.Get(ctx, req.NamespacedName, linodeCluster); err != nil {
+	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeCluster); err != nil {
 		logger.Info("Failed to fetch Linode cluster", "error", err.Error())
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	cluster, err := kutil.GetOwnerCluster(ctx, r.Client, linodeCluster.ObjectMeta)
+	cluster, err := kutil.GetOwnerCluster(ctx, r.TracedClient(), linodeCluster.ObjectMeta)
 	if err != nil {
 		logger.Info("Failed to get owner cluster", "error", err.Error())
 
@@ -91,7 +93,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		ctx,
 		r.LinodeApiKey,
 		scope.ClusterScopeParams{
-			Client:        r.Client,
+			Client:        r.TracedClient(),
 			Cluster:       cluster,
 			LinodeCluster: linodeCluster,
 		},
@@ -300,10 +302,14 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 				kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha2.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha2.LinodeCluster{}),
 			),
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
-		).Complete(r)
+		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
 	return nil
+}
+
+func (r *LinodeClusterReconciler) TracedClient() client.Client {
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client)
 }
