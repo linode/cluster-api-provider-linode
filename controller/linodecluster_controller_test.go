@@ -227,7 +227,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 
 var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lifecycle-dns"), func() {
 	controlPlaneEndpointHost := "cluster-lifecycle-dns-abc123.lkedevs.net"
-	controlPlaneEndpointPort := 6443
+	controlPlaneEndpointPort := 1000
 	clusterName := "cluster-lifecycle-dns"
 	clusterNameSpace := "default"
 	ownerRef := metav1.OwnerReference{
@@ -248,10 +248,11 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
 			Network: infrav1alpha2.NetworkSpec{
-				LoadBalancerType:    "dns",
-				DNSRootDomain:       "lkedevs.net",
-				DNSUniqueIdentifier: "abc123",
-				DNSTTLSec:           30,
+				LoadBalancerType:          "dns",
+				DNSRootDomain:             "lkedevs.net",
+				DNSUniqueIdentifier:       "abc123",
+				DNSTTLSec:                 30,
+				ApiserverLoadBalancerPort: controlPlaneEndpointPort,
 			},
 		},
 	}
