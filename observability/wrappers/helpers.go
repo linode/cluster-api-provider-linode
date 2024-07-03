@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Akamai Technologies, Inc.
+Copyright 2024 Akamai Technologies, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@ limitations under the License.
 
 package wrappers
 
-func GetValue[T any](params map[string]any, key string) (T, bool) {
+func GetValue[T any](m map[string]any, key string) (T, bool) {
 	var zero T
 
-	if val, ok := params[key]; ok {
+	if val, ok := m[key]; ok {
 		if val, ok := val.(T); ok {
 			return val, true
 		}
