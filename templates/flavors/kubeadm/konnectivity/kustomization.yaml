@@ -62,7 +62,7 @@ patches:
       spec:
         network:
           additionalPorts:
-          - port: 8132
+          - port: ${KONNECTIVITY_PORT:=8132}
   - target:
       kind: ConfigMap
       name: .*-cilium-policy
@@ -100,7 +100,7 @@ patches:
                   - all
                 toPorts:
                   - ports:
-                      - port: "6443"
+                      - port: "${APISERVER_PORT:=6443}"
           ---
           apiVersion: "cilium.io/v2"
           kind: CiliumClusterwideNetworkPolicy
@@ -114,4 +114,4 @@ patches:
                   - all
                 toPorts:
                   - ports:
-                      - port: "8132"
+                      - port: "${KONNECTIVITY_PORT:=8132}"

@@ -78,7 +78,7 @@ patches:
                   - all
                 toPorts:
                   - ports:
-                      - port: "6443"
+                      - port: "${APISERVER_PORT:=6443}"
           ---
           apiVersion: "cilium.io/v2"
           kind: CiliumClusterwideNetworkPolicy

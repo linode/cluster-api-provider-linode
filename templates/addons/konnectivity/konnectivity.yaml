@@ -16,4 +16,5 @@ spec:
     timeout: 5m
   valuesTemplate: |
     proxyServerHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
+    proxyServerPort: ${KONNECTIVITY_PORT:=8132}
     serverCount: ${CONTROL_PLANE_MACHINE_COUNT}
