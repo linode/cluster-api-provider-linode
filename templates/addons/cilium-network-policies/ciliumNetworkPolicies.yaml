@@ -34,7 +34,7 @@ data:
             - all
           toPorts:
             - ports:
-                - port: "6443"
+              - port: "${APISERVER_PORT:=6443}"
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet

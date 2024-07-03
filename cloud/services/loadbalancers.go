@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	defaultApiserverLBPort    = 6443
-	defaultKonnectivityLBPort = 8132
+	DefaultApiserverLBPort    = 6443
+	DefaultKonnectivityLBPort = 8132
 )
 
 // CreateNodeBalancer creates a new NodeBalancer if one doesn't exist
@@ -79,7 +79,7 @@ func CreateNodeBalancerConfigs(
 	logger logr.Logger,
 ) ([]*linodego.NodeBalancerConfig, error) {
 	nbConfigs := []*linodego.NodeBalancerConfig{}
-	apiLBPort := defaultApiserverLBPort
+	apiLBPort := DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
 	}
@@ -153,7 +153,7 @@ func AddNodeToNB(
 		return err
 	}
 
-	apiserverLBPort := defaultApiserverLBPort
+	apiserverLBPort := DefaultApiserverLBPort
 	if machineScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiserverLBPort = machineScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
 	}
