@@ -109,25 +109,30 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, instanceID int) ([]clusterv1.MachineAddress, error) {
 	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, instanceID)
 	if err != nil {
-		return nil, fmt.Errorf("get instance ips: %w", err)
+		return nil, err
 	}
 
 	// get the default instance config
 	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, instanceID, &linodego.ListOptions{})
 	if err != nil || len(configs) == 0 {
-		return nil, fmt.Errorf("list instance configs: %w", err)
+		return nil, err
 	}
 
 	ips := []clusterv1.MachineAddress{}
-	// check if a node has public ip and store it
-	if len(addresses.IPv4.Public) != 0 {
-		ips = append(ips, clusterv1.MachineAddress{Address: addresses.IPv4.Public[0].Address, Type: clusterv1.MachineExternalIP})
+	// check if a node has public ipv4 ip and store it
+	if len(addresses.IPv4.Public) == 0 {
+		return nil, fmt.Errorf("No Public IPv4 address set on machine")
 	}
+	ips = append(ips, clusterv1.MachineAddress{Address: addresses.IPv4.Public[0].Address, Type: clusterv1.MachineExternalIP})
 
-	// check if a node has public ip and store it
-	if addresses.IPv6.SLAAC != nil {
-		ips = append(ips, clusterv1.MachineAddress{Address: addresses.IPv6.SLAAC.Address, Type: clusterv1.MachineExternalIP})
+	// check if a node has public ipv6 ip and store it
+	if addresses.IPv6 == nil {
+		return nil, fmt.Errorf("No Public IPv6 address set on machine")
 	}
+	if addresses.IPv6.SLAAC == nil {
+		return nil, fmt.Errorf("No Public SLAAC IPv6 address set on machine")
+	}
+	ips = append(ips, clusterv1.MachineAddress{Address: addresses.IPv6.SLAAC.Address, Type: clusterv1.MachineExternalIP})
 
 	// Iterate over interfaces in config and find VPC specific ips
 	for _, iface := range configs[0].Interfaces {
