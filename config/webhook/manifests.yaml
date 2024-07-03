@@ -6,13 +6,15 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
+  - v1alpha1
+  - v1alpha2
   clientConfig:
     service:
       name: webhook-service
       namespace: system
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster
   failurePolicy: Fail
-  name: v1alpha2.linodecluster.kb.io
+  name: validation.linodecluster.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
@@ -25,13 +27,14 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
+  - v1alpha1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodecluster
   failurePolicy: Fail
-  name: v1alpha1.linodecluster.kb.io
+  name: validation.linodecluster.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
@@ -44,13 +47,14 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
+  - v1alpha1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodemachine
   failurePolicy: Fail
-  name: v1alpha1.linodemachine.kb.io
+  name: validation.linodemachine.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
@@ -63,13 +67,14 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
+  - v1alpha1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeobjectstoragebucket
   failurePolicy: Fail
-  name: v1alpha1.linodeobjectstoragebucket.kb.io
+  name: validation.linodeobjectstoragebucket.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
@@ -82,13 +87,14 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
+  - v1alpha1
   clientConfig:
     service:
       name: webhook-service
       namespace: system
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodevpc
   failurePolicy: Fail
-  name: v1alpha1.linodevpc.kb.io
+  name: validation.linodevpc.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
