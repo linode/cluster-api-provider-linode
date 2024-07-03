@@ -430,12 +430,12 @@ func (r *LinodeMachineReconciler) removeMachineFromLB(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) error {
-	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
+	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
 		if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
 			logger.Error(err, "Failed to remove node from Node Balancer backend")
 			return err
 		}
-	} else {
+	} else if machineScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
 		if err := services.DeleteIPFromDNS(ctx, machineScope); err != nil {
 			logger.Error(err, "Failed to remove IP from DNS")
 			return err
@@ -642,7 +642,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, "missing", clusterv1.ConditionSeverityWarning, "instance not found")
 		}
 		if err = r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
-			logger.Error(err, "Failed to remove machine to LB")
+			logger.Error(err, "Failed to remove machine from LB")
 			return res, nil, err
 		}
 		return res, nil, err
@@ -694,7 +694,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	}
 
 	if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
-		logger.Error(err, "Failed to remove machine to LB")
+		logger.Error(err, "Failed to remove machine from LB")
 
 		return err
 	}

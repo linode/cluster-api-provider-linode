@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
+	"net/netip"
 	"time"
 
 	"github.com/linode/linodego"
@@ -109,7 +109,11 @@ func getMachinePublicIPs(mscope *scope.MachineScope) ([]map[string]string, error
 	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
 		publicIPs := make(map[string]string)
 		if IPs.Type == "ExternalIP" {
-			if net.ParseIP(IPs.Address).To4() != nil {
+			addr, err := netip.ParseAddr(IPs.Address)
+			if err != nil {
+				return nil, fmt.Errorf("not a valid IP %w", err)
+			}
+			if addr.Is4() {
 				publicIPs["IPv4"] = IPs.Address
 			} else {
 				publicIPs["IPv6"] = IPs.Address

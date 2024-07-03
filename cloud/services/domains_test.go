@@ -502,6 +502,69 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("no addresses available on the LinodeMachine resource"),
 		},
+		{
+			name: "Error - no domain found when creating",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "lkedevs.net",
+							DNSUniqueIdentifier: "test-hash",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha1.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+					Status: infrav1alpha1.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{
+							{
+								Type:    "ExternalIP",
+								Address: "10.10.10.10",
+							},
+							{
+								Type:    "ExternalIP",
+								Address: "fd00::",
+							},
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{
+					{
+						ID:     1,
+						Domain: "test.net",
+					},
+				}, nil).AnyTimes()
+			},
+			expectedError: fmt.Errorf("domain lkedevs.net not found in list of domains owned by this account"),
+		},
 	}
 	for _, tt := range tests {
 		testcase := tt
@@ -783,7 +846,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			expectedError: fmt.Errorf("cannot get the domain from the api"),
 		},
 		{
-			name: "Error - no domain found",
+			name: "Error - no domain found when deleting",
 			machineScope: &scope.MachineScope{
 				Machine: &clusterv1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
@@ -844,6 +907,70 @@ func TestDeleteIPFromDNS(t *testing.T) {
 				}, nil).AnyTimes()
 			},
 			expectedError: fmt.Errorf("domain lkedevs.net not found in list of domains owned by this account"),
+		},
+		{
+			name: "Error - error listing domains when deleting",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "lkedevs.net",
+							DNSUniqueIdentifier: "test-hash",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha1.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+					Status: infrav1alpha1.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{
+							{
+								Type:    "ExternalIP",
+								Address: "10.10.10.10",
+							},
+							{
+								Type:    "ExternalIP",
+								Address: "fd00::",
+							},
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{
+					{
+						ID:     1,
+						Domain: "lkedevs.net",
+					},
+				}, nil).AnyTimes()
+				mockClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("api error")).AnyTimes()
+			},
+			expectedError: fmt.Errorf("api error"),
 		},
 	}
 	for _, tt := range tests {
