@@ -730,7 +730,7 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(kutil.MachineToInfrastructureMapFunc(infrav1alpha1.GroupVersion.WithKind("LinodeMachine"))),
 		).
 		Watches(
-			&infrav1alpha1.LinodeCluster{},
+			&infrav1alpha2.LinodeCluster{},
 			handler.EnqueueRequestsFromMapFunc(r.linodeClusterToLinodeMachines(mgr.GetLogger())),
 		).
 		Watches(
