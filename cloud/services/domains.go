@@ -2,11 +2,9 @@ package services
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/linode/linodego"
@@ -31,7 +29,7 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Get the public IP that was assigned
-	publicIPs, err := getMachinePublicIPs(ctx, mscope)
+	publicIPMapper, err := getMachinePublicIPs(mscope)
 	if err != nil {
 		return err
 	}
@@ -43,17 +41,16 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
-	// Create/Update the A record for this IP and name combo
-	for ipType, publicIP := range publicIPs {
-		if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, ipTypeToRecordTypeMapper[ipType]); err != nil {
-			return err
+	// Create/Update the A and TXT record for this IP and name combo
+	for _, publicIPs := range publicIPMapper {
+		for ipType, publicIP := range publicIPs {
+			if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, ipTypeToRecordTypeMapper[ipType]); err != nil {
+				return err
+			}
+			if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, "TXT"); err != nil {
+				return err
+			}
 		}
-	}
-
-	// Create/Update the TXT record for this IP and name combo
-	txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
-	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
-		return err
 	}
 
 	return nil
@@ -72,7 +69,7 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Get the public IP that was assigned
-	publicIPs, err := getMachinePublicIPs(ctx, mscope)
+	publicIPMapper, err := getMachinePublicIPs(mscope)
 	if err != nil {
 		return err
 	}
@@ -85,16 +82,16 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
 	// Delete A record
-	for ipType, publicIP := range publicIPs {
-		if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, ipTypeToRecordTypeMapper[ipType]); err != nil {
-			return err
+	for _, publicIPs := range publicIPMapper {
+		for ipType, publicIP := range publicIPs {
+			if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, ipTypeToRecordTypeMapper[ipType]); err != nil {
+				return err
+			}
+			// Delete TXT record
+			if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, "TXT"); err != nil {
+				return err
+			}
 		}
-	}
-
-	// Delete TXT record
-	txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
-	if err := DeleteDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
-		return err
 	}
 
 	// Wait for TTL to expire
@@ -104,27 +101,24 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 }
 
 // getMachinePublicIPs gets the machines public IP
-func getMachinePublicIPs(ctx context.Context, mscope *scope.MachineScope) (map[string]string, error) {
-	// Verify instance id is not nil
-	if mscope.LinodeMachine.Spec.InstanceID == nil {
-		return nil, errors.New("instance ID is nil. cant get machine's public ip")
+func getMachinePublicIPs(mscope *scope.MachineScope) ([]map[string]string, error) {
+	if mscope.LinodeMachine.Status.Addresses == nil {
+		return nil, fmt.Errorf("no addresses available on the LinodeMachine resource")
+	}
+	IPsToReturn := make([]map[string]string, 0, 2) //nolint:mnd // Max 2 IPs(1 IPv4 and 1 IPv6)
+	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
+		publicIPs := make(map[string]string)
+		if IPs.Type == "ExternalIP" {
+			if net.ParseIP(IPs.Address).To4() != nil {
+				publicIPs["IPv4"] = IPs.Address
+			} else {
+				publicIPs["IPv6"] = IPs.Address
+			}
+		}
+		IPsToReturn = append(IPsToReturn, publicIPs)
 	}
 
-	// Get the public IP that was assigned
-	addresses, err := mscope.LinodeClient.GetInstanceIPAddresses(ctx, *mscope.LinodeMachine.Spec.InstanceID)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(addresses.IPv4.Public) == 0 || addresses.IPv6 == nil {
-		return nil, errors.New("no public address")
-	}
-
-	if addresses.IPv6.SLAAC == nil {
-		return nil, errors.New("no SLAAC address")
-	}
-
-	return map[string]string{"IPv4": addresses.IPv4.Public[0].Address, "IPv6": addresses.IPv6.SLAAC.Address}, nil
+	return IPsToReturn, nil
 }
 
 // GetDomainID gets the domains linode id
@@ -200,8 +194,7 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 
 	// If record is A type, verify ownership
 	if recordType != "TXT" {
-		txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
-		isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, "owner:"+txtRecordValueString, domainID)
+		isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, target, domainID)
 		if ownerErr != nil {
 			return ownerErr
 		}
@@ -263,10 +256,4 @@ func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostna
 	}
 
 	return true, nil
-}
-
-func createSHA256HashOfString(stringToConvert string) string {
-	machineNameHash := sha256.New()
-	machineNameHash.Write([]byte(stringToConvert))
-	return hex.EncodeToString(machineNameHash.Sum(nil))
 }
