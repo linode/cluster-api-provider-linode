@@ -142,10 +142,10 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	// Create
-	if (clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "") || (clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns") {
+	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
 			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
-				logger.Info("re-queuing cluster/nb creation")
+				logger.Info("re-queuing cluster/load-balancer creation")
 				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 			}
 			return res, err
@@ -175,36 +175,36 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 		return err
 	}
 
+	// handle creation for the loadbalancer for the control plane
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
-		domainName := clusterScope.LinodeCluster.ObjectMeta.Name + "-" + clusterScope.LinodeCluster.Spec.Network.DNSUniqueIdentifier + "." + clusterScope.LinodeCluster.Spec.Network.DNSRootDomain
-		apiLBPort := services.DefaultApiserverLBPort
-		if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
-			apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
+		r.handleDNS(clusterScope)
+	} else if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" || clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "" {
+		if err := r.handleNBCreate(ctx, logger, clusterScope); err != nil {
+			return err
 		}
-		clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
-			Host: domainName,
-			Port: int32(apiLBPort),
-		}
-		return nil
 	}
-	linodeNB, err := services.CreateNodeBalancer(ctx, clusterScope, logger)
+
+	return nil
+}
+
+func (r *LinodeClusterReconciler) handleNBCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	linodeNB, err := services.EnsureNodeBalancer(ctx, clusterScope, logger)
 	if err != nil {
-		logger.Error(err, "failed to create nodebalancer")
+		logger.Error(err, "failed to ensure nodebalancer")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		return err
 	}
-
 	if linodeNB == nil {
 		err = fmt.Errorf("nodeBalancer created was nil")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		return err
 	}
-
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = &linodeNB.ID
 
-	configs, err := services.CreateNodeBalancerConfigs(ctx, clusterScope, logger)
+	// create the configs for the nodeabalancer if not already specified
+	configs, err := services.EnsureNodeBalancerConfigs(ctx, clusterScope, logger)
 	if err != nil {
-		logger.Error(err, "failed to create nodebalancer config")
+		logger.Error(err, "failed to ensure nodebalancer configs")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		return err
 	}
@@ -226,6 +226,18 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 	}
 
 	return nil
+}
+
+func (r *LinodeClusterReconciler) handleDNS(clusterScope *scope.ClusterScope) {
+	domainName := clusterScope.LinodeCluster.ObjectMeta.Name + "-" + clusterScope.LinodeCluster.Spec.Network.DNSUniqueIdentifier + "." + clusterScope.LinodeCluster.Spec.Network.DNSRootDomain
+	apiLBPort := services.DefaultApiserverLBPort
+	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
+		apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
+	}
+	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+		Host: domainName,
+		Port: int32(apiLBPort),
+	}
 }
 
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
