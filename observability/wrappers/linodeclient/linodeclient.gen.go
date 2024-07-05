@@ -778,29 +778,6 @@ func (_d LinodeClientWithTracing) ListInstances(ctx context.Context, opts *linod
 	return _d.LinodeClient.ListInstances(ctx, opts)
 }
 
-// ListNodeBalancers implements clients.LinodeClient
-func (_d LinodeClientWithTracing) ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) (na1 []linodego.NodeBalancer, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListNodeBalancers")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":  ctx,
-				"opts": opts}, map[string]interface{}{
-				"na1": na1,
-				"err": err})
-		} else if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.ListNodeBalancers(ctx, opts)
-}
-
 // ListStackscripts implements clients.LinodeClient
 func (_d LinodeClientWithTracing) ListStackscripts(ctx context.Context, opts *linodego.ListOptions) (sa1 []linodego.Stackscript, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListStackscripts")

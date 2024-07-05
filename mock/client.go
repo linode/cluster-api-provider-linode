@@ -517,21 +517,6 @@ func (mr *MockLinodeClientMockRecorder) ListInstances(ctx, opts any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeClient)(nil).ListInstances), ctx, opts)
 }
 
-// ListNodeBalancers mocks base method.
-func (m *MockLinodeClient) ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) ([]linodego.NodeBalancer, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListNodeBalancers", ctx, opts)
-	ret0, _ := ret[0].([]linodego.NodeBalancer)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListNodeBalancers indicates an expected call of ListNodeBalancers.
-func (mr *MockLinodeClientMockRecorder) ListNodeBalancers(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodeBalancers", reflect.TypeOf((*MockLinodeClient)(nil).ListNodeBalancers), ctx, opts)
-}
-
 // ListStackscripts mocks base method.
 func (m *MockLinodeClient) ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error) {
 	m.ctrl.T.Helper()
@@ -1072,21 +1057,6 @@ func (m *MockLinodeNodeBalancerClient) GetNodeBalancerConfig(ctx context.Context
 func (mr *MockLinodeNodeBalancerClientMockRecorder) GetNodeBalancerConfig(ctx, nodebalancerID, configID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeBalancerConfig", reflect.TypeOf((*MockLinodeNodeBalancerClient)(nil).GetNodeBalancerConfig), ctx, nodebalancerID, configID)
-}
-
-// ListNodeBalancers mocks base method.
-func (m *MockLinodeNodeBalancerClient) ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) ([]linodego.NodeBalancer, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListNodeBalancers", ctx, opts)
-	ret0, _ := ret[0].([]linodego.NodeBalancer)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListNodeBalancers indicates an expected call of ListNodeBalancers.
-func (mr *MockLinodeNodeBalancerClientMockRecorder) ListNodeBalancers(ctx, opts any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodeBalancers", reflect.TypeOf((*MockLinodeNodeBalancerClient)(nil).ListNodeBalancers), ctx, opts)
 }
 
 // MockLinodeObjectStorageClient is a mock of LinodeObjectStorageClient interface.
