@@ -748,6 +748,7 @@ func autoConvert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in *v1
 	out.OSDisk = (*InstanceDisk)(unsafe.Pointer(in.OSDisk))
 	out.DataDisks = *(*map[string]*InstanceDisk)(unsafe.Pointer(&in.DataDisks))
 	out.CredentialsRef = (*v1.SecretReference)(unsafe.Pointer(in.CredentialsRef))
+	// WARNING: in.Configuration requires manual conversion: does not exist in peer-type
 	// WARNING: in.PlacementGroupRef requires manual conversion: does not exist in peer-type
 	return nil
 }
