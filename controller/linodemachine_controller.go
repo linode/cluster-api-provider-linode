@@ -241,6 +241,8 @@ func (r *LinodeMachineReconciler) reconcile(
 		failureReason = cerrs.UpdateMachineError
 
 		res, linodeInstance, err = r.reconcileUpdate(ctx, logger, machineScope)
+		// If an instance exists, then we dont need to continue to create
+		// If there were no errors in updating, we dont need to continue to create
 		if linodeInstance != nil || err == nil {
 			return
 		}
@@ -385,7 +387,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
-		if err := r.addMachineToLB(ctx, logger, machineScope); err != nil {
+		if err := r.addMachineToLB(ctx, machineScope); err != nil {
 			logger.Error(err, "Failed to add machine to LB")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
@@ -409,9 +411,9 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 func (r *LinodeMachineReconciler) addMachineToLB(
 	ctx context.Context,
-	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) error {
+	logger := logr.FromContextOrDiscard(ctx)
 	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
 		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			return err
@@ -641,9 +643,8 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 
 			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, "missing", clusterv1.ConditionSeverityWarning, "instance not found")
 		}
-		if err = r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
-			logger.Error(err, "Failed to remove machine from LB")
-			return res, nil, err
+		if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
+			return res, nil, fmt.Errorf("remove machine from loadbalancer: %w", err)
 		}
 		return res, nil, err
 	}
@@ -694,9 +695,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	}
 
 	if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
-		logger.Error(err, "Failed to remove machine from LB")
-
-		return err
+		return fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {

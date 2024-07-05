@@ -198,9 +198,9 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 
 	// If record is A type, verify ownership
 	if recordType != "TXT" {
-		isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, target, domainID)
-		if ownerErr != nil {
-			return ownerErr
+		isOwner, err := IsDomainRecordOwner(ctx, mscope, hostname, target, domainID)
+		if err != nil {
+			return err
 		}
 		if !isOwner {
 			return fmt.Errorf("the domain record is not owned by this entity. wont delete")
