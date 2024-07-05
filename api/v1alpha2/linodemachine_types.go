@@ -84,6 +84,10 @@ type LinodeMachineSpec struct {
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 
+	// Configuration is the Akamai instance configuration OS,
+	// if not specified this defaults to the default configuration associated to the instance.
+	Configuration *InstanceConfiguration `json:"configuration,omitempty"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	// PlacementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group.
@@ -108,6 +112,12 @@ type InstanceDisk struct {
 type InstanceMetadataOptions struct {
 	// UserData expects a Base64-encoded string
 	UserData string `json:"userData,omitempty"`
+}
+
+// InstanceConfiguration defines the instance configuration
+type InstanceConfiguration struct {
+	// Kernel is a Kernel ID to boot a Linode with. (e.g linode/latest-64bit)
+	Kernel string `json:"kernel,omitempty"`
 }
 
 // InstanceConfigInterfaceCreateOptions defines network interface config
