@@ -52,8 +52,8 @@ const maxBootstrapDataBytes = 16384
 
 var (
 	errNoPublicIPv4Addrs      = errors.New("no public ipv4 addresses set")
-	errNoPublicIPv6Addrs      = errors.New("No public IPv6 address set")
-	errNoPublicIPv6SLAACAddrs = errors.New("No public SLAAC address set")
+	errNoPublicIPv6Addrs      = errors.New("no public IPv6 address set")
+	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
 )
 
 func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {

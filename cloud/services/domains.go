@@ -14,7 +14,12 @@ import (
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-var ipTypeToRecordTypeMapper = map[string]linodego.DomainRecordType{"IPv4": "A", "IPv6": "AAAA"}
+const numOfPublicIPs = 2
+
+type IPAndDNSRecordType struct {
+	IP            string
+	DNSRecordType linodego.DomainRecordType
+}
 
 // AddIPToDNS creates the A and TXT record for the machine
 func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
@@ -29,7 +34,7 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Get the public IP that was assigned
-	publicIPMapper, err := getMachinePublicIPs(mscope)
+	publicIPs, err := getMachinePublicIPs(mscope)
 	if err != nil {
 		return err
 	}
@@ -42,14 +47,12 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
 	// Create/Update the A and TXT record for this IP and name combo
-	for _, publicIPs := range publicIPMapper {
-		for ipType, publicIP := range publicIPs {
-			if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, ipTypeToRecordTypeMapper[ipType]); err != nil {
-				return err
-			}
-			if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, "TXT"); err != nil {
-				return err
-			}
+	for _, publicIP := range publicIPs {
+		if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP.IP, dnsTTLSec, domainID, publicIP.DNSRecordType); err != nil {
+			return err
+		}
+		if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP.IP, dnsTTLSec, domainID, "TXT"); err != nil {
+			return err
 		}
 	}
 
@@ -69,7 +72,7 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Get the public IP that was assigned
-	publicIPMapper, err := getMachinePublicIPs(mscope)
+	publicIPs, err := getMachinePublicIPs(mscope)
 	if err != nil {
 		return err
 	}
@@ -82,15 +85,13 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
 	// Delete A record
-	for _, publicIPs := range publicIPMapper {
-		for ipType, publicIP := range publicIPs {
-			if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, ipTypeToRecordTypeMapper[ipType]); err != nil {
-				return err
-			}
-			// Delete TXT record
-			if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, "TXT"); err != nil {
-				return err
-			}
+	for _, publicIP := range publicIPs {
+		if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP.IP, dnsTTLSec, domainID, publicIP.DNSRecordType); err != nil {
+			return err
+		}
+		// Delete TXT record
+		if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP.IP, dnsTTLSec, domainID, "TXT"); err != nil {
+			return err
 		}
 	}
 
@@ -101,28 +102,28 @@ func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
 }
 
 // getMachinePublicIPs gets the machines public IP
-func getMachinePublicIPs(mscope *scope.MachineScope) ([]map[string]string, error) {
+func getMachinePublicIPs(mscope *scope.MachineScope) ([]IPAndDNSRecordType, error) {
 	if mscope.LinodeMachine.Status.Addresses == nil {
 		return nil, fmt.Errorf("no addresses available on the LinodeMachine resource")
 	}
-	IPsToReturn := make([]map[string]string, 0, 2) //nolint:mnd // Max 2 IPs(1 IPv4 and 1 IPv6)
-	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
-		publicIPs := make(map[string]string)
+	addresses := make([]IPAndDNSRecordType, numOfPublicIPs)
+	for count, IPs := range mscope.LinodeMachine.Status.Addresses {
 		if IPs.Type == "ExternalIP" {
 			addr, err := netip.ParseAddr(IPs.Address)
 			if err != nil {
 				return nil, fmt.Errorf("not a valid IP %w", err)
 			}
 			if addr.Is4() {
-				publicIPs["IPv4"] = IPs.Address
+				addresses[count].DNSRecordType = "A"
+				addresses[count].IP = IPs.Address
 			} else {
-				publicIPs["IPv6"] = IPs.Address
+				addresses[count].DNSRecordType = "AAAA"
+				addresses[count].IP = IPs.Address
 			}
 		}
-		IPsToReturn = append(IPsToReturn, publicIPs)
 	}
 
-	return IPsToReturn, nil
+	return addresses, nil
 }
 
 // GetDomainID gets the domains linode id
