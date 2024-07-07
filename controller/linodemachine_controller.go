@@ -419,7 +419,7 @@ func (r *LinodeMachineReconciler) addMachineToLB(
 			return err
 		}
 	} else {
-		if err := services.AddIPToDNS(ctx, machineScope); err != nil {
+		if err := services.EnsureDNSEntries(ctx, machineScope, "create"); err != nil {
 			return err
 		}
 	}
@@ -438,7 +438,7 @@ func (r *LinodeMachineReconciler) removeMachineFromLB(
 			return err
 		}
 	} else if machineScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
-		if err := services.DeleteIPFromDNS(ctx, machineScope); err != nil {
+		if err := services.EnsureDNSEntries(ctx, machineScope, "delete"); err != nil {
 			logger.Error(err, "Failed to remove IP from DNS")
 			return err
 		}

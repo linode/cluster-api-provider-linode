@@ -583,7 +583,7 @@ func TestAddIPToDNS(t *testing.T) {
 			testcase.expects(MockLinodeClient)
 			testcase.expects(MockLinodeDomainsClient)
 
-			err := AddIPToDNS(context.Background(), testcase.machineScope)
+			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "create")
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
@@ -990,7 +990,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			testcase.expects(MockLinodeClient)
 			testcase.expects(MockLinodeDomainsClient)
 
-			err := DeleteIPFromDNS(context.Background(), testcase.machineScope)
+			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "delete")
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
