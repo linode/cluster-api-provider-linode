@@ -166,7 +166,7 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainI
 		return nil
 	}
 
-	// If record is A type, verify ownership
+	// If record is A/AAAA type, verify ownership
 	if dnsEntry.DNSRecordType != linodego.RecordTypeTXT {
 		isOwner, err := IsDomainRecordOwner(ctx, mscope, dnsEntry.Hostname, domainID)
 		if err != nil {
