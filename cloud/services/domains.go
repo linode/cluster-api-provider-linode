@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/netip"
+	"sync"
 
 	"github.com/linode/linodego"
 	kutil "sigs.k8s.io/cluster-api/util"
@@ -13,7 +14,10 @@ import (
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-const numOfDNSEntries = 3
+type DNSEntries struct {
+	options []DNSOptions
+	mux     sync.RWMutex
+}
 
 type DNSOptions struct {
 	Hostname      string
@@ -30,7 +34,8 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 	}
 
 	// Get the public IP that was assigned
-	dnsEntries, err := getDNSEntriesToEnsure(mscope)
+	var dnss DNSEntries
+	dnsEntries, err := dnss.getDNSEntriesToEnsure(mscope)
 	if err != nil {
 		return err
 	}
@@ -56,8 +61,10 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 	return nil
 }
 
-// getDNSEntriesToEnsure gets the machines public IP
-func getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOptions, error) {
+// getDNSEntriesToEnsure return DNS entries to create/delete
+func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOptions, error) {
+	d.mux.Lock()
+	defer d.mux.Unlock()
 	dnsTTLSec := rutil.DefaultDNSTTLSec
 	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
 		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSTTLSec
@@ -68,10 +75,8 @@ func getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOptions, error) {
 	}
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
-	entries := make([]DNSOptions, 0, numOfDNSEntries)
-	recordType := "A"
-
 	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
+		recordType := "A"
 		if IPs.Type != "ExternalIP" {
 			continue
 		}
@@ -82,11 +87,11 @@ func getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOptions, error) {
 		if !addr.Is4() {
 			recordType = "AAAA"
 		}
-		entries = append(entries, DNSOptions{domainHostname, IPs.Address, linodego.DomainRecordType(recordType), dnsTTLSec})
+		d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, linodego.DomainRecordType(recordType), dnsTTLSec})
 	}
-	entries = append(entries, DNSOptions{domainHostname, mscope.LinodeMachine.Name, "TXT", dnsTTLSec})
+	d.options = append(d.options, DNSOptions{domainHostname, mscope.LinodeMachine.Name, "TXT", dnsTTLSec})
 
-	return entries, nil
+	return d.options, nil
 }
 
 // GetDomainID gets the domains linode id
