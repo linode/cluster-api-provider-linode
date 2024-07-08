@@ -77,7 +77,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 
 	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
 		recordType := linodego.RecordTypeA
-		if IPs.Type != "ExternalIP" {
+		if IPs.Type != v1beta1.MachineExternalIP {
 			continue
 		}
 		addr, err := netip.ParseAddr(IPs.Address)
