@@ -76,7 +76,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
 	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
-		recordType := "A"
+		recordType := linodego.RecordTypeA
 		if IPs.Type != "ExternalIP" {
 			continue
 		}
