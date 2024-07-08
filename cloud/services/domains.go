@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/linode/linodego"
+	"sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -85,11 +86,11 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 			return nil, fmt.Errorf("not a valid IP %w", err)
 		}
 		if !addr.Is4() {
-			recordType = "AAAA"
+			recordType = linodego.RecordTypeAAAA
 		}
-		d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, linodego.DomainRecordType(recordType), dnsTTLSec})
+		d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, recordType, dnsTTLSec})
 	}
-	d.options = append(d.options, DNSOptions{domainHostname, mscope.LinodeMachine.Name, "TXT", dnsTTLSec})
+	d.options = append(d.options, DNSOptions{domainHostname, mscope.LinodeMachine.Name, linodego.DomainRecordType("TXT"), dnsTTLSec})
 
 	return d.options, nil
 }
