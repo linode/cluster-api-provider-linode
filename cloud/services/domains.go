@@ -2,36 +2,41 @@ package services
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"time"
+	"net/netip"
+	"sync"
 
 	"github.com/linode/linodego"
+	"sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-var ipTypeToRecordTypeMapper = map[string]linodego.DomainRecordType{"IPv4": "A", "IPv6": "AAAA"}
+type DNSEntries struct {
+	options []DNSOptions
+	mux     sync.RWMutex
+}
 
-// AddIPToDNS creates the A and TXT record for the machine
-func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
-	dnsTTLSec := rutil.DefaultDNSTTLSec
-	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
-		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSTTLSec
-	}
+type DNSOptions struct {
+	Hostname      string
+	Target        string
+	DNSRecordType linodego.DomainRecordType
+	DNSTTLSec     int
+}
 
+// EnsureDNSEntries ensures the domainrecord is created, updated, or deleted based on operation passed
+func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string) error {
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
 		return nil
 	}
 
 	// Get the public IP that was assigned
-	publicIPs, err := getMachinePublicIPs(ctx, mscope)
+	var dnss DNSEntries
+	dnsEntries, err := dnss.getDNSEntriesToEnsure(mscope)
 	if err != nil {
 		return err
 	}
@@ -41,90 +46,53 @@ func AddIPToDNS(ctx context.Context, mscope *scope.MachineScope) error {
 	if err != nil {
 		return err
 	}
-	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
-	// Create/Update the A record for this IP and name combo
-	for ipType, publicIP := range publicIPs {
-		if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, ipTypeToRecordTypeMapper[ipType]); err != nil {
+	for _, dnsEntry := range dnsEntries {
+		if operation == "delete" {
+			if err := DeleteDomainRecord(ctx, mscope, domainID, dnsEntry); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := CreateUpdateDomainRecord(ctx, mscope, domainID, dnsEntry); err != nil {
 			return err
 		}
-	}
-
-	// Create/Update the TXT record for this IP and name combo
-	txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
-	if err := CreateUpdateDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
-		return err
 	}
 
 	return nil
 }
 
-// DeleteIPFromDNS deletes the A and TXT record for the machine
-func DeleteIPFromDNS(ctx context.Context, mscope *scope.MachineScope) error {
+// getDNSEntriesToEnsure return DNS entries to create/delete
+func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOptions, error) {
+	d.mux.Lock()
+	defer d.mux.Unlock()
 	dnsTTLSec := rutil.DefaultDNSTTLSec
 	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
 		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSTTLSec
 	}
 
-	// Check if instance is a control plane node
-	if !kutil.IsControlPlaneMachine(mscope.Machine) {
-		return nil
-	}
-
-	// Get the public IP that was assigned
-	publicIPs, err := getMachinePublicIPs(ctx, mscope)
-	if err != nil {
-		return err
-	}
-
-	// Get domainID from domain name
-	domainID, err := GetDomainID(ctx, mscope)
-	if err != nil {
-		return err
+	if mscope.LinodeMachine.Status.Addresses == nil {
+		return nil, fmt.Errorf("no addresses available on the LinodeMachine resource")
 	}
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
-	// Delete A record
-	for ipType, publicIP := range publicIPs {
-		if err := DeleteDomainRecord(ctx, mscope, domainHostname, publicIP, dnsTTLSec, domainID, ipTypeToRecordTypeMapper[ipType]); err != nil {
-			return err
+	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
+		recordType := linodego.RecordTypeA
+		if IPs.Type != v1beta1.MachineExternalIP {
+			continue
 		}
+		addr, err := netip.ParseAddr(IPs.Address)
+		if err != nil {
+			return nil, fmt.Errorf("not a valid IP %w", err)
+		}
+		if !addr.Is4() {
+			recordType = linodego.RecordTypeAAAA
+		}
+		d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, recordType, dnsTTLSec})
 	}
+	d.options = append(d.options, DNSOptions{domainHostname, mscope.LinodeMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
-	// Delete TXT record
-	txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
-	if err := DeleteDomainRecord(ctx, mscope, domainHostname, "owner:"+txtRecordValueString, dnsTTLSec, domainID, "TXT"); err != nil {
-		return err
-	}
-
-	// Wait for TTL to expire
-	time.Sleep(time.Duration(dnsTTLSec) * time.Second)
-
-	return nil
-}
-
-// getMachinePublicIPs gets the machines public IP
-func getMachinePublicIPs(ctx context.Context, mscope *scope.MachineScope) (map[string]string, error) {
-	// Verify instance id is not nil
-	if mscope.LinodeMachine.Spec.InstanceID == nil {
-		return nil, errors.New("instance ID is nil. cant get machine's public ip")
-	}
-
-	// Get the public IP that was assigned
-	addresses, err := mscope.LinodeClient.GetInstanceIPAddresses(ctx, *mscope.LinodeMachine.Spec.InstanceID)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(addresses.IPv4.Public) == 0 || addresses.IPv6 == nil {
-		return nil, errors.New("no public address")
-	}
-
-	if addresses.IPv6.SLAAC == nil {
-		return nil, errors.New("no SLAAC address")
-	}
-
-	return map[string]string{"IPv4": addresses.IPv4.Public[0].Address, "IPv6": addresses.IPv6.SLAAC.Address}, nil
+	return d.options, nil
 }
 
 // GetDomainID gets the domains linode id
@@ -145,9 +113,9 @@ func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
 	return domains[0].ID, nil
 }
 
-func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname, target string, ttl, domainID int, recordType linodego.DomainRecordType) error {
+func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntry DNSOptions) error {
 	// Check if domain record exists for this IP and name combo
-	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": target, "type": recordType})
+	filter, err := json.Marshal(map[string]interface{}{"name": dnsEntry.Hostname, "target": dnsEntry.Target, "type": dnsEntry.DNSRecordType})
 	if err != nil {
 		return err
 	}
@@ -159,15 +127,15 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, h
 
 	// If record doesnt exist, create it
 	if len(domainRecords) == 0 {
-		if err := CreateDomainRecord(ctx, mscope, hostname, target, ttl, domainID, recordType); err != nil {
+		if err := CreateDomainRecord(ctx, mscope, domainID, dnsEntry); err != nil {
 			return err
 		}
 		return nil
 	}
 
 	// If record exists, update it
-	if len(domainRecords) != 0 && recordType != "TXT" {
-		isOwner, err := IsDomainRecordOwner(ctx, mscope, hostname, target, domainID)
+	if len(domainRecords) != 0 && dnsEntry.DNSRecordType != linodego.RecordTypeTXT {
+		isOwner, err := IsDomainRecordOwner(ctx, mscope, dnsEntry.Hostname, domainID)
 		if err != nil {
 			return err
 		}
@@ -175,15 +143,15 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, h
 			return fmt.Errorf("the domain record is not owned by this entity. wont update")
 		}
 	}
-	if err := UpdateDomainRecord(ctx, mscope, hostname, target, ttl, domainID, domainRecords[0].ID, recordType); err != nil {
+	if err := UpdateDomainRecord(ctx, mscope, domainID, domainRecords[0].ID, dnsEntry); err != nil {
 		return err
 	}
 	return nil
 }
 
-func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname, target string, ttl, domainID int, recordType linodego.DomainRecordType) error {
+func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntry DNSOptions) error {
 	// Check if domain record exists for this IP and name combo
-	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": target, "type": recordType})
+	filter, err := json.Marshal(map[string]interface{}{"name": dnsEntry.Hostname, "target": dnsEntry.Target, "type": dnsEntry.DNSRecordType})
 	if err != nil {
 		return err
 	}
@@ -198,12 +166,11 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 		return nil
 	}
 
-	// If record is A type, verify ownership
-	if recordType != "TXT" {
-		txtRecordValueString := createSHA256HashOfString(mscope.LinodeMachine.Name)
-		isOwner, ownerErr := IsDomainRecordOwner(ctx, mscope, hostname, "owner:"+txtRecordValueString, domainID)
-		if ownerErr != nil {
-			return ownerErr
+	// If record is A/AAAA type, verify ownership
+	if dnsEntry.DNSRecordType != linodego.RecordTypeTXT {
+		isOwner, err := IsDomainRecordOwner(ctx, mscope, dnsEntry.Hostname, domainID)
+		if err != nil {
+			return err
 		}
 		if !isOwner {
 			return fmt.Errorf("the domain record is not owned by this entity. wont delete")
@@ -217,12 +184,12 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	return nil
 }
 
-func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname, target string, ttl, domainID int, recordType linodego.DomainRecordType) error {
+func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntries DNSOptions) error {
 	recordReq := linodego.DomainRecordCreateOptions{
-		Type:   recordType,
-		Name:   hostname,
-		Target: target,
-		TTLSec: ttl,
+		Type:   dnsEntries.DNSRecordType,
+		Name:   dnsEntries.Hostname,
+		Target: dnsEntries.Target,
+		TTLSec: dnsEntries.DNSTTLSec,
 	}
 
 	if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(ctx, domainID, recordReq); err != nil {
@@ -231,12 +198,12 @@ func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	return nil
 }
 
-func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostname, target string, ttl, domainID, domainRecordID int, recordType linodego.DomainRecordType) error {
+func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID, domainRecordID int, dnsEntries DNSOptions) error {
 	recordReq := linodego.DomainRecordUpdateOptions{
-		Type:   recordType,
-		Name:   hostname,
-		Target: target,
-		TTLSec: ttl,
+		Type:   dnsEntries.DNSRecordType,
+		Name:   dnsEntries.Hostname,
+		Target: dnsEntries.Target,
+		TTLSec: dnsEntries.DNSTTLSec,
 	}
 
 	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq); err != nil {
@@ -245,9 +212,9 @@ func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, hostnam
 	return nil
 }
 
-func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostname, target string, domainID int) (bool, error) {
+func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostname string, domainID int) (bool, error) {
 	// Check if domain record exists
-	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": target, "type": "TXT"})
+	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": mscope.LinodeMachine.Name, "type": linodego.RecordTypeTXT})
 	if err != nil {
 		return false, err
 	}
@@ -259,14 +226,8 @@ func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostna
 
 	// If record exists, update it
 	if len(domainRecords) == 0 {
-		return false, fmt.Errorf("no txt record %s found with value %s for machine %s", hostname, target, mscope.LinodeMachine.Name)
+		return false, fmt.Errorf("no txt record %s found with value %s for machine %s", hostname, mscope.LinodeMachine.Name, mscope.LinodeMachine.Name)
 	}
 
 	return true, nil
-}
-
-func createSHA256HashOfString(stringToConvert string) string {
-	machineNameHash := sha256.New()
-	machineNameHash.Write([]byte(stringToConvert))
-	return hex.EncodeToString(machineNameHash.Sum(nil))
 }

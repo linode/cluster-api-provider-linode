@@ -240,13 +240,12 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		failureReason = cerrs.UpdateMachineError
 
-		if machineScope.LinodeMachine.Spec.InstanceID != nil {
-			logger = logger.WithValues("ID", *machineScope.LinodeMachine.Spec.InstanceID)
-		}
-
 		res, linodeInstance, err = r.reconcileUpdate(ctx, logger, machineScope)
-
-		return
+		// If an instance exists, then we dont need to continue to create
+		// If there were no errors in updating, we dont need to continue to create
+		if linodeInstance != nil || err == nil {
+			return
+		}
 	}
 
 	// Create
@@ -297,7 +296,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	switch len(linodeInstances) {
 	case 1:
 		logger.Info("Linode instance already exists")
-
 		linodeInstance = &linodeInstances[0]
 	case 0:
 		// get the bootstrap data for the Linode instance and set it for create config
@@ -370,21 +368,6 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered)
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
-		if err := r.addMachineToLB(ctx, logger, machineScope); err != nil {
-			logger.Error(err, "Failed to add machine to LB")
-
-			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
-		}
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
-	}
-
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
 		addrs, err := r.buildInstanceAddrs(ctx, machineScope, linodeInstance.ID)
 		if err != nil {
@@ -403,6 +386,21 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightReady)
 	}
 
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
+		if err := r.addMachineToLB(ctx, machineScope); err != nil {
+			logger.Error(err, "Failed to add machine to LB")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
+	}
+
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 
 	// Set the instance state to signal preflight process is done
@@ -413,19 +411,38 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 func (r *LinodeMachineReconciler) addMachineToLB(
 	ctx context.Context,
-	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) error {
+	logger := logr.FromContextOrDiscard(ctx)
 	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
 		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			return err
 		}
 	} else {
-		if err := services.AddIPToDNS(ctx, machineScope); err != nil {
+		if err := services.EnsureDNSEntries(ctx, machineScope, "create"); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (r *LinodeMachineReconciler) removeMachineFromLB(
+	ctx context.Context,
+	logger logr.Logger,
+	machineScope *scope.MachineScope,
+) error {
+	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
+		if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
+			logger.Error(err, "Failed to remove node from Node Balancer backend")
+			return err
+		}
+	} else if machineScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
+		if err := services.EnsureDNSEntries(ctx, machineScope, "delete"); err != nil {
+			logger.Error(err, "Failed to remove IP from DNS")
+			return err
+		}
+	}
 	return nil
 }
 
@@ -622,13 +639,15 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 			machineScope.LinodeMachine.Spec.ProviderID = nil
 			machineScope.LinodeMachine.Spec.InstanceID = nil
 			machineScope.LinodeMachine.Status.InstanceState = nil
+			machineScope.LinodeMachine.Status.Conditions = nil
 
 			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, "missing", clusterv1.ConditionSeverityWarning, "instance not found")
 		}
-
+		if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
+			return res, nil, fmt.Errorf("remove machine from loadbalancer: %w", err)
+		}
 		return res, nil, err
 	}
-
 	if _, ok := requeueInstanceStatuses[linodeInstance.Status]; ok {
 		if linodeInstance.Updated.Add(reconciler.DefaultMachineControllerWaitForRunningTimeout).After(time.Now()) {
 			logger.Info("Instance has one operaton running, re-queuing reconciliation", "status", linodeInstance.Status)
@@ -675,16 +694,8 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		return nil
 	}
 
-	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
-		if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
-			logger.Error(err, "Failed to remove node from Node Balancer backend")
-			return err
-		}
-	} else {
-		if err := services.DeleteIPFromDNS(ctx, machineScope); err != nil {
-			logger.Error(err, "Failed to remove IP from DNS")
-			return err
-		}
+	if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
+		return fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
