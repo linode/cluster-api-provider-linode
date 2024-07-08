@@ -33,6 +33,7 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
+	"github.com/linode/cluster-api-provider-linode/util"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -42,6 +43,7 @@ import (
 
 var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecycle"), func() {
 	nodebalancerID := 1
+	nbConfigID := util.Pointer(3)
 	controlPlaneEndpointHost := "10.0.0.1"
 	controlPlaneEndpointPort := 6443
 	clusterName := "cluster-lifecycle"
@@ -93,24 +95,22 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Path(
 				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
-					getNB := mck.LinodeClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-						After(getNB).
-						Return(nil, errors.New("create NB error"))
+						Return(nil, errors.New("failed to ensure nodebalancer"))
 				}),
 				OneOf(
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
 						tempTimeout := reconciler.ReconcileTimeout
 						reconciler.ReconcileTimeout = time.Nanosecond
 						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("create NB error"))
+						Expect(err.Error()).To(ContainSubstring("failed to ensure nodebalancer"))
 						reconciler.ReconcileTimeout = tempTimeout
 					})),
 				),
@@ -118,9 +118,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Path(
 				Call("cluster is not created because nb was nil", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
-					getNB := mck.LinodeClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-						After(getNB).
 						Return(nil, nil)
 				}),
 				OneOf(
@@ -128,7 +126,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
 						tempTimeout := reconciler.ReconcileTimeout
@@ -143,30 +141,62 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Path(
 				Call("cluster is not created because nb config was nil", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
-					getNB := mck.LinodeClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-						After(getNB).
+					mck.LinodeClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil, errors.New("nodeBalancer config created was nil"))
+				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+							Return(&linodego.NodeBalancer{
+								ID:   nodebalancerID,
+								IPv4: &controlPlaneEndpointHost,
+							}, nil)
+						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
+					})),
+					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
+						mck.LinodeClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).
+							Return(&linodego.NodeBalancer{
+								ID:   nodebalancerID,
+								IPv4: &controlPlaneEndpointHost,
+							}, nil)
+
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("nodeBalancer config created was nil"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
+			),
+			Path(
+				Call("cluster is not created because there was an error getting nb config", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+					cScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nbConfigID
+					mck.LinodeClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(&linodego.NodeBalancer{
 							ID:   nodebalancerID,
 							IPv4: &controlPlaneEndpointHost,
 						}, nil)
-					mck.LinodeClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
-						After(getNB).
-						Return(nil, errors.New("nodeBalancer config created was nil"))
+					mck.LinodeClient.EXPECT().GetNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil, errors.New("failed to get nodebalancer config"))
 				}),
 				OneOf(
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/nb creation"))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 					Path(Result("create nb error - timeout error", func(ctx context.Context, mck Mock) {
 						tempTimeout := reconciler.ReconcileTimeout
 						reconciler.ReconcileTimeout = time.Nanosecond
 						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("nodeBalancer config created was nil"))
+						Expect(err.Error()).To(ContainSubstring("failed to get nodebalancer config"))
 						reconciler.ReconcileTimeout = tempTimeout
 					})),
 				),
@@ -187,9 +217,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Path(
 				Call("cluster is created", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
-					getNB := mck.LinodeClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, nil)
-					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
-						After(getNB).
+					cScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
+					getNB := mck.LinodeClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(&linodego.NodeBalancer{
 							ID:   nodebalancerID,
 							IPv4: &controlPlaneEndpointHost,

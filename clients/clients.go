@@ -48,8 +48,9 @@ type LinodeVPCClient interface {
 
 // LinodeNodeBalancerClient defines the methods that interact with Linode's Node Balancer service.
 type LinodeNodeBalancerClient interface {
-	ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) ([]linodego.NodeBalancer, error)
 	CreateNodeBalancer(ctx context.Context, opts linodego.NodeBalancerCreateOptions) (*linodego.NodeBalancer, error)
+	GetNodeBalancer(ctx context.Context, nodebalancerID int) (*linodego.NodeBalancer, error)
+	GetNodeBalancerConfig(ctx context.Context, nodebalancerID int, configID int) (*linodego.NodeBalancerConfig, error)
 	CreateNodeBalancerConfig(ctx context.Context, nodebalancerID int, opts linodego.NodeBalancerConfigCreateOptions) (*linodego.NodeBalancerConfig, error)
 	DeleteNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, nodeID int) error
 	DeleteNodeBalancer(ctx context.Context, nodebalancerID int) error
