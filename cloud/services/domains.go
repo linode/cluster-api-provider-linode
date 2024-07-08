@@ -90,7 +90,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 		}
 		d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, recordType, dnsTTLSec})
 	}
-	d.options = append(d.options, DNSOptions{domainHostname, mscope.LinodeMachine.Name, linodego.DomainRecordType("TXT"), dnsTTLSec})
+	d.options = append(d.options, DNSOptions{domainHostname, mscope.LinodeMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
 	return d.options, nil
 }
@@ -134,7 +134,7 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, d
 	}
 
 	// If record exists, update it
-	if len(domainRecords) != 0 && dnsEntry.DNSRecordType != "TXT" {
+	if len(domainRecords) != 0 && dnsEntry.DNSRecordType != linodego.RecordTypeTXT {
 		isOwner, err := IsDomainRecordOwner(ctx, mscope, dnsEntry.Hostname, domainID)
 		if err != nil {
 			return err
@@ -167,7 +167,7 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainI
 	}
 
 	// If record is A type, verify ownership
-	if dnsEntry.DNSRecordType != "TXT" {
+	if dnsEntry.DNSRecordType != linodego.RecordTypeTXT {
 		isOwner, err := IsDomainRecordOwner(ctx, mscope, dnsEntry.Hostname, domainID)
 		if err != nil {
 			return err
@@ -214,7 +214,7 @@ func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainI
 
 func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostname string, domainID int) (bool, error) {
 	// Check if domain record exists
-	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": mscope.LinodeMachine.Name, "type": "TXT"})
+	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": mscope.LinodeMachine.Name, "type": linodego.RecordTypeTXT})
 	if err != nil {
 		return false, err
 	}
