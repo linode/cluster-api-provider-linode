@@ -97,6 +97,21 @@ func (r *LinodeCluster) validateLinodeClusterSpec(ctx context.Context, client Li
 		errs = append(errs, err)
 	}
 
+	if r.Spec.Network.LoadBalancerType == "dns" {
+		if r.Spec.Network.DNSRootDomain == "" {
+			var domainError field.Error
+			domainError.Field = "dnsRootDomain needs to be set when LoadBalancer Type is DNS"
+			domainError.Type = field.ErrorTypeRequired
+			errs = append(errs, &domainError)
+		}
+		if r.Spec.Network.DNSUniqueIdentifier == "" {
+			var uniqueIDError field.Error
+			uniqueIDError.Field = "dnsUniqueIdentifier needs to be set when LoadBalancer Type is DNS"
+			uniqueIDError.Type = field.ErrorTypeRequired
+			errs = append(errs, &uniqueIDError)
+		}
+	}
+
 	if len(errs) == 0 {
 		return nil
 	}
