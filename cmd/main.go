@@ -33,6 +33,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -40,7 +41,7 @@ import (
 
 	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-	controller2 "github.com/linode/cluster-api-provider-linode/controller"
+	"github.com/linode/cluster-api-provider-linode/controller"
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/reconciler"
 	"github.com/linode/cluster-api-provider-linode/version"
@@ -58,10 +59,12 @@ var (
 )
 
 const (
-	controllerName = "cluster-api-provider-linode.linode.com"
-	gracePeriod    = 5 * time.Second
-	envK8sNodeName = "K8S_NODE_NAME"
-	envK8sPodName  = "K8S_POD_NAME"
+	controllerName     = "cluster-api-provider-linode.linode.com"
+	envK8sNodeName     = "K8S_NODE_NAME"
+	envK8sPodName      = "K8S_POD_NAME"
+	concurrencyDefault = 10
+	qpsDefault         = 20
+	burstDefault       = 30
 )
 
 func init() {
@@ -84,6 +87,13 @@ func main() {
 		metricsAddr                    string
 		enableLeaderElection           bool
 		probeAddr                      string
+
+		restConfigQPS                        int
+		restConfigBurst                      int
+		linodeClusterConcurrency             int
+		linodeMachineConcurrency             int
+		linodeObjectStorageBucketConcurrency int
+		linodeVPCConcurrency                 int
 	)
 	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
 	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
@@ -93,6 +103,18 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.IntVar(&restConfigQPS, "kube-api-qps", qpsDefault,
+		"Maximum queries per second from the controller client to the Kubernetes API server. Defaults to 20")
+	flag.IntVar(&restConfigBurst, "kube-api-burst", burstDefault,
+		"Maximum number of queries that should be allowed in one burst from the controller client to the Kubernetes API server. Default 30")
+	flag.IntVar(&linodeClusterConcurrency, "linodecluster-concurrency", concurrencyDefault,
+		"Number of LinodeClusters to process simultaneously. Default 10")
+	flag.IntVar(&linodeMachineConcurrency, "linodemachine-concurrency", concurrencyDefault,
+		"Number of LinodeMachines to process simultaneously. Default 10")
+	flag.IntVar(&linodeObjectStorageBucketConcurrency, "linodeobjectstoragebucket-concurrency", concurrencyDefault,
+		"Number of linodeObjectStorageBuckets to process simultaneously. Default 10")
+	flag.IntVar(&linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault,
+		"Number of LinodeVPCs to process simultaneously. Default 10")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -110,7 +132,12 @@ func main() {
 		linodeDNSToken = linodeToken
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	restConfig := ctrl.GetConfigOrDie()
+	restConfig.QPS = float32(restConfigQPS)
+	restConfig.Burst = restConfigBurst
+	restConfig.UserAgent = fmt.Sprintf("CAPL/%s", version.GetVersion())
+
+	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: probeAddr,
@@ -134,19 +161,19 @@ func main() {
 	}
 
 	if err = reconciler.NewReconcilerWithTracing(
-		&controller2.LinodeClusterReconciler{
+		&controller.LinodeClusterReconciler{
 			Client:           mgr.GetClient(),
 			Recorder:         mgr.GetEventRecorderFor("LinodeClusterReconciler"),
 			WatchFilterValue: clusterWatchFilter,
 			LinodeApiKey:     linodeToken,
 		},
-	).SetupWithManager(mgr); err != nil {
+	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeClusterConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
 		os.Exit(1)
 	}
 
 	if err = reconciler.NewReconcilerWithTracing(
-		&controller2.LinodeMachineReconciler{
+		&controller.LinodeMachineReconciler{
 			Client:           mgr.GetClient(),
 			Scheme:           mgr.GetScheme(),
 			Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
@@ -154,32 +181,32 @@ func main() {
 			LinodeApiKey:     linodeToken,
 			LinodeDNSAPIKey:  linodeDNSToken,
 		},
-	).SetupWithManager(mgr); err != nil {
+	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
 	}
 
 	if err = reconciler.NewReconcilerWithTracing(
-		&controller2.LinodeVPCReconciler{
+		&controller.LinodeVPCReconciler{
 			Client:           mgr.GetClient(),
 			Recorder:         mgr.GetEventRecorderFor("LinodeVPCReconciler"),
 			WatchFilterValue: clusterWatchFilter,
 			LinodeApiKey:     linodeToken,
 		},
-	).SetupWithManager(mgr); err != nil {
+	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeVPCConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)
 	}
 
 	if err = reconciler.NewReconcilerWithTracing(
-		&controller2.LinodeObjectStorageBucketReconciler{
+		&controller.LinodeObjectStorageBucketReconciler{
 			Client:           mgr.GetClient(),
 			Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
 			Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
 			WatchFilterValue: objectStorageBucketWatchFilter,
 			LinodeApiKey:     linodeToken,
 		},
-	).SetupWithManager(mgr); err != nil {
+	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeObjectStorageBucketConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
