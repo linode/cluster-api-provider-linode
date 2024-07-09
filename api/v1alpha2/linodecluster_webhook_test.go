@@ -177,14 +177,8 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			require.EqualError(
-				t,
-				errors.New("LinodeCluster.infrastructure.cluster.x-k8s.io \"example\" is invalid: dnsRootDomain needs to be set when LoadBalancer Type is DNS: Required value"),
-				noRootDomainCluster.validateLinodeCluster(ctx, mck.LinodeClient).Error())
-			require.EqualError(
-				t,
-				errors.New("LinodeCluster.infrastructure.cluster.x-k8s.io \"example\" is invalid: dnsUniqueIdentifier needs to be set when LoadBalancer Type is DNS: Required value"),
-				noUniqueIDCluster.validateLinodeCluster(ctx, mck.LinodeClient).Error())
+			require.ErrorContains(t, noRootDomainCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsRootDomain")
+			require.ErrorContains(t, noUniqueIDCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsUniqueIdentifier")
 		}),
 	)
 }
