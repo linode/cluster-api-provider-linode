@@ -21,6 +21,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -31,5 +32,5 @@ type Reconciler interface {
 	client.SubResourceClientConstructor
 
 	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
-	SetupWithManager(mgr manager.Manager) error
+	SetupWithManager(mgr manager.Manager, options controller.Options) error
 }

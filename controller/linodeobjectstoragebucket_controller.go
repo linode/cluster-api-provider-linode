@@ -36,6 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -257,7 +258,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
 	linodeObjectStorageBucketMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeObjectStorageBucketList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeObjectStorageBuckets: %w", err)
@@ -265,6 +266,7 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager)
 
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeObjectStorageBucket{}).
+		WithOptions(options).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(
 			predicates.ResourceHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),

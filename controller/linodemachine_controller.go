@@ -40,6 +40,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -728,7 +729,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
 	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeMachineList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
@@ -736,6 +737,7 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeMachine{}).
+		WithOptions(options).
 		Watches(
 			&clusterv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(kutil.MachineToInfrastructureMapFunc(infrav1alpha1.GroupVersion.WithKind("LinodeMachine"))),
