@@ -2,7 +2,7 @@ load("ext://k8s_attach", "k8s_attach")
 load("ext://helm_resource", "helm_resource", "helm_repo")
 load("ext://namespace", "namespace_create")
 load("ext://restart_process", "docker_build_with_restart")
-update_settings(k8s_upsert_timeout_secs=60)
+update_settings(k8s_upsert_timeout_secs=120)
 
 helm_repo(
     "capi-operator-repo",
