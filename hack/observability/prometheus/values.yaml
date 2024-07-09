@@ -108,7 +108,7 @@ prometheus:
     serviceMonitorNamespaceSelector:
       matchLabels:
         control-plane: controller-manager
-    retention: 4h
+    retention: 15d
     enableAdminAPI: true
     walCompression: true
     additionalScrapeConfigs: |
