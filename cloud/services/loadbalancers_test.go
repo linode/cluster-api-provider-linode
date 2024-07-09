@@ -19,7 +19,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
-func TestCreateNodeBalancer(t *testing.T) {
+func TestEnsureNodeBalancer(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name                 string
@@ -50,8 +50,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{}, nil)
-				mockClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancer{
+				mockClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancer{
 					ID: 1234,
 				}, nil)
 			},
@@ -60,7 +59,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 			},
 		},
 		{
-			name: "Success - List NodeBalancers returns one nodebalancer and we return that",
+			name: "Success - Get NodeBalancers returns one nodebalancer and we return that",
 			clusterScope: &scope.ClusterScope{
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
@@ -75,12 +74,10 @@ func TestCreateNodeBalancer(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{
-					{
-						ID:    1234,
-						Label: ptr.To("test"),
-						Tags:  []string{"test-uid"},
-					},
+				mockClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancer{
+					ID:    1234,
+					Label: ptr.To("test"),
+					Tags:  []string{"test-uid"},
 				}, nil)
 			},
 			expectedNodeBalancer: &linodego.NodeBalancer{
@@ -90,7 +87,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - List NodeBalancers returns one nodebalancer but there is a nodebalancer conflict",
+			name: "Error - Get NodeBalancer returns an error",
 			clusterScope: &scope.ClusterScope{
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
@@ -105,40 +102,9 @@ func TestCreateNodeBalancer(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{
-					{
-						ID:    1234,
-						Label: ptr.To("test"),
-						Tags:  []string{"test"},
-					},
-				}, nil)
+				mockClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Unable to get NodeBalancer"))
 			},
-			expectedNodeBalancer: &linodego.NodeBalancer{
-				ID:    1234,
-				Label: ptr.To("test"),
-				Tags:  []string{"test"},
-			},
-			expectedError: fmt.Errorf("NodeBalancer conflict"),
-		},
-		{
-			name: "Error - List NodeBalancers returns an error",
-			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha2.LinodeCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha2.LinodeClusterSpec{
-						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID: ptr.To(1234),
-						},
-					},
-				},
-			},
-			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Unable to list NodeBalancers"))
-			},
-			expectedError: fmt.Errorf("Unable to list NodeBalancers"),
+			expectedError: fmt.Errorf("Unable to get NodeBalancer"),
 		},
 		{
 			name: "Error - Create NodeBalancer returns an error",
@@ -148,15 +114,10 @@ func TestCreateNodeBalancer(t *testing.T) {
 						Name: "test-cluster",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha2.LinodeClusterSpec{
-						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID: ptr.To(1234),
-						},
-					},
+					Spec: infrav1alpha2.LinodeClusterSpec{},
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{}, nil)
 				mockClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Unable to create NodeBalancer"))
 			},
 			expectedError: fmt.Errorf("Unable to create NodeBalancer"),
@@ -176,7 +137,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 
 			testcase.expects(MockLinodeClient)
 
-			got, err := CreateNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := EnsureNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
@@ -187,7 +148,7 @@ func TestCreateNodeBalancer(t *testing.T) {
 	}
 }
 
-func TestCreateNodeBalancerConfigs(t *testing.T) {
+func TestEnsureNodeBalancerConfigs(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -224,6 +185,48 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
+					Port:           DefaultApiserverLBPort,
+					Protocol:       linodego.ProtocolTCP,
+					Algorithm:      linodego.AlgorithmRoundRobin,
+					Check:          linodego.CheckConnection,
+					NodeBalancerID: 1234,
+				}, nil)
+			},
+		},
+		{
+			name: "Success - Get NodeBalancerConfig",
+			clusterScope: &scope.ClusterScope{
+				LinodeClient: nil,
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(2),
+						},
+						ControlPlaneEndpoint: clusterv1.APIEndpoint{
+							Host: "",
+							Port: 0,
+						},
+					},
+				},
+			},
+			expectedConfigs: []*linodego.NodeBalancerConfig{
+				{
+					Port:           DefaultApiserverLBPort,
+					Protocol:       linodego.ProtocolTCP,
+					Algorithm:      linodego.AlgorithmRoundRobin,
+					Check:          linodego.CheckConnection,
+					NodeBalancerID: 1234,
+					ID:             2,
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancerConfig{
+					ID:             2,
 					Port:           DefaultApiserverLBPort,
 					Protocol:       linodego.ProtocolTCP,
 					Algorithm:      linodego.AlgorithmRoundRobin,
@@ -396,7 +399,7 @@ func TestCreateNodeBalancerConfigs(t *testing.T) {
 
 			testcase.expects(MockLinodeClient)
 
-			got, err := CreateNodeBalancerConfigs(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := EnsureNodeBalancerConfigs(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {

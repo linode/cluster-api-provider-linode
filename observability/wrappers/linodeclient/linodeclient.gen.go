@@ -521,6 +521,53 @@ func (_d LinodeClientWithTracing) GetInstanceIPAddresses(ctx context.Context, li
 	return _d.LinodeClient.GetInstanceIPAddresses(ctx, linodeID)
 }
 
+// GetNodeBalancer implements clients.LinodeClient
+func (_d LinodeClientWithTracing) GetNodeBalancer(ctx context.Context, nodebalancerID int) (np1 *linodego.NodeBalancer, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetNodeBalancer")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":            ctx,
+				"nodebalancerID": nodebalancerID}, map[string]interface{}{
+				"np1": np1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetNodeBalancer(ctx, nodebalancerID)
+}
+
+// GetNodeBalancerConfig implements clients.LinodeClient
+func (_d LinodeClientWithTracing) GetNodeBalancerConfig(ctx context.Context, nodebalancerID int, configID int) (np1 *linodego.NodeBalancerConfig, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetNodeBalancerConfig")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":            ctx,
+				"nodebalancerID": nodebalancerID,
+				"configID":       configID}, map[string]interface{}{
+				"np1": np1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetNodeBalancerConfig(ctx, nodebalancerID, configID)
+}
+
 // GetObjectStorageBucket implements clients.LinodeClient
 func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, cluster string, label string) (op1 *linodego.ObjectStorageBucket, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageBucket")
@@ -729,29 +776,6 @@ func (_d LinodeClientWithTracing) ListInstances(ctx context.Context, opts *linod
 		_span.End()
 	}()
 	return _d.LinodeClient.ListInstances(ctx, opts)
-}
-
-// ListNodeBalancers implements clients.LinodeClient
-func (_d LinodeClientWithTracing) ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) (na1 []linodego.NodeBalancer, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListNodeBalancers")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":  ctx,
-				"opts": opts}, map[string]interface{}{
-				"na1": na1,
-				"err": err})
-		} else if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.ListNodeBalancers(ctx, opts)
 }
 
 // ListStackscripts implements clients.LinodeClient
