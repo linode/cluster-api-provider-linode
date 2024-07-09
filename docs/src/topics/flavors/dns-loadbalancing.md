@@ -10,10 +10,11 @@ spec:
         dnsRootDomain: test.net
         dnsUniqueIdentifier: abc123
 ```
-Along with this, the `test.net` domain needs to be registered and also be pre-configured as a domain on Linode CM. Using the `LINODE_DNS_TOKEN` env var, you can pass the API token of a different account if the Domain has been created in another acount under Linode CM
+Along with this, the `test.net` domain needs to be registered and also be pre-configured as a [domain on Linode CM](https://cloud.linode.com/domains).
+Using the `LINODE_DNS_TOKEN` env var, you can pass the [API token of a different account](https://cloud.linode.com/profile/tokens) if the Domain has been created in another acount under Linode CM
 
 With these changes, the controlPlaneEndpoint is set to `<domain-name>-<uniqueid>.<root-domain>`. This will set as the server in the KUBECONFIG as well.
-The controller will create A/AAAA and TXT records under the domain in Linode CM
+The controller will create A/AAAA and TXT records under [the Domains tab in the Linode Cloud Manager.](https://cloud.linode.com/domains)
 
 
 ## Specification
