@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -108,5 +109,76 @@ func TestValidateCreate(t *testing.T) {
 				}),
 			),
 		),
+	)
+}
+
+func TestValidateDNSLinodeCluster(t *testing.T) {
+	t.Parallel()
+
+	var (
+		validCluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "us-ord",
+				Network: NetworkSpec{
+					LoadBalancerType:    "dns",
+					DNSRootDomain:       "test.net",
+					DNSUniqueIdentifier: "abc123",
+				},
+			},
+		}
+		noRootDomainCluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "us-ord",
+				Network: NetworkSpec{
+					LoadBalancerType:    "dns",
+					DNSRootDomain:       "",
+					DNSUniqueIdentifier: "abc123",
+				},
+			},
+		}
+		noUniqueIDCluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "us-ord",
+				Network: NetworkSpec{
+					LoadBalancerType:    "dns",
+					DNSRootDomain:       "test.net",
+					DNSUniqueIdentifier: "",
+				},
+			},
+		}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					assert.NoError(t, validCluster.validateLinodeCluster(ctx, mck.LinodeClient))
+				}),
+			),
+		),
+		OneOf(
+			Path(Call("no domain and unique id set", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			})),
+		),
+		Result("error", func(ctx context.Context, mck Mock) {
+			require.ErrorContains(t, noRootDomainCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsRootDomain")
+			require.ErrorContains(t, noUniqueIDCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsUniqueIdentifier")
+		}),
 	)
 }
