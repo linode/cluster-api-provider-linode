@@ -257,6 +257,41 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		})
 	})
 
+	Context("when a known error occurs", func() {
+		It("requeues due to context deadline exceeded error", func(ctx SpecContext) {
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+			listInst := mockLinodeClient.EXPECT().
+				ListInstances(ctx, gomock.Any()).
+				Return([]linodego.Instance{}, nil)
+			getRegion := mockLinodeClient.EXPECT().
+				GetRegion(ctx, gomock.Any()).
+				After(listInst).
+				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+			getImage := mockLinodeClient.EXPECT().
+				GetImage(ctx, gomock.Any()).
+				After(getRegion).
+				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+			mockLinodeClient.EXPECT().
+				CreateInstance(ctx, gomock.Any()).
+				After(getImage).
+				DoAndReturn(func(_, _ any) (*linodego.Instance, error) {
+					return nil, linodego.NewError(errors.New("context deadline exceeded"))
+				})
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+
+			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+		})
+	})
+
 	Context("creates a instance with disks", func() {
 		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
