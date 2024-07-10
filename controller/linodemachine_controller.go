@@ -305,7 +305,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 			return ctrl.Result{}, err
 		}
-
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil {
 			if linodego.ErrHasStatus(err, linodeTooManyRequests) || linodego.ErrHasStatus(err, linodego.ErrorFromError) {
@@ -322,16 +321,15 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
-
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
-		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
-
 	default:
 		err = errors.New("multiple instances")
 		logger.Error(err, "multiple instances found", "tags", tags)
 
 		return ctrl.Result{}, err
 	}
+
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
+	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
 
 	return r.reconcileInstanceCreate(ctx, logger, machineScope, linodeInstance)
 }
