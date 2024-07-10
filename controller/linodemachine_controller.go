@@ -55,6 +55,7 @@ import (
 
 const (
 	linodeBusyCode        = 400
+	linodeTooManyRequests = 429
 	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
@@ -309,6 +310,10 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil {
+			if linodego.ErrHasStatus(err, linodeTooManyRequests) || linodego.ErrHasStatus(err, linodego.ErrorFromError) {
+				logger.Error(err, "Failed to create Linode instance due to API error, requeing")
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+			}
 			logger.Error(err, "Failed to create Linode machine instance")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,

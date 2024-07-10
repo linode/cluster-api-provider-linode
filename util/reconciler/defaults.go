@@ -36,6 +36,8 @@ const (
 	DefaultMachineControllerWaitForPreflightTimeout = 5 * time.Minute
 	// DefaultMachineControllerWaitForRunningTimeout is the default timeout if instance is not running.
 	DefaultMachineControllerWaitForRunningTimeout = 20 * time.Minute
+	// DefaultMachineControllerRetryDelay is the default requeue delay if there is an error.
+	DefaultMachineControllerRetryDelay = 10 * time.Second
 
 	// DefaultVPCControllerReconcileDelay is the default requeue delay when a reconcile operation fails.
 	DefaultVPCControllerReconcileDelay = 5 * time.Second
