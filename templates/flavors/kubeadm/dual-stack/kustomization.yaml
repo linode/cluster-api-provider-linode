@@ -63,3 +63,14 @@ patches:
               enabled: true
             ui:
               enabled: true
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeCluster
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeCluster
+      metadata:
+        name: ${CLUSTER_NAME}
+        labels:
+          ipv6_enabled: true

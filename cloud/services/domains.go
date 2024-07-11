@@ -77,7 +77,6 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 	domainHostname := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
 
 	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
-		recordType := linodego.RecordTypeA
 		if IPs.Type != v1beta1.MachineExternalIP {
 			continue
 		}
@@ -85,10 +84,13 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 		if err != nil {
 			return nil, fmt.Errorf("not a valid IP %w", err)
 		}
-		if !addr.Is4() {
-			recordType = linodego.RecordTypeAAAA
+		if addr.Is4() {
+			d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, linodego.RecordTypeA, dnsTTLSec})
+			continue
 		}
-		d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, recordType, dnsTTLSec})
+		if mscope.LinodeCluster.ObjectMeta.Labels["ipv6_enabled"] == "true" {
+			d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, linodego.RecordTypeAAAA, dnsTTLSec})
+		}
 	}
 	d.options = append(d.options, DNSOptions{domainHostname, mscope.LinodeMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
