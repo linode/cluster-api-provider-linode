@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -95,7 +94,6 @@ type LinodeMachineReconciler struct {
 	LinodeApiKey     string
 	LinodeDNSAPIKey  string
 	WatchFilterValue string
-	Scheme           *runtime.Scheme
 	ReconcileTimeout time.Duration
 }
 
@@ -635,7 +633,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to get Linode machine instance")
 
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil, err
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil, err
 		} else {
 			logger.Info("Instance not found, let's create a new one")
 
@@ -704,9 +702,15 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-			logger.Error(err, "Failed to delete Linode machine instance")
+			logger.Error(err, "Failed to delete Linode instance")
 
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, err
+			if machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerRetryDelay)).After(time.Now()) {
+				logger.Info("re-queuing Linode instance deletion")
+
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+			}
+
+			return ctrl.Result{}, err
 		}
 	}
 
