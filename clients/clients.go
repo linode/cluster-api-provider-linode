@@ -75,6 +75,17 @@ type LinodeDNSClient interface {
 	DeleteDomainRecord(ctx context.Context, domainID int, domainRecordID int) error
 }
 
+// LinodePlacementGroupClient defines the methods that interact with Linode's PlacementGroup service.
+type LinodePlacementGroupClient interface {
+	GetPlacementGroup(ctx context.Context, id int) (*linodego.PlacementGroup, error)
+	ListPlacementGroups(ctx context.Context, options *linodego.ListOptions) ([]linodego.PlacementGroup, error)
+	CreatePlacementGroup(ctx context.Context, opts linodego.PlacementGroupCreateOptions) (*linodego.PlacementGroup, error)
+	DeletePlacementGroup(ctx context.Context, id int) error
+	UpdatePlacementGroup(ctx context.Context, id int, options linodego.PlacementGroupUpdateOptions) (*linodego.PlacementGroup, error)
+	AssignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupAssignOptions) (*linodego.PlacementGroup, error)
+	UnassignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupUnAssignOptions) (*linodego.PlacementGroup, error)
+}
+
 type K8sClient interface {
 	client.Client
 }
