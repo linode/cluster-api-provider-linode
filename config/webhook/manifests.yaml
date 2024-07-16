@@ -94,7 +94,7 @@ webhooks:
       namespace: system
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeplacementgroup
   failurePolicy: Fail
-  name: validation.linodeplacementgroups.infrastructure.cluster.x-k8s.io
+  name: validation.linodeplacementgroup.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
