@@ -16,6 +16,7 @@ type LinodeClient interface {
 	LinodeVPCClient
 	LinodeObjectStorageClient
 	LinodeDNSClient
+	LinodePlacementGroupClient
 }
 
 // LinodeInstanceClient defines the methods that interact with Linode's Instance service.

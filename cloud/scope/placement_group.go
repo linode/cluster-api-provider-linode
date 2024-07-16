@@ -52,42 +52,6 @@ func validatePlacementGroupScope(params PlacementGroupScopeParams) error {
 	return nil
 }
 
-// NewPlacementGroupScope creates a new Scope from the supplied parameters.
-// This is meant to be called for each reconcile iteration.
-func NewPlacementGroupScope(ctx context.Context, apiKey string, params PlacementGroupScopeParams) (*PlacementGroupScope, error) {
-	if err := validatePlacementGroupScope(params); err != nil {
-		return nil, err
-	}
-
-	// Override the controller credentials with ones from the VPC's Secret reference (if supplied).
-	if params.LinodePlacementGroup.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodePlacementGroup.Spec.CredentialsRef, params.LinodePlacementGroup.GetNamespace(), "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		apiKey = string(apiToken)
-	}
-	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout,
-		WithRetryCount(0),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
-	}
-
-	helper, err := patch.NewHelper(params.LinodePlacementGroup, params.Client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init patch helper: %w", err)
-	}
-
-	return &PlacementGroupScope{
-		Client:               params.Client,
-		LinodeClient:         linodeClient,
-		LinodePlacementGroup: params.LinodePlacementGroup,
-		PatchHelper:          helper,
-	}, nil
-}
-
 // PatchObject persists the placement group configuration and status.
 func (s *PlacementGroupScope) PatchObject(ctx context.Context) error {
 	return s.PatchHelper.Patch(ctx, s.LinodePlacementGroup)
@@ -126,4 +90,42 @@ func (s *PlacementGroupScope) RemoveCredentialsRefFinalizer(ctx context.Context)
 	return removeCredentialsFinalizer(ctx, s.Client,
 		*s.LinodePlacementGroup.Spec.CredentialsRef, s.LinodePlacementGroup.GetNamespace(),
 		toFinalizer(s.LinodePlacementGroup))
+}
+
+// NewPlacementGroupScope creates a new Scope from the supplied parameters.
+// This is meant to be called for each reconcile iteration.
+//
+//nolint:dupl // This is pretty much the same as VPC, maybe a candidate to use generics later.
+func NewPlacementGroupScope(ctx context.Context, apiKey string, params PlacementGroupScopeParams) (*PlacementGroupScope, error) {
+	if err := validatePlacementGroupScope(params); err != nil {
+		return nil, err
+	}
+
+	// Override the controller credentials with ones from the Placement Groups's Secret reference (if supplied).
+	if params.LinodePlacementGroup.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodePlacementGroup.Spec.CredentialsRef, params.LinodePlacementGroup.GetNamespace(), "apiToken")
+		if err != nil {
+			return nil, fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		apiKey = string(apiToken)
+	}
+	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout,
+		WithRetryCount(0),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
+
+	helper, err := patch.NewHelper(params.LinodePlacementGroup, params.Client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init patch helper: %w", err)
+	}
+
+	return &PlacementGroupScope{
+		Client:               params.Client,
+		LinodeClient:         linodeClient,
+		LinodePlacementGroup: params.LinodePlacementGroup,
+		PatchHelper:          helper,
+	}, nil
 }

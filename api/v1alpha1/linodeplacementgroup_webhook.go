@@ -127,7 +127,7 @@ func validatePlacementGroupLabel(label string, path *field.Path) *field.Error {
 			fmt.Errorf("%d..%d characters", minLen, maxLen),
 			errors.New("can only contain ASCII letters, numbers, hyphens (-), underscores (_) and periods (.), must start and end with a alphanumeric character"),
 		}
-		regex = regexp.MustCompile(`^[[:alnum:]][-[:alnum:]_\.]*[[:alnum:]]$|^[[:alnum:]]$`)
+		regex = regexp.MustCompile(`^[[:alnum:]][-[:alnum:]_.]*[[:alnum:]]$|^[[:alnum:]]$`)
 	)
 	if len(label) < minLen || len(label) > maxLen {
 		return field.Invalid(path, label, errs[0].Error())

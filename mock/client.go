@@ -44,6 +44,21 @@ func (m *MockLinodeClient) EXPECT() *MockLinodeClientMockRecorder {
 	return m.recorder
 }
 
+// AssignPlacementGroupLinodes mocks base method.
+func (m *MockLinodeClient) AssignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupAssignOptions) (*linodego.PlacementGroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AssignPlacementGroupLinodes", ctx, id, options)
+	ret0, _ := ret[0].(*linodego.PlacementGroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AssignPlacementGroupLinodes indicates an expected call of AssignPlacementGroupLinodes.
+func (mr *MockLinodeClientMockRecorder) AssignPlacementGroupLinodes(ctx, id, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssignPlacementGroupLinodes", reflect.TypeOf((*MockLinodeClient)(nil).AssignPlacementGroupLinodes), ctx, id, options)
+}
+
 // BootInstance mocks base method.
 func (m *MockLinodeClient) BootInstance(ctx context.Context, linodeID, configID int) error {
 	m.ctrl.T.Helper()
@@ -178,6 +193,21 @@ func (mr *MockLinodeClientMockRecorder) CreateObjectStorageKey(ctx, opts any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateObjectStorageKey", reflect.TypeOf((*MockLinodeClient)(nil).CreateObjectStorageKey), ctx, opts)
 }
 
+// CreatePlacementGroup mocks base method.
+func (m *MockLinodeClient) CreatePlacementGroup(ctx context.Context, opts linodego.PlacementGroupCreateOptions) (*linodego.PlacementGroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePlacementGroup", ctx, opts)
+	ret0, _ := ret[0].(*linodego.PlacementGroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreatePlacementGroup indicates an expected call of CreatePlacementGroup.
+func (mr *MockLinodeClientMockRecorder) CreatePlacementGroup(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePlacementGroup", reflect.TypeOf((*MockLinodeClient)(nil).CreatePlacementGroup), ctx, opts)
+}
+
 // CreateStackscript mocks base method.
 func (m *MockLinodeClient) CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error) {
 	m.ctrl.T.Helper()
@@ -276,6 +306,20 @@ func (m *MockLinodeClient) DeleteObjectStorageKey(ctx context.Context, keyID int
 func (mr *MockLinodeClientMockRecorder) DeleteObjectStorageKey(ctx, keyID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjectStorageKey", reflect.TypeOf((*MockLinodeClient)(nil).DeleteObjectStorageKey), ctx, keyID)
+}
+
+// DeletePlacementGroup mocks base method.
+func (m *MockLinodeClient) DeletePlacementGroup(ctx context.Context, id int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePlacementGroup", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePlacementGroup indicates an expected call of DeletePlacementGroup.
+func (mr *MockLinodeClientMockRecorder) DeletePlacementGroup(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlacementGroup", reflect.TypeOf((*MockLinodeClient)(nil).DeletePlacementGroup), ctx, id)
 }
 
 // DeleteVPC mocks base method.
@@ -412,6 +456,21 @@ func (mr *MockLinodeClientMockRecorder) GetObjectStorageKey(ctx, keyID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageKey", reflect.TypeOf((*MockLinodeClient)(nil).GetObjectStorageKey), ctx, keyID)
 }
 
+// GetPlacementGroup mocks base method.
+func (m *MockLinodeClient) GetPlacementGroup(ctx context.Context, id int) (*linodego.PlacementGroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPlacementGroup", ctx, id)
+	ret0, _ := ret[0].(*linodego.PlacementGroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPlacementGroup indicates an expected call of GetPlacementGroup.
+func (mr *MockLinodeClientMockRecorder) GetPlacementGroup(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlacementGroup", reflect.TypeOf((*MockLinodeClient)(nil).GetPlacementGroup), ctx, id)
+}
+
 // GetRegion mocks base method.
 func (m *MockLinodeClient) GetRegion(ctx context.Context, regionID string) (*linodego.Region, error) {
 	m.ctrl.T.Helper()
@@ -517,6 +576,21 @@ func (mr *MockLinodeClientMockRecorder) ListInstances(ctx, opts any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeClient)(nil).ListInstances), ctx, opts)
 }
 
+// ListPlacementGroups mocks base method.
+func (m *MockLinodeClient) ListPlacementGroups(ctx context.Context, options *linodego.ListOptions) ([]linodego.PlacementGroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPlacementGroups", ctx, options)
+	ret0, _ := ret[0].([]linodego.PlacementGroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPlacementGroups indicates an expected call of ListPlacementGroups.
+func (mr *MockLinodeClientMockRecorder) ListPlacementGroups(ctx, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPlacementGroups", reflect.TypeOf((*MockLinodeClient)(nil).ListPlacementGroups), ctx, options)
+}
+
 // ListStackscripts mocks base method.
 func (m *MockLinodeClient) ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error) {
 	m.ctrl.T.Helper()
@@ -561,6 +635,21 @@ func (mr *MockLinodeClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
 }
 
+// UnassignPlacementGroupLinodes mocks base method.
+func (m *MockLinodeClient) UnassignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupUnAssignOptions) (*linodego.PlacementGroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnassignPlacementGroupLinodes", ctx, id, options)
+	ret0, _ := ret[0].(*linodego.PlacementGroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnassignPlacementGroupLinodes indicates an expected call of UnassignPlacementGroupLinodes.
+func (mr *MockLinodeClientMockRecorder) UnassignPlacementGroupLinodes(ctx, id, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnassignPlacementGroupLinodes", reflect.TypeOf((*MockLinodeClient)(nil).UnassignPlacementGroupLinodes), ctx, id, options)
+}
+
 // UpdateDomainRecord mocks base method.
 func (m *MockLinodeClient) UpdateDomainRecord(ctx context.Context, domainID, domainRecordID int, recordReq linodego.DomainRecordUpdateOptions) (*linodego.DomainRecord, error) {
 	m.ctrl.T.Helper()
@@ -589,6 +678,21 @@ func (m *MockLinodeClient) UpdateInstanceConfig(ctx context.Context, linodeID, c
 func (mr *MockLinodeClientMockRecorder) UpdateInstanceConfig(ctx, linodeID, configID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstanceConfig", reflect.TypeOf((*MockLinodeClient)(nil).UpdateInstanceConfig), ctx, linodeID, configID, opts)
+}
+
+// UpdatePlacementGroup mocks base method.
+func (m *MockLinodeClient) UpdatePlacementGroup(ctx context.Context, id int, options linodego.PlacementGroupUpdateOptions) (*linodego.PlacementGroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePlacementGroup", ctx, id, options)
+	ret0, _ := ret[0].(*linodego.PlacementGroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdatePlacementGroup indicates an expected call of UpdatePlacementGroup.
+func (mr *MockLinodeClientMockRecorder) UpdatePlacementGroup(ctx, id, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePlacementGroup", reflect.TypeOf((*MockLinodeClient)(nil).UpdatePlacementGroup), ctx, id, options)
 }
 
 // MockLinodeInstanceClient is a mock of LinodeInstanceClient interface.
