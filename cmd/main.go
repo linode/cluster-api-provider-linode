@@ -175,7 +175,6 @@ func main() {
 	if err = reconciler.NewReconcilerWithTracing(
 		&controller.LinodeMachineReconciler{
 			Client:           mgr.GetClient(),
-			Scheme:           mgr.GetScheme(),
 			Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
 			WatchFilterValue: machineWatchFilter,
 			LinodeApiKey:     linodeToken,
