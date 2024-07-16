@@ -92,7 +92,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodevpc
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeplacementgroup
   failurePolicy: Fail
   name: validation.linodeplacementgroups.infrastructure.cluster.x-k8s.io
   rules:
