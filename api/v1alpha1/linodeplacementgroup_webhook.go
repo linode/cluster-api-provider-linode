@@ -52,7 +52,7 @@ func (r *LinodePlacementGroup) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodevpc,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeplacementgroups,verbs=create;update,versions=v1alpha1,name=validation.linodeplacementgroups.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1;v1alpha1
+//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeplacementgroup,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeplacementgroups,verbs=create;update,versions=v1alpha1,name=validation.linodeplacementgroups.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1;v1alpha1
 
 var _ webhook.Validator = &LinodePlacementGroup{}
 
@@ -94,7 +94,7 @@ func (r *LinodePlacementGroup) validateLinodePlacementGroup(ctx context.Context,
 		return nil
 	}
 	return apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
+		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodePlacementGroup"},
 		r.Name, errs)
 }
 
