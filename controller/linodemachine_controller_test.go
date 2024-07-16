@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net"
 	"time"
@@ -32,6 +33,8 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -40,9 +43,12 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
+	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+const defaultNamespace = "default"
 
 var _ = Describe("create", Label("machine", "create"), func() {
 	var machine clusterv1.Machine
@@ -57,7 +63,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	cluster := clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mock",
-			Namespace: "default",
+			Namespace: defaultNamespace,
 		},
 	}
 
@@ -76,7 +82,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		secret = corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bootstrap-secret",
-				Namespace: "default",
+				Namespace: defaultNamespace,
 			},
 			Data: map[string][]byte{
 				"value": []byte("userdata"),
@@ -86,7 +92,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		machine = clusterv1.Machine{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
+				Namespace: defaultNamespace,
 				Labels:    make(map[string]string),
 			},
 			Spec: clusterv1.MachineSpec{
@@ -98,7 +104,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		linodeMachine = infrav1alpha1.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
-				Namespace: "default",
+				Namespace: defaultNamespace,
 				UID:       "12345",
 			},
 			Spec: infrav1alpha1.LinodeMachineSpec{
@@ -633,7 +639,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 	cluster := clusterv1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mock",
-			Namespace: "default",
+			Namespace: defaultNamespace,
 		},
 	}
 
@@ -654,7 +660,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 		secret = corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "bootstrap-secret",
-				Namespace: "default",
+				Namespace: defaultNamespace,
 			},
 			Data: map[string][]byte{
 				"value": []byte("userdata"),
@@ -664,7 +670,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 
 		machine = clusterv1.Machine{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
+				Namespace: defaultNamespace,
 				Labels:    make(map[string]string),
 			},
 			Spec: clusterv1.MachineSpec{
@@ -676,7 +682,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 		linodeMachine = infrav1alpha1.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
-				Namespace: "default",
+				Namespace: defaultNamespace,
 				UID:       "12345",
 			},
 			Spec: infrav1alpha1.LinodeMachineSpec{
@@ -785,4 +791,307 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 		Expect(testLogs.String()).To(ContainSubstring("creating machine"))
 	})
 
+})
+
+var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecycle"), func() {
+	machineName := "machine-lifecycle"
+	namespace := defaultNamespace
+	ownerRef := metav1.OwnerReference{
+		Name:       machineName,
+		APIVersion: "cluster.x-k8s.io/v1beta1",
+		Kind:       "Machine",
+		UID:        "00000000-000-0000-0000-000000000000",
+	}
+	ownerRefs := []metav1.OwnerReference{ownerRef}
+	metadata := metav1.ObjectMeta{
+		Name:            machineName,
+		Namespace:       namespace,
+		OwnerReferences: ownerRefs,
+	}
+	linodeMachine := &infrav1alpha1.LinodeMachine{
+		ObjectMeta: metadata,
+		Spec: infrav1alpha1.LinodeMachineSpec{
+			InstanceID: ptr.To(0),
+			Type:       "g6-nanode-1",
+			Image:      rutil.DefaultMachineControllerLinodeImage,
+		},
+	}
+	machineKey := client.ObjectKeyFromObject(linodeMachine)
+	machine := &clusterv1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Labels:    make(map[string]string),
+		},
+		Spec: clusterv1.MachineSpec{
+			Bootstrap: clusterv1.Bootstrap{
+				DataSecretName: ptr.To("test-bootstrap-secret"),
+			},
+		},
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-bootstrap-secret",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"value": []byte("userdata"),
+		},
+	}
+
+	linodeCluster := &infrav1alpha2.LinodeCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test-cluster",
+			Labels:    make(map[string]string),
+		},
+		Spec: infrav1alpha2.LinodeClusterSpec{
+			Network: infrav1alpha2.NetworkSpec{
+				NodeBalancerID:                ptr.To(1),
+				ApiserverNodeBalancerConfigID: ptr.To(2),
+			},
+		},
+	}
+	clusterKey := client.ObjectKeyFromObject(linodeCluster)
+
+	ctlrSuite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
+	reconciler := LinodeMachineReconciler{}
+	mScope := &scope.MachineScope{}
+
+	BeforeAll(func(ctx SpecContext) {
+		mScope.Client = k8sClient
+		reconciler.Client = k8sClient
+		mScope.Cluster = &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test",
+				Namespace: namespace,
+			},
+			Spec: clusterv1.ClusterSpec{
+				InfrastructureRef: &corev1.ObjectReference{
+					Name:      "test-cluster",
+					Namespace: namespace,
+				},
+			},
+		}
+		mScope.Machine = machine
+		Expect(k8sClient.Create(ctx, linodeCluster)).To(Succeed())
+		Expect(k8sClient.Create(ctx, linodeMachine)).To(Succeed())
+		_ = k8sClient.Create(ctx, secret)
+	})
+
+	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+
+		Expect(k8sClient.Get(ctx, machineKey, linodeMachine)).To(Succeed())
+		mScope.LinodeMachine = linodeMachine
+
+		machinePatchHelper, err := patch.NewHelper(linodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.PatchHelper = machinePatchHelper
+
+		Expect(k8sClient.Get(ctx, clusterKey, linodeCluster)).To(Succeed())
+		mScope.LinodeCluster = linodeCluster
+
+		mScope.LinodeClient = mck.LinodeClient
+	})
+
+	ctlrSuite.Run(
+		OneOf(
+			Path(
+				Call("machine is not created because there was an error creating instance", func(ctx context.Context, mck Mock) {
+					listInst := mck.LinodeClient.EXPECT().
+						ListInstances(ctx, gomock.Any()).
+						Return([]linodego.Instance{}, nil)
+					getRegion := mck.LinodeClient.EXPECT().
+						GetRegion(ctx, gomock.Any()).
+						After(listInst).
+						Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+					getImage := mck.LinodeClient.EXPECT().
+						GetImage(ctx, gomock.Any()).
+						After(getRegion).
+						Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+					mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
+						After(getImage).
+						Return(nil, errors.New("failed to ensure instance"))
+				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode machine instance"))
+					})),
+					Path(Result("create machine error - timeout error", func(ctx context.Context, mck Mock) {
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("failed to ensure instance"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
+			),
+			Path(
+				Call("machine is created", func(ctx context.Context, mck Mock) {
+				}),
+				OneOf(
+					Path(Result("creates a worker machine without disks", func(ctx context.Context, mck Mock) {
+						listInst := mck.LinodeClient.EXPECT().
+							ListInstances(ctx, gomock.Any()).
+							Return([]linodego.Instance{}, nil)
+						getRegion := mck.LinodeClient.EXPECT().
+							GetRegion(ctx, gomock.Any()).
+							After(listInst).
+							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+						getImage := mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							After(getRegion).
+							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+						createInst := mck.LinodeClient.EXPECT().
+							CreateInstance(ctx, gomock.Any()).
+							After(getImage).
+							Return(&linodego.Instance{
+								ID:     123,
+								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+								IPv6:   "fd00::",
+								Status: linodego.InstanceOffline,
+							}, nil)
+						bootInst := mck.LinodeClient.EXPECT().
+							BootInstance(ctx, 123, 0).
+							After(createInst).
+							Return(nil)
+						getAddrs := mck.LinodeClient.EXPECT().
+							GetInstanceIPAddresses(ctx, 123).
+							After(bootInst).
+							Return(&linodego.InstanceIPAddressResponse{
+								IPv4: &linodego.InstanceIPv4Response{
+									Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+									Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+								},
+								IPv6: &linodego.InstanceIPv6Response{
+									SLAAC: &linodego.InstanceIP{
+										Address: "fd00::",
+									},
+								},
+							}, nil).AnyTimes()
+						mck.LinodeClient.EXPECT().
+							ListInstanceConfigs(ctx, 123, gomock.Any()).
+							After(getAddrs).
+							Return([]linodego.InstanceConfig{{
+								Devices: &linodego.InstanceConfigDeviceMap{
+									SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+								},
+							}}, nil)
+						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightReady)).To(BeTrue())
+
+						Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
+						Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
+						Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
+						Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
+							{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
+							{Type: clusterv1.MachineExternalIP, Address: "fd00::"},
+							{Type: clusterv1.MachineInternalIP, Address: "192.168.0.2"},
+						}))
+					})),
+				),
+			),
+		),
+	)
+})
+
+var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), func() {
+	machineName := "cluster-delete"
+	namespace := "default"
+	ownerRef := metav1.OwnerReference{
+		Name:       machineName,
+		APIVersion: "cluster.x-k8s.io/v1beta1",
+		Kind:       "Machine",
+		UID:        "00000000-000-0000-0000-000000000000",
+	}
+	ownerRefs := []metav1.OwnerReference{ownerRef}
+	metadata := metav1.ObjectMeta{
+		Name:              machineName,
+		Namespace:         namespace,
+		OwnerReferences:   ownerRefs,
+		DeletionTimestamp: &metav1.Time{Time: time.Now()},
+	}
+
+	linodeCluster := &infrav1alpha2.LinodeCluster{
+		ObjectMeta: metadata,
+		Spec: infrav1alpha2.LinodeClusterSpec{
+			Region:  "us-ord",
+			Network: infrav1alpha2.NetworkSpec{},
+		},
+	}
+	instanceID := 12345
+	linodeMachine := &infrav1alpha1.LinodeMachine{
+		ObjectMeta: metadata,
+		Spec: infrav1alpha1.LinodeMachineSpec{
+			InstanceID: &instanceID,
+		},
+	}
+
+	ctlrSuite := NewControllerSuite(
+		GinkgoT(),
+		mock.MockLinodeClient{},
+		mock.MockK8sClient{},
+	)
+	reconciler := LinodeMachineReconciler{}
+
+	mScope := &scope.MachineScope{
+		LinodeCluster: linodeCluster,
+		LinodeMachine: linodeMachine,
+	}
+
+	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+		mScope.LinodeMachine = linodeMachine
+		machinePatchHelper, err := patch.NewHelper(linodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.PatchHelper = machinePatchHelper
+		mScope.LinodeCluster = linodeCluster
+		mScope.LinodeClient = mck.LinodeClient
+		reconciler.Client = mck.K8sClient
+	})
+
+	ctlrSuite.Run(
+		OneOf(
+			Path(
+				Call("machine is not deleted because there was an error deleting instance", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
+						Return(errors.New("failed to delete instance"))
+				}),
+				OneOf(
+					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing Linode instance deletion"))
+					})),
+					Path(Result("create machine error - timeout error", func(ctx context.Context, mck Mock) {
+						tempTimeout := reconciler.ReconcileTimeout
+						reconciler.ReconcileTimeout = time.Nanosecond
+						_, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("failed to delete instance"))
+						reconciler.ReconcileTimeout = tempTimeout
+					})),
+				),
+			),
+			Path(
+				Call("machine deleted", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).Return(nil)
+				}),
+				Result("machine deleted", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
+					_, err := reconciler.reconcileDelete(ctx, logr.Logger{}, mScope)
+					Expect(err).NotTo(HaveOccurred())
+				})),
+		),
+	)
 })

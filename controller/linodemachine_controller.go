@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -95,7 +94,6 @@ type LinodeMachineReconciler struct {
 	LinodeApiKey     string
 	LinodeDNSAPIKey  string
 	WatchFilterValue string
-	Scheme           *runtime.Scheme
 	ReconcileTimeout time.Duration
 }
 
@@ -215,9 +213,7 @@ func (r *LinodeMachineReconciler) reconcile(
 			}
 		}
 
-		err = r.reconcileDelete(ctx, logger, machineScope)
-
-		return
+		return r.reconcileDelete(ctx, logger, machineScope)
 	}
 
 	linodeClusterKey := client.ObjectKey{
@@ -307,7 +303,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 			return ctrl.Result{}, err
 		}
-
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil {
 			if linodego.ErrHasStatus(err, linodeTooManyRequests) || linodego.ErrHasStatus(err, linodego.ErrorFromError) {
@@ -324,16 +319,15 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
-
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
-		machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
-
 	default:
 		err = errors.New("multiple instances")
 		logger.Error(err, "multiple instances found", "tags", tags)
 
 		return ctrl.Result{}, err
 	}
+
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
+	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
 
 	return r.reconcileInstanceCreate(ctx, logger, machineScope, linodeInstance)
 }
@@ -638,6 +632,8 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to get Linode machine instance")
+
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil, err
 		} else {
 			logger.Info("Instance not found, let's create a new one")
 
@@ -656,12 +652,12 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 	}
 	if _, ok := requeueInstanceStatuses[linodeInstance.Status]; ok {
 		if linodeInstance.Updated.Add(reconciler.DefaultMachineControllerWaitForRunningTimeout).After(time.Now()) {
-			logger.Info("Instance has one operaton running, re-queuing reconciliation", "status", linodeInstance.Status)
+			logger.Info("Instance has one operation running, re-queuing reconciliation", "status", linodeInstance.Status)
 
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, linodeInstance, nil
 		}
 
-		logger.Info("Instance has one operaton long running, skipping reconciliation", "status", linodeInstance.Status)
+		logger.Info("Instance has one operation long running, skipping reconciliation", "status", linodeInstance.Status)
 
 		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "skipped due to long running operation")
 
@@ -685,7 +681,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
-) error {
+) (ctrl.Result, error) {
 	logger.Info("deleting machine")
 
 	if machineScope.LinodeMachine.Spec.InstanceID == nil {
@@ -693,22 +689,28 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 		if err := machineScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 			logger.Error(err, "Failed to update credentials secret")
-			return err
+			return ctrl.Result{}, err
 		}
 		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.MachineFinalizer)
 
-		return nil
+		return ctrl.Result{}, nil
 	}
 
 	if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
-		return fmt.Errorf("remove machine from loadbalancer: %w", err)
+		return ctrl.Result{}, fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-			logger.Error(err, "Failed to delete Linode machine instance")
+			logger.Error(err, "Failed to delete Linode instance")
 
-			return err
+			if machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerRetryDelay)).After(time.Now()) {
+				logger.Info("re-queuing Linode instance deletion")
+
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+			}
+
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -722,7 +724,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	if err := machineScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
-		return err
+		return ctrl.Result{}, err
 	}
 	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.MachineFinalizer)
 	// TODO: remove this check and removal later
@@ -730,7 +732,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
 	}
 
-	return nil
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
