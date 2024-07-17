@@ -1,0 +1,6 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: LinodePlacementGroup
+metadata:
+  name: ($placementgroup)
+spec:
+  region: us-ord

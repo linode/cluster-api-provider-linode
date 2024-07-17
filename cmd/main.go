@@ -94,6 +94,7 @@ func main() {
 		linodeMachineConcurrency             int
 		linodeObjectStorageBucketConcurrency int
 		linodeVPCConcurrency                 int
+		linodePlacementGroupConcurrency      int
 	)
 	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
 	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
@@ -115,6 +116,8 @@ func main() {
 		"Number of linodeObjectStorageBuckets to process simultaneously. Default 10")
 	flag.IntVar(&linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault,
 		"Number of LinodeVPCs to process simultaneously. Default 10")
+	flag.IntVar(&linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault,
+		"Number of Linode Placement Groups to process simultaneously. Default 10")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -209,6 +212,19 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
+
+	if err = reconciler.NewReconcilerWithTracing(
+		&controller.LinodePlacementGroupReconciler{
+			Client:           mgr.GetClient(),
+			Recorder:         mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
+			WatchFilterValue: clusterWatchFilter,
+			LinodeApiKey:     linodeToken,
+		},
+	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodePlacementGroupConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodePlacementGroup")
+		os.Exit(1)
+	}
+
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		setupWebhooks(mgr)
 	}
@@ -260,6 +276,10 @@ func setupWebhooks(mgr manager.Manager) {
 	}
 	if err = (&infrastructurev1alpha1.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
+		os.Exit(1)
+	}
+	if err = (&infrastructurev1alpha1.LinodePlacementGroup{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LinodePlacementGroup")
 		os.Exit(1)
 	}
 }

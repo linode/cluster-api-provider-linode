@@ -39,6 +39,11 @@ type LinodePlacementGroupSpec struct {
 	// +optional
 	IsStrict bool `json:"isStrict"`
 
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:default="anti_affinity:local"
+	// +kubebuilder:validation:Enum="anti_affinity:local"
+	// +optional
+	AffinityType string `json:"affinity_type"`
 	// TODO: add affinity as a type when available
 
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup. If not
