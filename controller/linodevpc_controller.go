@@ -74,7 +74,7 @@ type LinodeVPCReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.0/pkg/reconcile
 //
-//nolint:dupl // this is same as VPC, worth making generic later.
+
 func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
@@ -187,6 +187,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	return
 }
 
+//nolint:dupl // same as Placement Group - future generics candidate.
 func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
 	logger.Info("creating vpc")
 

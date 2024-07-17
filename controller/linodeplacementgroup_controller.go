@@ -68,7 +68,7 @@ type LinodePlacementGroupReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the Placement Group closer to the desired state.
 //
-//nolint:dupl // this is same as VPC, worth making generic later.
+
 func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
@@ -150,7 +150,17 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 		return
 	}
 
-	// Everything is immutable, no updates.
+	// Update
+	if pgScope.LinodePlacementGroup.Spec.PGID != nil {
+		logger = logger.WithValues("pgID", *pgScope.LinodePlacementGroup.Spec.PGID)
+
+		logger.Info("updating placement group")
+
+		// Update is essentially a no-op as everything is immutable, just set it to ready and move on
+		pgScope.LinodePlacementGroup.Status.Ready = true
+
+		return
+	}
 
 	// Create
 	failureReason = infrav1alpha1.CreatePlacementGroupError
@@ -166,6 +176,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	return
 }
 
+//nolint:dupl // same as VPC - future generics candidate.
 func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, pgScope *scope.PlacementGroupScope) error {
 	logger.Info("creating placement group")
 

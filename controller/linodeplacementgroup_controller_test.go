@@ -120,48 +120,6 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 				}),
 			),
 		),
-		Once("update", func(ctx context.Context, _ Mock) {
-			Expect(k8sClient.Update(ctx, &linodePG)).To(Succeed())
-			Expect(k8sClient.Get(ctx, objectKey, &linodePG)).To(Succeed())
-		}),
-		OneOf(
-			Path(
-				Call("able to list Placement Groups", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().ListPlacementGroups(ctx, gomock.Any()).Return([]linodego.PlacementGroup{
-						{
-							ID:     1,
-							Label:  "pg1",
-							Region: "us-ord",
-						},
-					}, nil)
-				}),
-				Result("update success", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(mck.Logs()).NotTo(ContainSubstring("Failed to update Placement Group"))
-				}),
-			),
-			Path(
-				Call("unable to list Placement Groups", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().ListPlacementGroups(ctx, gomock.Any()).Return(nil, errors.New("server error"))
-				}),
-				OneOf(
-					Path(Result("update requeues", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing Placement Group update"))
-					})),
-					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
-						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
-						Expect(err).To(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Events()).To(ContainSubstring("server error"))
-					})),
-				),
-			),
-		),
 		Once("delete", func(ctx context.Context, _ Mock) {
 			Expect(k8sClient.Delete(ctx, &linodePG)).To(Succeed())
 			Expect(k8sClient.Get(ctx, objectKey, &linodePG)).To(Succeed())

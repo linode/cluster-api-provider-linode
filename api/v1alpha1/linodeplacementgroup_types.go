@@ -146,10 +146,6 @@ const (
 	// when trying to create the PlacementGroup.
 	CreatePlacementGroupError LinodePlacementGroupStatusError = "CreateError"
 
-	// UpdatePlacementGroupError indicates that an error was encountered
-	// when trying to update the PlacementGroup.
-	UpdatePlacementGroupError LinodePlacementGroupStatusError = "UpdateError"
-
 	// DeletePlacementGroupError indicates that an error was encountered
 	// when trying to delete the PlacementGroup.
 	DeletePlacementGroupError LinodePlacementGroupStatusError = "DeleteError"
