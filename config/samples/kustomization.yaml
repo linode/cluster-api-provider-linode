@@ -7,4 +7,5 @@ resources:
 - infrastructure_v1alpha1_linodevpc.yaml
 - infrastructure_v1alpha1_linodeobjectstoragebucket.yaml
 - infrastructure_v1alpha2_linodecluster.yaml
+- infrastructure_v1alpha1_linodeobjectstoragekey.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

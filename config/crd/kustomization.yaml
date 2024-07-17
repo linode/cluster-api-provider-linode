@@ -15,6 +15,7 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_linodeclustertemplates.yaml
 - bases/infrastructure.cluster.x-k8s.io_linodevpcs.yaml
 - bases/infrastructure.cluster.x-k8s.io_linodeobjectstoragebuckets.yaml
+- bases/infrastructure.cluster.x-k8s.io_linodeobjectstoragekeys.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -45,6 +46,7 @@ patches:
 - path: patches/cainjection_in_linodevpcs.yaml
 - path: patches/cainjection_in_linodeobjectstoragebuckets.yaml
 - path: patches/cainjection_in_infrastructure_linodeclusters.yaml
+#- path: patches/cainjection_in_linodeobjectstoragekeys.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [VALIDATION]

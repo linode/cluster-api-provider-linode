@@ -84,6 +84,7 @@ func main() {
 		machineWatchFilter             string
 		clusterWatchFilter             string
 		objectStorageBucketWatchFilter string
+		objectStorageKeyWatchFilter    string
 		metricsAddr                    string
 		enableLeaderElection           bool
 		probeAddr                      string
@@ -211,6 +212,17 @@ func main() {
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		setupWebhooks(mgr)
+	}
+	if err = (&controller2.LinodeObjectStorageKeyReconciler{
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		Logger:           ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
+		Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageKeyReconciler"),
+		WatchFilterValue: objectStorageKeyWatchFilter,
+		LinodeApiKey:     linodeToken,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageKey")
+		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
 
