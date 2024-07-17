@@ -150,22 +150,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 		return
 	}
 
-	// Update
-	if pgScope.LinodePlacementGroup.Spec.PGID != nil {
-		failureReason = infrav1alpha1.UpdatePlacementGroupError
-
-		logger = logger.WithValues("pgID", *pgScope.LinodePlacementGroup.Spec.PGID)
-
-		err = r.reconcileUpdate(ctx, logger, pgScope)
-		if err != nil && !reconciler.HasConditionSeverity(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
-			logger.Info("re-queuing Placement Group update")
-
-			res = ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}
-			err = nil
-		}
-
-		return
-	}
+	// Everything is immutable, no updates.
 
 	// Create
 	failureReason = infrav1alpha1.CreatePlacementGroupError
@@ -208,23 +193,6 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 	if pgScope.LinodePlacementGroup.Spec.PGID != nil {
 		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, "Created", fmt.Sprintf("Created Placement Group %d", *pgScope.LinodePlacementGroup.Spec.PGID))
 	}
-
-	return nil
-}
-
-func (r *LinodePlacementGroupReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, pgScope *scope.PlacementGroupScope) error {
-	logger.Info("updating placement group")
-
-	if err := r.reconcilePlacementGroup(ctx, pgScope, logger); err != nil {
-		logger.Error(err, "Failed to update Placement Group")
-
-		reconciler.RecordDecayingCondition(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(infrav1alpha1.UpdatePlacementGroupError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout))
-
-		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha1.UpdatePlacementGroupError), err.Error())
-
-		return err
-	}
-	pgScope.LinodePlacementGroup.Status.Ready = true
 
 	return nil
 }
