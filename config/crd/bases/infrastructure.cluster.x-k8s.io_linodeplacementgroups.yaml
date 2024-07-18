@@ -51,7 +51,7 @@ spec:
           spec:
             description: LinodePlacementGroupSpec defines the desired state of LinodePlacementGroup
             properties:
-              affinity_type:
+              affinityType:
                 default: anti_affinity:local
                 enum:
                 - anti_affinity:local

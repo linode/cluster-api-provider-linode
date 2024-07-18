@@ -43,7 +43,7 @@ type LinodePlacementGroupSpec struct {
 	// +kubebuilder:default="anti_affinity:local"
 	// +kubebuilder:validation:Enum="anti_affinity:local"
 	// +optional
-	AffinityType string `json:"affinity_type"`
+	AffinityType string `json:"affinityType"`
 	// TODO: add affinity as a type when available
 
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup. If not
