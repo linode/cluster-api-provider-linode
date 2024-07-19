@@ -228,7 +228,7 @@ func (r *LinodePlacementGroupReconciler) deletePlacementGroup(ctx context.Contex
 	return pgScope.LinodeClient.DeletePlacementGroup(ctx, *pgScope.LinodePlacementGroup.Spec.PGID)
 }
 
-//nolint:nestif,gocognit // As simple as possible.
+//nolint:nestif // As simple as possible.
 func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, pgScope *scope.PlacementGroupScope) (ctrl.Result, error) {
 	logger.Info("deleting Placement Group")
 
