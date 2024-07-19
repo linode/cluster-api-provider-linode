@@ -208,27 +208,7 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 	return nil
 }
 
-func (r *LinodePlacementGroupReconciler) deletePlacementGroup(ctx context.Context, logger logr.Logger, pgScope scope.PlacementGroupScope, pg *linodego.PlacementGroup) error {
-	if len(pg.Members) > 0 {
-		logger.Info("Placement Group still has node(s) attached, unassigning them")
-		members := make([]int, 0, len(pg.Members))
-		for _, member := range pg.Members {
-			members = append(members, member.LinodeID)
-		}
-
-		_, err := pgScope.LinodeClient.UnassignPlacementGroupLinodes(ctx, pg.ID, linodego.PlacementGroupUnAssignOptions{
-			Linodes: members,
-		})
-
-		if err != nil {
-			return fmt.Errorf("unassigning linodes from pg %d: %w", pg.ID, err)
-		}
-	}
-
-	return pgScope.LinodeClient.DeletePlacementGroup(ctx, *pgScope.LinodePlacementGroup.Spec.PGID)
-}
-
-//nolint:nestif // As simple as possible.
+//nolint:nestif,gocognit // As simple as possible.
 func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, pgScope *scope.PlacementGroupScope) (ctrl.Result, error) {
 	logger.Info("deleting Placement Group")
 
@@ -247,8 +227,24 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 		}
 
 		if pg != nil {
-			err := r.deletePlacementGroup(ctx, logger, *pgScope, pg)
-			if err != nil && util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+			if len(pg.Members) > 0 {
+				logger.Info("Placement Group still has node(s) attached, unassigning them")
+				members := make([]int, 0, len(pg.Members))
+				for _, member := range pg.Members {
+					members = append(members, member.LinodeID)
+				}
+
+				_, err := pgScope.LinodeClient.UnassignPlacementGroupLinodes(ctx, pg.ID, linodego.PlacementGroupUnAssignOptions{
+					Linodes: members,
+				})
+
+				if err != nil {
+					return ctrl.Result{}, fmt.Errorf("unassigning linodes from pg %d: %w", pg.ID, err)
+				}
+			}
+
+			err = pgScope.LinodeClient.DeletePlacementGroup(ctx, *pgScope.LinodePlacementGroup.Spec.PGID)
+			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 				logger.Error(err, "Failed to delete Placement Group")
 
 				if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
