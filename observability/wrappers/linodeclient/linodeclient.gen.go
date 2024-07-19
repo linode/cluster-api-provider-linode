@@ -569,14 +569,14 @@ func (_d LinodeClientWithTracing) GetNodeBalancerConfig(ctx context.Context, nod
 }
 
 // GetObjectStorageBucket implements clients.LinodeClient
-func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, cluster string, label string) (op1 *linodego.ObjectStorageBucket, err error) {
+func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, regionID string, label string) (op1 *linodego.ObjectStorageBucket, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageBucket")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":     ctx,
-				"cluster": cluster,
-				"label":   label}, map[string]interface{}{
+				"ctx":      ctx,
+				"regionID": regionID,
+				"label":    label}, map[string]interface{}{
 				"op1": op1,
 				"err": err})
 		} else if err != nil {
@@ -589,7 +589,7 @@ func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, cl
 
 		_span.End()
 	}()
-	return _d.LinodeClient.GetObjectStorageBucket(ctx, cluster, label)
+	return _d.LinodeClient.GetObjectStorageBucket(ctx, regionID, label)
 }
 
 // GetObjectStorageKey implements clients.LinodeClient

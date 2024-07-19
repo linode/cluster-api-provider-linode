@@ -383,18 +383,18 @@ func (mr *MockLinodeClientMockRecorder) GetNodeBalancerConfig(ctx, nodebalancerI
 }
 
 // GetObjectStorageBucket mocks base method.
-func (m *MockLinodeClient) GetObjectStorageBucket(ctx context.Context, cluster, label string) (*linodego.ObjectStorageBucket, error) {
+func (m *MockLinodeClient) GetObjectStorageBucket(ctx context.Context, regionID, label string) (*linodego.ObjectStorageBucket, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetObjectStorageBucket", ctx, cluster, label)
+	ret := m.ctrl.Call(m, "GetObjectStorageBucket", ctx, regionID, label)
 	ret0, _ := ret[0].(*linodego.ObjectStorageBucket)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetObjectStorageBucket indicates an expected call of GetObjectStorageBucket.
-func (mr *MockLinodeClientMockRecorder) GetObjectStorageBucket(ctx, cluster, label any) *gomock.Call {
+func (mr *MockLinodeClientMockRecorder) GetObjectStorageBucket(ctx, regionID, label any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucket", reflect.TypeOf((*MockLinodeClient)(nil).GetObjectStorageBucket), ctx, cluster, label)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucket", reflect.TypeOf((*MockLinodeClient)(nil).GetObjectStorageBucket), ctx, regionID, label)
 }
 
 // GetObjectStorageKey mocks base method.
@@ -1127,18 +1127,18 @@ func (mr *MockLinodeObjectStorageClientMockRecorder) DeleteObjectStorageKey(ctx,
 }
 
 // GetObjectStorageBucket mocks base method.
-func (m *MockLinodeObjectStorageClient) GetObjectStorageBucket(ctx context.Context, cluster, label string) (*linodego.ObjectStorageBucket, error) {
+func (m *MockLinodeObjectStorageClient) GetObjectStorageBucket(ctx context.Context, regionID, label string) (*linodego.ObjectStorageBucket, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetObjectStorageBucket", ctx, cluster, label)
+	ret := m.ctrl.Call(m, "GetObjectStorageBucket", ctx, regionID, label)
 	ret0, _ := ret[0].(*linodego.ObjectStorageBucket)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetObjectStorageBucket indicates an expected call of GetObjectStorageBucket.
-func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageBucket(ctx, cluster, label any) *gomock.Call {
+func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageBucket(ctx, regionID, label any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucket", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageBucket), ctx, cluster, label)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucket", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageBucket), ctx, regionID, label)
 }
 
 // GetObjectStorageKey mocks base method.
