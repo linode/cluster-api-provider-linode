@@ -248,7 +248,7 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 
 		if pg != nil {
 			err := r.deletePlacementGroup(ctx, logger, *pgScope, pg)
-			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+			if err != nil && util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 				logger.Error(err, "Failed to delete Placement Group")
 
 				if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
