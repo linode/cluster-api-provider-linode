@@ -30,7 +30,7 @@ spec:
             file: assert-placementgroup.yaml
       catch:
         - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodePlacementGroup
     - name: Check if the PlacementGroup was created
       try:
@@ -53,7 +53,7 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
               kind: LinodePlacementGroup
               name: ($placementgroup)
         - error:

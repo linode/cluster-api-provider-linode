@@ -27,19 +27,19 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1alpha1
+  - v1alpha2
   clientConfig:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeplacementgroup
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeplacementgroup
   failurePolicy: Fail
   name: validation.linodeplacementgroup.infrastructure.cluster.x-k8s.io
   rules:
   - apiGroups:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
-    - v1alpha1
+    - v1alpha2
     operations:
     - CREATE
     resources:
