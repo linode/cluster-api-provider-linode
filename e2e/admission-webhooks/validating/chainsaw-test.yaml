@@ -54,3 +54,11 @@ spec:
               - check:
                   ($error != null): true
                   (contains($error, $name)): true
+    - name: Invalid LinodePlacementGroup
+      try:
+        - apply:
+            file: invalid-linodeplacementgroup.yaml
+            expect:
+              - check:
+                  ($error != null): true
+                  (contains($error, $name)): true
