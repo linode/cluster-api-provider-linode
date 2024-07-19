@@ -32,6 +32,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeplacementgroup
+  failurePolicy: Fail
+  name: validation.linodeplacementgroup.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    resources:
+    - linodeplacementgroups
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1alpha1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodecluster
   failurePolicy: Fail
   name: validation.linodecluster.infrastructure.cluster.x-k8s.io
@@ -84,26 +104,6 @@ webhooks:
     - CREATE
     resources:
     - linodeobjectstoragebuckets
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1alpha1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeplacementgroup
-  failurePolicy: Fail
-  name: validation.linodeplacementgroup.infrastructure.cluster.x-k8s.io
-  rules:
-  - apiGroups:
-    - infrastructure.cluster.x-k8s.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    resources:
-    - linodeplacementgroups
   sideEffects: None
 - admissionReviewVersions:
   - v1

@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
@@ -44,7 +44,7 @@ func TestValidatePlacementGroupScopeParams(t *testing.T) {
 			name:    "Valid PlacementGroupScopeParams",
 			wantErr: false,
 			params: PlacementGroupScopeParams{
-				LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{},
+				LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{},
 			},
 		},
 		{
@@ -82,14 +82,14 @@ func TestNewPlacementGroupScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: PlacementGroupScopeParams{
-					LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{},
+					LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{},
 				},
 			},
 			expectedError: nil,
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
@@ -99,8 +99,8 @@ func TestNewPlacementGroupScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: PlacementGroupScopeParams{
-					LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{
-						Spec: infrav1alpha1.LinodePlacementGroupSpec{
+					LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
+						Spec: infrav1alpha2.LinodePlacementGroupSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Namespace: "test-namespace",
 								Name:      "test-name",
@@ -113,7 +113,7 @@ func TestNewPlacementGroupScope(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -141,8 +141,8 @@ func TestNewPlacementGroupScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: PlacementGroupScopeParams{
-					LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{
-						Spec: infrav1alpha1.LinodePlacementGroupSpec{
+					LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
+						Spec: infrav1alpha2.LinodePlacementGroupSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Namespace: "test-namespace",
 								Name:      "test-name",
@@ -161,7 +161,7 @@ func TestNewPlacementGroupScope(t *testing.T) {
 			args: args{
 				apiKey: "",
 				params: PlacementGroupScopeParams{
-					LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{},
+					LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{},
 				},
 			},
 			expects:       func(mock *mock.MockK8sClient) {},
@@ -172,7 +172,7 @@ func TestNewPlacementGroupScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: PlacementGroupScopeParams{
-					LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{},
+					LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{},
 				},
 			},
 			expectedError: fmt.Errorf("failed to init patch helper:"),
@@ -209,12 +209,12 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name                 string
-		LinodePlacementGroup *infrav1alpha1.LinodePlacementGroup
+		LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
 		expects              func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode Placement Group object",
-			LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{
+			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-pg",
 				},
@@ -222,7 +222,7 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(2)
 				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -230,16 +230,16 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 		},
 		{
 			name: "AddFinalizer error - finalizer should not be added to the Linode VPC object. Function returns nil since it was already present",
-			LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{
+			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-pg",
-					Finalizers: []string{infrav1alpha1.PlacementGroupFinalizer},
+					Finalizers: []string{infrav1alpha2.PlacementGroupFinalizer},
 				},
 			},
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(1)
 			},
@@ -273,7 +273,7 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 				t.Errorf("NewPlacementGroupScope.AddFinalizer() error = %v", err)
 			}
 
-			if pgScope.LinodePlacementGroup.Finalizers[0] != infrav1alpha1.PlacementGroupFinalizer {
+			if pgScope.LinodePlacementGroup.Finalizers[0] != infrav1alpha2.PlacementGroupFinalizer {
 				t.Errorf("Finalizer was not added")
 			}
 		})
@@ -284,16 +284,16 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name                 string
-		LinodePlacementGroup *infrav1alpha1.LinodePlacementGroup
+		LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
 		expects              func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode Placement Group credentials Secret",
-			LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{
+			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-pg",
 				},
-				Spec: infrav1alpha1.LinodePlacementGroupSpec{
+				Spec: infrav1alpha2.LinodePlacementGroupSpec{
 					CredentialsRef: &corev1.SecretReference{
 						Name:      "example",
 						Namespace: "test",
@@ -303,7 +303,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -325,7 +325,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 		},
 		{
 			name: "No-op - no Linode Cluster credentials Secret",
-			LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{
+			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-pg",
 				},
@@ -333,7 +333,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
@@ -374,16 +374,16 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name                 string
-		LinodePlacementGroup *infrav1alpha1.LinodePlacementGroup
+		LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
 		expects              func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode Placement Group credentials Secret",
-			LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{
+			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-pg",
 				},
-				Spec: infrav1alpha1.LinodePlacementGroupSpec{
+				Spec: infrav1alpha2.LinodePlacementGroupSpec{
 					CredentialsRef: &corev1.SecretReference{
 						Name:      "example",
 						Namespace: "test",
@@ -393,7 +393,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -415,7 +415,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 		},
 		{
 			name: "No-op - no Linode Placement Group credentials Secret",
-			LinodePlacementGroup: &infrav1alpha1.LinodePlacementGroup{
+			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-pg",
 				},
@@ -423,7 +423,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},

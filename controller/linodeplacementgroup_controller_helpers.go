@@ -25,7 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 )
@@ -76,7 +76,7 @@ func (r *LinodePlacementGroupReconciler) reconcilePlacementGroup(ctx context.Con
 	return nil
 }
 
-func linodePlacementGroupSpecToPGCreateConfig(pgSpec infrav1alpha1.LinodePlacementGroupSpec) *linodego.PlacementGroupCreateOptions {
+func linodePlacementGroupSpecToPGCreateConfig(pgSpec infrav1alpha2.LinodePlacementGroupSpec) *linodego.PlacementGroupCreateOptions {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(pgSpec)

@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -40,12 +40,12 @@ import (
 var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
-	linodePG := infrav1alpha1.LinodePlacementGroup{
+	linodePG := infrav1alpha2.LinodePlacementGroup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lifecycle",
 			Namespace: "default",
 		},
-		Spec: infrav1alpha1.LinodePlacementGroupSpec{
+		Spec: infrav1alpha2.LinodePlacementGroupSpec{
 			Region:       "us-ord",
 			AffinityType: "anti_affinity:local",
 		},

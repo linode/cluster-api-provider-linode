@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
@@ -35,13 +35,13 @@ type PlacementGroupScope struct {
 
 	PatchHelper          *patch.Helper
 	LinodeClient         LinodeClient
-	LinodePlacementGroup *infrav1alpha1.LinodePlacementGroup
+	LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
 }
 
 // PlacementGroupScopeParams defines the input parameters used to create a new Scope.
 type PlacementGroupScopeParams struct {
 	Client               K8sClient
-	LinodePlacementGroup *infrav1alpha1.LinodePlacementGroup
+	LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
 }
 
 func validatePlacementGroupScope(params PlacementGroupScopeParams) error {
@@ -65,7 +65,7 @@ func (s *PlacementGroupScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *PlacementGroupScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.LinodePlacementGroup, infrav1alpha1.PlacementGroupFinalizer) {
+	if controllerutil.AddFinalizer(s.LinodePlacementGroup, infrav1alpha2.PlacementGroupFinalizer) {
 		return s.Close(ctx)
 	}
 

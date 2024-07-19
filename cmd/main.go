@@ -278,7 +278,7 @@ func setupWebhooks(mgr manager.Manager) {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.LinodePlacementGroup{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrastructurev1alpha2.LinodePlacementGroup{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodePlacementGroup")
 		os.Exit(1)
 	}

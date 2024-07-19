@@ -43,7 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -75,7 +75,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 
 	log := ctrl.LoggerFrom(ctx).WithName("LinodePlacementGroupReconciler").WithValues("name", req.NamespacedName.String())
 
-	linodeplacementgroup := &infrav1alpha1.LinodePlacementGroup{}
+	linodeplacementgroup := &infrav1alpha2.LinodePlacementGroup{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeplacementgroup); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch LinodePlacementGroup")
@@ -112,7 +112,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	pgScope.LinodePlacementGroup.Status.FailureReason = nil
 	pgScope.LinodePlacementGroup.Status.FailureMessage = util.Pointer("")
 
-	failureReason := infrav1alpha1.LinodePlacementGroupStatusError("UnknownError")
+	failureReason := infrav1alpha2.LinodePlacementGroupStatusError("UnknownError")
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
@@ -135,7 +135,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 
 	// Delete
 	if !pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.IsZero() {
-		failureReason = infrav1alpha1.DeletePlacementGroupError
+		failureReason = infrav1alpha2.DeletePlacementGroupError
 
 		res, err = r.reconcileDelete(ctx, logger, pgScope)
 
@@ -163,7 +163,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	}
 
 	// Create
-	failureReason = infrav1alpha1.CreatePlacementGroupError
+	failureReason = infrav1alpha2.CreatePlacementGroupError
 
 	err = r.reconcileCreate(ctx, logger, pgScope)
 	if err != nil && !reconciler.HasConditionSeverity(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
@@ -183,9 +183,9 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 	if err := pgScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
 
-		reconciler.RecordDecayingCondition(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(infrav1alpha1.CreatePlacementGroupError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout))
+		reconciler.RecordDecayingCondition(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(infrav1alpha2.CreatePlacementGroupError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout))
 
-		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha1.CreatePlacementGroupError), err.Error())
+		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha2.CreatePlacementGroupError), err.Error())
 
 		return err
 	}
@@ -193,9 +193,9 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 	if err := r.reconcilePlacementGroup(ctx, pgScope, logger); err != nil {
 		logger.Error(err, "Failed to create Placement Group")
 
-		reconciler.RecordDecayingCondition(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(infrav1alpha1.CreatePlacementGroupError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout))
+		reconciler.RecordDecayingCondition(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(infrav1alpha2.CreatePlacementGroupError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout))
 
-		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha1.CreatePlacementGroupError), err.Error())
+		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha2.CreatePlacementGroupError), err.Error())
 
 		return err
 	}
@@ -278,10 +278,10 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 		return ctrl.Result{}, err
 	}
 
-	controllerutil.RemoveFinalizer(pgScope.LinodePlacementGroup, infrav1alpha1.PlacementGroupFinalizer)
+	controllerutil.RemoveFinalizer(pgScope.LinodePlacementGroup, infrav1alpha2.PlacementGroupFinalizer)
 	// TODO: remove this check and removal later
-	if controllerutil.ContainsFinalizer(pgScope.LinodePlacementGroup, infrav1alpha1.GroupVersion.String()) {
-		controllerutil.RemoveFinalizer(pgScope.LinodePlacementGroup, infrav1alpha1.GroupVersion.String())
+	if controllerutil.ContainsFinalizer(pgScope.LinodePlacementGroup, infrav1alpha2.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(pgScope.LinodePlacementGroup, infrav1alpha2.GroupVersion.String())
 	}
 
 	return ctrl.Result{}, nil
@@ -291,13 +291,13 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 //
 //nolint:dupl // this is same as Placement Group, worth making generic later.
 func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodePlacementGroupMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodePlacementGroupList{}, mgr.GetScheme())
+	linodePlacementGroupMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodePlacementGroupList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodePlacementGroups: %w", err)
 	}
 
 	err = ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1alpha1.LinodePlacementGroup{}).
+		For(&infrav1alpha2.LinodePlacementGroup{}).
 		WithOptions(options).
 		WithEventFilter(
 			predicate.And(
