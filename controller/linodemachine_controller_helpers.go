@@ -109,6 +109,17 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
 	}
 
+	if machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
+		pgID, err := r.getPlacementGroupID(ctx, machineScope, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get Placement Group config")
+			return nil, err
+		}
+		createConfig.PlacementGroup = &linodego.InstanceCreatePlacementGroupOptions{
+			ID: pgID,
+		}
+	}
+
 	return createConfig, nil
 }
 
@@ -295,6 +306,33 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 	}
 
 	return result, nil
+}
+
+func (r *LinodeMachineReconciler) getPlacementGroupID(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (int, error) {
+	name := machineScope.LinodeMachine.Spec.PlacementGroupRef.Name
+	namespace := machineScope.LinodeMachine.Spec.PlacementGroupRef.Namespace
+	if namespace == "" {
+		namespace = machineScope.LinodeMachine.Namespace
+	}
+
+	logger = logger.WithValues("placementGroupName", name, "placementGroupNamespace", namespace)
+
+	linodePlacementGroup := infrav1alpha2.LinodePlacementGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(&linodePlacementGroup), &linodePlacementGroup); err != nil {
+		logger.Error(err, "Failed to fetch LinodePlacementGroup")
+		return -1, err
+	} else if !linodePlacementGroup.Status.Ready || linodePlacementGroup.Spec.PGID == nil {
+		logger.Info("LinodePlacementGroup is not available")
+		return -1, errors.New("placement group is not available")
+	}
+
+	return *linodePlacementGroup.Spec.PGID, nil
 }
 
 func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
