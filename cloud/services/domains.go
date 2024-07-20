@@ -5,8 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/netip"
+	"os"
+	"strings"
 	"sync"
 
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/edgegrid"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/session"
 	"github.com/linode/linodego"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
@@ -14,6 +19,8 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
+
+const maxBody = 131072
 
 type DNSEntries struct {
 	options []DNSOptions
@@ -27,7 +34,7 @@ type DNSOptions struct {
 	DNSTTLSec     int
 }
 
-// EnsureDNSEntries ensures the domainrecord is created, updated, or deleted based on operation passed
+// EnsureDNSEntries ensures the domainrecord on Linode Cloud Manager is created, updated, or deleted based on operation passed
 func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string) error {
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
@@ -41,6 +48,15 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 		return err
 	}
 
+	if mscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
+		return EnsureAkamaiDNSEntries(ctx, mscope, operation, dnsEntries)
+	}
+
+	return EnsureLinodeDNSEntries(ctx, mscope, operation, dnsEntries)
+}
+
+// EnsureLinodeDNSEntries ensures the domainrecord on Linode Cloud Manager is created, updated, or deleted based on operation passed
+func EnsureLinodeDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string, dnsEntries []DNSOptions) error {
 	// Get domainID from domain name
 	domainID, err := GetDomainID(ctx, mscope)
 	if err != nil {
@@ -59,6 +75,86 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 		}
 	}
 
+	return nil
+}
+
+// EnsureAkamaiDNSEntries ensures the domainrecord on Akamai EDGE DNS is created, updated, or deleted based on operation passed
+func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string, dnsEntries []DNSOptions) error {
+	// SetUp Client for Akamai EDGE DNS
+	akamClient, err := setUpEdgeDNSInterface()
+	if err != nil {
+		return err
+	}
+
+	fqdn := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier + "." + mscope.LinodeCluster.Spec.Network.DNSRootDomain
+
+	for _, dnsEntry := range dnsEntries {
+		recordBody, err := akamClient.GetRecord(ctx, mscope.LinodeCluster.Spec.Network.DNSRootDomain, fqdn, string(dnsEntry.DNSRecordType))
+		if err != nil {
+			if operation == "create" {
+				if err := createAkamaiDNSEntry(ctx, mscope, akamClient, fqdn, dnsEntry); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+		if operation == "delete" {
+			switch {
+			case len(recordBody.Target) > 1:
+				recordBody.Target = removeElement(recordBody.Target, strings.Replace(dnsEntry.Target, "::", ":0:0:", 8)) //nolint:mnd // 8 for 8 octest
+				if err := updateAkamaiDNSEntry(ctx, mscope, akamClient, recordBody); err != nil {
+					return err
+				}
+				continue
+			default:
+				if err := deleteAkamaiDNSEntry(ctx, mscope, akamClient, recordBody); err != nil {
+					return err
+				}
+			}
+		} else {
+			recordBody.Target = append(recordBody.Target, dnsEntry.Target)
+			if err := updateAkamaiDNSEntry(ctx, mscope, akamClient, recordBody); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func removeElement(stringList []string, elemToRemove string) []string {
+	for index, element := range stringList {
+		if element == elemToRemove {
+			stringList = append(stringList[:index], stringList[index+1:]...)
+			continue
+		}
+	}
+	return stringList
+}
+
+func createAkamaiDNSEntry(ctx context.Context, mscope *scope.MachineScope, akamClient dns.DNS, fqdn string, dnsOptions DNSOptions) error {
+	recordBody := &dns.RecordBody{
+		Name:       fqdn,
+		RecordType: string(dnsOptions.DNSRecordType),
+		TTL:        dnsOptions.DNSTTLSec,
+		Target:     []string{dnsOptions.Target},
+	}
+	if err := akamClient.CreateRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
+		return err
+	}
+	return nil
+}
+
+func updateAkamaiDNSEntry(ctx context.Context, mscope *scope.MachineScope, akamClient dns.DNS, recordBody *dns.RecordBody) error {
+	if err := akamClient.UpdateRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
+		return err
+	}
+	return nil
+}
+
+func deleteAkamaiDNSEntry(ctx context.Context, mscope *scope.MachineScope, akamClient dns.DNS, recordBody *dns.RecordBody) error {
+	if err := akamClient.DeleteRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -230,4 +326,19 @@ func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostna
 	}
 
 	return true, nil
+}
+
+func setUpEdgeDNSInterface() (dnsInterface dns.DNS, err error) {
+	edgeRCConfig := edgegrid.Config{
+		Host:         os.Getenv("AKAMAI_HOST"),
+		AccessToken:  os.Getenv("AKAMAI_ACCESS_TOKEN"),
+		ClientToken:  os.Getenv("AKAMAI_CLIENT_TOKEN"),
+		ClientSecret: os.Getenv("AKAMAI_CLIENT_SECRET"),
+		MaxBody:      maxBody,
+	}
+	sess, err := session.New(session.WithSigner(&edgeRCConfig))
+	if err != nil {
+		return nil, err
+	}
+	return dns.Client(sess), nil
 }
