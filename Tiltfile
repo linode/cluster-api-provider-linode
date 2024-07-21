@@ -166,6 +166,7 @@ k8s_resource(
         "linodeclustertemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",
         "linodemachinetemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",
         "linodevpcs.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+        "linodeplacementgroups.infrastructure.cluster.x-k8s.io:customresourcedefinition",
         "linodeobjectstoragebuckets.infrastructure.cluster.x-k8s.io:customresourcedefinition",
         "capl-controller-manager:serviceaccount",
         "capl-leader-election-role:role",

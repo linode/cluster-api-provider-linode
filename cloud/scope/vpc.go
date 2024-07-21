@@ -54,6 +54,8 @@ func validateVPCScopeParams(params VPCScopeParams) error {
 
 // NewVPCScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
+//
+//nolint:dupl // this is the same as PlacementGroups - worth making into generics later.
 func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VPCScope, error) {
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
