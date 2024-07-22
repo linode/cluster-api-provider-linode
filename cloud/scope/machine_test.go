@@ -138,14 +138,14 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 					LinodeMachine: &infrav1alpha1.LinodeMachine{
 						ObjectMeta: metav1.ObjectMeta{
-							Finalizers: []string{infrav1alpha1.MachineFinalizer},
+							Finalizers: []string{infrav1alpha2.MachineFinalizer},
 						},
 					},
 				})
 				require.NoError(t, err)
 				assert.NoError(t, mScope.AddFinalizer(ctx))
 				require.Len(t, mScope.LinodeMachine.Finalizers, 1)
-				assert.Equal(t, infrav1alpha1.MachineFinalizer, mScope.LinodeMachine.Finalizers[0])
+				assert.Equal(t, infrav1alpha2.MachineFinalizer, mScope.LinodeMachine.Finalizers[0])
 			})),
 		),
 		OneOf(
@@ -164,7 +164,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					require.NoError(t, err)
 					assert.NoError(t, mScope.AddFinalizer(ctx))
 					require.Len(t, mScope.LinodeMachine.Finalizers, 1)
-					assert.Equal(t, infrav1alpha1.MachineFinalizer, mScope.LinodeMachine.Finalizers[0])
+					assert.Equal(t, infrav1alpha2.MachineFinalizer, mScope.LinodeMachine.Finalizers[0])
 				}),
 			),
 			Path(
