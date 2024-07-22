@@ -84,7 +84,10 @@ func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 	for _, dnsEntry := range dnsEntries {
 		recordBody, err := akaDNSClient.GetRecord(ctx, mscope.LinodeCluster.Spec.Network.DNSRootDomain, fqdn, string(dnsEntry.DNSRecordType))
 		if err != nil {
-			if strings.Contains(err.Error(), "Not Found") && operation == "create" {
+			if !strings.Contains(err.Error(), "Not Found") {
+				return err
+			}
+			if operation == "create" {
 				if err := akaDNSClient.CreateRecord(
 					ctx,
 					&dns.RecordBody{
