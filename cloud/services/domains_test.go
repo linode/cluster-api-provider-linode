@@ -87,6 +87,66 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		{
+			name: "Faiure - Error in creating records",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "akafn.com",
+							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha1.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha1.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+					Status: infrav1alpha1.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{
+							{
+								Type:    "ExternalIP",
+								Address: "10.10.10.10",
+							},
+							{
+								Type:    "ExternalIP",
+								Address: "fd00::",
+							},
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockAkamClient) {
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("domain record not found")).AnyTimes()
+				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("domain record not found")).AnyTimes()
+			},
+			expectedError: fmt.Errorf("domain record not found"),
+		},
 	}
 	for _, tt := range tests {
 		testcase := tt
@@ -101,7 +161,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			testcase.expects(MockAkamClient)
 
 			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "create")
-			if testcase.expectedError != nil {
+			if err != nil || testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
@@ -112,6 +172,8 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
+		listOfIPS     []string
+		expectedList  []string
 		machineScope  *scope.MachineScope
 		expects       func(*mock.MockAkamClient)
 		expectedError error
@@ -170,6 +232,7 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 					},
 				},
 			},
+			listOfIPS: []string{"10.10.10.10", "10.10.10.11", "10.10.10.12"},
 			expects: func(mockClient *mock.MockAkamClient) {
 				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&dns.RecordBody{
 					Name:       "test-machine",
@@ -180,6 +243,7 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 				mockClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: nil,
+			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
 		},
 	}
 	for _, tt := range tests {
@@ -195,9 +259,10 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			testcase.expects(MockAkamClient)
 
 			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "delete")
-			if testcase.expectedError != nil {
+			if err != nil || testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
+			assert.EqualValues(t, testcase.expectedList, removeElement(testcase.listOfIPS, "10.10.10.11"))
 		})
 	}
 }
