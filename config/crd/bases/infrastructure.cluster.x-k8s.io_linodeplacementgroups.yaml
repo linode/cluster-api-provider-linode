@@ -51,14 +51,6 @@ spec:
           spec:
             description: LinodePlacementGroupSpec defines the desired state of LinodePlacementGroup
             properties:
-              affinityType:
-                default: anti_affinity:local
-                enum:
-                - anti_affinity:local
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               credentialsRef:
                 description: |-
                   CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup. If not
@@ -74,14 +66,25 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
-              isStrict:
-                default: true
-                type: boolean
+              pgID:
+                type: integer
+              placementGroupPolicy:
+                default: strict
+                enum:
+                - strict
+                - flexible
+                type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              pgID:
-                type: integer
+              placementGroupType:
+                default: anti_affinity:local
+                enum:
+                - anti_affinity:local
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               region:
                 type: string
                 x-kubernetes-validations:
