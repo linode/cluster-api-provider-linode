@@ -63,3 +63,13 @@ func validateRegion(ctx context.Context, client LinodeClient, id string, path *f
 
 	return nil
 }
+
+func validateLinodeType(ctx context.Context, client LinodeClient, id string, path *field.Path) (*linodego.LinodeType, *field.Error) {
+	// TODO: instrument with tracing, might need refactor to preserve readibility
+	plan, err := client.GetType(ctx, id)
+	if err != nil {
+		return nil, field.NotFound(path, id)
+	}
+
+	return plan, nil
+}

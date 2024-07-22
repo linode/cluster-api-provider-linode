@@ -29,9 +29,9 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 	}
 
 	opts := linodego.ObjectStorageBucketCreateOptions{
-		Cluster: bScope.Bucket.Spec.Cluster,
-		Label:   bScope.Bucket.Name,
-		ACL:     linodego.ACLPrivate,
+		Region: bScope.Bucket.Spec.Cluster,
+		Label:  bScope.Bucket.Name,
+		ACL:    linodego.ACLPrivate,
 	}
 
 	if bucket, err = bScope.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {
@@ -78,7 +78,7 @@ func createObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBuck
 		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 			{
 				BucketName:  bScope.Bucket.Name,
-				Cluster:     bScope.Bucket.Spec.Cluster,
+				Region:      bScope.Bucket.Spec.Cluster,
 				Permissions: permission,
 			},
 		},
