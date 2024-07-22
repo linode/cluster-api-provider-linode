@@ -364,6 +364,9 @@ spec:
                       DNSProvider is provider who manages the domain
                       Ignored if the LoadBalancerType is set to anything other than dns
                       If not set, defaults linode dns
+                    enum:
+                    - linode
+                    - akamai
                     type: string
                   dnsRootDomain:
                     description: |-
