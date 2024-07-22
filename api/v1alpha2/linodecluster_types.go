@@ -110,6 +110,7 @@ type NetworkSpec struct {
 	// DNSProvider is provider who manages the domain
 	// Ignored if the LoadBalancerType is set to anything other than dns
 	// If not set, defaults linode dns
+	// +kubebuilder:validation:Enum=linode;akamai
 	// +optional
 	DNSProvider string `json:"dnsProvider,omitempty"`
 	// DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint

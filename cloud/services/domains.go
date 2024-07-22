@@ -10,6 +10,7 @@ import (
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
 	"github.com/linode/linodego"
+	"golang.org/x/exp/slices"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 
@@ -115,7 +116,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 func removeElement(stringList []string, elemToRemove string) []string {
 	for index, element := range stringList {
 		if element == elemToRemove {
-			stringList = append(stringList[:index], stringList[index+1:]...)
+			stringList = slices.Delete(stringList, index, index+1)
 			continue
 		}
 	}
