@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: minimal-linodeplacementgroup
+  # Label to trigger the test on every PR
+  labels:
+    all:
+    quick:
+    linodeplacementgroup:
+spec:
+  bindings:
+    # A short identifier for the E2E test run
+    - name: run
+      value: (join('-', ['e2e', 'min-placementgroup', env('GIT_REF')]))
+    - name: placementgroup
+      # Format the placementgroup name into a valid Kubernetes object name
+      value: (trim((truncate(($run), `63`)), '-'))
+  template: true
+  steps:
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create LinodePlacementGroup
+      try:
+        - apply:
+            file: create-placementgroup.yaml
+        - assert:
+            file: assert-placementgroup.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodePlacementGroup
+    - name: Check if the PlacementGroup was created
+      try:
+        - script:
+            env:
+              - name: FILTER
+                value: (to_string({"label":($placementgroup)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/placement/groups"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 1
+    - name: Delete PlacementGroup
+      try:
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodePlacementGroup
+              name: ($placementgroup)
+        - error:
+            file: check-placementgroup-deletion.yaml
+    - name: Check if the PlacementGroup was deleted
+      try:
+        - script:
+            env:
+              - name: FILTER
+                value: (to_string({"label":($placementgroup)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/placement/groups"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0

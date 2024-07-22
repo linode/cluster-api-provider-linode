@@ -49,7 +49,7 @@ spec:
             file: assert-child-cluster-resources.yaml
       catch:
         - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeMachine
         - describe:
             apiVersion: cluster.x-k8s.io/v1beta1

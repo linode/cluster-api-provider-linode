@@ -35,6 +35,30 @@ func NewLinodeClientWithTracing(base clients.LinodeClient, spanDecorator ...func
 	return d
 }
 
+// AssignPlacementGroupLinodes implements clients.LinodeClient
+func (_d LinodeClientWithTracing) AssignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupAssignOptions) (pp1 *linodego.PlacementGroup, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.AssignPlacementGroupLinodes")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":     ctx,
+				"id":      id,
+				"options": options}, map[string]interface{}{
+				"pp1": pp1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.AssignPlacementGroupLinodes(ctx, id, options)
+}
+
 // BootInstance implements clients.LinodeClient
 func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int, configID int) (err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.BootInstance")
@@ -247,6 +271,29 @@ func (_d LinodeClientWithTracing) CreateObjectStorageKey(ctx context.Context, op
 	return _d.LinodeClient.CreateObjectStorageKey(ctx, opts)
 }
 
+// CreatePlacementGroup implements clients.LinodeClient
+func (_d LinodeClientWithTracing) CreatePlacementGroup(ctx context.Context, opts linodego.PlacementGroupCreateOptions) (pp1 *linodego.PlacementGroup, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreatePlacementGroup")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":  ctx,
+				"opts": opts}, map[string]interface{}{
+				"pp1": pp1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.CreatePlacementGroup(ctx, opts)
+}
+
 // CreateStackscript implements clients.LinodeClient
 func (_d LinodeClientWithTracing) CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (sp1 *linodego.Stackscript, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateStackscript")
@@ -404,6 +451,28 @@ func (_d LinodeClientWithTracing) DeleteObjectStorageKey(ctx context.Context, ke
 		_span.End()
 	}()
 	return _d.LinodeClient.DeleteObjectStorageKey(ctx, keyID)
+}
+
+// DeletePlacementGroup implements clients.LinodeClient
+func (_d LinodeClientWithTracing) DeletePlacementGroup(ctx context.Context, id int) (err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeletePlacementGroup")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx": ctx,
+				"id":  id}, map[string]interface{}{
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.DeletePlacementGroup(ctx, id)
 }
 
 // DeleteVPC implements clients.LinodeClient
@@ -569,14 +638,14 @@ func (_d LinodeClientWithTracing) GetNodeBalancerConfig(ctx context.Context, nod
 }
 
 // GetObjectStorageBucket implements clients.LinodeClient
-func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, cluster string, label string) (op1 *linodego.ObjectStorageBucket, err error) {
+func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, regionID string, label string) (op1 *linodego.ObjectStorageBucket, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageBucket")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":     ctx,
-				"cluster": cluster,
-				"label":   label}, map[string]interface{}{
+				"ctx":      ctx,
+				"regionID": regionID,
+				"label":    label}, map[string]interface{}{
 				"op1": op1,
 				"err": err})
 		} else if err != nil {
@@ -589,7 +658,7 @@ func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, cl
 
 		_span.End()
 	}()
-	return _d.LinodeClient.GetObjectStorageBucket(ctx, cluster, label)
+	return _d.LinodeClient.GetObjectStorageBucket(ctx, regionID, label)
 }
 
 // GetObjectStorageKey implements clients.LinodeClient
@@ -613,6 +682,29 @@ func (_d LinodeClientWithTracing) GetObjectStorageKey(ctx context.Context, keyID
 		_span.End()
 	}()
 	return _d.LinodeClient.GetObjectStorageKey(ctx, keyID)
+}
+
+// GetPlacementGroup implements clients.LinodeClient
+func (_d LinodeClientWithTracing) GetPlacementGroup(ctx context.Context, id int) (pp1 *linodego.PlacementGroup, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetPlacementGroup")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx": ctx,
+				"id":  id}, map[string]interface{}{
+				"pp1": pp1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetPlacementGroup(ctx, id)
 }
 
 // GetRegion implements clients.LinodeClient
@@ -778,6 +870,29 @@ func (_d LinodeClientWithTracing) ListInstances(ctx context.Context, opts *linod
 	return _d.LinodeClient.ListInstances(ctx, opts)
 }
 
+// ListPlacementGroups implements clients.LinodeClient
+func (_d LinodeClientWithTracing) ListPlacementGroups(ctx context.Context, options *linodego.ListOptions) (pa1 []linodego.PlacementGroup, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListPlacementGroups")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":     ctx,
+				"options": options}, map[string]interface{}{
+				"pa1": pa1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListPlacementGroups(ctx, options)
+}
+
 // ListStackscripts implements clients.LinodeClient
 func (_d LinodeClientWithTracing) ListStackscripts(ctx context.Context, opts *linodego.ListOptions) (sa1 []linodego.Stackscript, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListStackscripts")
@@ -848,6 +963,30 @@ func (_d LinodeClientWithTracing) ResizeInstanceDisk(ctx context.Context, linode
 	return _d.LinodeClient.ResizeInstanceDisk(ctx, linodeID, diskID, size)
 }
 
+// UnassignPlacementGroupLinodes implements clients.LinodeClient
+func (_d LinodeClientWithTracing) UnassignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupUnAssignOptions) (pp1 *linodego.PlacementGroup, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UnassignPlacementGroupLinodes")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":     ctx,
+				"id":      id,
+				"options": options}, map[string]interface{}{
+				"pp1": pp1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UnassignPlacementGroupLinodes(ctx, id, options)
+}
+
 // UpdateDomainRecord implements clients.LinodeClient
 func (_d LinodeClientWithTracing) UpdateDomainRecord(ctx context.Context, domainID int, domainRecordID int, recordReq linodego.DomainRecordUpdateOptions) (dp1 *linodego.DomainRecord, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateDomainRecord")
@@ -896,4 +1035,28 @@ func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, lino
 		_span.End()
 	}()
 	return _d.LinodeClient.UpdateInstanceConfig(ctx, linodeID, configID, opts)
+}
+
+// UpdatePlacementGroup implements clients.LinodeClient
+func (_d LinodeClientWithTracing) UpdatePlacementGroup(ctx context.Context, id int, options linodego.PlacementGroupUpdateOptions) (pp1 *linodego.PlacementGroup, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdatePlacementGroup")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":     ctx,
+				"id":      id,
+				"options": options}, map[string]interface{}{
+				"pp1": pp1,
+				"err": err})
+		} else if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdatePlacementGroup(ctx, id, options)
 }

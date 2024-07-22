@@ -73,6 +73,8 @@ type LinodeVPCReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.0/pkg/reconcile
+//
+
 func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
@@ -185,6 +187,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	return
 }
 
+//nolint:dupl // same as Placement Group - future generics candidate.
 func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
 	logger.Info("creating vpc")
 
@@ -315,6 +318,8 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 }
 
 // SetupWithManager sets up the controller with the Manager.
+//
+//nolint:dupl // this is same as Placement Group, worth making generic later.
 func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
 	linodeVPCMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeVPCList{}, mgr.GetScheme())
 	if err != nil {

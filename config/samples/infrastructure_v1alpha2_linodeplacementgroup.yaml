@@ -1,0 +1,13 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodePlacementGroup
+metadata:
+  labels:
+    app.kubernetes.io/name: linodepg
+    app.kubernetes.io/instance: linodepg-sample
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+  name: linodepg-sample
+spec:
+  region: us-ord
+  

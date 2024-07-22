@@ -30,6 +30,7 @@ resources:
   path: github.com/linode/cluster-api-provider-linode/api/v1alpha1
   version: v1alpha1
   webhooks:
+    conversion: true
     validation: true
     webhookVersion: v1
 - api:
@@ -82,6 +83,29 @@ resources:
   version: v1alpha2
   webhooks:
     conversion: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: LinodeMachine
+  path: github.com/linode/cluster-api-provider-linode/api/v1alpha2
+  version: v1alpha2
+  webhooks:
+    conversion: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: LinodePlacementGroup
+  path: github.com/linode/cluster-api-provider-linode/api/v1alpha2
+  version: v1alpha2
+  webhooks:
+    validation: true
     webhookVersion: v1
 - api:
     crdVersion: v1

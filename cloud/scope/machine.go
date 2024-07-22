@@ -136,7 +136,7 @@ func (s *MachineScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *MachineScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.LinodeMachine, infrav1alpha1.MachineFinalizer) {
+	if controllerutil.AddFinalizer(s.LinodeMachine, infrav1alpha2.MachineFinalizer) {
 		return s.Close(ctx)
 	}
 

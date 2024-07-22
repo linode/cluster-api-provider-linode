@@ -16,6 +16,7 @@ type LinodeClient interface {
 	LinodeVPCClient
 	LinodeObjectStorageClient
 	LinodeDNSClient
+	LinodePlacementGroupClient
 }
 
 // LinodeInstanceClient defines the methods that interact with Linode's Instance service.
@@ -59,7 +60,7 @@ type LinodeNodeBalancerClient interface {
 
 // LinodeObjectStorageClient defines the methods that interact with Linode's Object Storage service.
 type LinodeObjectStorageClient interface {
-	GetObjectStorageBucket(ctx context.Context, cluster, label string) (*linodego.ObjectStorageBucket, error)
+	GetObjectStorageBucket(ctx context.Context, regionID, label string) (*linodego.ObjectStorageBucket, error)
 	CreateObjectStorageBucket(ctx context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error)
 	GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error)
 	CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)
@@ -73,6 +74,17 @@ type LinodeDNSClient interface {
 	ListDomainRecords(ctx context.Context, domainID int, opts *linodego.ListOptions) ([]linodego.DomainRecord, error)
 	ListDomains(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Domain, error)
 	DeleteDomainRecord(ctx context.Context, domainID int, domainRecordID int) error
+}
+
+// LinodePlacementGroupClient defines the methods that interact with Linode's PlacementGroup service.
+type LinodePlacementGroupClient interface {
+	GetPlacementGroup(ctx context.Context, id int) (*linodego.PlacementGroup, error)
+	ListPlacementGroups(ctx context.Context, options *linodego.ListOptions) ([]linodego.PlacementGroup, error)
+	CreatePlacementGroup(ctx context.Context, opts linodego.PlacementGroupCreateOptions) (*linodego.PlacementGroup, error)
+	DeletePlacementGroup(ctx context.Context, id int) error
+	UpdatePlacementGroup(ctx context.Context, id int, options linodego.PlacementGroupUpdateOptions) (*linodego.PlacementGroup, error)
+	AssignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupAssignOptions) (*linodego.PlacementGroup, error)
+	UnassignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupUnAssignOptions) (*linodego.PlacementGroup, error)
 }
 
 type K8sClient interface {
