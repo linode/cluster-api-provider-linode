@@ -8,6 +8,7 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -162,7 +163,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 
 			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "create")
 			if err != nil || testcase.expectedError != nil {
-				assert.ErrorContains(t, err, testcase.expectedError.Error())
+				require.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
 	}
@@ -260,7 +261,7 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 
 			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "delete")
 			if err != nil || testcase.expectedError != nil {
-				assert.ErrorContains(t, err, testcase.expectedError.Error())
+				require.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 			assert.EqualValues(t, testcase.expectedList, removeElement(testcase.listOfIPS, "10.10.10.11"))
 		})
