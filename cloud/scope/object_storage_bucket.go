@@ -133,7 +133,7 @@ func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [
 		secretStringData = map[string]string{
 			"bucket-details-secret.yaml": fmt.Sprintf(bucketDataSecret,
 				bucket.Label,
-				bucket.Cluster,
+				bucket.Region,
 				bucket.Hostname,
 				keys[0].AccessKey,
 				keys[0].SecretKey,
@@ -144,7 +144,7 @@ func (s *ObjectStorageBucketScope) GenerateKeySecret(ctx context.Context, keys [
 	} else {
 		secretStringData = map[string]string{
 			"bucket_name":     bucket.Label,
-			"bucket_region":   bucket.Cluster,
+			"bucket_region":   bucket.Region,
 			"bucket_endpoint": bucket.Hostname,
 			"access_key_rw":   keys[0].AccessKey,
 			"secret_key_rw":   keys[0].SecretKey,
