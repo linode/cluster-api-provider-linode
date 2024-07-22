@@ -143,10 +143,10 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockAkamClient) {
-				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("domain record not found")).AnyTimes()
-				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("domain record not found")).AnyTimes()
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
+				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("create record failed")).AnyTimes()
 			},
-			expectedError: fmt.Errorf("domain record not found"),
+			expectedError: fmt.Errorf("create record failed"),
 		},
 	}
 	for _, tt := range tests {
