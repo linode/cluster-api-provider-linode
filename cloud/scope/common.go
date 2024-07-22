@@ -27,7 +27,9 @@ import (
 const (
 	// defaultClientTimeout is the default timeout for a client Linode API call
 	defaultClientTimeout = time.Second * 10
-	maxBody              = 131072
+
+	// MaxBodySize is the max payload size for Akamai edge dns client requests
+	maxBody = 131072
 )
 
 type Option struct {
