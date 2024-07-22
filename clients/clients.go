@@ -60,7 +60,7 @@ type LinodeNodeBalancerClient interface {
 
 // LinodeObjectStorageClient defines the methods that interact with Linode's Object Storage service.
 type LinodeObjectStorageClient interface {
-	GetObjectStorageBucket(ctx context.Context, cluster, label string) (*linodego.ObjectStorageBucket, error)
+	GetObjectStorageBucket(ctx context.Context, regionID, label string) (*linodego.ObjectStorageBucket, error)
 	CreateObjectStorageBucket(ctx context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error)
 	GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error)
 	CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)

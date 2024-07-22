@@ -326,7 +326,7 @@ func TestGenerateKeySecret(t *testing.T) {
 					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 						{
 							BucketName:  "bucket",
-							Cluster:     "test-bucket",
+							Region:      "test-bucket",
 							Permissions: "read_write",
 						},
 					},
@@ -340,7 +340,7 @@ func TestGenerateKeySecret(t *testing.T) {
 					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 						{
 							BucketName:  "bucket",
-							Cluster:     "test-bucket",
+							Region:      "test-bucket",
 							Permissions: "read_only",
 						},
 					},
@@ -376,7 +376,7 @@ func TestGenerateKeySecret(t *testing.T) {
 					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 						{
 							BucketName:  "bucket",
-							Cluster:     "test-bucket",
+							Region:      "test-bucket",
 							Permissions: "read_write",
 						},
 					},
@@ -402,7 +402,7 @@ func TestGenerateKeySecret(t *testing.T) {
 					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 						{
 							BucketName:  "bucket",
-							Cluster:     "test-bucket",
+							Region:      "test-bucket",
 							Permissions: "read_write",
 						},
 					},
@@ -416,7 +416,7 @@ func TestGenerateKeySecret(t *testing.T) {
 					BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 						{
 							BucketName:  "bucket",
-							Cluster:     "test-bucket",
+							Region:      "test-bucket",
 							Permissions: "read_only",
 						},
 					},

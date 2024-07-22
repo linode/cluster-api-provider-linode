@@ -431,6 +431,374 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Cluster to which this LinodeMachine belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
+      name: Cluster
+      type: string
+    - description: Linode instance state
+      jsonPath: .status.instanceState
+      name: State
+      type: string
+    - description: Machine ready status
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: Linode instance ID
+      jsonPath: .spec.providerID
+      name: InstanceID
+      type: string
+    - description: Machine object which owns with this LinodeMachine
+      jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
+      name: Machine
+      type: string
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: LinodeMachine is the Schema for the linodemachines API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LinodeMachineSpec defines the desired state of LinodeMachine
+            properties:
+              authorizedKeys:
+                items:
+                  type: string
+                type: array
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              authorizedUsers:
+                items:
+                  type: string
+                type: array
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              backupID:
+                type: integer
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              backupsEnabled:
+                type: boolean
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              credentialsRef:
+                description: |-
+                  CredentialsRef is a reference to a Secret that contains the credentials
+                  to use for provisioning this machine. If not supplied then these
+                  credentials will be used in-order:
+                    1. LinodeMachine
+                    2. Owner LinodeCluster
+                    3. Controller
+                properties:
+                  name:
+                    description: name is unique within a namespace to reference a
+                      secret resource.
+                    type: string
+                  namespace:
+                    description: namespace defines the space within which the secret
+                      name must be unique.
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              dataDisks:
+                additionalProperties:
+                  description: InstanceDisk defines a list of disks to use for an
+                    instance
+                  properties:
+                    diskID:
+                      description: DiskID is the linode assigned ID of the disk
+                      type: integer
+                    filesystem:
+                      description: Filesystem of disk to provision, the default disk
+                        filesystem is "ext4"
+                      enum:
+                      - raw
+                      - swap
+                      - ext3
+                      - ext4
+                      - initrd
+                      type: string
+                    label:
+                      description: Label for the instance disk, if nothing is provided
+                        it will match the device name
+                      type: string
+                    size:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Size of the disk in resource.Quantity notation
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                  required:
+                  - size
+                  type: object
+                description: |-
+                  DataDisks is a map of any additional disks to add to an instance,
+                  The sum of these disks + the OSDisk must not be more than allowed on a linodes plan
+                type: object
+              firewallID:
+                type: integer
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              group:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              image:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              instanceID:
+                description: InstanceID is the Linode instance ID for this machine.
+                type: integer
+              interfaces:
+                items:
+                  description: InstanceConfigInterfaceCreateOptions defines network
+                    interface config
+                  properties:
+                    ipRanges:
+                      items:
+                        type: string
+                      type: array
+                    ipamAddress:
+                      type: string
+                    ipv4:
+                      description: VPCIPv4 defines VPC IPV4 settings
+                      properties:
+                        nat1to1:
+                          type: string
+                        vpc:
+                          type: string
+                      type: object
+                    label:
+                      maxLength: 63
+                      minLength: 3
+                      type: string
+                    primary:
+                      type: boolean
+                    purpose:
+                      description: ConfigInterfacePurpose options start with InterfacePurpose
+                        and include all known interface purpose types
+                      type: string
+                    subnetId:
+                      type: integer
+                  type: object
+                type: array
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              osDisk:
+                description: |-
+                  OSDisk is configuration for the root disk that includes the OS,
+                  if not specified this defaults to whatever space is not taken up by the DataDisks
+                properties:
+                  diskID:
+                    description: DiskID is the linode assigned ID of the disk
+                    type: integer
+                  filesystem:
+                    description: Filesystem of disk to provision, the default disk
+                      filesystem is "ext4"
+                    enum:
+                    - raw
+                    - swap
+                    - ext3
+                    - ext4
+                    - initrd
+                    type: string
+                  label:
+                    description: Label for the instance disk, if nothing is provided
+                      it will match the device name
+                    type: string
+                  size:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: Size of the disk in resource.Quantity notation
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                required:
+                - size
+                type: object
+              privateIP:
+                type: boolean
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              providerID:
+                description: ProviderID is the unique identifier as specified by the
+                  cloud provider.
+                type: string
+              region:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              rootPass:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              tags:
+                items:
+                  type: string
+                type: array
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              type:
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+            required:
+            - region
+            - type
+            type: object
+          status:
+            description: LinodeMachineStatus defines the observed state of LinodeMachine
+            properties:
+              addresses:
+                description: Addresses contains the Linode instance associated addresses.
+                items:
+                  description: MachineAddress contains information for the node's
+                    address.
+                  properties:
+                    address:
+                      description: The machine address.
+                      type: string
+                    type:
+                      description: Machine address type, one of Hostname, ExternalIP,
+                        InternalIP, ExternalDNS or InternalDNS.
+                      type: string
+                  required:
+                  - address
+                  - type
+                  type: object
+                type: array
+              conditions:
+                description: Conditions defines current service state of the LinodeMachine.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: |-
+                  FailureMessage will be set in the event that there is a terminal problem
+                  reconciling the Machine and will contain a more verbose string suitable
+                  for logging and human consumption.
+
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the Machine's spec or the configuration of
+                  the controller, and that manual intervention is required. Examples
+                  of terminal errors would be invalid combinations of settings in the
+                  spec, values that are unsupported by the controller, or the
+                  responsible controller itself being critically misconfigured.
+
+
+                  Any transient errors that occur during the reconciliation of Machines
+                  can be added as events to the Machine object and/or logged in the
+                  controller's output.
+                type: string
+              failureReason:
+                description: |-
+                  FailureReason will be set in the event that there is a terminal problem
+                  reconciling the Machine and will contain a succinct value suitable
+                  for machine interpretation.
+
+
+                  This field should not be set for transitive errors that a controller
+                  faces that are expected to be fixed automatically over
+                  time (like service outages), but instead indicate that something is
+                  fundamentally wrong with the Machine's spec or the configuration of
+                  the controller, and that manual intervention is required. Examples
+                  of terminal errors would be invalid combinations of settings in the
+                  spec, values that are unsupported by the controller, or the
+                  responsible controller itself being critically misconfigured.
+
+
+                  Any transient errors that occur during the reconciliation of Machines
+                  can be added as events to the Machine object and/or logged in the
+                  controller's output.
+                type: string
+              instanceState:
+                description: InstanceState is the state of the Linode instance for
+                  this machine.
+                type: string
+              ready:
+                default: false
+                description: Ready is true when the provider resource is ready.
+                type: boolean
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}

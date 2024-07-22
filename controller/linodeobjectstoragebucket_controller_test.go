@@ -111,7 +111,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					After(getBucket).
 					Return(&linodego.ObjectStorageBucket{
 						Label:    obj.Name,
-						Cluster:  obj.Spec.Cluster,
+						Region:   obj.Spec.Cluster,
 						Created:  util.Pointer(time.Now()),
 						Hostname: "hostname",
 					}, nil)
@@ -202,7 +202,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).
 					Return(&linodego.ObjectStorageBucket{
 						Label:    obj.Name,
-						Cluster:  obj.Spec.Cluster,
+						Region:   obj.Spec.Cluster,
 						Created:  util.Pointer(time.Now()),
 						Hostname: "hostname",
 					}, nil)
