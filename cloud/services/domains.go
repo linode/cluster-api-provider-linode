@@ -123,30 +123,22 @@ func removeElement(stringList []string, elemToRemove string) []string {
 }
 
 func createAkamaiDNSEntry(ctx context.Context, mscope *scope.MachineScope, fqdn string, dnsOptions DNSOptions) error {
-	recordBody := &dns.RecordBody{
-		Name:       fqdn,
-		RecordType: string(dnsOptions.DNSRecordType),
-		TTL:        dnsOptions.DNSTTLSec,
-		Target:     []string{dnsOptions.Target},
-	}
-	if err := mscope.AkamaiDomainsClient.CreateRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
-		return err
-	}
-	return nil
+	return mscope.AkamaiDomainsClient.CreateRecord(
+		ctx,
+		&dns.RecordBody{
+			Name:       fqdn,
+			RecordType: string(dnsOptions.DNSRecordType),
+			TTL:        dnsOptions.DNSTTLSec,
+			Target:     []string{dnsOptions.Target},
+		}, mscope.LinodeCluster.Spec.Network.DNSRootDomain)
 }
 
 func updateAkamaiDNSEntry(ctx context.Context, mscope *scope.MachineScope, recordBody *dns.RecordBody) error {
-	if err := mscope.AkamaiDomainsClient.UpdateRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
-		return err
-	}
-	return nil
+	return mscope.AkamaiDomainsClient.UpdateRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain)
 }
 
 func deleteAkamaiDNSEntry(ctx context.Context, mscope *scope.MachineScope, recordBody *dns.RecordBody) error {
-	if err := mscope.AkamaiDomainsClient.DeleteRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
-		return err
-	}
-	return nil
+	return mscope.AkamaiDomainsClient.DeleteRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain)
 }
 
 // getDNSEntriesToEnsure return DNS entries to create/delete
