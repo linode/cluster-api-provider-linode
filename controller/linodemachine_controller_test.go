@@ -1237,9 +1237,8 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		})
 
 		Expect(err).NotTo(HaveOccurred())
-		machinePatchHelper, err := patch.NewHelper(&linodeMachine, k8sClient)
+
 		mScope := scope.MachineScope{
-			PatchHelper:         machinePatchHelper,
 			Client:              k8sClient,
 			LinodeClient:        mockLinodeClient,
 			LinodeDomainsClient: mockLinodeClient,
