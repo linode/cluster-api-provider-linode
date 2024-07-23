@@ -76,7 +76,6 @@ func EnsureLinodeDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 
 // EnsureAkamaiDNSEntries ensures the domainrecord on Akamai EDGE DNS is created, updated, or deleted based on operation passed
 func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string, dnsEntries []DNSOptions) error {
-
 	linodeCluster := mscope.LinodeCluster
 	linodeClusterNetworkSpec := linodeCluster.Spec.Network
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
@@ -244,7 +243,6 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, d
 		return err
 	}
 	return nil
-
 }
 
 func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntry DNSOptions) error {
