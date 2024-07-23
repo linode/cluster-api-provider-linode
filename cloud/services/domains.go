@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/netip"
+	"strings"
 	"sync"
 
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
 	"github.com/linode/linodego"
+	"golang.org/x/exp/slices"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 
@@ -27,7 +30,7 @@ type DNSOptions struct {
 	DNSTTLSec     int
 }
 
-// EnsureDNSEntries ensures the domainrecord is created, updated, or deleted based on operation passed
+// EnsureDNSEntries ensures the domainrecord on Linode Cloud Manager is created, updated, or deleted based on operation passed
 func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string) error {
 	// Check if instance is a control plane node
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
@@ -41,6 +44,15 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 		return err
 	}
 
+	if mscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
+		return EnsureAkamaiDNSEntries(ctx, mscope, operation, dnsEntries)
+	}
+
+	return EnsureLinodeDNSEntries(ctx, mscope, operation, dnsEntries)
+}
+
+// EnsureLinodeDNSEntries ensures the domainrecord on Linode Cloud Manager is created, updated, or deleted based on operation passed
+func EnsureLinodeDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string, dnsEntries []DNSOptions) error {
 	// Get domainID from domain name
 	domainID, err := GetDomainID(ctx, mscope)
 	if err != nil {
@@ -60,6 +72,70 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 	}
 
 	return nil
+}
+
+// EnsureAkamaiDNSEntries ensures the domainrecord on Akamai EDGE DNS is created, updated, or deleted based on operation passed
+func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string, dnsEntries []DNSOptions) error {
+	linodeCluster := mscope.LinodeCluster
+	linodeClusterNetworkSpec := linodeCluster.Spec.Network
+	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
+	fqdn := linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
+	akaDNSClient := mscope.AkamaiDomainsClient
+
+	for _, dnsEntry := range dnsEntries {
+		recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
+		if err != nil {
+			if !strings.Contains(err.Error(), "Not Found") {
+				return err
+			}
+			if operation == "create" {
+				if err := akaDNSClient.CreateRecord(
+					ctx,
+					&dns.RecordBody{
+						Name:       fqdn,
+						RecordType: string(dnsEntry.DNSRecordType),
+						TTL:        dnsEntry.DNSTTLSec,
+						Target:     []string{dnsEntry.Target},
+					}, rootDomain); err != nil {
+					return err
+				}
+			}
+			continue
+		}
+		if operation == "delete" {
+			switch {
+			case len(recordBody.Target) > 1:
+				recordBody.Target = removeElement(
+					recordBody.Target,
+					strings.Replace(dnsEntry.Target, "::", ":0:0:", 8), //nolint:mnd // 8 for 8 octest
+				)
+				if err := akaDNSClient.UpdateRecord(ctx, recordBody, rootDomain); err != nil {
+					return err
+				}
+				continue
+			default:
+				if err := akaDNSClient.DeleteRecord(ctx, recordBody, rootDomain); err != nil {
+					return err
+				}
+			}
+		} else {
+			recordBody.Target = append(recordBody.Target, dnsEntry.Target)
+			if err := akaDNSClient.UpdateRecord(ctx, recordBody, rootDomain); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func removeElement(stringList []string, elemToRemove string) []string {
+	for index, element := range stringList {
+		if element == elemToRemove {
+			stringList = slices.Delete(stringList, index, index+1)
+			continue
+		}
+	}
+	return stringList
 }
 
 // getDNSEntriesToEnsure return DNS entries to create/delete
@@ -127,7 +203,16 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, d
 
 	// If record doesnt exist, create it
 	if len(domainRecords) == 0 {
-		if err := CreateDomainRecord(ctx, mscope, domainID, dnsEntry); err != nil {
+		if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(
+			ctx,
+			domainID,
+			linodego.DomainRecordCreateOptions{
+				Type:   dnsEntry.DNSRecordType,
+				Name:   dnsEntry.Hostname,
+				Target: dnsEntry.Target,
+				TTLSec: dnsEntry.DNSTTLSec,
+			},
+		); err != nil {
 			return err
 		}
 		return nil
@@ -143,7 +228,18 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, d
 			return fmt.Errorf("the domain record is not owned by this entity. wont update")
 		}
 	}
-	if err := UpdateDomainRecord(ctx, mscope, domainID, domainRecords[0].ID, dnsEntry); err != nil {
+
+	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(
+		ctx,
+		domainID,
+		domainRecords[0].ID,
+		linodego.DomainRecordUpdateOptions{
+			Type:   dnsEntry.DNSRecordType,
+			Name:   dnsEntry.Hostname,
+			Target: dnsEntry.Target,
+			TTLSec: dnsEntry.DNSTTLSec,
+		},
+	); err != nil {
 		return err
 	}
 	return nil
@@ -180,34 +276,6 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainI
 	// Delete record
 	if deleteErr := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID); deleteErr != nil {
 		return deleteErr
-	}
-	return nil
-}
-
-func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntries DNSOptions) error {
-	recordReq := linodego.DomainRecordCreateOptions{
-		Type:   dnsEntries.DNSRecordType,
-		Name:   dnsEntries.Hostname,
-		Target: dnsEntries.Target,
-		TTLSec: dnsEntries.DNSTTLSec,
-	}
-
-	if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(ctx, domainID, recordReq); err != nil {
-		return err
-	}
-	return nil
-}
-
-func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID, domainRecordID int, dnsEntries DNSOptions) error {
-	recordReq := linodego.DomainRecordUpdateOptions{
-		Type:   dnsEntries.DNSRecordType,
-		Name:   dnsEntries.Hostname,
-		Target: dnsEntries.Target,
-		TTLSec: dnsEntries.DNSTTLSec,
-	}
-
-	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq); err != nil {
-		return err
 	}
 	return nil
 }
