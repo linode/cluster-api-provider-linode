@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -42,14 +42,14 @@ import (
 var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
-	linodeVPC := infrav1alpha1.LinodeVPC{
+	linodeVPC := infrav1alpha2.LinodeVPC{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lifecycle",
 			Namespace: "default",
 		},
-		Spec: infrav1alpha1.LinodeVPCSpec{
+		Spec: infrav1alpha2.LinodeVPCSpec{
 			Region: "us-east",
-			Subnets: []infrav1alpha1.VPCSubnetCreateOptions{
+			Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 				{Label: "subnet1", IPv4: "10.0.0.0/8"},
 			},
 		},

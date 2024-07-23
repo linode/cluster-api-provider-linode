@@ -1,0 +1,23 @@
+# permissions for end users to view linodevpcs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+  name: linodevpc-viewer-role
+rules:
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - linodevpcs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - linodevpcs/status
+  verbs:
+  - get

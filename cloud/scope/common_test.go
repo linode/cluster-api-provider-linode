@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
@@ -437,8 +436,8 @@ func Test_toFinalizer(t *testing.T) {
 		{
 			"Namespaced Resources",
 			schema.GroupVersionKind{
-				Group:   infrav1alpha1.GroupVersion.Group,
-				Version: infrav1alpha1.GroupVersion.Version,
+				Group:   infrav1alpha2.GroupVersion.Group,
+				Version: infrav1alpha2.GroupVersion.Version,
 				Kind:    "LinodeCluster",
 			},
 			&infrav1alpha2.LinodeCluster{
@@ -452,8 +451,8 @@ func Test_toFinalizer(t *testing.T) {
 		{
 			"Cluster Resources",
 			schema.GroupVersionKind{
-				Group:   infrav1alpha1.GroupVersion.Group,
-				Version: infrav1alpha1.GroupVersion.Version,
+				Group:   infrav1alpha2.GroupVersion.Group,
+				Version: infrav1alpha2.GroupVersion.Version,
 				Kind:    "LinodeCluster",
 			},
 			&infrav1alpha2.LinodeCluster{

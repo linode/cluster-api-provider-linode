@@ -364,7 +364,10 @@ spec:
                       DNSProvider is provider who manages the domain
                       Ignored if the LoadBalancerType is set to anything other than dns
                       If not set, defaults linode dns
-                    type: integer
+                    enum:
+                    - linode
+                    - akamai
+                    type: string
                   dnsRootDomain:
                     description: |-
                       DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint

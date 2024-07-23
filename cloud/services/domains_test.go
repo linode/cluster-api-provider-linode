@@ -5,18 +5,329 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
+
+func TestAddIPToEdgeDNS(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		machineScope  *scope.MachineScope
+		expects       func(*mock.MockAkamClient)
+		expectedError error
+	}{
+		{
+			name: "Success - If DNS Provider is akamai",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "akafn.com",
+							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+					Status: infrav1alpha2.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{
+							{
+								Type:    "ExternalIP",
+								Address: "10.10.10.10",
+							},
+							{
+								Type:    "ExternalIP",
+								Address: "fd00::",
+							},
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockAkamClient) {
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
+				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Faiure - Error in creating records",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "akafn.com",
+							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+					Status: infrav1alpha2.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{
+							{
+								Type:    "ExternalIP",
+								Address: "10.10.10.10",
+							},
+							{
+								Type:    "ExternalIP",
+								Address: "fd00::",
+							},
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockAkamClient) {
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
+				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("create record failed")).AnyTimes()
+			},
+			expectedError: fmt.Errorf("create record failed"),
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			MockAkamClient := mock.NewMockAkamClient(ctrl)
+			testcase.machineScope.AkamaiDomainsClient = MockAkamClient
+			testcase.expects(MockAkamClient)
+
+			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "create")
+			if err != nil || testcase.expectedError != nil {
+				require.ErrorContains(t, err, testcase.expectedError.Error())
+			}
+		})
+	}
+}
+
+func TestRemoveIPFromEdgeDNS(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		listOfIPS     []string
+		expectedList  []string
+		machineScope  *scope.MachineScope
+		expects       func(*mock.MockAkamClient)
+		expectedError error
+	}{
+		{
+			name: "Success - If DNS Provider is akamai",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "akafn.com",
+							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+					Status: infrav1alpha2.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{
+							{
+								Type:    "ExternalIP",
+								Address: "10.10.10.10",
+							},
+							{
+								Type:    "ExternalIP",
+								Address: "fd00::",
+							},
+						},
+					},
+				},
+			},
+			listOfIPS: []string{"10.10.10.10", "10.10.10.11", "10.10.10.12"},
+			expects: func(mockClient *mock.MockAkamClient) {
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&dns.RecordBody{
+					Name:       "test-machine",
+					RecordType: "A",
+					TTL:        30,
+					Target:     []string{"10.10.10.10"},
+				}, nil).AnyTimes()
+				mockClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			expectedError: nil,
+			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
+		},
+		{
+			name: "Failure - API Error",
+			machineScope: &scope.MachineScope{
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+						Labels: map[string]string{
+							clusterv1.MachineControlPlaneLabel: "true",
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "akafn.com",
+							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-machine",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						InstanceID: ptr.To(123),
+					},
+					Status: infrav1alpha2.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{
+							{
+								Type:    "ExternalIP",
+								Address: "10.10.10.10",
+							},
+							{
+								Type:    "ExternalIP",
+								Address: "fd00::",
+							},
+						},
+					},
+				},
+			},
+			listOfIPS: []string{"10.10.10.10", "10.10.10.11", "10.10.10.12"},
+			expects: func(mockClient *mock.MockAkamClient) {
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("API Down")).AnyTimes()
+				mockClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			expectedError: fmt.Errorf("API Down"),
+			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			MockAkamClient := mock.NewMockAkamClient(ctrl)
+			testcase.machineScope.AkamaiDomainsClient = MockAkamClient
+			testcase.expects(MockAkamClient)
+
+			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "delete")
+			if err != nil || testcase.expectedError != nil {
+				require.ErrorContains(t, err, testcase.expectedError.Error())
+			}
+			assert.EqualValues(t, testcase.expectedList, removeElement(testcase.listOfIPS, "10.10.10.11"))
+		})
+	}
+}
 
 func TestAddIPToDNS(t *testing.T) {
 	t.Parallel()
@@ -58,15 +369,15 @@ func TestAddIPToDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -129,15 +440,15 @@ func TestAddIPToDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -199,15 +510,15 @@ func TestAddIPToDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -264,15 +575,15 @@ func TestAddIPToDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -342,15 +653,15 @@ func TestAddIPToDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -406,15 +717,15 @@ func TestAddIPToDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -479,15 +790,15 @@ func TestAddIPToDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: nil,
 					},
 				},
@@ -533,15 +844,15 @@ func TestAddIPToDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -630,15 +941,15 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -702,15 +1013,15 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -774,12 +1085,12 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -818,15 +1129,15 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -876,15 +1187,15 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",
@@ -939,15 +1250,15 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
-					Status: infrav1alpha1.LinodeMachineStatus{
+					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
 							{
 								Type:    "ExternalIP",

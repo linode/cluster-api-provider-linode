@@ -129,6 +129,11 @@ for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":
         resource["stringData"]["apiToken"] = os.getenv("LINODE_TOKEN")
         resource["stringData"]["dnsToken"] = os.getenv("LINODE_DNS_TOKEN")
+    if resource["metadata"]["name"] == "capl-akamai-edgerc-secret":
+        resource["stringData"]["AKAMAI_HOST"] = os.getenv("AKAMAI_HOST")
+        resource["stringData"]["AKAMAI_CLIENT_TOKEN"] = os.getenv("AKAMAI_CLIENT_TOKEN")
+        resource["stringData"]["AKAMAI_CLIENT_SECRET"] = os.getenv("AKAMAI_CLIENT_SECRET")
+        resource["stringData"]["AKAMAI_ACCESS_TOKEN"] = os.getenv("AKAMAI_ACCESS_TOKEN")
     if (
         resource["kind"] == "CustomResourceDefinition"
         and resource["spec"]["group"] == "infrastructure.cluster.x-k8s.io"
@@ -172,6 +177,7 @@ k8s_resource(
         "capl-manager-rolebinding:clusterrolebinding",
         "capl-proxy-rolebinding:clusterrolebinding",
         "capl-manager-credentials:secret",
+        "capl-akamai-edgerc-secret:secret",
         "capl-serving-cert:certificate",
         "capl-selfsigned-issuer:issuer",
         "capl-validating-webhook-configuration:validatingwebhookconfiguration",

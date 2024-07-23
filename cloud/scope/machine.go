@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
@@ -22,7 +21,7 @@ type MachineScopeParams struct {
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
 	LinodeCluster *infrav1alpha2.LinodeCluster
-	LinodeMachine *infrav1alpha1.LinodeMachine
+	LinodeMachine *infrav1alpha2.LinodeMachine
 }
 
 type MachineScope struct {
@@ -32,8 +31,9 @@ type MachineScope struct {
 	Machine             *clusterv1.Machine
 	LinodeClient        LinodeClient
 	LinodeDomainsClient LinodeClient
+	AkamaiDomainsClient AkamClient
 	LinodeCluster       *infrav1alpha2.LinodeCluster
-	LinodeMachine       *infrav1alpha1.LinodeMachine
+	LinodeMachine       *infrav1alpha2.LinodeMachine
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
@@ -106,6 +106,11 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
+	akamDomainsClient, err := setUpEdgeDNSInterface()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create akamai dns client: %w", err)
+	}
+
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
@@ -118,6 +123,7 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		Machine:             params.Machine,
 		LinodeClient:        linodeClient,
 		LinodeDomainsClient: linodeDomainsClient,
+		AkamaiDomainsClient: akamDomainsClient,
 		LinodeCluster:       params.LinodeCluster,
 		LinodeMachine:       params.LinodeMachine,
 	}, nil

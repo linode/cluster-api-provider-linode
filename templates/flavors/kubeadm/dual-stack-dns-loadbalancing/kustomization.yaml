@@ -18,3 +18,4 @@ patches:
           loadBalancerType: dns
           dnsRootDomain: ${DNS_ROOT_DOMAIN}
           dnsUniqueIdentifier: ${DNS_UNIQUE_ID}
+          dnsProvider: ${DNS_PROVIDER:-"linode"}

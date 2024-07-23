@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
@@ -180,7 +179,7 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 	return ips, nil
 }
 
-func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha1.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
+func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
 	machine, err := kutil.GetOwnerMachine(ctx, r.Client, linodeMachine.ObjectMeta)
 	if err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
@@ -345,7 +344,7 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 
 	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
 
-	linodeVPC := infrav1alpha1.LinodeVPC{
+	linodeVPC := infrav1alpha2.LinodeVPC{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
@@ -395,7 +394,7 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 	}, nil
 }
 
-func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha1.LinodeMachineSpec) *linodego.InstanceCreateOptions {
+func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec) *linodego.InstanceCreateOptions {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(machineSpec)
@@ -468,7 +467,7 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 	return nil
 }
 
-func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha1.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {
+func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha2.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {
 	for deviceName, disk := range instanceDisks {
 		dev := linodego.InstanceConfigDevice{
 			DiskID: disk.DiskID,

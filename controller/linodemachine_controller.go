@@ -117,7 +117,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log := ctrl.LoggerFrom(ctx).WithName("LinodeMachineReconciler").WithValues("name", req.NamespacedName.String())
 
-	linodeMachine := &infrav1alpha1.LinodeMachine{}
+	linodeMachine := &infrav1alpha2.LinodeMachine{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeMachine); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch LinodeMachine")
@@ -737,17 +737,17 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeMachineList{}, mgr.GetScheme())
+	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodeMachineList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
 	}
 
 	err = ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1alpha1.LinodeMachine{}).
+		For(&infrav1alpha2.LinodeMachine{}).
 		WithOptions(options).
 		Watches(
 			&clusterv1.Machine{},
-			handler.EnqueueRequestsFromMapFunc(kutil.MachineToInfrastructureMapFunc(infrav1alpha1.GroupVersion.WithKind("LinodeMachine"))),
+			handler.EnqueueRequestsFromMapFunc(kutil.MachineToInfrastructureMapFunc(infrav1alpha2.GroupVersion.WithKind("LinodeMachine"))),
 		).
 		Watches(
 			&infrav1alpha2.LinodeCluster{},

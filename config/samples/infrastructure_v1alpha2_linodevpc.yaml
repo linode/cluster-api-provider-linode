@@ -1,0 +1,9 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeVpc
+metadata:
+  labels:
+    app.kubernetes.io/name: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+  name: linodevpc-sample
+spec:
+  # TODO(user): Add fields here

@@ -28,7 +28,7 @@ on:
           - linodemachine
           - linodeobj
           - linodevpc
-          - linodeplacementgroup
+          # - linodeplacementgroup
           - all
       e2e-flags:
         type: string

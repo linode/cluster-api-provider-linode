@@ -42,7 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -81,7 +81,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	log := ctrl.LoggerFrom(ctx).WithName("LinodeVPCReconciler").WithValues("name", req.NamespacedName.String())
 
-	linodeVPC := &infrav1alpha1.LinodeVPC{}
+	linodeVPC := &infrav1alpha2.LinodeVPC{}
 	if err := r.Client.Get(ctx, req.NamespacedName, linodeVPC); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch LinodeVPC")
@@ -118,7 +118,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	vpcScope.LinodeVPC.Status.FailureReason = nil
 	vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer("")
 
-	failureReason := infrav1alpha1.VPCStatusError("UnknownError")
+	failureReason := infrav1alpha2.VPCStatusError("UnknownError")
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
@@ -141,7 +141,7 @@ func (r *LinodeVPCReconciler) reconcile(
 
 	// Delete
 	if !vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.IsZero() {
-		failureReason = infrav1alpha1.DeleteVPCError
+		failureReason = infrav1alpha2.DeleteVPCError
 
 		res, err = r.reconcileDelete(ctx, logger, vpcScope)
 
@@ -158,7 +158,7 @@ func (r *LinodeVPCReconciler) reconcile(
 
 	// Update
 	if vpcScope.LinodeVPC.Spec.VPCID != nil {
-		failureReason = infrav1alpha1.UpdateVPCError
+		failureReason = infrav1alpha2.UpdateVPCError
 
 		logger = logger.WithValues("vpcID", *vpcScope.LinodeVPC.Spec.VPCID)
 
@@ -174,7 +174,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	}
 
 	// Create
-	failureReason = infrav1alpha1.CreateVPCError
+	failureReason = infrav1alpha2.CreateVPCError
 
 	err = r.reconcileCreate(ctx, logger, vpcScope)
 	if err != nil && !reconciler.HasConditionSeverity(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
@@ -194,9 +194,9 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 	if err := vpcScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
 
-		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
+		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
 
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha1.CreateVPCError), err.Error())
+		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.CreateVPCError), err.Error())
 
 		return err
 	}
@@ -204,9 +204,9 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
 
-		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
+		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
 
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha1.CreateVPCError), err.Error())
+		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.CreateVPCError), err.Error())
 
 		return err
 	}
@@ -225,9 +225,9 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
 
-		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha1.UpdateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
+		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.UpdateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
 
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha1.UpdateVPCError), err.Error())
+		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.UpdateVPCError), err.Error())
 
 		return err
 	}
@@ -308,10 +308,10 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		return ctrl.Result{}, err
 	}
 
-	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha1.VPCFinalizer)
+	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha2.VPCFinalizer)
 	// TODO: remove this check and removal later
-	if controllerutil.ContainsFinalizer(vpcScope.LinodeVPC, infrav1alpha1.GroupVersion.String()) {
-		controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha1.GroupVersion.String())
+	if controllerutil.ContainsFinalizer(vpcScope.LinodeVPC, infrav1alpha2.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha2.GroupVersion.String())
 	}
 
 	return ctrl.Result{}, nil
@@ -321,13 +321,13 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 //
 //nolint:dupl // this is same as Placement Group, worth making generic later.
 func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeVPCMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeVPCList{}, mgr.GetScheme())
+	linodeVPCMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodeVPCList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeVPCs: %w", err)
 	}
 
 	err = ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1alpha1.LinodeVPC{}).
+		For(&infrav1alpha2.LinodeVPC{}).
 		WithOptions(options).
 		WithEventFilter(
 			predicate.And(

@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -52,7 +51,7 @@ const defaultNamespace = "default"
 
 var _ = Describe("create", Label("machine", "create"), func() {
 	var machine clusterv1.Machine
-	var linodeMachine infrav1alpha1.LinodeMachine
+	var linodeMachine infrav1alpha2.LinodeMachine
 	var secret corev1.Secret
 	var reconciler *LinodeMachineReconciler
 
@@ -101,13 +100,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				},
 			},
 		}
-		linodeMachine = infrav1alpha1.LinodeMachine{
+		linodeMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
 				Namespace: defaultNamespace,
 				UID:       "12345",
 			},
-			Spec: infrav1alpha1.LinodeMachineSpec{
+			Spec: infrav1alpha2.LinodeMachineSpec{
 				InstanceID: ptr.To(0),
 				Type:       "g6-nanode-1",
 				Image:      rutil.DefaultMachineControllerLinodeImage,
@@ -301,7 +300,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	Context("creates a instance with disks", func() {
 		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
@@ -452,7 +451,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		It("in multiple calls when disks are delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha1.InstanceDisk{"sdb": ptr.To(infrav1alpha1.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
+			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			listInst := mockLinodeClient.EXPECT().
@@ -628,7 +627,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 	var machine clusterv1.Machine
-	var linodeMachine infrav1alpha1.LinodeMachine
+	var linodeMachine infrav1alpha2.LinodeMachine
 	var secret corev1.Secret
 	var reconciler *LinodeMachineReconciler
 
@@ -679,13 +678,13 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 				},
 			},
 		}
-		linodeMachine = infrav1alpha1.LinodeMachine{
+		linodeMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
 				Namespace: defaultNamespace,
 				UID:       "12345",
 			},
-			Spec: infrav1alpha1.LinodeMachineSpec{
+			Spec: infrav1alpha2.LinodeMachineSpec{
 				InstanceID: ptr.To(0),
 				Type:       "g6-nanode-1",
 				Image:      rutil.DefaultMachineControllerLinodeImage,
@@ -808,9 +807,9 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 		Namespace:       namespace,
 		OwnerReferences: ownerRefs,
 	}
-	linodeMachine := &infrav1alpha1.LinodeMachine{
+	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
-		Spec: infrav1alpha1.LinodeMachineSpec{
+		Spec: infrav1alpha2.LinodeMachineSpec{
 			InstanceID: ptr.To(0),
 			Type:       "g6-nanode-1",
 			Image:      rutil.DefaultMachineControllerLinodeImage,
@@ -1029,9 +1028,9 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 		},
 	}
 	instanceID := 12345
-	linodeMachine := &infrav1alpha1.LinodeMachine{
+	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
-		Spec: infrav1alpha1.LinodeMachineSpec{
+		Spec: infrav1alpha2.LinodeMachineSpec{
 			InstanceID: &instanceID,
 		},
 	}

@@ -145,9 +145,9 @@ var _ = Describe("linode creation", func() {
   // Create a mocktest controller suite.
   suite := NewControllerSuite(GinkgoT(), mock.MockLinodeMachineClient{})
 
-  obj := infrav1alpha1.LinodeMachine{
+  obj := infrav1alpha2.LinodeMachine{
     ObjectMeta: metav1.ObjectMeta{/* ... */}
-    Spec: infrav1alpha1.LinodeMachineSpec{/* ... */}
+    Spec: infrav1alpha2.LinodeMachineSpec{/* ... */}
   }
 
   suite.Run(
