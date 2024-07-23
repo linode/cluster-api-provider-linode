@@ -300,6 +300,9 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
+			if util.IsTransientError(err) {
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+			}
 
 			return ctrl.Result{}, err
 		}
