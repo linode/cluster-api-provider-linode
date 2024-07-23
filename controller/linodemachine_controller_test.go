@@ -1097,7 +1097,7 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 
 var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup"), func() {
 	var machine clusterv1.Machine
-	var linodeMachine infrav1alpha1.LinodeMachine
+	var linodeMachine infrav1alpha2.LinodeMachine
 	var secret corev1.Secret
 	var reconciler *LinodeMachineReconciler
 	var lpgReconciler *LinodePlacementGroupReconciler
@@ -1170,13 +1170,13 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		}
 		Expect(k8sClient.Create(ctx, &linodePlacementGroup)).To(Succeed())
 
-		linodeMachine = infrav1alpha1.LinodeMachine{
+		linodeMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
 				Namespace: defaultNamespace,
 				UID:       "12345",
 			},
-			Spec: infrav1alpha1.LinodeMachineSpec{
+			Spec: infrav1alpha2.LinodeMachineSpec{
 				InstanceID: ptr.To(0),
 				Type:       "g6-nanode-1",
 				Image:      rutil.DefaultMachineControllerLinodeImage,
