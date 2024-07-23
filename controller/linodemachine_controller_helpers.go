@@ -323,8 +323,9 @@ func (r *LinodeMachineReconciler) getPlacementGroupID(ctx context.Context, machi
 			Name:      name,
 		},
 	}
-
-	if err := r.Get(ctx, client.ObjectKeyFromObject(&linodePlacementGroup), &linodePlacementGroup); err != nil {
+	objectKey := client.ObjectKeyFromObject(&linodePlacementGroup)
+	err := r.Get(ctx, objectKey, &linodePlacementGroup)
+	if err != nil {
 		logger.Error(err, "Failed to fetch LinodePlacementGroup")
 		return -1, err
 	} else if !linodePlacementGroup.Status.Ready || linodePlacementGroup.Spec.PGID == nil {
