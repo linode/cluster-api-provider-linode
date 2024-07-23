@@ -1101,6 +1101,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 	var linodeMachine infrav1alpha1.LinodeMachine
 	var secret corev1.Secret
 	var reconciler *LinodeMachineReconciler
+	var lpgReconciler *LinodePlacementGroupReconciler
 	var linodePlacementGroup infrav1alpha2.LinodePlacementGroup
 
 	var mockCtrl *gomock.Controller
@@ -1116,6 +1117,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 
 	linodeCluster := infrav1alpha2.LinodeCluster{
 		Spec: infrav1alpha2.LinodeClusterSpec{
+			Region: "us-ord",
 			Network: infrav1alpha2.NetworkSpec{
 				LoadBalancerType:    "dns",
 				DNSRootDomain:       "lkedevs.net",
@@ -1186,9 +1188,16 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 			},
 		}
 
+		lpgReconciler = &LinodePlacementGroupReconciler{
+			Recorder: recorder,
+			Client:   k8sClient,
+		}
+
 		reconciler = &LinodeMachineReconciler{
 			Recorder: recorder,
+			Client:   k8sClient,
 		}
+
 		mockCtrl = gomock.NewController(GinkgoT())
 		testLogs = &bytes.Buffer{}
 		logger = zap.New(
@@ -1209,54 +1218,28 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 
 	It("creates a instance in a PlacementGroup", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
-		listInst := mockLinodeClient.EXPECT().
-			ListInstances(ctx, gomock.Any()).
-			Return([]linodego.Instance{}, nil)
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
-			After(listInst).
-			Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-		getImage := mockLinodeClient.EXPECT().
+			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, infrav1alpha2.LinodePlacementGroupCapability}}, nil)
+		mockLinodeClient.EXPECT().
 			GetImage(ctx, gomock.Any()).
 			After(getRegion).
 			Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-		createInst := mockLinodeClient.EXPECT().
-			CreateInstance(ctx, gomock.Any()).
-			After(getImage).
-			Return(&linodego.Instance{
-				ID:     123,
-				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
-				IPv6:   "fd00::",
-				Status: linodego.InstanceOffline,
-			}, nil)
-		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, 0).
-			After(createInst).
-			Return(nil)
-		getAddrs := mockLinodeClient.EXPECT().
-			GetInstanceIPAddresses(ctx, 123).
-			After(bootInst).
-			Return(&linodego.InstanceIPAddressResponse{
-				IPv4: &linodego.InstanceIPv4Response{
-					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-					Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-				},
-				IPv6: &linodego.InstanceIPv6Response{
-					SLAAC: &linodego.InstanceIP{
-						Address: "fd00::",
-					},
-				},
-			}, nil).AnyTimes()
-		mockLinodeClient.EXPECT().
-			ListInstanceConfigs(ctx, 123, gomock.Any()).
-			After(getAddrs).
-			Return([]linodego.InstanceConfig{{
-				Devices: &linodego.InstanceConfigDeviceMap{
-					SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-				},
-			}}, nil)
 
+		helper, err := patch.NewHelper(&linodePlacementGroup, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = lpgReconciler.reconcile(ctx, logger, &scope.PlacementGroupScope{
+			PatchHelper:          helper,
+			Client:               k8sClient,
+			LinodeClient:         mockLinodeClient,
+			LinodePlacementGroup: &linodePlacementGroup,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		machinePatchHelper, err := patch.NewHelper(&linodeMachine, k8sClient)
 		mScope := scope.MachineScope{
+			PatchHelper:         machinePatchHelper,
 			Client:              k8sClient,
 			LinodeClient:        mockLinodeClient,
 			LinodeDomainsClient: mockLinodeClient,
@@ -1265,24 +1248,11 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 			LinodeCluster:       &linodeCluster,
 			LinodeMachine:       &linodeMachine,
 		}
-		_, err := reconciler.getPlacementGroupID(ctx, &mScope, logger)
+
+		createOpts, err := reconciler.newCreateConfig(ctx, &mScope, []string{}, logger)
 		Expect(err).NotTo(HaveOccurred())
-
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
-
-		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
-		Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
-		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
-		Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
-			{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
-			{Type: clusterv1.MachineExternalIP, Address: "fd00::"},
-			{Type: clusterv1.MachineInternalIP, Address: "192.168.0.2"},
-		}))
-
-		Expect(testLogs.String()).To(ContainSubstring("creating machine"))
+		Expect(createOpts).NotTo(BeNil())
+		Expect(createOpts.PlacementGroup.ID).To(Equal(1))
 	})
 
 })

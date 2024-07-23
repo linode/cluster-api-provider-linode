@@ -329,8 +329,8 @@ func (r *LinodeMachineReconciler) getPlacementGroupID(ctx context.Context, machi
 		logger.Error(err, "Failed to fetch LinodePlacementGroup")
 		return -1, err
 	} else if !linodePlacementGroup.Status.Ready || linodePlacementGroup.Spec.PGID == nil {
-		logger.Info("LinodePlacementGroup is not available")
-		return -1, errors.New("placement group is not available")
+		logger.Info("LinodePlacementGroup is not ready")
+		return -1, errors.New("placement group is not ready")
 	}
 
 	return *linodePlacementGroup.Spec.PGID, nil
