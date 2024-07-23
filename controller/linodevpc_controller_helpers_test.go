@@ -8,16 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
 func TestLinodeVPCSpecToCreateVPCConfig(t *testing.T) {
 	t.Parallel()
 
-	vpcSpec := infrav1alpha1.LinodeVPCSpec{
+	vpcSpec := infrav1alpha2.LinodeVPCSpec{
 		Description: "description",
 		Region:      "region",
-		Subnets: []infrav1alpha1.VPCSubnetCreateOptions{
+		Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 			{
 				Label: "subnet",
 				IPv4:  "ipv4",
@@ -33,7 +33,7 @@ func TestLinodeVPCSpecToCreateVPCConfig(t *testing.T) {
 	err := enc.Encode(createConfig)
 	require.NoError(t, err, "Failed to encode VPCCreateOptions")
 
-	var actualVPCSpec infrav1alpha1.LinodeVPCSpec
+	var actualVPCSpec infrav1alpha2.LinodeVPCSpec
 	dec := gob.NewDecoder(&buf)
 	err = dec.Decode(&actualVPCSpec)
 	require.NoError(t, err, "Failed to decode LinodeVPCSpec")

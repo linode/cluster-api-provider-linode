@@ -29,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
@@ -44,7 +44,7 @@ func TestValidateVPCScopeParams(t *testing.T) {
 			name:    "Valid VPCScopeParams",
 			wantErr: false,
 			params: VPCScopeParams{
-				LinodeVPC: &infrav1alpha1.LinodeVPC{},
+				LinodeVPC: &infrav1alpha2.LinodeVPC{},
 			},
 		},
 		{
@@ -82,14 +82,14 @@ func TestNewVPCScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha1.LinodeVPC{},
+					LinodeVPC: &infrav1alpha2.LinodeVPC{},
 				},
 			},
 			expectedError: nil,
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
@@ -99,8 +99,8 @@ func TestNewVPCScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha1.LinodeVPC{
-						Spec: infrav1alpha1.LinodeVPCSpec{
+					LinodeVPC: &infrav1alpha2.LinodeVPC{
+						Spec: infrav1alpha2.LinodeVPCSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Namespace: "test-namespace",
 								Name:      "test-name",
@@ -113,7 +113,7 @@ func TestNewVPCScope(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -141,8 +141,8 @@ func TestNewVPCScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha1.LinodeVPC{
-						Spec: infrav1alpha1.LinodeVPCSpec{
+					LinodeVPC: &infrav1alpha2.LinodeVPC{
+						Spec: infrav1alpha2.LinodeVPCSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Namespace: "test-namespace",
 								Name:      "test-name",
@@ -161,7 +161,7 @@ func TestNewVPCScope(t *testing.T) {
 			args: args{
 				apiKey: "",
 				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha1.LinodeVPC{},
+					LinodeVPC: &infrav1alpha2.LinodeVPC{},
 				},
 			},
 			expects:       func(mock *mock.MockK8sClient) {},
@@ -172,7 +172,7 @@ func TestNewVPCScope(t *testing.T) {
 			args: args{
 				apiKey: "test-key",
 				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha1.LinodeVPC{},
+					LinodeVPC: &infrav1alpha2.LinodeVPC{},
 				},
 			},
 			expectedError: fmt.Errorf("failed to init patch helper:"),
@@ -209,12 +209,12 @@ func TestVPCScopeMethods(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name      string
-		LinodeVPC *infrav1alpha1.LinodeVPC
+		LinodeVPC *infrav1alpha2.LinodeVPC
 		expects   func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode VPC object",
-			LinodeVPC: &infrav1alpha1.LinodeVPC{
+			LinodeVPC: &infrav1alpha2.LinodeVPC{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-vpc",
 				},
@@ -222,7 +222,7 @@ func TestVPCScopeMethods(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(2)
 				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -230,16 +230,16 @@ func TestVPCScopeMethods(t *testing.T) {
 		},
 		{
 			name: "AddFinalizer error - finalizer should not be added to the Linode VPC object. Function returns nil since it was already present",
-			LinodeVPC: &infrav1alpha1.LinodeVPC{
+			LinodeVPC: &infrav1alpha2.LinodeVPC{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-vpc",
-					Finalizers: []string{infrav1alpha1.VPCFinalizer},
+					Finalizers: []string{infrav1alpha2.VPCFinalizer},
 				},
 			},
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(1)
 			},
@@ -273,7 +273,7 @@ func TestVPCScopeMethods(t *testing.T) {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
-			if vScope.LinodeVPC.Finalizers[0] != infrav1alpha1.VPCFinalizer {
+			if vScope.LinodeVPC.Finalizers[0] != infrav1alpha2.VPCFinalizer {
 				t.Errorf("Finalizer was not added")
 			}
 		})
@@ -284,16 +284,16 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name      string
-		LinodeVPC *infrav1alpha1.LinodeVPC
+		LinodeVPC *infrav1alpha2.LinodeVPC
 		expects   func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode VPC credentials Secret",
-			LinodeVPC: &infrav1alpha1.LinodeVPC{
+			LinodeVPC: &infrav1alpha2.LinodeVPC{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-vpc",
 				},
-				Spec: infrav1alpha1.LinodeVPCSpec{
+				Spec: infrav1alpha2.LinodeVPCSpec{
 					CredentialsRef: &corev1.SecretReference{
 						Name:      "example",
 						Namespace: "test",
@@ -303,7 +303,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -325,7 +325,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 		},
 		{
 			name: "No-op - no Linode Cluster credentials Secret",
-			LinodeVPC: &infrav1alpha1.LinodeVPC{
+			LinodeVPC: &infrav1alpha2.LinodeVPC{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-vpc",
 				},
@@ -333,7 +333,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
@@ -374,16 +374,16 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name      string
-		LinodeVPC *infrav1alpha1.LinodeVPC
+		LinodeVPC *infrav1alpha2.LinodeVPC
 		expects   func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "Success - finalizer should be added to the Linode VPC credentials Secret",
-			LinodeVPC: &infrav1alpha1.LinodeVPC{
+			LinodeVPC: &infrav1alpha2.LinodeVPC{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-vpc",
 				},
-				Spec: infrav1alpha1.LinodeVPCSpec{
+				Spec: infrav1alpha2.LinodeVPCSpec{
 					CredentialsRef: &corev1.SecretReference{
 						Name:      "example",
 						Namespace: "test",
@@ -393,7 +393,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -415,7 +415,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 		},
 		{
 			name: "No-op - no Linode VPC credentials Secret",
-			LinodeVPC: &infrav1alpha1.LinodeVPC{
+			LinodeVPC: &infrav1alpha2.LinodeVPC{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-vpc",
 				},
@@ -423,7 +423,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
