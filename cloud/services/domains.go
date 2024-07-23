@@ -76,13 +76,15 @@ func EnsureLinodeDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 
 // EnsureAkamaiDNSEntries ensures the domainrecord on Akamai EDGE DNS is created, updated, or deleted based on operation passed
 func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string, dnsEntries []DNSOptions) error {
-	// SetUp Client for Akamai EDGE DNS
 
-	fqdn := mscope.LinodeCluster.ObjectMeta.Name + "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier + "." + mscope.LinodeCluster.Spec.Network.DNSRootDomain
+	linodeCluster := mscope.LinodeCluster
+	linodeClusterNetworkSpec := linodeCluster.Spec.Network
+	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
+	fqdn := linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
 	akaDNSClient := mscope.AkamaiDomainsClient
 
 	for _, dnsEntry := range dnsEntries {
-		recordBody, err := akaDNSClient.GetRecord(ctx, mscope.LinodeCluster.Spec.Network.DNSRootDomain, fqdn, string(dnsEntry.DNSRecordType))
+		recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
 		if err != nil {
 			if !strings.Contains(err.Error(), "Not Found") {
 				return err
@@ -95,7 +97,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 						RecordType: string(dnsEntry.DNSRecordType),
 						TTL:        dnsEntry.DNSTTLSec,
 						Target:     []string{dnsEntry.Target},
-					}, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
+					}, rootDomain); err != nil {
 					return err
 				}
 			}
@@ -104,19 +106,22 @@ func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 		if operation == "delete" {
 			switch {
 			case len(recordBody.Target) > 1:
-				recordBody.Target = removeElement(recordBody.Target, strings.Replace(dnsEntry.Target, "::", ":0:0:", 8)) //nolint:mnd // 8 for 8 octest
-				if err := akaDNSClient.UpdateRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
+				recordBody.Target = removeElement(
+					recordBody.Target,
+					strings.Replace(dnsEntry.Target, "::", ":0:0:", 8), //nolint:mnd // 8 for 8 octest
+				)
+				if err := akaDNSClient.UpdateRecord(ctx, recordBody, rootDomain); err != nil {
 					return err
 				}
 				continue
 			default:
-				if err := akaDNSClient.DeleteRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
+				if err := akaDNSClient.DeleteRecord(ctx, recordBody, rootDomain); err != nil {
 					return err
 				}
 			}
 		} else {
 			recordBody.Target = append(recordBody.Target, dnsEntry.Target)
-			if err := akaDNSClient.UpdateRecord(ctx, recordBody, mscope.LinodeCluster.Spec.Network.DNSRootDomain); err != nil {
+			if err := akaDNSClient.UpdateRecord(ctx, recordBody, rootDomain); err != nil {
 				return err
 			}
 		}
@@ -199,7 +204,16 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, d
 
 	// If record doesnt exist, create it
 	if len(domainRecords) == 0 {
-		if err := CreateDomainRecord(ctx, mscope, domainID, dnsEntry); err != nil {
+		if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(
+			ctx,
+			domainID,
+			linodego.DomainRecordCreateOptions{
+				Type:   dnsEntry.DNSRecordType,
+				Name:   dnsEntry.Hostname,
+				Target: dnsEntry.Target,
+				TTLSec: dnsEntry.DNSTTLSec,
+			},
+		); err != nil {
 			return err
 		}
 		return nil
@@ -215,10 +229,22 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, d
 			return fmt.Errorf("the domain record is not owned by this entity. wont update")
 		}
 	}
-	if err := UpdateDomainRecord(ctx, mscope, domainID, domainRecords[0].ID, dnsEntry); err != nil {
+
+	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(
+		ctx,
+		domainID,
+		domainRecords[0].ID,
+		linodego.DomainRecordUpdateOptions{
+			Type:   dnsEntry.DNSRecordType,
+			Name:   dnsEntry.Hostname,
+			Target: dnsEntry.Target,
+			TTLSec: dnsEntry.DNSTTLSec,
+		},
+	); err != nil {
 		return err
 	}
 	return nil
+
 }
 
 func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntry DNSOptions) error {
@@ -252,34 +278,6 @@ func DeleteDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainI
 	// Delete record
 	if deleteErr := mscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID); deleteErr != nil {
 		return deleteErr
-	}
-	return nil
-}
-
-func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntries DNSOptions) error {
-	recordReq := linodego.DomainRecordCreateOptions{
-		Type:   dnsEntries.DNSRecordType,
-		Name:   dnsEntries.Hostname,
-		Target: dnsEntries.Target,
-		TTLSec: dnsEntries.DNSTTLSec,
-	}
-
-	if _, err := mscope.LinodeDomainsClient.CreateDomainRecord(ctx, domainID, recordReq); err != nil {
-		return err
-	}
-	return nil
-}
-
-func UpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID, domainRecordID int, dnsEntries DNSOptions) error {
-	recordReq := linodego.DomainRecordUpdateOptions{
-		Type:   dnsEntries.DNSRecordType,
-		Name:   dnsEntries.Hostname,
-		Target: dnsEntries.Target,
-		TTLSec: dnsEntries.DNSTTLSec,
-	}
-
-	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq); err != nil {
-		return err
 	}
 	return nil
 }
