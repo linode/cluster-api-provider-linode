@@ -25,7 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 )
@@ -79,7 +79,7 @@ func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.
 	return nil
 }
 
-func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha1.LinodeVPCSpec) *linodego.VPCCreateOptions {
+func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linodego.VPCCreateOptions {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	err := enc.Encode(vpcSpec)
