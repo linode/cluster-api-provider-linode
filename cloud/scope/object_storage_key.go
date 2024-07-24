@@ -6,28 +6,19 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusteraddonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	"github.com/linode/linodego"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
-
-const bucketKeySecret = `kind: Secret
-apiVersion: v1
-metadata:
-  name: %s
-stringData:
-  bucket_name: %s
-  bucket_region: %s
-  bucket_endpoint: %s
-  access_key_rw: %s
-  secret_key_rw: %s
-  access_key_ro: %s
-  secret_key_ro: %s`
 
 type ObjectStorageKeyScopeParams struct {
 	Client K8sClient
@@ -107,11 +98,86 @@ func (s *ObjectStorageKeyScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
+const (
+	accessKeySecretNameTemplate            = "%s-etcd-backup"
+	secretTypeOpaqueValueCount             = 2
+	secretTypeClusterResourceSetValueCount = 1
+
+	ClusterResourceSetSecretFilename = "etcd-backup.yaml"
+	BucketKeySecret                  = `kind: Secret
+	apiVersion: v1
+	metadata:
+	  name: %s
+	stringData:
+	  bucket_name: %s
+	  bucket_region: %s
+	  bucket_endpoint: %s
+	  access_key: %s
+	  secret_key: %s`
+)
+
+var secretTypeValueCounts = map[corev1.SecretType]int{
+	corev1.SecretTypeOpaque:                      secretTypeOpaqueValueCount,
+	clusteraddonsv1.ClusterResourceSetSecretType: secretTypeClusterResourceSetValueCount,
+}
+
 // GenerateKeySecret returns a secret suitable for submission to the Kubernetes API.
 // The secret is expected to contain keys for accessing the bucket, as well as owner and controller references.
 func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *linodego.ObjectStorageKey) (*corev1.Secret, error) {
-	// TODO
-	return nil, nil
+	var secretStringData map[string]string
+
+	secretName := fmt.Sprintf(accessKeySecretNameTemplate, s.Key.Name)
+
+	// If the desired secret is of ClusterResourceSet type, encapsulate the secret.
+	// Bucket details are retrieved from the first referenced LinodeObjectStorageBucket in the access key.
+	if s.Key.Spec.SecretType == clusteraddonsv1.ClusterResourceSetSecretType {
+		// This should never run since the CRD has a validation marker to ensure bucketAccess has at least one item.
+		if len(s.Key.Spec.BucketAccess) == 0 {
+			return nil, fmt.Errorf("unable to generate %s; spec.bucketAccess must not be empty", clusteraddonsv1.ClusterResourceSetSecretType)
+		}
+
+		bucketRef := s.Key.Spec.BucketAccess[0]
+		bucket, err := s.LinodeClient.GetObjectStorageBucket(ctx, bucketRef.Region, bucketRef.BucketName)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate %s; failed to get bucket: %w", clusteraddonsv1.ClusterResourceSetSecretType, err)
+		}
+
+		secretStringData = map[string]string{
+			ClusterResourceSetSecretFilename: fmt.Sprintf(
+				BucketKeySecret,
+				secretName,
+				bucket.Label,
+				bucket.Region,
+				bucket.Hostname,
+				key.AccessKey,
+				key.SecretKey,
+			),
+		}
+	} else {
+		secretStringData = map[string]string{
+			"access_key": key.AccessKey,
+			"secret_key": key.SecretKey,
+		}
+	}
+
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: s.Key.Namespace,
+		},
+		Type:       s.Key.Spec.SecretType,
+		StringData: secretStringData,
+	}
+
+	scheme := s.Client.Scheme()
+	if err := controllerutil.SetOwnerReference(s.Key, &secret, scheme); err != nil {
+		return nil, fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
+	}
+	if err := controllerutil.SetControllerReference(s.Key, &secret, scheme); err != nil {
+		return nil, fmt.Errorf("could not set controller ref on access key secret %s: %w", secretName, err)
+	}
+
+	return &secret, nil
 }
 
 func (s *ObjectStorageKeyScope) ShouldInitKey() bool {
@@ -120,10 +186,38 @@ func (s *ObjectStorageKeyScope) ShouldInitKey() bool {
 
 func (s *ObjectStorageKeyScope) ShouldRotateKey() bool {
 	return s.Key.Status.LastKeyGeneration != nil &&
-		*s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
+		s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
 }
 
-func (s *ObjectStorageKeyScope) ShouldRestoreKeySecret(ctx context.Context) (bool, error) {
-	// TODO
+func (s *ObjectStorageKeyScope) ShouldReconcileKeySecret(ctx context.Context) (bool, error) {
+	if s.Key.Status.KeySecretName == nil {
+		return false, nil
+	}
+
+	secret := &corev1.Secret{}
+	key := client.ObjectKey{Namespace: s.Key.Namespace, Name: *s.Key.Status.KeySecretName}
+	err := s.Client.Get(ctx, key, secret)
+	if apierrors.IsNotFound(err) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	// Compare the length of secret.Data with expected counts to determine if secret type has changed.
+	// If it has changed, we must recreate the secret since secret.type field is immutable.
+	count, ok := secretTypeValueCounts[s.Key.Spec.SecretType]
+	if !ok {
+		return false, errors.New("unsupported secret type configured in LinodeObjectStorageKey")
+	}
+
+	if count != len(secret.Data) {
+		if err := s.Client.Delete(ctx, secret); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+
 	return false, nil
 }

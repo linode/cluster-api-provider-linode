@@ -24,6 +24,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -34,6 +35,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -86,7 +88,7 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	bScope, err := scope.NewObjectStorageKeyScope(
+	keyScope, err := scope.NewObjectStorageKeyScope(
 		ctx,
 		r.LinodeApiKey,
 		scope.ObjectStorageKeyScopeParams{
@@ -101,122 +103,176 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, fmt.Errorf("failed to create object storage key scope: %w", err)
 	}
 
-	return r.reconcile(ctx, bScope)
+	return r.reconcile(ctx, keyScope)
 }
 
-func (r *LinodeObjectStorageKeyReconciler) reconcile(ctx context.Context, bScope *scope.ObjectStorageKeyScope) (res ctrl.Result, reterr error) {
+func (r *LinodeObjectStorageKeyReconciler) reconcile(ctx context.Context, keyScope *scope.ObjectStorageKeyScope) (res ctrl.Result, reterr error) {
 	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageKey changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
-		if err := bScope.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
-			bScope.Logger.Error(err, "failed to patch LinodeObjectStorageKey")
+		if err := keyScope.Close(ctx); utilerrors.FilterOut(err, apierrors.IsNotFound) != nil && reterr == nil {
+			keyScope.Logger.Error(err, "failed to patch LinodeObjectStorageKey")
 			reterr = err
 		}
 	}()
 
-	if !bScope.Key.DeletionTimestamp.IsZero() {
-		return res, r.reconcileDelete(ctx, bScope)
+	if !keyScope.Key.DeletionTimestamp.IsZero() {
+		return res, r.reconcileDelete(ctx, keyScope)
 	}
 
-	if err := bScope.AddFinalizer(ctx); err != nil {
+	if err := keyScope.AddFinalizer(ctx); err != nil {
 		return res, err
 	}
 
-	if err := r.reconcileApply(ctx, bScope); err != nil {
+	if err := r.reconcileApply(ctx, keyScope); err != nil {
 		return res, err
 	}
 
 	return res, nil
 }
 
-func (r *LinodeObjectStorageKeyReconciler) setFailure(bScope *scope.ObjectStorageKeyScope, err error) {
-	bScope.Key.Status.FailureMessage = util.Pointer(err.Error())
-	r.Recorder.Event(bScope.Key, corev1.EventTypeWarning, "Failed", err.Error())
-	conditions.MarkFalse(bScope.Key, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
+func (r *LinodeObjectStorageKeyReconciler) setFailure(keyScope *scope.ObjectStorageKeyScope, err error) {
+	keyScope.Key.Status.FailureMessage = util.Pointer(err.Error())
+	r.Recorder.Event(keyScope.Key, corev1.EventTypeWarning, "Failed", err.Error())
+	conditions.MarkFalse(keyScope.Key, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
 }
 
-func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, bScope *scope.ObjectStorageKeyScope) error {
-	bScope.Logger.Info("Reconciling apply")
-	key := &linodego.ObjectStorageKey{}
+func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, keyScope *scope.ObjectStorageKeyScope) error {
+	keyScope.Logger.Info("Reconciling apply")
+
+	keyScope.Key.Status.Ready = false
+
+	var keyForSecret *linodego.ObjectStorageKey
 
 	switch {
-	case bScope.ShouldInitKey(), bScope.ShouldRotateKey():
-		newKey, err := services.RotateObjectStorageKey(ctx, bScope)
+
+	// If no access key exists or key rotation is requested, make a new key
+	case keyScope.ShouldInitKey(), keyScope.ShouldRotateKey():
+		key, err := services.RotateObjectStorageKey(ctx, keyScope)
 		if err != nil {
-			bScope.Logger.Error(err, "Failed to provision new access key")
-			r.setFailure(bScope, err)
-
-			return err
-		}
-		bScope.Key.Status.AccessKeyRef = []int{newKey.ID}
-		key = newKey
-
-		r.Recorder.Event(bScope.Key, corev1.EventTypeNormal, "KeysAssigned", "Object storage keys assigned")
-
-	case bScope.Key.Status.AccessKeyRef != nil:
-		secretDeleted, err := bScope.ShouldRestoreKeySecret(ctx)
-		if err != nil {
-			bScope.Logger.Error(err, "Failed to ensure access key secret exists")
-			r.setFailure(bScope, err)
+			keyScope.Logger.Error(err, "Failed to provision new access key")
+			r.setFailure(keyScope, err)
 
 			return err
 		}
 
-		if secretDeleted {
-			sameKey, err := services.GetObjectStorageKey(ctx, bScope)
+		keyScope.Key.Status.AccessKeyRef = &key.ID
+		keyForSecret = key
+
+		if keyScope.Key.Status.LastKeyGeneration == nil {
+			keyScope.Key.Status.CreationTime = &metav1.Time{Time: time.Now()}
+		}
+
+		r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyAssigned", "Object storage key assigned")
+
+	// Ensure the generated secret still exists
+	case keyScope.Key.Status.AccessKeyRef != nil:
+		ok, err := keyScope.ShouldReconcileKeySecret(ctx)
+		if err != nil {
+			keyScope.Logger.Error(err, "Failed check for access key secret")
+			r.setFailure(keyScope, err)
+
+			return err
+		}
+
+		if ok {
+			key, err := services.GetObjectStorageKey(ctx, keyScope)
 			if err != nil {
-				bScope.Logger.Error(err, "Failed to restore access key for deleted secret")
-				r.setFailure(bScope, err)
+				keyScope.Logger.Error(err, "Failed to restore access key for modified/deleted secret")
+				r.setFailure(keyScope, err)
 
 				return err
 			}
-			key = sameKey
+
+			keyForSecret = key
+
+			r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyRetrieved", "Object storage key retrieved")
+		}
+	}
+
+	if keyForSecret != nil {
+		secret, err := keyScope.GenerateKeySecret(ctx, keyForSecret)
+		if err != nil {
+			keyScope.Logger.Error(err, "Failed to generate key secret")
+			r.setFailure(keyScope, err)
+
+			return err
 		}
 
-		r.Recorder.Event(bScope.Key, corev1.EventTypeNormal, "KeysRetrieved", "Object storage keys retrieved")
+		emptySecret := &corev1.Secret{ObjectMeta: secret.ObjectMeta}
+		operation, err := controllerutil.CreateOrUpdate(ctx, keyScope.Client, emptySecret, func() error {
+			emptySecret.Type = keyScope.Key.Spec.SecretType
+			emptySecret.StringData = secret.StringData
+			emptySecret.Data = nil
+
+			return nil
+		})
+		if err != nil {
+			keyScope.Logger.Error(err, "Failed to apply key secret")
+			r.setFailure(keyScope, err)
+
+			return err
+		}
+
+		keyScope.Key.Status.KeySecretName = util.Pointer(secret.Name)
+
+		keyScope.Logger.Info(fmt.Sprintf("Secret %s was %s with access key", secret.Name, operation))
+		r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyStored", "Object storage key stored in secret")
 	}
 
-	if key != nil {
-		// TODO: generate key secret
-	}
+	keyScope.Key.Status.LastKeyGeneration = &keyScope.Key.Spec.KeyGeneration
+	keyScope.Key.Status.Ready = true
 
-	r.Recorder.Event(bScope.Key, corev1.EventTypeNormal, "Synced", "Object storage key synced")
-
-	bScope.Key.Status.Ready = true
-	conditions.MarkTrue(bScope.Key, clusterv1.ReadyCondition)
+	conditions.MarkTrue(keyScope.Key, clusterv1.ReadyCondition)
+	r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "Synced", "Object storage key synced")
 
 	return nil
 }
 
-func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, bScope *scope.ObjectStorageKeyScope) error {
-	bScope.Logger.Info("Reconciling delete")
+func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, keyScope *scope.ObjectStorageKeyScope) error {
+	keyScope.Logger.Info("Reconciling delete")
 
-	if err := services.RevokeObjectStorageKey(ctx, bScope); err != nil {
-		bScope.Logger.Error(err, "failed to revoke access keys; keys must be manually revoked")
-		r.setFailure(bScope, err)
+	if err := services.RevokeObjectStorageKey(ctx, keyScope); err != nil {
+		keyScope.Logger.Error(err, "failed to revoke access key; key must be manually revoked")
+		r.setFailure(keyScope, err)
 
 		return err
 	}
 
-	if !controllerutil.RemoveFinalizer(bScope.Key, infrav1alpha1.ObjectStorageBucketFinalizer) {
-		err := errors.New("failed to remove finalizer from bucket; unable to delete")
-		bScope.Logger.Error(err, "controllerutil.RemoveFinalizer")
-		r.setFailure(bScope, err)
+	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "KeyRevoked", "Object storage key revoked")
+
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: keyScope.Key.Namespace,
+			Name:      *keyScope.Key.Status.KeySecretName,
+		},
+	}
+	if err := keyScope.Client.Delete(ctx, &secret); err != nil {
+		keyScope.Logger.Error(err, "failed to delete access key secret")
+		r.setFailure(keyScope, err)
+
+		return err
+	}
+
+	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "SecretDeleted", "Secret deleted")
+
+	if !controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha1.ObjectStorageKeyFinalizer) {
+		err := errors.New("failed to remove finalizer from key; unable to delete")
+		keyScope.Logger.Error(err, "controllerutil.RemoveFinalizer")
+		r.setFailure(keyScope, err)
 
 		return err
 	}
 	// TODO: remove this check and removal later
-	if controllerutil.ContainsFinalizer(bScope.Key, infrav1alpha1.GroupVersion.String()) {
-		controllerutil.RemoveFinalizer(bScope.Key, infrav1alpha1.GroupVersion.String())
+	if controllerutil.ContainsFinalizer(keyScope.Key, infrav1alpha1.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha1.GroupVersion.String())
 	}
-
-	r.Recorder.Event(bScope.Key, clusterv1.DeletedReason, "Revoked", "Object storage keys revoked")
 
 	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
 	linodeObjectStorageKeyMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeObjectStorageKeyList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeObjectStorageKeys: %w", err)
@@ -224,6 +280,7 @@ func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha1.LinodeObjectStorageKey{}).
+		WithOptions(options).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(
 			predicates.ResourceHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),

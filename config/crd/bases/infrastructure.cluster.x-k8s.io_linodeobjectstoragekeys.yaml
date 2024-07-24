@@ -40,22 +40,23 @@ spec:
           spec:
             description: LinodeObjectStorageKeySpec defines the desired state of LinodeObjectStorageKey
             properties:
-              buckets:
-                description: Buckets is the list of object storage bucket labels which
-                  can be accessed using the key
+              bucketAccess:
+                description: BucketAccess is the list of object storage bucket labels
+                  which can be accessed using the key
                 items:
                   properties:
-                    cluster:
+                    bucketName:
                       type: string
-                    name:
+                    permissions:
                       type: string
-                    permission:
+                    region:
                       type: string
                   required:
-                  - cluster
-                  - name
-                  - permission
+                  - bucketName
+                  - permissions
+                  - region
                   type: object
+                minItems: 1
                 type: array
               credentialsRef:
                 description: |-
@@ -74,21 +75,28 @@ spec:
                 x-kubernetes-map-type: atomic
               keyGeneration:
                 default: 0
-                description: KeyGeneration may be modified to trigger rotation of
-                  access key.
+                description: KeyGeneration may be modified to trigger a rotation of
+                  the access key.
                 type: integer
+              secretType:
+                default: Opaque
+                description: SecretType instructs the controller what type of secret
+                  to generate containing access key details.
+                enum:
+                - Opaque
+                - addons.cluster.x-k8s.io/resource-set
+                type: string
             required:
-            - buckets
+            - bucketAccess
+            - keyGeneration
             type: object
           status:
             description: LinodeObjectStorageKeyStatus defines the observed state of
               LinodeObjectStorageKey
             properties:
               accessKeyRef:
-                description: AccessKeyRefs stores ID for Object Storage key provisioned.
-                items:
-                  type: integer
-                type: array
+                description: AccessKeyRef stores the ID for Object Storage key provisioned.
+                type: integer
               conditions:
                 description: Conditions specify the service state of the LinodeObjectStorageKey.
                 items:
@@ -144,6 +152,10 @@ spec:
                   FailureMessage will be set in the event that there is a terminal problem
                   reconciling the Object Storage Key and will contain a verbose string
                   suitable for logging and human consumption.
+                type: string
+              keySecretName:
+                description: KeySecretName specifies the name of the Secret containing
+                  the access key.
                 type: string
               lastKeyGeneration:
                 description: LastKeyGeneration tracks the last known value of .spec.keyGeneration.

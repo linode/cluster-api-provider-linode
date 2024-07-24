@@ -215,6 +215,20 @@ func main() {
 	}
 
 	if err = reconciler.NewReconcilerWithTracing(
+		&controller.LinodeObjectStorageKeyReconciler{
+			Client:           mgr.GetClient(),
+			Scheme:           mgr.GetScheme(),
+			Logger:           ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
+			Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageKeyReconciler"),
+			WatchFilterValue: objectStorageKeyWatchFilter,
+			LinodeApiKey:     linodeToken,
+		},
+	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeObjectStorageBucketConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageKey")
+		os.Exit(1)
+	}
+
+	if err = reconciler.NewReconcilerWithTracing(
 		&controller.LinodePlacementGroupReconciler{
 			Client:           mgr.GetClient(),
 			Recorder:         mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
@@ -229,17 +243,7 @@ func main() {
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		setupWebhooks(mgr)
 	}
-	if err = (&controller2.LinodeObjectStorageKeyReconciler{
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-		Logger:           ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
-		Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageKeyReconciler"),
-		WatchFilterValue: objectStorageKeyWatchFilter,
-		LinodeApiKey:     linodeToken,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageKey")
-		os.Exit(1)
-	}
+
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

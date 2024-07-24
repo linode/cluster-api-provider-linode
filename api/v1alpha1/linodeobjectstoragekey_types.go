@@ -28,10 +28,10 @@ const (
 	ObjectStorageKeyFinalizer = "linodeobjectstoragekey.infrastructure.cluster.x-k8s.io"
 )
 
-type LinodeObjStorageBucket struct {
-	Name       string `json:"name"`
-	Cluster    string `json:"cluster"`
-	Permission string `json:"permission"`
+type BucketAccessRef struct {
+	BucketName  string `json:"bucketName"`
+	Permissions string `json:"permissions"`
+	Region      string `json:"region"`
 }
 
 // LinodeObjectStorageKeySpec defines the desired state of LinodeObjectStorageKey
@@ -39,18 +39,24 @@ type LinodeObjectStorageKeySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Buckets is the list of object storage bucket labels which can be accessed using the key
-	Buckets []LinodeObjStorageBucket `json:"buckets"`
+	// BucketAccess is the list of object storage bucket labels which can be accessed using the key
+	// +kubebuilder:validation:MinItems=1
+	BucketAccess []BucketAccessRef `json:"bucketAccess"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.
 	// If not supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef"`
 
-	// KeyGeneration may be modified to trigger rotation of access key.
-	// +optional
+	// KeyGeneration may be modified to trigger a rotation of the access key.
 	// +kubebuilder:default=0
-	KeyGeneration *int `json:"keyGeneration,omitempty"`
+	KeyGeneration int `json:"keyGeneration"`
+
+	// SecretType instructs the controller what type of secret to generate containing access key details.
+	// +kubebuilder:validation:Enum=Opaque;addons.cluster.x-k8s.io/resource-set
+	// +kubebuilder:default=Opaque
+	// +optional
+	SecretType corev1.SecretType `json:"secretType,omitempty"`
 }
 
 // LinodeObjectStorageKeyStatus defines the observed state of LinodeObjectStorageKey
@@ -81,9 +87,13 @@ type LinodeObjectStorageKeyStatus struct {
 	// +optional
 	LastKeyGeneration *int `json:"lastKeyGeneration,omitempty"`
 
-	// AccessKeyRefs stores ID for Object Storage key provisioned.
+	// KeySecretName specifies the name of the Secret containing the access key.
 	// +optional
-	AccessKeyRef []int `json:"accessKeyRef,omitempty"`
+	KeySecretName *string `json:"keySecretName,omitempty"`
+
+	// AccessKeyRef stores the ID for Object Storage key provisioned.
+	// +optional
+	AccessKeyRef *int `json:"accessKeyRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true
