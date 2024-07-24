@@ -219,29 +219,22 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, d
 	}
 
 	// If record exists, update it
-	if len(domainRecords) != 0 && dnsEntry.DNSRecordType != linodego.RecordTypeTXT {
-		isOwner, err := IsDomainRecordOwner(ctx, mscope, dnsEntry.Hostname, domainID)
-		if err != nil {
+	if len(domainRecords) != 0 && dnsEntry.DNSRecordType == linodego.RecordTypeTXT {
+		if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(
+			ctx,
+			domainID,
+			domainRecords[0].ID,
+			linodego.DomainRecordUpdateOptions{
+				Type:   dnsEntry.DNSRecordType,
+				Name:   dnsEntry.Hostname,
+				Target: dnsEntry.Target,
+				TTLSec: dnsEntry.DNSTTLSec,
+			},
+		); err != nil {
 			return err
-		}
-		if !isOwner {
-			return fmt.Errorf("the domain record is not owned by this entity. wont update")
 		}
 	}
 
-	if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(
-		ctx,
-		domainID,
-		domainRecords[0].ID,
-		linodego.DomainRecordUpdateOptions{
-			Type:   dnsEntry.DNSRecordType,
-			Name:   dnsEntry.Hostname,
-			Target: dnsEntry.Target,
-			TTLSec: dnsEntry.DNSTTLSec,
-		},
-	); err != nil {
-		return err
-	}
 	return nil
 }
 
