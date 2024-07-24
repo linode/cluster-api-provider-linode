@@ -9,6 +9,7 @@ spec:
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
+      # diskEncryption: disabled
       interfaces:
         - purpose: public
       authorizedKeys:
@@ -25,6 +26,7 @@ spec:
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
+      # diskEncryption: disabled
       interfaces:
         - purpose: public
       authorizedKeys:
