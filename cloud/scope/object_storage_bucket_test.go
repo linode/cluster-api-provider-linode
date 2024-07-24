@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
@@ -38,7 +38,7 @@ func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
 		{
 			name: "Success - Valid ObjectStorageBucketScopeParams",
 			params: ObjectStorageBucketScopeParams{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
 				Logger: &logr.Logger{},
 			},
 			expectedErr: nil,
@@ -46,7 +46,7 @@ func TestValidateObjectStorageBucketScopeParams(t *testing.T) {
 		{
 			name: "Failure - Invalid ObjectStorageBucketScopeParams. Logger is nil",
 			params: ObjectStorageBucketScopeParams{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
 				Logger: nil,
 			},
 			expectedErr: fmt.Errorf("logger is required when creating an ObjectStorageBucketScope"),
@@ -93,7 +93,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
 					Client: nil,
-					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+					Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
 					Logger: &logr.Logger{},
 				},
 			},
@@ -101,7 +101,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			expects: func(k8s *mock.MockK8sClient) {
 				k8s.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
@@ -112,8 +112,8 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
 					Client: nil,
-					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-						Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+						Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Name:      "example",
 								Namespace: "test",
@@ -127,7 +127,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			expects: func(k8s *mock.MockK8sClient) {
 				k8s.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				k8s.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, name types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -156,7 +156,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
 					Client: nil,
-					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+					Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
 					Logger: &logr.Logger{},
 				},
 			},
@@ -171,8 +171,8 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 				apiKey: "test-key",
 				params: ObjectStorageBucketScopeParams{
 					Client: nil,
-					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-						Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+					Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+						Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Name:      "example",
 								Namespace: "test",
@@ -193,7 +193,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 				apiKey: "",
 				params: ObjectStorageBucketScopeParams{
 					Client: nil,
-					Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+					Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
 					Logger: &logr.Logger{},
 				},
 			},
@@ -230,16 +230,16 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
-		Bucket  *infrav1alpha1.LinodeObjectStorageBucket
+		Bucket  *infrav1alpha2.LinodeObjectStorageBucket
 		expects func(mock *mock.MockK8sClient)
 	}{
 		{
 			name:   "Success - finalizer should be added to the Linode Object Storage Bucket object",
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(2)
 				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -247,15 +247,15 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 		},
 		{
 			name: "Failure - finalizer should not be added to the Bucket object. Function returns nil since it was already present",
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
-					Finalizers: []string{infrav1alpha1.ObjectStorageBucketFinalizer},
+					Finalizers: []string{infrav1alpha2.ObjectStorageBucketFinalizer},
 				},
 			},
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(1)
 			},
@@ -289,7 +289,7 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
-			if objScope.Bucket.Finalizers[0] != infrav1alpha1.ObjectStorageBucketFinalizer {
+			if objScope.Bucket.Finalizers[0] != infrav1alpha2.ObjectStorageBucketFinalizer {
 				t.Errorf("Finalizer was not added")
 			}
 		})
@@ -300,19 +300,19 @@ func TestGenerateKeySecret(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
-		Bucket      *infrav1alpha1.LinodeObjectStorageBucket
+		Bucket      *infrav1alpha2.LinodeObjectStorageBucket
 		keys        [NumAccessKeys]*linodego.ObjectStorageKey
 		expectedErr error
 		expects     func(mock *mock.MockK8sClient)
 	}{
 		{
 			name: "happy path",
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
 					Namespace: "test-namespace",
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					KeySecretName: ptr.To("test-bucket-bucket-details"),
 				},
 			},
@@ -349,7 +349,7 @@ func TestGenerateKeySecret(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				}).Times(1)
 			},
@@ -357,12 +357,12 @@ func TestGenerateKeySecret(t *testing.T) {
 		},
 		{
 			name: "missing one or more keys",
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
 					Namespace: "test-namespace",
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					KeySecretName: ptr.To("test-bucket-bucket-details"),
 				},
 			},
@@ -385,8 +385,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			expectedErr: errors.New("expected two non-nil object storage keys"),
 		},
 		{
-			name: "client scheme does not have infrav1alpha1",
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			name: "client scheme does not have infrav1alpha2",
+			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bucket",
 					Namespace: "test-namespace",
@@ -464,16 +464,16 @@ func TestShouldInitKeys(t *testing.T) {
 	tests := []struct {
 		name   string
 		want   bool
-		Bucket *infrav1alpha1.LinodeObjectStorageBucket
+		Bucket *infrav1alpha2.LinodeObjectStorageBucket
 	}{
 		{
 			name: "should init keys",
 			want: true,
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+				Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 					KeyGeneration: ptr.To(1),
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					LastKeyGeneration: nil,
 				},
 			},
@@ -506,16 +506,16 @@ func TestShouldRotateKeys(t *testing.T) {
 	tests := []struct {
 		name   string
 		want   bool
-		Bucket *infrav1alpha1.LinodeObjectStorageBucket
+		Bucket *infrav1alpha2.LinodeObjectStorageBucket
 	}{
 		{
 			name: "should rotate keys",
 			want: true,
-			Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+				Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 					KeyGeneration: ptr.To(1),
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					LastKeyGeneration: ptr.To(0),
 				},
 			},
@@ -547,15 +547,15 @@ func TestShouldRestoreKeySecret(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
-		bucket      *infrav1alpha1.LinodeObjectStorageBucket
+		bucket      *infrav1alpha2.LinodeObjectStorageBucket
 		expects     func(k8s *mock.MockK8sClient)
 		want        bool
 		expectedErr error
 	}{
 		{
 			name: "status has no secret name",
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+			bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					KeySecretName: nil,
 				},
 			},
@@ -563,12 +563,12 @@ func TestShouldRestoreKeySecret(t *testing.T) {
 		},
 		{
 			name: "status has secret name and secret exists",
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bucket",
 					Namespace: "ns",
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					KeySecretName: ptr.To("secret"),
 				},
 			},
@@ -581,12 +581,12 @@ func TestShouldRestoreKeySecret(t *testing.T) {
 		},
 		{
 			name: "status has secret name and secret is missing",
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bucket",
 					Namespace: "ns",
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					KeySecretName: ptr.To("secret"),
 				},
 			},
@@ -599,12 +599,12 @@ func TestShouldRestoreKeySecret(t *testing.T) {
 		},
 		{
 			name: "non-404 api error",
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bucket",
 					Namespace: "ns",
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					KeySecretName: ptr.To("secret"),
 				},
 			},

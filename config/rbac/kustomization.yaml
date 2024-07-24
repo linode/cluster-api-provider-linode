@@ -20,6 +20,8 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the Project itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- linodeobjectstoragebucket_editor_role.yaml
+- linodeobjectstoragebucket_viewer_role.yaml
 - linodevpc_editor_role.yaml
 - linodevpc_viewer_role.yaml
 - linodemachine_editor_role.yaml

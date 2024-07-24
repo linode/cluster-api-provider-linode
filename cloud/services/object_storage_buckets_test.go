@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
@@ -33,12 +33,12 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 		{
 			name: "Success - Successfully get the OBJ bucket",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-bucket",
 					},
-					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster: "test-cluster",
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
 					},
 				},
 			},
@@ -54,29 +54,29 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 		{
 			name: "Error - Unable to get the OBJ bucket",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-bucket",
 					},
-					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster: "test-cluster",
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
 					},
 				},
 			},
 			expects: func(c *mock.MockLinodeClient) {
 				c.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in getting object storage bucket"))
 			},
-			expectedError: fmt.Errorf("failed to get bucket from cluster"),
+			expectedError: fmt.Errorf("failed to get bucket from region"),
 		},
 		{
 			name: "Success - Successfully create the OBJ bucket",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-bucket",
 					},
-					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster: "test-cluster",
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
 					},
 				},
 			},
@@ -93,12 +93,12 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 		{
 			name: "Error - unable to create the OBJ bucket",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-bucket",
 					},
-					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster: "test-cluster",
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
 					},
 				},
 			},
@@ -146,15 +146,15 @@ func TestRotateObjectStorageKeysCreation(t *testing.T) {
 		{
 			name: "Creates new access keys",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-bucket",
 					},
-					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster:       "test-cluster",
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region:        "test-region",
 						KeyGeneration: ptr.To(1),
 					},
-					Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+					Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 						LastKeyGeneration: ptr.To(0),
 						AccessKeyRefs: []int{
 							11,
@@ -188,12 +188,12 @@ func TestRotateObjectStorageKeysCreation(t *testing.T) {
 		{
 			name: "Error creating keys",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-bucket",
 					},
-					Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
-						Cluster: "test-cluster",
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
 					},
 				},
 			},
@@ -233,19 +233,19 @@ func TestRotateObjectStorageKeysRevocation(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		bucket  *infrav1alpha1.LinodeObjectStorageBucket
+		bucket  *infrav1alpha2.LinodeObjectStorageBucket
 		expects func(*mock.MockLinodeClient)
 	}{
 		{
 			name: "should revoke existing keys",
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "bucket",
 				},
-				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+				Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 					KeyGeneration: ptr.To(1),
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					LastKeyGeneration: ptr.To(0),
 					AccessKeyRefs:     []int{0, 1},
 				},
@@ -261,39 +261,39 @@ func TestRotateObjectStorageKeysRevocation(t *testing.T) {
 		},
 		{
 			name: "shouldInitKeys",
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "bucket",
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					LastKeyGeneration: nil,
 				},
 			},
 		},
 		{
 			name: "not shouldRotateKeys",
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "bucket",
 				},
-				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+				Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 					KeyGeneration: ptr.To(1),
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					LastKeyGeneration: ptr.To(1),
 				},
 			},
 		},
 		{
 			name: "unable to revoke keys",
-			bucket: &infrav1alpha1.LinodeObjectStorageBucket{
+			bucket: &infrav1alpha2.LinodeObjectStorageBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "bucket",
 				},
-				Spec: infrav1alpha1.LinodeObjectStorageBucketSpec{
+				Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 					KeyGeneration: ptr.To(1),
 				},
-				Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 					LastKeyGeneration: ptr.To(0),
 					AccessKeyRefs:     []int{0, 1},
 				},
@@ -349,8 +349,8 @@ func TestGetObjectStorageKeys(t *testing.T) {
 		{
 			name: "happy path",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-					Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 						AccessKeyRefs: []int{0, 1},
 					},
 				},
@@ -371,15 +371,15 @@ func TestGetObjectStorageKeys(t *testing.T) {
 		{
 			name: "not two key refs in status",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{},
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
 			},
 			wantErr: "expected two object storage key IDs in .status.accessKeyRefs",
 		},
 		{
 			name: "one client error",
 			bScope: &scope.ObjectStorageBucketScope{
-				Bucket: &infrav1alpha1.LinodeObjectStorageBucket{
-					Status: infrav1alpha1.LinodeObjectStorageBucketStatus{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					Status: infrav1alpha2.LinodeObjectStorageBucketStatus{
 						AccessKeyRefs: []int{0, 1},
 					},
 				},

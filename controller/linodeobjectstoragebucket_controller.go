@@ -41,7 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -80,7 +81,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 
 	logger := r.Logger.WithValues("name", req.NamespacedName.String())
 
-	objectStorageBucket := &infrav1alpha1.LinodeObjectStorageBucket{}
+	objectStorageBucket := &infrav1alpha2.LinodeObjectStorageBucket{}
 	if err := r.Client.Get(ctx, req.NamespacedName, objectStorageBucket); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			logger.Error(err, "Failed to fetch LinodeObjectStorageBucket", "name", req.NamespacedName.String())
@@ -240,7 +241,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 		return err
 	}
 
-	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha1.ObjectStorageBucketFinalizer) {
+	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha2.ObjectStorageBucketFinalizer) {
 		err := errors.New("failed to remove finalizer from bucket; unable to delete")
 		bScope.Logger.Error(err, "controllerutil.RemoveFinalizer")
 		r.setFailure(bScope, err)
@@ -248,8 +249,8 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 		return err
 	}
 	// TODO: remove this check and removal later
-	if controllerutil.ContainsFinalizer(bScope.Bucket, infrav1alpha1.GroupVersion.String()) {
-		controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha1.GroupVersion.String())
+	if controllerutil.ContainsFinalizer(bScope.Bucket, infrav1alpha2.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha2.GroupVersion.String())
 	}
 
 	r.Recorder.Event(bScope.Bucket, clusterv1.DeletedReason, "Revoked", "Object storage keys revoked")
@@ -259,13 +260,13 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeObjectStorageBucketMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeObjectStorageBucketList{}, mgr.GetScheme())
+	linodeObjectStorageBucketMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodeObjectStorageBucketList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeObjectStorageBuckets: %w", err)
 	}
 
 	err = ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1alpha1.LinodeObjectStorageBucket{}).
+		For(&infrav1alpha2.LinodeObjectStorageBucket{}).
 		WithOptions(options).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(
