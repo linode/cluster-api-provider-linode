@@ -18,7 +18,6 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
@@ -43,7 +42,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				},
 			},
 			false,
@@ -61,7 +60,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 				params: MachineScopeParams{
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				},
 			},
 			true,
@@ -83,7 +82,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 				params: MachineScopeParams{
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				},
 			},
 			true,
@@ -94,7 +93,7 @@ func TestValidateMachineScopeParams(t *testing.T) {
 				params: MachineScopeParams{
 					Cluster:       &clusterv1.Cluster{},
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				},
 			},
 			true,
@@ -118,7 +117,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 		Call("scheme 1", func(ctx context.Context, mck Mock) {
 			mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 				s := runtime.NewScheme()
-				infrav1alpha1.AddToScheme(s)
+				infrav1alpha2.AddToScheme(s)
 				return s
 			})
 		}),
@@ -126,7 +125,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 			Path(Call("scheme 2", func(ctx context.Context, mck Mock) {
 				mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			})),
@@ -136,7 +135,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{
+					LinodeMachine: &infrav1alpha2.LinodeMachine{
 						ObjectMeta: metav1.ObjectMeta{
 							Finalizers: []string{infrav1alpha2.MachineFinalizer},
 						},
@@ -159,7 +158,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha1.LinodeMachine{},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{},
 					})
 					require.NoError(t, err)
 					assert.NoError(t, mScope.AddFinalizer(ctx))
@@ -177,7 +176,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha1.LinodeMachine{},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{},
 					})
 					require.NoError(t, err)
 
@@ -204,7 +203,7 @@ func TestNewMachineScope(t *testing.T) {
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				})
 				require.ErrorContains(t, err, "failed to create linode client")
 				assert.Nil(t, mScope)
@@ -219,8 +218,8 @@ func TestNewMachineScope(t *testing.T) {
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha1.LinodeMachine{
-							Spec: infrav1alpha1.LinodeMachineSpec{
+						LinodeMachine: &infrav1alpha2.LinodeMachine{
+							Spec: infrav1alpha2.LinodeMachineSpec{
 								CredentialsRef: &corev1.SecretReference{
 									Name:      "example",
 									Namespace: "test",
@@ -237,7 +236,7 @@ func TestNewMachineScope(t *testing.T) {
 			Path(Call("valid scheme", func(ctx context.Context, mck Mock) {
 				mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			})),
@@ -251,7 +250,7 @@ func TestNewMachineScope(t *testing.T) {
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha1.LinodeMachine{},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{},
 					})
 					require.ErrorContains(t, err, "failed to init patch helper")
 					assert.Nil(t, mScope)
@@ -276,7 +275,7 @@ func TestNewMachineScope(t *testing.T) {
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, mScope)
@@ -289,8 +288,8 @@ func TestNewMachineScope(t *testing.T) {
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{
-						Spec: infrav1alpha1.LinodeMachineSpec{
+					LinodeMachine: &infrav1alpha2.LinodeMachine{
+						Spec: infrav1alpha2.LinodeMachineSpec{
 							CredentialsRef: &corev1.SecretReference{
 								Name:      "example",
 								Namespace: "test",
@@ -314,7 +313,7 @@ func TestNewMachineScope(t *testing.T) {
 							},
 						},
 					},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				})
 				require.NoError(t, err)
 				assert.NotNil(t, mScope)
@@ -345,7 +344,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
 			}
 
 			data, err := mScope.GetBootstrapData(ctx)
@@ -368,7 +367,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 				mScope := MachineScope{
 					Client:        mck.K8sClient,
 					Machine:       &clusterv1.Machine{},
-					LinodeMachine: &infrav1alpha1.LinodeMachine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				}
 
 				data, err := mScope.GetBootstrapData(ctx)
@@ -386,7 +385,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
 			}
 
 			data, err := mScope.GetBootstrapData(ctx)
@@ -399,7 +398,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 	t.Parallel()
 	type fields struct {
-		LinodeMachine *infrav1alpha1.LinodeMachine
+		LinodeMachine *infrav1alpha2.LinodeMachine
 	}
 	tests := []struct {
 		name    string
@@ -409,8 +408,8 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 		{
 			"Success - finalizer should be added to the Linode Machine credentials Secret",
 			fields{
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
-					Spec: infrav1alpha1.LinodeMachineSpec{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						CredentialsRef: &corev1.SecretReference{
 							Name:      "example",
 							Namespace: "test",
@@ -421,7 +420,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 			func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -444,12 +443,12 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 		{
 			name: "No-op - no Linode Machine credentials Secret",
 			fields: fields{
-				LinodeMachine: &infrav1alpha1.LinodeMachine{},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
 			},
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},
@@ -493,7 +492,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 	t.Parallel()
 	type fields struct {
-		LinodeMachine *infrav1alpha1.LinodeMachine
+		LinodeMachine *infrav1alpha2.LinodeMachine
 	}
 	tests := []struct {
 		name    string
@@ -503,8 +502,8 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 		{
 			"Success - finalizer should be added to the Linode Machine credentials Secret",
 			fields{
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
-					Spec: infrav1alpha1.LinodeMachineSpec{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						CredentialsRef: &corev1.SecretReference{
 							Name:      "example",
 							Namespace: "test",
@@ -515,7 +514,7 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 			func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -538,12 +537,12 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 		{
 			name: "No-op - no Linode Machine credentials Secret",
 			fields: fields{
-				LinodeMachine: &infrav1alpha1.LinodeMachine{},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
 			},
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
 					s := runtime.NewScheme()
-					infrav1alpha1.AddToScheme(s)
+					infrav1alpha2.AddToScheme(s)
 					return s
 				})
 			},

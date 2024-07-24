@@ -13,7 +13,6 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -444,12 +443,12 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -479,12 +478,12 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -510,12 +509,12 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -610,12 +609,12 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -663,12 +662,12 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -749,12 +748,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -782,12 +781,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -828,12 +827,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},
@@ -868,12 +867,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachine: &infrav1alpha1.LinodeMachine{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "test-machine",
 						UID:  "test-uid",
 					},
-					Spec: infrav1alpha1.LinodeMachineSpec{
+					Spec: infrav1alpha2.LinodeMachineSpec{
 						InstanceID: ptr.To(123),
 					},
 				},

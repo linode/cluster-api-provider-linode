@@ -10,7 +10,7 @@ import (
 	"go.uber.org/mock/gomock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -104,7 +104,7 @@ var _ = Describe("multiple clients", Label("multiple"), func() {
 func contrivedCalls(ctx context.Context, mck Mock) error {
 	GinkgoHelper()
 
-	err := mck.K8sClient.Get(ctx, client.ObjectKey{}, &infrav1alpha1.LinodeMachine{})
+	err := mck.K8sClient.Get(ctx, client.ObjectKey{}, &infrav1alpha2.LinodeMachine{})
 	if err != nil {
 		return err
 	}
