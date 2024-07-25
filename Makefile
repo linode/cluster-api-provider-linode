@@ -78,7 +78,7 @@ help: ## Display this help.
 
 ##@ Generate:
 .PHONY: generate
-generate: generate-manifests generate-code generate-mock
+generate: generate-manifests generate-conversion generate-code generate-mock
 
 .PHONY: generate-manifests
 generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -88,6 +88,10 @@ generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole
 generate-code: controller-gen gowrap ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	go generate ./...
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+.PHONY: generate-conversion
+generate-conversion: conversion-gen
+	$(CONVERSION_GEN) ./api/v1alpha1 --go-header-file=./hack/boilerplate.go.txt --output-file=zz_generated.conversion.go
 
 .PHONY: generate-mock
 generate-mock: mockgen ## Generate mocks for the Linode API client.
@@ -144,7 +148,7 @@ docs:
 .PHONY: test
 test: generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
-	grep -v "zz_generated.deepcopy.go" cover.out.tmp > cover.out
+	grep -v "zz_generated.*" cover.out.tmp > cover.out
 	rm cover.out.tmp
 
 .PHONY: e2etest
@@ -297,6 +301,7 @@ CTLPTL         ?= $(LOCALBIN)/ctlptl
 CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
 KUBEBUILDER    ?= $(LOCALBIN)/kubebuilder
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CONVERSION_GEN ?= $(CACHE_BIN)/conversion-gen
 TILT           ?= $(LOCALBIN)/tilt
 KIND           ?= $(LOCALBIN)/kind
 CHAINSAW       ?= $(LOCALBIN)/chainsaw
@@ -323,7 +328,7 @@ MOCKGEN_VERSION          ?= v0.4.0
 GOWRAP_VERSION           ?= latest
 
 .PHONY: tools
-tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
+tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
 
 
 .PHONY: kustomize
@@ -353,6 +358,10 @@ controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessar
 $(CONTROLLER_GEN): $(LOCALBIN)
 	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
+.PHONY: conversion-gen
+conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary.
+$(CONVERSION_GEN): $(LOCALBIN)
+	GOBIN=$(CACHE_BIN) go install k8s.io/code-generator/cmd/conversion-gen@latest
 
 .PHONY: tilt
 tilt: $(TILT) ## Download tilt locally if necessary.
