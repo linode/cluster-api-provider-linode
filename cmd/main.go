@@ -229,12 +229,6 @@ func main() {
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		setupWebhooks(mgr)
 	}
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&infrastructurev1alpha2.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
-			os.Exit(1)
-		}
-	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -281,7 +275,7 @@ func setupWebhooks(mgr manager.Manager) {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeVPC")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrastructurev1alpha2.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
