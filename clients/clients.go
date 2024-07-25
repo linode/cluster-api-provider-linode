@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
 	"github.com/linode/linodego"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,6 +18,17 @@ type LinodeClient interface {
 	LinodeObjectStorageClient
 	LinodeDNSClient
 	LinodePlacementGroupClient
+}
+
+type AkamClient interface {
+	AkamEdgeDNSClient
+}
+
+type AkamEdgeDNSClient interface {
+	GetRecord(context.Context, string, string, string) (*dns.RecordBody, error)
+	CreateRecord(context.Context, *dns.RecordBody, string, ...bool) error
+	UpdateRecord(context.Context, *dns.RecordBody, string, ...bool) error
+	DeleteRecord(context.Context, *dns.RecordBody, string, ...bool) error
 }
 
 // LinodeInstanceClient defines the methods that interact with Linode's Instance service.

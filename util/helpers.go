@@ -2,6 +2,9 @@ package util
 
 import (
 	"errors"
+	"io"
+	"net/http"
+	"os"
 
 	"github.com/linode/linodego"
 )
@@ -29,4 +32,24 @@ func UnwrapError(err error) error {
 	}
 
 	return err
+}
+
+// IsTransientError determines if the error is transient, meaning a controller that
+// encounters this error should requeue reconciliation to try again later
+func IsTransientError(err error) bool {
+	if linodego.ErrHasStatus(
+		err,
+		http.StatusTooManyRequests,
+		http.StatusInternalServerError,
+		http.StatusBadGateway,
+		http.StatusGatewayTimeout,
+		http.StatusServiceUnavailable) {
+		return true
+	}
+
+	if errors.Is(err, http.ErrHandlerTimeout) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+
+	return false
 }

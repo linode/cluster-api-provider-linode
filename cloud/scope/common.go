@@ -5,9 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/edgegrid"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/session"
 	"github.com/linode/linodego"
 	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +27,9 @@ import (
 const (
 	// defaultClientTimeout is the default timeout for a client Linode API call
 	defaultClientTimeout = time.Second * 10
+
+	// MaxBodySize is the max payload size for Akamai edge dns client requests
+	maxBody = 131072
 )
 
 type Option struct {
@@ -61,6 +68,21 @@ func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (L
 	return linodeclient.NewLinodeClientWithTracing(
 		&linodeClient,
 	), nil
+}
+
+func setUpEdgeDNSInterface() (dnsInterface dns.DNS, err error) {
+	edgeRCConfig := edgegrid.Config{
+		Host:         os.Getenv("AKAMAI_HOST"),
+		AccessToken:  os.Getenv("AKAMAI_ACCESS_TOKEN"),
+		ClientToken:  os.Getenv("AKAMAI_CLIENT_TOKEN"),
+		ClientSecret: os.Getenv("AKAMAI_CLIENT_SECRET"),
+		MaxBody:      maxBody,
+	}
+	sess, err := session.New(session.WithSigner(&edgeRCConfig))
+	if err != nil {
+		return nil, err
+	}
+	return dns.Client(sess), nil
 }
 
 func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {

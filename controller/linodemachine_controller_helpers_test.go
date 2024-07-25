@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -32,7 +32,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 
 	subnetID := 1
 
-	machineSpec := infrav1alpha1.LinodeMachineSpec{
+	machineSpec := infrav1alpha2.LinodeMachineSpec{
 		Region:          "region",
 		Type:            "type",
 		Group:           "group",
@@ -41,14 +41,14 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		AuthorizedUsers: []string{"user"},
 		BackupID:        1,
 		Image:           "image",
-		Interfaces: []infrav1alpha1.InstanceConfigInterfaceCreateOptions{
+		Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
 			{
 				IPAMAddress: "address",
 				Label:       "label",
 				Purpose:     linodego.InterfacePurposePublic,
 				Primary:     true,
 				SubnetID:    &subnetID,
-				IPv4: &infrav1alpha1.VPCIPv4{
+				IPv4: &infrav1alpha2.VPCIPv4{
 					VPC:     "vpc",
 					NAT1To1: "nat11",
 				},
@@ -69,7 +69,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 	err := enc.Encode(createConfig)
 	require.NoError(t, err, "Failed to encode InstanceCreateOptions")
 
-	var actualMachineSpec infrav1alpha1.LinodeMachineSpec
+	var actualMachineSpec infrav1alpha2.LinodeMachineSpec
 	dec := gob.NewDecoder(&buf)
 	err = dec.Decode(&actualMachineSpec)
 	require.NoError(t, err, "Failed to decode LinodeMachineSpec")
@@ -98,13 +98,13 @@ func TestSetUserData(t *testing.T) {
 					},
 					InfrastructureRef: corev1.ObjectReference{},
 				},
-			}, LinodeMachine: &infrav1alpha1.LinodeMachine{
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha1.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha1.LinodeMachineStatus{},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
@@ -138,13 +138,13 @@ func TestSetUserData(t *testing.T) {
 					},
 					InfrastructureRef: corev1.ObjectReference{},
 				},
-			}, LinodeMachine: &infrav1alpha1.LinodeMachine{
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha1.LinodeMachineSpec{Region: "us-east", Image: "linode/ubuntu22.04", Type: "g6-standard-1"},
-				Status: infrav1alpha1.LinodeMachineStatus{},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-east", Image: "linode/ubuntu22.04", Type: "g6-standard-1"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{StackScriptID: 1234, StackScriptData: map[string]string{
@@ -181,13 +181,13 @@ func TestSetUserData(t *testing.T) {
 					},
 					InfrastructureRef: corev1.ObjectReference{},
 				},
-			}, LinodeMachine: &infrav1alpha1.LinodeMachine{
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha1.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha1.LinodeMachineStatus{},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
@@ -215,13 +215,13 @@ func TestSetUserData(t *testing.T) {
 					},
 					InfrastructureRef: corev1.ObjectReference{},
 				},
-			}, LinodeMachine: &infrav1alpha1.LinodeMachine{
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha1.LinodeMachineSpec{},
-				Status: infrav1alpha1.LinodeMachineStatus{},
+				Spec:   infrav1alpha2.LinodeMachineSpec{},
+				Status: infrav1alpha2.LinodeMachineStatus{},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
@@ -239,13 +239,13 @@ func TestSetUserData(t *testing.T) {
 					},
 					InfrastructureRef: corev1.ObjectReference{},
 				},
-			}, LinodeMachine: &infrav1alpha1.LinodeMachine{
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha1.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha1.LinodeMachineStatus{},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
@@ -273,13 +273,13 @@ func TestSetUserData(t *testing.T) {
 					},
 					InfrastructureRef: corev1.ObjectReference{},
 				},
-			}, LinodeMachine: &infrav1alpha1.LinodeMachine{
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha1.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha1.LinodeMachineStatus{},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
@@ -310,13 +310,13 @@ func TestSetUserData(t *testing.T) {
 					},
 					InfrastructureRef: corev1.ObjectReference{},
 				},
-			}, LinodeMachine: &infrav1alpha1.LinodeMachine{
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha1.LinodeMachineSpec{Region: "us-east", Image: "linode/ubuntu22.04", Type: "g6-standard-1"},
-				Status: infrav1alpha1.LinodeMachineStatus{},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-east", Image: "linode/ubuntu22.04", Type: "g6-standard-1"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{StackScriptID: 1234, StackScriptData: map[string]string{
@@ -373,13 +373,13 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name            string
-		instanceDisks   map[string]*infrav1alpha1.InstanceDisk
+		instanceDisks   map[string]*infrav1alpha2.InstanceDisk
 		expectedDiskMap linodego.InstanceConfigDeviceMap
 		expectedError   error
 	}{
 		{
 			name: "Success - single disk gets added to config",
-			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdb": {
+			instanceDisks: map[string]*infrav1alpha2.InstanceDisk{"sdb": {
 				DiskID: 101,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
@@ -390,7 +390,7 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 		},
 		{
 			name: "Success - multiple disks gets added to config",
-			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdb": {
+			instanceDisks: map[string]*infrav1alpha2.InstanceDisk{"sdb": {
 				DiskID: 101,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
@@ -432,7 +432,7 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 		},
 		{
 			name: "Error - single disk with invalid name",
-			instanceDisks: map[string]*infrav1alpha1.InstanceDisk{"sdx": {
+			instanceDisks: map[string]*infrav1alpha2.InstanceDisk{"sdx": {
 				DiskID: 101,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
