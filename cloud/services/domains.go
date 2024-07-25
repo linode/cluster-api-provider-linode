@@ -66,7 +66,7 @@ func EnsureLinodeDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 			}
 			continue
 		}
-		if err := CreateUpdateDomainRecord(ctx, mscope, domainID, dnsEntry); err != nil {
+		if err := CreateDomainRecord(ctx, mscope, domainID, dnsEntry); err != nil {
 			return err
 		}
 	}
@@ -189,7 +189,7 @@ func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
 	return domains[0].ID, nil
 }
 
-func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntry DNSOptions) error {
+func CreateDomainRecord(ctx context.Context, mscope *scope.MachineScope, domainID int, dnsEntry DNSOptions) error {
 	// Check if domain record exists for this IP and name combo
 	filter, err := json.Marshal(map[string]interface{}{"name": dnsEntry.Hostname, "target": dnsEntry.Target, "type": dnsEntry.DNSRecordType})
 	if err != nil {
@@ -215,26 +215,7 @@ func CreateUpdateDomainRecord(ctx context.Context, mscope *scope.MachineScope, d
 		); err != nil {
 			return err
 		}
-		return nil
 	}
-
-	// If record exists, update it
-	if len(domainRecords) != 0 && dnsEntry.DNSRecordType == linodego.RecordTypeTXT {
-		if _, err := mscope.LinodeDomainsClient.UpdateDomainRecord(
-			ctx,
-			domainID,
-			domainRecords[0].ID,
-			linodego.DomainRecordUpdateOptions{
-				Type:   dnsEntry.DNSRecordType,
-				Name:   dnsEntry.Hostname,
-				Target: dnsEntry.Target,
-				TTLSec: dnsEntry.DNSTTLSec,
-			},
-		); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
