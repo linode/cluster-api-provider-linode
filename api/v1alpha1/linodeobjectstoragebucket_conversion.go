@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"errors"
+	"regexp"
 
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
@@ -34,9 +35,10 @@ func (src *LinodeObjectStorageBucket) ConvertTo(dstRaw conversion.Hub) error {
 	// ObjectMeta
 	dst.ObjectMeta = src.ObjectMeta
 
+	cexp := regexp.MustCompile(`^(([[:lower:]]+-)*[[:lower:]]+)-\d+$`)
+
 	// Spec
-	//us-east-1
-	dst.Spec.Region = src.Spec.Cluster[:(len(src.Spec.Cluster) - 2)]
+	dst.Spec.Region = cexp.FindStringSubmatch(src.Spec.Cluster)[1]
 	dst.Spec.CredentialsRef = src.Spec.CredentialsRef
 	dst.Spec.KeyGeneration = src.Spec.KeyGeneration
 	dst.Spec.SecretType = src.Spec.SecretType

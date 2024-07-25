@@ -87,7 +87,7 @@ func validateLinodeType(ctx context.Context, client LinodeClient, id string, pat
 // [Cluster View]: https://www.linode.com/docs/api/object-storage/#cluster-view
 func validateObjectStorageRegion(ctx context.Context, client LinodeClient, id string, path *field.Path) *field.Error {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
-	//nolint:gocritic // prefer no escapes
+
 	cexp := regexp.MustCompile("^(([[:lower:]]+-)*[[:lower:]]+)$")
 	if !cexp.MatchString(id) {
 		return field.Invalid(path, id, "must be in form: region_id")
