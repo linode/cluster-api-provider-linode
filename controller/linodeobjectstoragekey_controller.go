@@ -41,7 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/go-logr/logr"
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -79,7 +79,7 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 
 	logger := r.Logger.WithValues("name", req.NamespacedName.String())
 
-	objectStorageKey := &infrav1alpha1.LinodeObjectStorageKey{}
+	objectStorageKey := &infrav1alpha2.LinodeObjectStorageKey{}
 	if err := r.Client.Get(ctx, req.NamespacedName, objectStorageKey); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			logger.Error(err, "Failed to fetch LinodeObjectStorageKey", "name", req.NamespacedName.String())
@@ -256,7 +256,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 
 	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "SecretDeleted", "Secret deleted")
 
-	if !controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha1.ObjectStorageKeyFinalizer) {
+	if !controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha2.ObjectStorageKeyFinalizer) {
 		err := errors.New("failed to remove finalizer from key; unable to delete")
 		keyScope.Logger.Error(err, "controllerutil.RemoveFinalizer")
 		r.setFailure(keyScope, err)
@@ -264,8 +264,8 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 		return err
 	}
 	// TODO: remove this check and removal later
-	if controllerutil.ContainsFinalizer(keyScope.Key, infrav1alpha1.GroupVersion.String()) {
-		controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha1.GroupVersion.String())
+	if controllerutil.ContainsFinalizer(keyScope.Key, infrav1alpha2.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha2.GroupVersion.String())
 	}
 
 	return nil
@@ -273,13 +273,13 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeObjectStorageKeyMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeObjectStorageKeyList{}, mgr.GetScheme())
+	linodeObjectStorageKeyMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodeObjectStorageKeyList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeObjectStorageKeys: %w", err)
 	}
 
 	err = ctrl.NewControllerManagedBy(mgr).
-		For(&infrav1alpha1.LinodeObjectStorageKey{}).
+		For(&infrav1alpha2.LinodeObjectStorageKey{}).
 		WithOptions(options).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(

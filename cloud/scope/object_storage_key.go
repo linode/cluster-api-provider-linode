@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/linodego"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
@@ -22,13 +22,13 @@ import (
 
 type ObjectStorageKeyScopeParams struct {
 	Client K8sClient
-	Key    *infrav1alpha1.LinodeObjectStorageKey
+	Key    *infrav1alpha2.LinodeObjectStorageKey
 	Logger *logr.Logger
 }
 
 type ObjectStorageKeyScope struct {
 	Client       K8sClient
-	Key          *infrav1alpha1.LinodeObjectStorageKey
+	Key          *infrav1alpha2.LinodeObjectStorageKey
 	Logger       logr.Logger
 	LinodeClient LinodeClient
 	PatchHelper  *patch.Helper
@@ -91,7 +91,7 @@ func (s *ObjectStorageKeyScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *ObjectStorageKeyScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.Key, infrav1alpha1.ObjectStorageKeyFinalizer) {
+	if controllerutil.AddFinalizer(s.Key, infrav1alpha2.ObjectStorageKeyFinalizer) {
 		return s.Close(ctx)
 	}
 

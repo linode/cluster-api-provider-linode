@@ -14,7 +14,7 @@ spec:
     singular: linodeobjectstoragekey
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - name: v1alpha2
     schema:
       openAPIV3Schema:
         description: LinodeObjectStorageKey is the Schema for the linodeobjectstoragekeys

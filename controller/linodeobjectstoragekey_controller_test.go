@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/linodego"
