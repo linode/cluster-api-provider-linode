@@ -4,17 +4,40 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
+  labels:
+    clusterctl.cluster.x-k8s.io/move-hierarchy: "true"
   name: linodeobjectstoragekeys.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
+    categories:
+    - cluster-api
     kind: LinodeObjectStorageKey
     listKind: LinodeObjectStorageKeyList
     plural: linodeobjectstoragekeys
+    shortNames:
+    - lobjkey
     singular: linodeobjectstoragekey
   scope: Namespaced
   versions:
-  - name: v1alpha2
+  - additionalPrinterColumns:
+    - description: The ID assigned to the access key
+      jsonPath: .status.accessKeyRef
+      name: ID
+      type: string
+    - description: The label of the access key
+      jsonPath: .metadata.name
+      name: Label
+      type: string
+    - description: The name of the Secret containing access key data
+      jsonPath: .metadata.name
+      name: Secret
+      type: string
+    - description: Whether the access key is synced in the Linode API
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    name: v1alpha2
     schema:
       openAPIV3Schema:
         description: LinodeObjectStorageKey is the Schema for the linodeobjectstoragekeys
@@ -155,7 +178,7 @@ spec:
                 type: string
               keySecretName:
                 description: KeySecretName specifies the name of the Secret containing
-                  the access key.
+                  access key data.
                 type: string
               lastKeyGeneration:
                 description: LastKeyGeneration tracks the last known value of .spec.keyGeneration.

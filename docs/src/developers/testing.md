@@ -236,6 +236,7 @@ There are other selectors you can use to invoke specfic tests. Please look at th
 | Linode Cluster Controller        | `linodecluster` |
 | Linode Machine Controller        | `linodemachine` |
 | Linode Obj Controller            | `linodeobj`     | 
+| Linode Obj Key Controller        | `linodeobjkey`  | 
 | Linode VPC Controller            | `linodevpc`     | 
 
 *Note: For any flavor e2e tests, please set the required env variables*

@@ -21,6 +21,7 @@ rules:
   - secrets
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -123,7 +124,7 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - linodeobjectstoragekey
+  - linodeobjectstoragekeys
   verbs:
   - create
   - delete
@@ -135,13 +136,13 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - linodeobjectstoragekey/finalizers
+  - linodeobjectstoragekeys/finalizers
   verbs:
   - update
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
-  - linodeobjectstoragekey/status
+  - linodeobjectstoragekeys/status
   verbs:
   - get
   - patch

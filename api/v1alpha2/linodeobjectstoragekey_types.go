@@ -36,9 +36,6 @@ type BucketAccessRef struct {
 
 // LinodeObjectStorageKeySpec defines the desired state of LinodeObjectStorageKey
 type LinodeObjectStorageKeySpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// BucketAccess is the list of object storage bucket labels which can be accessed using the key
 	// +kubebuilder:validation:MinItems=1
 	BucketAccess []BucketAccessRef `json:"bucketAccess"`
@@ -61,9 +58,6 @@ type LinodeObjectStorageKeySpec struct {
 
 // LinodeObjectStorageKeyStatus defines the observed state of LinodeObjectStorageKey
 type LinodeObjectStorageKeyStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Ready denotes that the key has been provisioned.
 	// +optional
 	// +kubebuilder:default=false
@@ -87,7 +81,7 @@ type LinodeObjectStorageKeyStatus struct {
 	// +optional
 	LastKeyGeneration *int `json:"lastKeyGeneration,omitempty"`
 
-	// KeySecretName specifies the name of the Secret containing the access key.
+	// KeySecretName specifies the name of the Secret containing access key data.
 	// +optional
 	KeySecretName *string `json:"keySecretName,omitempty"`
 
@@ -97,7 +91,13 @@ type LinodeObjectStorageKeyStatus struct {
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:path=linodeobjectstoragekeys,scope=Namespaced,categories=cluster-api,shortName=lobjkey
 // +kubebuilder:subresource:status
+// +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
+// +kubebuilder:printcolumn:name="ID",type="string",JSONPath=".status.accessKeyRef",description="The ID assigned to the access key"
+// +kubebuilder:printcolumn:name="Label",type="string",JSONPath=".metadata.name",description="The label of the access key"
+// +kubebuilder:printcolumn:name="Secret",type="string",JSONPath=".metadata.name",description="The name of the Secret containing access key data"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Whether the access key is synced in the Linode API"
 
 // LinodeObjectStorageKey is the Schema for the linodeobjectstoragekeys API
 type LinodeObjectStorageKey struct {
