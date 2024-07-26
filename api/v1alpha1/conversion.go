@@ -38,3 +38,8 @@ func Convert_v1alpha2_NetworkSpec_To_v1alpha1_NetworkSpec(in *infrastructurev1al
 	out.NodeBalancerID = in.NodeBalancerID
 	return nil
 }
+
+func Convert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in *infrastructurev1alpha2.LinodeMachineSpec, out *LinodeMachineSpec, s conversion.Scope) error {
+	// Ok to use the auto-generated conversion function, it simply drops the PlacementGroupRef, and copies everything else
+	return autoConvert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in, out, s)
+}
