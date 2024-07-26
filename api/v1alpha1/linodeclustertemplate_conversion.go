@@ -64,7 +64,7 @@ func (dst *LinodeClusterTemplate) ConvertFrom(srcRaw conversion.Hub) error {
 	return nil
 }
 
-// ConvertTo converts this DOClusterList to the Hub version (v1alpha2).
+// ConvertTo converts this LinodeClusterTemplateList to the Hub version (v1alpha2).
 func (src *LinodeClusterTemplateList) ConvertTo(dstRaw conversion.Hub) error {
 	dst, ok := dstRaw.(*infrastructurev1alpha2.LinodeClusterTemplateList)
 	if !ok {

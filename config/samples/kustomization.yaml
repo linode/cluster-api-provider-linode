@@ -10,4 +10,5 @@ resources:
 - infrastructure_v1alpha2_linodemachine.yaml
 - infrastructure_v1alpha2_linodevpc.yaml
 - infrastructure_v1alpha2_linodeclustertemplate.yaml
+- infrastructure_v1alpha2_linodemachinetemplate.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
