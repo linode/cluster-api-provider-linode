@@ -529,8 +529,8 @@ func (in *LinodeObjectStorageKeyStatus) DeepCopyInto(out *LinodeObjectStorageKey
 		*out = new(int)
 		**out = **in
 	}
-	if in.KeySecretName != nil {
-		in, out := &in.KeySecretName, &out.KeySecretName
+	if in.SecretName != nil {
+		in, out := &in.SecretName, &out.SecretName
 		*out = new(string)
 		**out = **in
 	}

@@ -81,9 +81,9 @@ type LinodeObjectStorageKeyStatus struct {
 	// +optional
 	LastKeyGeneration *int `json:"lastKeyGeneration,omitempty"`
 
-	// KeySecretName specifies the name of the Secret containing access key data.
+	// SecretName specifies the name of the Secret containing access key data.
 	// +optional
-	KeySecretName *string `json:"keySecretName,omitempty"`
+	SecretName *string `json:"secretName,omitempty"`
 
 	// AccessKeyRef stores the ID for Object Storage key provisioned.
 	// +optional
@@ -96,7 +96,7 @@ type LinodeObjectStorageKeyStatus struct {
 // +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 // +kubebuilder:printcolumn:name="ID",type="string",JSONPath=".status.accessKeyRef",description="The ID assigned to the access key"
 // +kubebuilder:printcolumn:name="Label",type="string",JSONPath=".metadata.name",description="The label of the access key"
-// +kubebuilder:printcolumn:name="Secret",type="string",JSONPath=".metadata.name",description="The name of the Secret containing access key data"
+// +kubebuilder:printcolumn:name="Secret",type="string",JSONPath=".status.secretName",description="The name of the Secret containing access key data"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Whether the access key is synced in the Linode API"
 
 // LinodeObjectStorageKey is the Schema for the linodeobjectstoragekeys API

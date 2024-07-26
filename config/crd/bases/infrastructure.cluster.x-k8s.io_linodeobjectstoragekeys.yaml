@@ -30,7 +30,7 @@ spec:
       name: Label
       type: string
     - description: The name of the Secret containing access key data
-      jsonPath: .metadata.name
+      jsonPath: .status.secretName
       name: Secret
       type: string
     - description: Whether the access key is synced in the Linode API
@@ -176,10 +176,6 @@ spec:
                   reconciling the Object Storage Key and will contain a verbose string
                   suitable for logging and human consumption.
                 type: string
-              keySecretName:
-                description: KeySecretName specifies the name of the Secret containing
-                  access key data.
-                type: string
               lastKeyGeneration:
                 description: LastKeyGeneration tracks the last known value of .spec.keyGeneration.
                 type: integer
@@ -187,6 +183,10 @@ spec:
                 default: false
                 description: Ready denotes that the key has been provisioned.
                 type: boolean
+              secretName:
+                description: SecretName specifies the name of the Secret containing
+                  access key data.
+                type: string
             type: object
         type: object
     served: true

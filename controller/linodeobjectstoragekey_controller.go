@@ -217,7 +217,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 			return err
 		}
 
-		keyScope.Key.Status.KeySecretName = util.Pointer(secret.Name)
+		keyScope.Key.Status.SecretName = util.Pointer(secret.Name)
 
 		keyScope.Logger.Info(fmt.Sprintf("Secret %s was %s with access key", secret.Name, operation))
 		r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyStored", "Object storage key stored in secret")
@@ -243,21 +243,6 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 	}
 
 	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "KeyRevoked", "Object storage key revoked")
-
-	secret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: keyScope.Key.Namespace,
-			Name:      *keyScope.Key.Status.KeySecretName,
-		},
-	}
-	if err := keyScope.Client.Delete(ctx, &secret); err != nil {
-		keyScope.Logger.Error(err, "failed to delete access key secret")
-		r.setFailure(keyScope, err)
-
-		return err
-	}
-
-	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "SecretDeleted", "Secret deleted")
 
 	if !controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha2.ObjectStorageKeyFinalizer) {
 		err := errors.New("failed to remove finalizer from key; unable to delete")

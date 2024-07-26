@@ -123,7 +123,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 
 					By("secret")
 					var secret corev1.Secret
-					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.KeySecretName}
+					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
 					Expect(string(secret.Data["access_key"])).To(Equal("access-key-1"))
@@ -136,7 +136,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-					Expect(logOutput).To(ContainSubstring("Secret lifecycle-etcd-backup was created with access key"))
+					Expect(logOutput).To(ContainSubstring("Secret %s was created with access key", *key.Status.SecretName))
 				}),
 			),
 		),
@@ -178,7 +178,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 
 					By("secret")
 					var secret corev1.Secret
-					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.KeySecretName}
+					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
 					Expect(string(secret.Data["access_key"])).To(Equal("access-key-2"))
@@ -191,13 +191,13 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-					Expect(logOutput).To(ContainSubstring("Secret lifecycle-etcd-backup was updated with access key"))
+					Expect(logOutput).To(ContainSubstring("Secret %s was updated with access key", *key.Status.SecretName))
 				}),
 			),
 		),
 		Once("secret is deleted", func(ctx context.Context, _ Mock) {
 			var secret corev1.Secret
-			secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.KeySecretName}
+			secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
 			Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, &secret)).To(Succeed())
 		}),
@@ -227,7 +227,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					var secret corev1.Secret
-					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.KeySecretName}
+					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
 					Expect(string(secret.Data["access_key"])).To(Equal("access-key-2"))
@@ -240,7 +240,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-					Expect(logOutput).To(ContainSubstring("Secret lifecycle-etcd-backup was created with access key"))
+					Expect(logOutput).To(ContainSubstring("Secret %s was created with access key", *key.Status.SecretName))
 				}),
 			),
 		),
@@ -293,11 +293,11 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 							Expect(err).NotTo(HaveOccurred())
 
 							var secret corev1.Secret
-							secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.KeySecretName}
+							secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
 							Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 							Expect(secret.Data).To(HaveLen(1))
-							Expect(string(secret.Data["etcd-backup.yaml"])).To(Equal(fmt.Sprintf(scope.BucketKeySecret,
-								"lifecycle-etcd-backup",
+							Expect(string(secret.Data[scope.ClusterResourceSetSecretFilename])).To(Equal(fmt.Sprintf(scope.BucketKeySecret,
+								*key.Status.SecretName,
 								"mybucket",
 								"us-ord",
 								"mybucket.us-ord-1.linodeobjects.com",
@@ -312,7 +312,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 
 							logOutput := mck.Logs()
 							Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-							Expect(logOutput).To(ContainSubstring("Secret lifecycle-etcd-backup was created with access key"))
+							Expect(logOutput).To(ContainSubstring("Secret %s was created with access key", *key.Status.SecretName))
 						}),
 					),
 				),
@@ -339,19 +339,16 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 				Call("(resource is deleted) > key is revoked", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), 2).Return(nil)
 				}),
-				Result("finalizer is removed, secret is deleted", func(ctx context.Context, mck Mock) {
+				Result("finalizer is removed, resource is not found", func(ctx context.Context, mck Mock) {
 					objectKey := client.ObjectKeyFromObject(&key)
 					k8sClient.Get(ctx, objectKey, &key)
 					keyScope.LinodeClient = mck.LinodeClient
 					_, err := reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &key))).To(BeTrue())
-					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.KeySecretName}
-					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, secretKey, &corev1.Secret{}))).To(BeTrue())
 
 					events := mck.Events()
 					Expect(events).To(ContainSubstring("Object storage key revoked"))
-					Expect(events).To(ContainSubstring("Secret deleted"))
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling delete"))
