@@ -95,7 +95,6 @@ type LinodeObjectStorageKeyStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 // +kubebuilder:printcolumn:name="ID",type="string",JSONPath=".status.accessKeyRef",description="The ID assigned to the access key"
-// +kubebuilder:printcolumn:name="Label",type="string",JSONPath=".metadata.name",description="The label of the access key"
 // +kubebuilder:printcolumn:name="Secret",type="string",JSONPath=".status.secretName",description="The name of the Secret containing access key data"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Whether the access key is synced in the Linode API"
 
