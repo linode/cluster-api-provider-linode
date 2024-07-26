@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -63,7 +64,13 @@ func TestConvertVPCTo(t *testing.T) {
 			CredentialsRef: nil,
 		},
 	}
-
+	srcList := &LinodeVPCList{
+		Items: append([]LinodeVPC{}, *src),
+	}
+	expectedDstList := &infrav1alpha2.LinodeVPCList{
+		Items: append([]infrav1alpha2.LinodeVPC{}, *expectedDst),
+	}
+	dstList := &infrav1alpha2.LinodeVPCList{}
 	dst := &infrav1alpha2.LinodeVPC{}
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -77,6 +84,19 @@ func TestConvertVPCTo(t *testing.T) {
 				}),
 				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
 					if diff := cmp.Diff(expectedDst, dst); diff != "" {
+						t.Errorf("ConvertTo() mismatch (-expected +got):\n%s", diff)
+					}
+				}),
+			),
+			Path(
+				Call("convert v1alpha1 list to v1alpha2 list", func(ctx context.Context, mck Mock) {
+					err := srcList.ConvertTo(dstList)
+					if err != nil {
+						t.Fatalf("ConvertTo failed: %v", err)
+					}
+				}),
+				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
+					if diff := cmp.Diff(expectedDstList, dstList); diff != "" {
 						t.Errorf("ConvertTo() mismatch (-expected +got):\n%s", diff)
 					}
 				}),
@@ -118,6 +138,17 @@ func TestConvertVPCFrom(t *testing.T) {
 			CredentialsRef: nil,
 		},
 	}
+
+	srcList := &infrav1alpha2.LinodeVPCList{
+		Items: append([]infrav1alpha2.LinodeVPC{}, *src),
+	}
+	expectedDstList := &LinodeVPCList{
+		Items: append([]LinodeVPC{}, *expectedDst),
+	}
+	if err := utilconversion.MarshalData(src, expectedDst); err != nil {
+		t.Fatalf("ConvertFrom failed: %v", err)
+	}
+	dstList := &LinodeVPCList{}
 	dst := &LinodeVPC{}
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -131,6 +162,19 @@ func TestConvertVPCFrom(t *testing.T) {
 				}),
 				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
 					if diff := cmp.Diff(expectedDst, dst); diff != "" {
+						t.Errorf("ConvertFrom() mismatch (-expected +got):\n%s", diff)
+					}
+				}),
+			),
+			Path(
+				Call("convert v1alpha2 list to v1alpha1 list", func(ctx context.Context, mck Mock) {
+					err := dstList.ConvertFrom(srcList)
+					if err != nil {
+						t.Fatalf("ConvertFrom failed: %v", err)
+					}
+				}),
+				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
+					if diff := cmp.Diff(expectedDstList, dstList); diff != "" {
 						t.Errorf("ConvertFrom() mismatch (-expected +got):\n%s", diff)
 					}
 				}),

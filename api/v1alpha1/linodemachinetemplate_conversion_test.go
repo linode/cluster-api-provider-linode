@@ -128,6 +128,13 @@ func TestLinodeMachineTemplateConvertTo(t *testing.T) {
 			},
 		},
 	}
+	srcList := &LinodeMachineTemplateList{
+		Items: append([]LinodeMachineTemplate{}, *src),
+	}
+	expectedDstList := &infrav1alpha2.LinodeMachineTemplateList{
+		Items: append([]infrav1alpha2.LinodeMachineTemplate{}, *expectedDst),
+	}
+	dstList := &infrav1alpha2.LinodeMachineTemplateList{}
 	dst := &infrav1alpha2.LinodeMachineTemplate{}
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -141,6 +148,19 @@ func TestLinodeMachineTemplateConvertTo(t *testing.T) {
 				}),
 				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
 					if diff := cmp.Diff(expectedDst, dst); diff != "" {
+						t.Errorf("ConvertTo() mismatch (-expected +got):\n%s", diff)
+					}
+				}),
+			),
+			Path(
+				Call("convert v1alpha1 list to v1alpha2 list", func(ctx context.Context, mck Mock) {
+					err := srcList.ConvertTo(dstList)
+					if err != nil {
+						t.Fatalf("ConvertTo failed: %v", err)
+					}
+				}),
+				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
+					if diff := cmp.Diff(expectedDstList, dstList); diff != "" {
 						t.Errorf("ConvertTo() mismatch (-expected +got):\n%s", diff)
 					}
 				}),
@@ -244,9 +264,16 @@ func TestLinodeMachineTemplateConvertFrom(t *testing.T) {
 			},
 		},
 	}
+	srcList := &infrav1alpha2.LinodeMachineTemplateList{
+		Items: append([]infrav1alpha2.LinodeMachineTemplate{}, *src),
+	}
+	expectedDstList := &LinodeMachineTemplateList{
+		Items: append([]LinodeMachineTemplate{}, *expectedDst),
+	}
 	if err := utilconversion.MarshalData(src, expectedDst); err != nil {
 		t.Fatalf("ConvertFrom failed: %v", err)
 	}
+	dstList := &LinodeMachineTemplateList{}
 	dst := &LinodeMachineTemplate{}
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -260,6 +287,19 @@ func TestLinodeMachineTemplateConvertFrom(t *testing.T) {
 				}),
 				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
 					if diff := cmp.Diff(expectedDst, dst); diff != "" {
+						t.Errorf("ConvertFrom() mismatch (-expected +got):\n%s", diff)
+					}
+				}),
+			),
+			Path(
+				Call("convert v1alpha2 list to v1alpha1 list", func(ctx context.Context, mck Mock) {
+					err := dstList.ConvertFrom(srcList)
+					if err != nil {
+						t.Fatalf("ConvertFrom failed: %v", err)
+					}
+				}),
+				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
+					if diff := cmp.Diff(expectedDstList, dstList); diff != "" {
 						t.Errorf("ConvertFrom() mismatch (-expected +got):\n%s", diff)
 					}
 				}),

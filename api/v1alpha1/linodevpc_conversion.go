@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"errors"
 
+	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -31,30 +32,15 @@ func (src *LinodeVPC) ConvertTo(dstRaw conversion.Hub) error {
 		return errors.New("failed to convert LinodeVPC version from v1alpha1 to v1alpha2")
 	}
 
-	// ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
-
-	// Spec
-	dst.Spec.Description = src.Spec.Description
-	dst.Spec.Region = src.Spec.Region
-	if src.Spec.Subnets != nil {
-		dst.Spec.Subnets = []infrastructurev1alpha2.VPCSubnetCreateOptions{}
-		for _, subnet := range src.Spec.Subnets {
-			dst.Spec.Subnets = append(dst.Spec.Subnets, infrastructurev1alpha2.VPCSubnetCreateOptions{
-				Label: subnet.Label,
-				IPv4:  subnet.IPv4,
-			})
-		}
+	if err := Convert_v1alpha1_LinodeVPC_To_v1alpha2_LinodeVPC(src, dst, nil); err != nil {
+		return err
 	}
 
-	dst.Spec.VPCID = src.Spec.VPCID
-	dst.Spec.CredentialsRef = src.Spec.CredentialsRef
-
-	// Status
-	dst.Status.Ready = src.Status.Ready
-	dst.Status.Conditions = src.Status.Conditions
-	dst.Status.FailureMessage = src.Status.FailureMessage
-	dst.Status.FailureReason = (*infrastructurev1alpha2.VPCStatusError)(src.Status.FailureReason)
+	// Manually restore data from annotations
+	restored := &LinodeVPC{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
 
 	return nil
 }
@@ -66,30 +52,32 @@ func (dst *LinodeVPC) ConvertFrom(srcRaw conversion.Hub) error {
 		return errors.New("failed to convert LinodeVPC version from v1alpha2 to v1alpha1")
 	}
 
-	// ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
-
-	// Spec
-	dst.Spec.Description = src.Spec.Description
-	dst.Spec.Region = src.Spec.Region
-	if src.Spec.Subnets != nil {
-		dst.Spec.Subnets = []VPCSubnetCreateOptions{}
-		for _, subnet := range src.Spec.Subnets {
-			dst.Spec.Subnets = append(dst.Spec.Subnets, VPCSubnetCreateOptions{
-				Label: subnet.Label,
-				IPv4:  subnet.IPv4,
-			})
-		}
+	if err := Convert_v1alpha2_LinodeVPC_To_v1alpha1_LinodeVPC(src, dst, nil); err != nil {
+		return err
 	}
 
-	dst.Spec.VPCID = src.Spec.VPCID
-	dst.Spec.CredentialsRef = src.Spec.CredentialsRef
-
-	// Status
-	dst.Status.Ready = src.Status.Ready
-	dst.Status.Conditions = src.Status.Conditions
-	dst.Status.FailureMessage = src.Status.FailureMessage
-	dst.Status.FailureReason = (*VPCStatusError)(src.Status.FailureReason)
+	// Preserve Hub data on down-conversion.
+	if err := utilconversion.MarshalData(src, dst); err != nil {
+		return err
+	}
 
 	return nil
+}
+
+// ConvertTo converts this LinodeVPCList to the Hub version (v1alpha2).
+func (src *LinodeVPCList) ConvertTo(dstRaw conversion.Hub) error {
+	dst, ok := dstRaw.(*infrastructurev1alpha2.LinodeVPCList)
+	if !ok {
+		return errors.New("failed to convert LinodeVPC version from v1alpha1 to v1alpha2")
+	}
+	return Convert_v1alpha1_LinodeVPCList_To_v1alpha2_LinodeVPCList(src, dst, nil)
+}
+
+// ConvertFrom converts from the Hub version (v1alpha2) to this version.
+func (dst *LinodeVPCList) ConvertFrom(srcRaw conversion.Hub) error {
+	src, ok := srcRaw.(*infrastructurev1alpha2.LinodeVPCList)
+	if !ok {
+		return errors.New("failed to convert LinodeVPC version from v1alpha2 to v1alpha1")
+	}
+	return Convert_v1alpha2_LinodeVPCList_To_v1alpha1_LinodeVPCList(src, dst, nil)
 }
