@@ -32,6 +32,8 @@ patches:
 - path: patches/webhook_in_linodemachines.yaml
 - path: patches/webhook_in_linodevpcs.yaml
 - path: patches/webhook_in_linodevpcs.yaml
+- path: patches/webhook_in_linodeclustertemplates.yaml
+- path: patches/webhook_in_linodemachinetemplates.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 - path: patches/capicontract_in_linodeclusters.yaml

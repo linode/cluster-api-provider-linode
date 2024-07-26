@@ -8,6 +8,7 @@ metadata:
   labels:
     all:
     webhook:
+    quick:
 spec:
   bindings:
     # A short identifier for the E2E test run

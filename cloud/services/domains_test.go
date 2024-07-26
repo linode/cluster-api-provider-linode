@@ -545,7 +545,7 @@ func TestAddIPToDNS(t *testing.T) {
 			expectedError: fmt.Errorf("failed to create domain record of type A"),
 		},
 		{
-			name: "Success - If the machine is a control plane node and record already exists, update it",
+			name: "Success - If the machine is a control plane node and record already exists, leave it alone",
 			machineScope: &scope.MachineScope{
 				Machine: &clusterv1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
@@ -611,13 +611,6 @@ func TestAddIPToDNS(t *testing.T) {
 						Name:   "test-cluster",
 						TTLSec: 30,
 					},
-				}, nil).AnyTimes()
-				mockClient.EXPECT().CreateDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-				mockClient.EXPECT().UpdateDomainRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.DomainRecord{
-					ID:     1234,
-					Type:   "A",
-					Name:   "test-cluster",
-					TTLSec: 30,
 				}, nil).AnyTimes()
 			},
 			expectedError: nil,
@@ -685,79 +678,6 @@ func TestAddIPToDNS(t *testing.T) {
 				mockClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("api error")).AnyTimes()
 			},
 			expectedError: fmt.Errorf("api error"),
-		},
-		{
-			name: "Error - UpdateDomainRecord fails",
-			machineScope: &scope.MachineScope{
-				Machine: &clusterv1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-						Labels: map[string]string{
-							clusterv1.MachineControlPlaneLabel: "true",
-						},
-					},
-				},
-				Cluster: &clusterv1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-				},
-				LinodeCluster: &infrav1alpha2.LinodeCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha2.LinodeClusterSpec{
-						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
-						},
-					},
-				},
-				LinodeMachine: &infrav1alpha2.LinodeMachine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-machine",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
-					},
-					Status: infrav1alpha2.LinodeMachineStatus{
-						Addresses: []clusterv1.MachineAddress{
-							{
-								Type:    "ExternalIP",
-								Address: "10.10.10.10",
-							},
-							{
-								Type:    "ExternalIP",
-								Address: "fd00::",
-							},
-						},
-					},
-				},
-			},
-			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{
-					{
-						ID:     1,
-						Domain: "lkedevs.net",
-					},
-				}, nil).AnyTimes()
-				mockClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.DomainRecord{
-					{
-						ID:     1234,
-						Type:   "A",
-						Name:   "test-cluster",
-						TTLSec: 30,
-					},
-				}, nil).AnyTimes()
-				mockClient.EXPECT().CreateDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-				mockClient.EXPECT().UpdateDomainRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed to update domain record of type A")).AnyTimes()
-			},
-			expectedError: fmt.Errorf("failed to update domain record of type A"),
 		},
 		{
 			name: "Error - no public ip set",

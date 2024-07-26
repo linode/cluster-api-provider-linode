@@ -64,17 +64,3 @@ patch: |-
   - op: remove
     path: /spec/template/spec/version
     value:
-# patch: |-
-#  $patch: delete
-#  apiVersion: controlplane.cluster.x-k8s.io/v1beta1
-#  kind: KubeadmControlPlaneTemplate
-#  metadata:
-#    name: kubeadm-control-plane
-#  spec:
-#    machineTemplate:
-#      infrastructureRef:
-#        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
-#        kind: LinodeMachineTemplate
-#        name: ${CLUSTER_NAME}-control-plane
-#    replicas: ${CONTROL_PLANE_MACHINE_COUNT}
-#    version: ${KUBERNETES_VERSION}

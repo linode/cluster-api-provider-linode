@@ -20,7 +20,7 @@ patches:
     options:
       allowNameChange: true
     patch: |-
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
         name: kubeadm-worker
@@ -33,7 +33,7 @@ patches:
     options:
       allowNameChange: true
     patch: |-
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
         name: kubeadm-control-plane
