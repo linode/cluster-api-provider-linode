@@ -18,44 +18,24 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"os"
-	"strings"
-	"sync"
-	"time"
-
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	capi "sigs.k8s.io/cluster-api/api/v1beta1"
-	ctrl "sigs.k8s.io/controller-runtime"
-	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
 	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/controller"
-	"github.com/linode/cluster-api-provider-linode/observability/tracing"
-	"github.com/linode/cluster-api-provider-linode/observability/wrappers/reconciler"
 	"github.com/linode/cluster-api-provider-linode/version"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"os"
+	capi "sigs.k8s.io/cluster-api/api/v1beta1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	_ "go.uber.org/automaxprocs"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	// +kubebuilder:scaffold:imports
-)
-
-var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithName("setup")
 )
 
 const (
@@ -69,55 +49,39 @@ const (
 )
 
 func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(capi.AddToScheme(scheme))
-	utilruntime.Must(infrastructurev1alpha1.AddToScheme(scheme))
-	utilruntime.Must(infrastructurev1alpha2.AddToScheme(scheme))
+	utilruntime.Must(clientgoscheme.AddToScheme(controller.Scheme))
+	utilruntime.Must(capi.AddToScheme(controller.Scheme))
+	utilruntime.Must(infrastructurev1alpha1.AddToScheme(controller.Scheme))
+	utilruntime.Must(infrastructurev1alpha2.AddToScheme(controller.Scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
-	var (
-		// Environment variables
-		linodeToken    = os.Getenv("LINODE_TOKEN")
-		linodeDNSToken = os.Getenv("LINODE_DNS_TOKEN")
-
-		machineWatchFilter             string
-		clusterWatchFilter             string
-		objectStorageBucketWatchFilter string
-		metricsAddr                    string
-		enableLeaderElection           bool
-		probeAddr                      string
-
-		restConfigQPS                        int
-		restConfigBurst                      int
-		linodeClusterConcurrency             int
-		linodeMachineConcurrency             int
-		linodeObjectStorageBucketConcurrency int
-		linodeVPCConcurrency                 int
-		linodePlacementGroupConcurrency      int
-	)
-	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
-	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
-	flag.StringVar(&objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+	CmdConfig := controller.Config{
+		LinodeToken:    os.Getenv("LINODE_TOKEN"),
+		LinodeDNSToken: os.Getenv("LINODE_DNS_TOKEN"),
+	}
+	flag.StringVar(&CmdConfig.MachineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
+	flag.StringVar(&CmdConfig.ClusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
+	flag.StringVar(&CmdConfig.ObjectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
+	flag.StringVar(&CmdConfig.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&CmdConfig.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&CmdConfig.EnableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.IntVar(&restConfigQPS, "kube-api-qps", qpsDefault,
+	flag.IntVar(&CmdConfig.RestConfigQPS, "kube-api-qps", qpsDefault,
 		"Maximum queries per second from the controller client to the Kubernetes API server. Defaults to 20")
-	flag.IntVar(&restConfigBurst, "kube-api-burst", burstDefault,
+	flag.IntVar(&CmdConfig.RestConfigBurst, "kube-api-burst", burstDefault,
 		"Maximum number of queries that should be allowed in one burst from the controller client to the Kubernetes API server. Default 30")
-	flag.IntVar(&linodeClusterConcurrency, "linodecluster-concurrency", concurrencyDefault,
+	flag.IntVar(&CmdConfig.LinodeClusterConcurrency, "linodecluster-concurrency", concurrencyDefault,
 		"Number of LinodeClusters to process simultaneously. Default 10")
-	flag.IntVar(&linodeMachineConcurrency, "linodemachine-concurrency", linodeMachineConcurrencyDefault,
+	flag.IntVar(&CmdConfig.LinodeMachineConcurrency, "linodemachine-concurrency", linodeMachineConcurrencyDefault,
 		"Number of LinodeMachines to process simultaneously. Default 10")
-	flag.IntVar(&linodeObjectStorageBucketConcurrency, "linodeobjectstoragebucket-concurrency", concurrencyDefault,
+	flag.IntVar(&CmdConfig.LinodeObjectStorageBucketConcurrency, "linodeobjectstoragebucket-concurrency", concurrencyDefault,
 		"Number of linodeObjectStorageBuckets to process simultaneously. Default 10")
-	flag.IntVar(&linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault,
+	flag.IntVar(&CmdConfig.LinodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault,
 		"Number of LinodeVPCs to process simultaneously. Default 10")
-	flag.IntVar(&linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault,
+	flag.IntVar(&CmdConfig.LinodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault,
 		"Number of Linode Placement Groups to process simultaneously. Default 10")
 	opts := zap.Options{
 		Development: true,
@@ -126,117 +90,11 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-	setupLog.Info(fmt.Sprintf("CAPL version: %s", version.GetVersion()))
-	// Check environment variables
-	if linodeToken == "" {
-		setupLog.Error(errors.New("failed to get LINODE_TOKEN environment variable"), "unable to start operator")
-		os.Exit(1)
-	}
-	if linodeDNSToken == "" {
-		linodeDNSToken = linodeToken
-	}
+	controller.SetupLog.Info(fmt.Sprintf("CAPL version: %s", version.GetVersion()))
 
-	restConfig := ctrl.GetConfigOrDie()
-	restConfig.QPS = float32(restConfigQPS)
-	restConfig.Burst = restConfigBurst
-	restConfig.UserAgent = fmt.Sprintf("CAPL/%s", version.GetVersion())
-
-	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:                 scheme,
-		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "3cfd31c3.cluster.x-k8s.io",
-		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
-		// when the Manager ends. This requires the binary to immediately end when the
-		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
-		// speeds up voluntary leader transitions as the new leader don't have to wait
-		// LeaseDuration time first.
-		//
-		// In the default scaffold provided, the program ends immediately after
-		// the manager stops, so would be fine to enable this option. However,
-		// if you are doing or is intended to do any operation such as perform cleanups
-		// after the manager stops then its usage might be unsafe.
-		// LeaderElectionReleaseOnCancel: true,
-	})
-	if mgr == nil || err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodeClusterReconciler{
-			Client:           mgr.GetClient(),
-			Recorder:         mgr.GetEventRecorderFor("LinodeClusterReconciler"),
-			WatchFilterValue: clusterWatchFilter,
-			LinodeApiKey:     linodeToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeClusterConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
-		os.Exit(1)
-	}
-
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodeMachineReconciler{
-			Client:           mgr.GetClient(),
-			Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
-			WatchFilterValue: machineWatchFilter,
-			LinodeApiKey:     linodeToken,
-			LinodeDNSAPIKey:  linodeDNSToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
-		os.Exit(1)
-	}
-
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodeVPCReconciler{
-			Client:           mgr.GetClient(),
-			Recorder:         mgr.GetEventRecorderFor("LinodeVPCReconciler"),
-			WatchFilterValue: clusterWatchFilter,
-			LinodeApiKey:     linodeToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeVPCConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
-		os.Exit(1)
-	}
-
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodeObjectStorageBucketReconciler{
-			Client:           mgr.GetClient(),
-			Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-			Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
-			WatchFilterValue: objectStorageBucketWatchFilter,
-			LinodeApiKey:     linodeToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeObjectStorageBucketConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
-		os.Exit(1)
-	}
-
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodePlacementGroupReconciler{
-			Client:           mgr.GetClient(),
-			Recorder:         mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
-			WatchFilterValue: clusterWatchFilter,
-			LinodeApiKey:     linodeToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodePlacementGroupConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodePlacementGroup")
-		os.Exit(1)
-	}
-
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		setupWebhooks(mgr)
-	}
-	// +kubebuilder:scaffold:builder
-
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
+	mgr, err := controller.SetupManagers(CmdConfig)
+	if err != nil {
+		controller.SetupLog.Error(err, "setup-managers")
 		os.Exit(1)
 	}
 
@@ -244,113 +102,15 @@ func main() {
 
 	// closure for mgr.Start, so we defers are running
 	run := func(ctx context.Context) error {
-		o11yShutdown := setupObservabillity(ctx)
+		o11yShutdown := controller.SetupObservability(ctx)
 		defer o11yShutdown()
 
-		setupLog.Info("starting manager")
+		controller.SetupLog.Info("starting manager")
 		return mgr.Start(ctx)
 	}
 
 	if err := run(ctx); err != nil {
-		setupLog.Error(err, "problem running manager")
+		controller.SetupLog.Error(err, "problem running manager")
 		os.Exit(1)
-	}
-}
-
-func setupWebhooks(mgr manager.Manager) {
-	var err error
-	if err = (&infrastructurev1alpha1.LinodeCluster{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha2.LinodeCluster{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha2.LinodeClusterTemplate{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha1.LinodeMachine{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachine")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha2.LinodeMachine{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachine")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha2.LinodeMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha1.LinodeVPC{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeVPC")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha2.LinodeVPC{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeVPC")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha1.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha2.LinodePlacementGroup{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodePlacementGroup")
-		os.Exit(1)
-	}
-}
-
-func setupObservabillity(ctx context.Context) func() {
-	node := os.Getenv(envK8sNodeName)
-	pod := os.Getenv(envK8sPodName)
-
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName(controllerName),
-		semconv.ServiceVersion(version.GetVersion()),
-		semconv.K8SPodName(pod),
-		semconv.K8SNodeName(node),
-	)
-
-	tracingShutdown, err := tracing.Setup(ctx, res)
-	if err != nil {
-		setupLog.Error(err, "failed to setup tracing")
-	}
-
-	attrs := []any{}
-
-	for _, kv := range os.Environ() {
-		k, v, ok := strings.Cut(kv, "=")
-		if ok && strings.HasPrefix(k, "OTEL_") {
-			attrs = append(attrs, k, v)
-		}
-	}
-
-	setupLog.Info("opentelemetry configuration applied",
-		attrs...,
-	)
-
-	return func() {
-		timeout := 25 * time.Second //nolint:mnd // 2.5x default OTLP timeout
-
-		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
-		defer cancel()
-
-		wg := &sync.WaitGroup{}
-
-		if tracingShutdown != nil {
-			wg.Add(1)
-
-			go func() {
-				defer wg.Done()
-
-				if err := tracingShutdown(ctx); err != nil {
-					setupLog.Error(err, "failed to shutdown tracing")
-				}
-			}()
-		}
-
-		wg.Wait()
 	}
 }

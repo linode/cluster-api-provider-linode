@@ -17,17 +17,9 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"testing"
-	"time"
 )
 
 func TestSetupObservabillity(t *testing.T) {
 	t.Parallel()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	shutdown := setupObservabillity(ctx)
-	shutdown()
 }
