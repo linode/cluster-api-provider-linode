@@ -35,15 +35,16 @@ type LinodePlacementGroupSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +kubebuilder:default=true
+	// +kubebuilder:default="strict"
+	// +kubebuilder:validation:Enum=strict;flexible
 	// +optional
-	IsStrict bool `json:"isStrict"`
+	PlacementGroupPolicy string `json:"placementGroupPolicy"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:default="anti_affinity:local"
 	// +kubebuilder:validation:Enum="anti_affinity:local"
 	// +optional
-	AffinityType string `json:"affinityType"`
+	PlacementGroupType string `json:"placementGroupType"`
 	// TODO: add affinity as a type when available
 
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup. If not

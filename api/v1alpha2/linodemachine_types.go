@@ -83,6 +83,11 @@ type LinodeMachineSpec struct {
 	//   3. Controller
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	// PlacementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group.
+	PlacementGroupRef *corev1.ObjectReference `json:"placementGroupRef,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance

@@ -14,7 +14,7 @@ patches:
 
   - target:
       group: infrastructure.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1alpha2
       kind: LinodeMachineTemplate
       name: .*md-0
     options:
@@ -27,7 +27,7 @@ patches:
 
   - target:
       group: infrastructure.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1alpha2
       kind: LinodeMachineTemplate
       name: .*control-plane
     options:

@@ -206,6 +206,11 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 				Namespace: "default",
 				Name:      "cred-secret",
 			},
+			PlacementGroupRef: &corev1.ObjectReference{
+				Kind:      "LinodePlacementGroup",
+				Name:      "test-placement-group",
+				Namespace: "default",
+			},
 		},
 		Status: infrav1alpha2.LinodeMachineStatus{},
 	}

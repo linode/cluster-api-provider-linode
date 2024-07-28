@@ -46,8 +46,9 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 			Namespace: "default",
 		},
 		Spec: infrav1alpha2.LinodePlacementGroupSpec{
-			Region:       "us-ord",
-			AffinityType: "anti_affinity:local",
+			Region:               "us-ord",
+			PlacementGroupType:   "anti_affinity:local",
+			PlacementGroupPolicy: "strict",
 		},
 	}
 
