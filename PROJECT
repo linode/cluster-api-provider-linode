@@ -151,5 +151,6 @@ resources:
   version: v1alpha2
   webhooks:
     conversion: true
+    validation: true
     webhookVersion: v1
 version: "3"

@@ -38,10 +38,10 @@ spec:
             apiVersion: cluster.x-k8s.io/v1beta1
             kind: Cluster
         - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeCluster
         - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeVPC
     - name: Create LinodeMachine resource
       try:
@@ -113,7 +113,7 @@ spec:
               name: ($cluster)
         - delete:
             ref:
-              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
               kind: LinodeVPC
               name: ($vpc)
         - error:

@@ -43,3 +43,21 @@ func Convert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in *infras
 	// Ok to use the auto-generated conversion function, it simply drops the PlacementGroupRef, and copies everything else
 	return autoConvert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in, out, s)
 }
+
+func Convert_v1alpha1_LinodeObjectStorageBucketSpec_To_v1alpha2_LinodeObjectStorageBucketSpec(in *LinodeObjectStorageBucketSpec, out *infrastructurev1alpha2.LinodeObjectStorageBucketSpec, s conversion.Scope) error {
+	// WARNING: in.Cluster requires manual conversion: does not exist in peer-type
+	out.Region = in.Cluster
+	out.CredentialsRef = in.CredentialsRef
+	out.KeyGeneration = in.KeyGeneration
+	out.SecretType = in.SecretType
+	return nil
+}
+
+func Convert_v1alpha2_LinodeObjectStorageBucketSpec_To_v1alpha1_LinodeObjectStorageBucketSpec(in *infrastructurev1alpha2.LinodeObjectStorageBucketSpec, out *LinodeObjectStorageBucketSpec, s conversion.Scope) error {
+	// WARNING: in.Region requires manual conversion: does not exist in peer-type
+	out.Cluster = in.Region + "-1"
+	out.CredentialsRef = in.CredentialsRef
+	out.KeyGeneration = in.KeyGeneration
+	out.SecretType = in.SecretType
+	return nil
+}

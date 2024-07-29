@@ -262,7 +262,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
 	linodeObjectStorageBucketMapper, err := kutil.ClusterToTypedObjectsMapper(
-		r.TracedClient(), 
+		r.TracedClient(),
 		&infrav1alpha2.LinodeObjectStorageBucketList{},
 		mgr.GetScheme(),
 	)

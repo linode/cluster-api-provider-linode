@@ -222,13 +222,6 @@ spec:
             description: LinodeObjectStorageBucketSpec defines the desired state of
               LinodeObjectStorageBucket
             properties:
-              cluster:
-                description: Cluster is the ID of the Object Storage cluster for the
-                  bucket.
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               credentialsRef:
                 description: |-
                   CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.

@@ -31,6 +31,10 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
+const (
+	ConversionDataAnnotation = "cluster.x-k8s.io/conversion-data"
+)
+
 func TestLinodeObjectStorageBucketConvertTo(t *testing.T) {
 	t.Parallel()
 
@@ -50,7 +54,7 @@ func TestLinodeObjectStorageBucketConvertTo(t *testing.T) {
 	expectedDst := &infrav1alpha2.LinodeObjectStorageBucket{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-bucket"},
 		Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
-			Region: "us-mia",
+			Region: "us-mia-1",
 			CredentialsRef: &corev1.SecretReference{
 				Namespace: "default",
 				Name:      "cred-secret",
@@ -81,7 +85,7 @@ func TestLinodeObjectStorageBucketConvertTo(t *testing.T) {
 	)
 }
 
-func TestLLinodeObjectStorageBucketFrom(t *testing.T) {
+func TestLinodeObjectStorageBucketFrom(t *testing.T) {
 	t.Parallel()
 
 	src := &infrav1alpha2.LinodeObjectStorageBucket{
@@ -98,7 +102,12 @@ func TestLLinodeObjectStorageBucketFrom(t *testing.T) {
 		Status: infrav1alpha2.LinodeObjectStorageBucketStatus{},
 	}
 	expectedDst := &LinodeObjectStorageBucket{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-bucket"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-bucket",
+			Annotations: map[string]string{
+				ConversionDataAnnotation: `{"spec":{"credentialsRef":{"name":"cred-secret","namespace":"default"},"keyGeneration":1,"region":"us-mia","secretType":"Opaque"},"status":{"ready":false}}`,
+			},
+		},
 		Spec: LinodeObjectStorageBucketSpec{
 			Cluster: "us-mia-1",
 			CredentialsRef: &corev1.SecretReference{

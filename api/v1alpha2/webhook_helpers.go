@@ -87,8 +87,9 @@ func validateObjectStorageRegion(ctx context.Context, client LinodeClient, id st
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 
 	cexp := regexp.MustCompile("^(([[:lower:]]+-)*[[:lower:]]+)$")
-	if !cexp.MatchString(id) {
-		return field.Invalid(path, id, "must be in form: region_id")
+	cexp1 := regexp.MustCompile("^(([[:lower:]]+-)*[[:lower:]]+)-[[:digit:]]+$")
+	if !cexp.MatchString(id) && !cexp1.MatchString(id) {
+		return field.Invalid(path, id, "must be in form: region_id or region_id-ordinal")
 	}
 
 	region := cexp.FindStringSubmatch(id)[1]

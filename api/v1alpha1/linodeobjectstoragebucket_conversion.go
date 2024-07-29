@@ -18,8 +18,8 @@ package v1alpha1
 
 import (
 	"errors"
-	"regexp"
 
+	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -32,26 +32,15 @@ func (src *LinodeObjectStorageBucket) ConvertTo(dstRaw conversion.Hub) error {
 		return errors.New("failed to convert LinodeObjectStorageBucket version from v1alpha1 to v1alpha2")
 	}
 
-	// ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
+	if err := Convert_v1alpha1_LinodeObjectStorageBucket_To_v1alpha2_LinodeObjectStorageBucket(src, dst, nil); err != nil {
+		return err
+	}
 
-	cexp := regexp.MustCompile(`^(([[:lower:]]+-)*[[:lower:]]+)-\d+$`)
-
-	// Spec
-	dst.Spec.Region = cexp.FindStringSubmatch(src.Spec.Cluster)[1]
-	dst.Spec.CredentialsRef = src.Spec.CredentialsRef
-	dst.Spec.KeyGeneration = src.Spec.KeyGeneration
-	dst.Spec.SecretType = src.Spec.SecretType
-
-	// Status
-	dst.Status.Ready = src.Status.Ready
-	dst.Status.Conditions = src.Status.Conditions
-	dst.Status.FailureMessage = src.Status.FailureMessage
-	dst.Status.Hostname = src.Status.Hostname
-	dst.Status.CreationTime = src.Status.CreationTime
-	dst.Status.LastKeyGeneration = src.Status.LastKeyGeneration
-	dst.Status.KeySecretName = src.Status.KeySecretName
-	dst.Status.AccessKeyRefs = src.Status.AccessKeyRefs
+	// Manually restore data from annotations
+	restored := &LinodeObjectStorageBucket{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
 
 	return nil
 }
@@ -63,24 +52,14 @@ func (dst *LinodeObjectStorageBucket) ConvertFrom(srcRaw conversion.Hub) error {
 		return errors.New("failed to convert LinodeObjectStorageBucket version from v1alpha2 to v1alpha1")
 	}
 
-	// ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
+	if err := Convert_v1alpha2_LinodeObjectStorageBucket_To_v1alpha1_LinodeObjectStorageBucket(src, dst, nil); err != nil {
+		return err
+	}
 
-	// Spec
-	dst.Spec.Cluster = src.Spec.Region + "-1"
-	dst.Spec.CredentialsRef = src.Spec.CredentialsRef
-	dst.Spec.KeyGeneration = src.Spec.KeyGeneration
-	dst.Spec.SecretType = src.Spec.SecretType
-
-	// Status
-	dst.Status.Ready = src.Status.Ready
-	dst.Status.Conditions = src.Status.Conditions
-	dst.Status.FailureMessage = src.Status.FailureMessage
-	dst.Status.Hostname = src.Status.Hostname
-	dst.Status.CreationTime = src.Status.CreationTime
-	dst.Status.LastKeyGeneration = src.Status.LastKeyGeneration
-	dst.Status.KeySecretName = src.Status.KeySecretName
-	dst.Status.AccessKeyRefs = src.Status.AccessKeyRefs
+	// Preserve Hub data on down-conversion.
+	if err := utilconversion.MarshalData(src, dst); err != nil {
+		return err
+	}
 
 	return nil
 }

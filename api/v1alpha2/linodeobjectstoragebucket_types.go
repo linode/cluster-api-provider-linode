@@ -37,11 +37,6 @@ type LinodeObjectStorageBucketSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
 
-	// Cluster is the ID of the Object Storage cluster for the bucket.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	Cluster string `json:"cluster,omitempty"`
-
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
 	// If not supplied then the credentials of the controller will be used.
 	// +optional
