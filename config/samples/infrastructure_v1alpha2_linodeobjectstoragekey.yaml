@@ -1,4 +1,4 @@
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeObjectStorageKey
 metadata:
   labels:
@@ -6,4 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: linodeobjectstoragekey-sample
 spec:
-  # TODO(user): Add fields here
+  bucketAccess:
+    - bucketName: linodeobjectstoragebucket-sample
+      permissions: read_only
+      region: us-ord

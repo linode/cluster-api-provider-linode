@@ -149,5 +149,5 @@ resources:
   group: infrastructure
   kind: LinodeObjectStorageKey
   path: github.com/linode/cluster-api-provider-linode/api/v1alpha1
-  version: v1alpha1
+  version: v1alpha2
 version: "3"
