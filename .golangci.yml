@@ -207,6 +207,10 @@ issues:
         - gosec
         - exportloopref
         - unparam
+    # conversion files rely on largely generated code so are very similar
+    - path: _conversion\.go
+      linters:
+        - dupl
 
     # Ease some gocritic warnings on test files.
     - path: _test\.go

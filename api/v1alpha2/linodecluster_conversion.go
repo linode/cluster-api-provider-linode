@@ -18,3 +18,6 @@ package v1alpha2
 
 // Hub marks LinodeCluster as a conversion hub.
 func (*LinodeCluster) Hub() {}
+
+// Hub marks LinodeClusterList as a conversion hub.
+func (*LinodeClusterList) Hub() {}

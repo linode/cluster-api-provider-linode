@@ -1,6 +1,6 @@
 ---
 kind: LinodeMachineTemplate
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 metadata:
   name: ${CLUSTER_NAME}-control-plane
 spec:
@@ -15,7 +15,7 @@ spec:
       # uncomment to include your ssh key in linode provisioning
       # - ${LINODE_SSH_PUBKEY}
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
   name: ${CLUSTER_NAME}-md-0

@@ -4,10 +4,10 @@ kind: Test
 metadata:
   name: minimal-linodeplacementgroup
   # Label to trigger the test on every PR
-  # labels:
-  #   # all:
-  #   # quick:
-  #   # linodeplacementgroup:
+  labels:
+    all:
+    quick:
+    linodeplacementgroup:
 spec:
   bindings:
     # A short identifier for the E2E test run

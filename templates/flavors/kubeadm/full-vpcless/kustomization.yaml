@@ -113,11 +113,11 @@ patches:
           cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: ${WORKER_MACHINE_MAX:-"10"}
   - target:
       group: infrastructure.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1alpha2
       kind: LinodeMachineTemplate
       name: .*-control-plane
     patch: |-
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
         name: ${CLUSTER_NAME}-control-plane

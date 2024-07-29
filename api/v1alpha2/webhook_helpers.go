@@ -26,6 +26,7 @@ import (
 
 	"github.com/linode/linodego"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/ptr"
 
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
 
@@ -39,14 +40,11 @@ const (
 	defaultClientTimeout = time.Second * 10
 )
 
-func mkptr[T any](v T) *T {
-	return &v
-}
-
 var (
 	// defaultLinodeClient is an unauthenticated Linode client
 	defaultLinodeClient = linodeclient.NewLinodeClientWithTracing(
-		mkptr(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
+		ptr.To(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
+		linodeclient.DefaultDecorator(),
 	)
 )
 

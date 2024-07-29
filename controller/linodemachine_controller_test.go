@@ -1094,3 +1094,163 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 		),
 	)
 })
+
+var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup"), func() {
+	var machine clusterv1.Machine
+	var linodeMachine infrav1alpha2.LinodeMachine
+	var secret corev1.Secret
+	var reconciler *LinodeMachineReconciler
+	var lpgReconciler *LinodePlacementGroupReconciler
+	var linodePlacementGroup infrav1alpha2.LinodePlacementGroup
+
+	var mockCtrl *gomock.Controller
+	var testLogs *bytes.Buffer
+	var logger logr.Logger
+
+	cluster := clusterv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mock",
+			Namespace: defaultNamespace,
+		},
+	}
+
+	linodeCluster := infrav1alpha2.LinodeCluster{
+		Spec: infrav1alpha2.LinodeClusterSpec{
+			Region: "us-ord",
+			Network: infrav1alpha2.NetworkSpec{
+				LoadBalancerType:    "dns",
+				DNSRootDomain:       "lkedevs.net",
+				DNSUniqueIdentifier: "abc123",
+				DNSTTLSec:           30,
+			},
+		},
+	}
+
+	recorder := record.NewFakeRecorder(10)
+
+	BeforeEach(func(ctx SpecContext) {
+		secret = corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bootstrap-secret",
+				Namespace: defaultNamespace,
+			},
+			Data: map[string][]byte{
+				"value": []byte("userdata"),
+			},
+		}
+		Expect(k8sClient.Create(ctx, &secret)).To(Succeed())
+
+		machine = clusterv1.Machine{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: defaultNamespace,
+				Labels:    make(map[string]string),
+			},
+			Spec: clusterv1.MachineSpec{
+				Bootstrap: clusterv1.Bootstrap{
+					DataSecretName: ptr.To("bootstrap-secret"),
+				},
+			},
+		}
+
+		linodePlacementGroup = infrav1alpha2.LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-pg",
+				Namespace: defaultNamespace,
+				UID:       "5123122",
+			},
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
+				PGID:                 ptr.To(1),
+				Region:               "us-ord",
+				PlacementGroupPolicy: "strict",
+				PlacementGroupType:   "anti_affinity:local",
+			},
+			Status: infrav1alpha2.LinodePlacementGroupStatus{
+				Ready: true,
+			},
+		}
+		Expect(k8sClient.Create(ctx, &linodePlacementGroup)).To(Succeed())
+
+		linodeMachine = infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mock",
+				Namespace: defaultNamespace,
+				UID:       "12345",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				InstanceID: ptr.To(0),
+				Type:       "g6-nanode-1",
+				Image:      rutil.DefaultMachineControllerLinodeImage,
+				PlacementGroupRef: &corev1.ObjectReference{
+					Namespace: defaultNamespace,
+					Name:      "test-pg",
+				},
+			},
+		}
+
+		lpgReconciler = &LinodePlacementGroupReconciler{
+			Recorder: recorder,
+			Client:   k8sClient,
+		}
+
+		reconciler = &LinodeMachineReconciler{
+			Recorder: recorder,
+			Client:   k8sClient,
+		}
+
+		mockCtrl = gomock.NewController(GinkgoT())
+		testLogs = &bytes.Buffer{}
+		logger = zap.New(
+			zap.WriteTo(GinkgoWriter),
+			zap.WriteTo(testLogs),
+			zap.UseDevMode(true),
+		)
+	})
+
+	AfterEach(func(ctx SpecContext) {
+		Expect(k8sClient.Delete(ctx, &secret)).To(Succeed())
+
+		mockCtrl.Finish()
+		for len(recorder.Events) > 0 {
+			<-recorder.Events
+		}
+	})
+
+	It("creates a instance in a PlacementGroup", func(ctx SpecContext) {
+		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+		getRegion := mockLinodeClient.EXPECT().
+			GetRegion(ctx, gomock.Any()).
+			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, infrav1alpha2.LinodePlacementGroupCapability}}, nil)
+		mockLinodeClient.EXPECT().
+			GetImage(ctx, gomock.Any()).
+			After(getRegion).
+			Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+
+		helper, err := patch.NewHelper(&linodePlacementGroup, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = lpgReconciler.reconcile(ctx, logger, &scope.PlacementGroupScope{
+			PatchHelper:          helper,
+			Client:               k8sClient,
+			LinodeClient:         mockLinodeClient,
+			LinodePlacementGroup: &linodePlacementGroup,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+
+		mScope := scope.MachineScope{
+			Client:              k8sClient,
+			LinodeClient:        mockLinodeClient,
+			LinodeDomainsClient: mockLinodeClient,
+			Cluster:             &cluster,
+			Machine:             &machine,
+			LinodeCluster:       &linodeCluster,
+			LinodeMachine:       &linodeMachine,
+		}
+
+		createOpts, err := reconciler.newCreateConfig(ctx, &mScope, []string{}, logger)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(createOpts).NotTo(BeNil())
+		Expect(createOpts.PlacementGroup.ID).To(Equal(1))
+	})
+
+})

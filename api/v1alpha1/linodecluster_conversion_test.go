@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -31,7 +32,7 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
-func TestConvertTo(t *testing.T) {
+func TestConvertLinodeClusterTo(t *testing.T) {
 	t.Parallel()
 
 	src := &LinodeCluster{
@@ -65,6 +66,13 @@ func TestConvertTo(t *testing.T) {
 			Region:               "test-region",
 		},
 	}
+	srcList := &LinodeClusterList{
+		Items: append([]LinodeCluster{}, *src),
+	}
+	expectedDstList := &infrav1alpha2.LinodeClusterList{
+		Items: append([]infrav1alpha2.LinodeCluster{}, *expectedDst),
+	}
+	dstList := &infrav1alpha2.LinodeClusterList{}
 	dst := &infrav1alpha2.LinodeCluster{}
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -82,11 +90,24 @@ func TestConvertTo(t *testing.T) {
 					}
 				}),
 			),
+			Path(
+				Call("convert v1alpha1 list to v1alpha2 list", func(ctx context.Context, mck Mock) {
+					err := srcList.ConvertTo(dstList)
+					if err != nil {
+						t.Fatalf("ConvertTo failed: %v", err)
+					}
+				}),
+				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
+					if diff := cmp.Diff(expectedDstList, dstList); diff != "" {
+						t.Errorf("ConvertTo() mismatch (-expected +got):\n%s", diff)
+					}
+				}),
+			),
 		),
 	)
 }
 
-func TestConvertFrom(t *testing.T) {
+func TestConvertLinodeClusterFrom(t *testing.T) {
 	t.Parallel()
 
 	src := &infrav1alpha2.LinodeCluster{
@@ -125,6 +146,17 @@ func TestConvertFrom(t *testing.T) {
 			Region:               "test-region",
 		},
 	}
+
+	srcList := &infrav1alpha2.LinodeClusterList{
+		Items: append([]infrav1alpha2.LinodeCluster{}, *src),
+	}
+	expectedDstList := &LinodeClusterList{
+		Items: append([]LinodeCluster{}, *expectedDst),
+	}
+	if err := utilconversion.MarshalData(src, expectedDst); err != nil {
+		t.Fatalf("ConvertFrom failed: %v", err)
+	}
+	dstList := &LinodeClusterList{}
 	dst := &LinodeCluster{}
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -138,6 +170,19 @@ func TestConvertFrom(t *testing.T) {
 				}),
 				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
 					if diff := cmp.Diff(expectedDst, dst); diff != "" {
+						t.Errorf("ConvertFrom() mismatch (-expected +got):\n%s", diff)
+					}
+				}),
+			),
+			Path(
+				Call("convert v1alpha2 list to v1alpha1 list", func(ctx context.Context, mck Mock) {
+					err := dstList.ConvertFrom(srcList)
+					if err != nil {
+						t.Fatalf("ConvertFrom failed: %v", err)
+					}
+				}),
+				Result("conversion succeeded", func(ctx context.Context, mck Mock) {
+					if diff := cmp.Diff(expectedDstList, dstList); diff != "" {
 						t.Errorf("ConvertFrom() mismatch (-expected +got):\n%s", diff)
 					}
 				}),

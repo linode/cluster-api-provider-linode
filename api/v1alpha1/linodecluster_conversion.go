@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"errors"
 
+	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -31,27 +32,15 @@ func (src *LinodeCluster) ConvertTo(dstRaw conversion.Hub) error {
 		return errors.New("failed to convert LinodeCluster version from v1alpha1 to v1alpha2")
 	}
 
-	// ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
-
-	// Spec
-	dst.Spec.Network = infrastructurev1alpha2.NetworkSpec{
-		LoadBalancerType:              src.Spec.Network.LoadBalancerType,
-		ApiserverLoadBalancerPort:     src.Spec.Network.LoadBalancerPort,
-		NodeBalancerID:                src.Spec.Network.NodeBalancerID,
-		ApiserverNodeBalancerConfigID: src.Spec.Network.NodeBalancerConfigID,
-		AdditionalPorts:               make([]infrastructurev1alpha2.LinodeNBPortConfig, 0),
+	if err := Convert_v1alpha1_LinodeCluster_To_v1alpha2_LinodeCluster(src, dst, nil); err != nil {
+		return err
 	}
-	dst.Spec.ControlPlaneEndpoint = src.Spec.ControlPlaneEndpoint
-	dst.Spec.Region = src.Spec.Region
-	dst.Spec.VPCRef = src.Spec.VPCRef
-	dst.Spec.CredentialsRef = src.Spec.CredentialsRef
 
-	// Status
-	dst.Status.Ready = src.Status.Ready
-	dst.Status.Conditions = src.Status.Conditions
-	dst.Status.FailureMessage = src.Status.FailureMessage
-	dst.Status.FailureReason = src.Status.FailureReason
+	// Manually restore data from annotations
+	restored := &LinodeCluster{}
+	if ok, err := utilconversion.UnmarshalData(src, restored); err != nil || !ok {
+		return err
+	}
 
 	return nil
 }
@@ -63,24 +52,32 @@ func (dst *LinodeCluster) ConvertFrom(srcRaw conversion.Hub) error {
 		return errors.New("failed to convert LinodeCluster version from v1alpha2 to v1alpha1")
 	}
 
-	// ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
+	if err := Convert_v1alpha2_LinodeCluster_To_v1alpha1_LinodeCluster(src, dst, nil); err != nil {
+		return err
+	}
 
-	// Spec
-	dst.Spec.Network.LoadBalancerPort = src.Spec.Network.ApiserverLoadBalancerPort
-	dst.Spec.Network.LoadBalancerType = src.Spec.Network.LoadBalancerType
-	dst.Spec.Network.NodeBalancerID = src.Spec.Network.NodeBalancerID
-	dst.Spec.Network.NodeBalancerConfigID = src.Spec.Network.ApiserverNodeBalancerConfigID
-	dst.Spec.ControlPlaneEndpoint = src.Spec.ControlPlaneEndpoint
-	dst.Spec.Region = src.Spec.Region
-	dst.Spec.VPCRef = src.Spec.VPCRef
-	dst.Spec.CredentialsRef = src.Spec.CredentialsRef
-
-	// Status
-	dst.Status.Ready = src.Status.Ready
-	dst.Status.Conditions = src.Status.Conditions
-	dst.Status.FailureMessage = src.Status.FailureMessage
-	dst.Status.FailureReason = src.Status.FailureReason
+	// Preserve Hub data on down-conversion.
+	if err := utilconversion.MarshalData(src, dst); err != nil {
+		return err
+	}
 
 	return nil
+}
+
+// ConvertTo converts this LinodeClusterList to the Hub version (v1alpha2).
+func (src *LinodeClusterList) ConvertTo(dstRaw conversion.Hub) error {
+	dst, ok := dstRaw.(*infrastructurev1alpha2.LinodeClusterList)
+	if !ok {
+		return errors.New("failed to convert LinodeCluster version from v1alpha1 to v1alpha2")
+	}
+	return Convert_v1alpha1_LinodeClusterList_To_v1alpha2_LinodeClusterList(src, dst, nil)
+}
+
+// ConvertFrom converts from the Hub version (v1alpha2) to this version.
+func (dst *LinodeClusterList) ConvertFrom(srcRaw conversion.Hub) error {
+	src, ok := srcRaw.(*infrastructurev1alpha2.LinodeClusterList)
+	if !ok {
+		return errors.New("failed to convert LinodeCluster version from v1alpha2 to v1alpha1")
+	}
+	return Convert_v1alpha2_LinodeClusterList_To_v1alpha1_LinodeClusterList(src, dst, nil)
 }
