@@ -56,7 +56,6 @@ import (
 
 const (
 	linodeBusyCode        = 400
-	linodeTooManyRequests = 429
 	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
@@ -262,6 +261,16 @@ func (r *LinodeMachineReconciler) reconcile(
 	return
 }
 
+func retryIfTransient(err error) (ctrl.Result, error) {
+	if util.IsTransientError(err) {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+	} else if util.IsRetryableLinodeError(err) {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerLinodeErrorRetryDelay}, nil
+	}
+
+	return ctrl.Result{}, err
+}
+
 func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
@@ -302,17 +311,13 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
-			if util.IsTransientError(err) {
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-			}
-
-			return ctrl.Result{}, err
+			return retryIfTransient(err)
 		}
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil {
-			if linodego.ErrHasStatus(err, linodeTooManyRequests) || linodego.ErrHasStatus(err, linodego.ErrorFromError) {
+			if util.IsRetryableLinodeError(err) {
 				logger.Error(err, "Failed to create Linode instance due to API error, requeing")
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerLinodeErrorRetryDelay}, nil
 			}
 			logger.Error(err, "Failed to create Linode machine instance")
 
@@ -362,11 +367,12 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		instanceConfig, err := r.getDefaultInstanceConfig(ctx, machineScope, linodeInstance.ID)
 		if err != nil {
 			logger.Error(err, "Failed to get default instance configuration")
-			return ctrl.Result{}, err
+			return retryIfTransient(err)
 		}
 
 		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, linodeInstance.ID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Kernel: machineScope.LinodeMachine.Spec.Configuration.Kernel}); err != nil {
-			return ctrl.Result{}, err
+			logger.Error(err, "Failed to update default instance configuration")
+			return retryIfTransient(err)
 		}
 	}
 
