@@ -108,6 +108,17 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
 	}
 
+	if machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
+		pgID, err := r.getPlacementGroupID(ctx, machineScope, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get Placement Group config")
+			return nil, err
+		}
+		createConfig.PlacementGroup = &linodego.InstanceCreatePlacementGroupOptions{
+			ID: pgID,
+		}
+	}
+
 	return createConfig, nil
 }
 
@@ -169,7 +180,7 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 }
 
 func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
-	machine, err := kutil.GetOwnerMachine(ctx, r.Client, linodeMachine.ObjectMeta)
+	machine, err := kutil.GetOwnerMachine(ctx, r.TracedClient(), linodeMachine.ObjectMeta)
 	if err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch owner machine")
@@ -201,7 +212,7 @@ func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMac
 }
 
 func (r *LinodeMachineReconciler) getClusterFromMetadata(ctx context.Context, machine clusterv1.Machine, log logr.Logger) (*clusterv1.Cluster, error) {
-	cluster, err := kutil.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
+	cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), machine.ObjectMeta)
 	if err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch cluster by label")
@@ -243,7 +254,7 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 			return nil
 		}
 
-		cluster, err := kutil.GetOwnerCluster(ctx, r.Client, linodeCluster.ObjectMeta)
+		cluster, err := kutil.GetOwnerCluster(ctx, r.TracedClient(), linodeCluster.ObjectMeta)
 		switch {
 		case apierrors.IsNotFound(err) || cluster == nil:
 			logger.Info("Cluster for LinodeCluster not found, skipping mapping")
@@ -270,7 +281,7 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 	labels := map[string]string{clusterv1.ClusterNameLabel: name}
 
 	machineList := clusterv1.MachineList{}
-	if err := r.Client.List(ctx, &machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+	if err := r.TracedClient().List(ctx, &machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		return nil, err
 	}
 
@@ -294,6 +305,34 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 	}
 
 	return result, nil
+}
+
+func (r *LinodeMachineReconciler) getPlacementGroupID(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (int, error) {
+	name := machineScope.LinodeMachine.Spec.PlacementGroupRef.Name
+	namespace := machineScope.LinodeMachine.Spec.PlacementGroupRef.Namespace
+	if namespace == "" {
+		namespace = machineScope.LinodeMachine.Namespace
+	}
+
+	logger = logger.WithValues("placementGroupName", name, "placementGroupNamespace", namespace)
+
+	linodePlacementGroup := infrav1alpha2.LinodePlacementGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	objectKey := client.ObjectKeyFromObject(&linodePlacementGroup)
+	err := r.Get(ctx, objectKey, &linodePlacementGroup)
+	if err != nil {
+		logger.Error(err, "Failed to fetch LinodePlacementGroup")
+		return -1, err
+	} else if !linodePlacementGroup.Status.Ready || linodePlacementGroup.Spec.PGID == nil {
+		logger.Info("LinodePlacementGroup is not ready")
+		return -1, errors.New("placement group is not ready")
+	}
+
+	return *linodePlacementGroup.Spec.PGID, nil
 }
 
 func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {

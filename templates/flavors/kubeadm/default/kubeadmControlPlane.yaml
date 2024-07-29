@@ -8,7 +8,7 @@ spec:
   machineTemplate:
     infrastructureRef:
       kind: LinodeMachineTemplate
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       name: ${CLUSTER_NAME}-control-plane
   kubeadmConfigSpec:
     preKubeadmCommands:

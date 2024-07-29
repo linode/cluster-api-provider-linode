@@ -22,6 +22,10 @@ resources:
 # if you do not want those helpers be installed with your Project.
 - linodeobjectstoragekey_editor_role.yaml
 - linodeobjectstoragekey_viewer_role.yaml
+- linodemachinetemplate_editor_role.yaml
+- linodemachinetemplate_viewer_role.yaml
+- linodeclustertemplate_editor_role.yaml
+- linodeclustertemplate_viewer_role.yaml
 - linodevpc_editor_role.yaml
 - linodevpc_viewer_role.yaml
 - linodemachine_editor_role.yaml

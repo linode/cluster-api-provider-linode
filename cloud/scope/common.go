@@ -67,6 +67,7 @@ func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (L
 
 	return linodeclient.NewLinodeClientWithTracing(
 		&linodeClient,
+		linodeclient.DefaultDecorator(),
 	), nil
 }
 

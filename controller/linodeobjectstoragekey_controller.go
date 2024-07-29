@@ -44,6 +44,8 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
+	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
+	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 	"github.com/linode/linodego"
@@ -82,8 +84,10 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 
 	logger := r.Logger.WithValues("name", req.NamespacedName.String())
 
+	tracedClient := r.TracedClient()
+
 	objectStorageKey := &infrav1alpha2.LinodeObjectStorageKey{}
-	if err := r.Client.Get(ctx, req.NamespacedName, objectStorageKey); err != nil {
+	if err := tracedClient.Get(ctx, req.NamespacedName, objectStorageKey); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			logger.Error(err, "Failed to fetch LinodeObjectStorageKey", "name", req.NamespacedName.String())
 		}
@@ -95,7 +99,7 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 		ctx,
 		r.LinodeApiKey,
 		scope.ObjectStorageKeyScopeParams{
-			Client: r.Client,
+			Client: tracedClient,
 			Key:    objectStorageKey,
 			Logger: &logger,
 		},
@@ -261,7 +265,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeObjectStorageKeyMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodeObjectStorageKeyList{}, mgr.GetScheme())
+	linodeObjectStorageKeyMapper, err := kutil.ClusterToTypedObjectsMapper(r.TracedClient(), &infrav1alpha2.LinodeObjectStorageKeyList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeObjectStorageKeys: %w", err)
 	}
@@ -278,10 +282,14 @@ func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, op
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeObjectStorageKeyMapper),
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
-		).Complete(r)
+		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
 	return nil
+}
+
+func (r *LinodeObjectStorageKeyReconciler) TracedClient() client.Client {
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
 }

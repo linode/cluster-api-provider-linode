@@ -18,3 +18,6 @@ package v1alpha2
 
 // Hub marks LinodeMachine as a conversion hub.
 func (*LinodeMachine) Hub() {}
+
+// Hub marks LinodeMachineList as a conversion hub.
+func (*LinodeMachineList) Hub() {}

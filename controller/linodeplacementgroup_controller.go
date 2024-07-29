@@ -45,6 +45,8 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
+	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -76,7 +78,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 	log := ctrl.LoggerFrom(ctx).WithName("LinodePlacementGroupReconciler").WithValues("name", req.NamespacedName.String())
 
 	linodeplacementgroup := &infrav1alpha2.LinodePlacementGroup{}
-	if err := r.Client.Get(ctx, req.NamespacedName, linodeplacementgroup); err != nil {
+	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeplacementgroup); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch LinodePlacementGroup")
 		}
@@ -88,7 +90,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 		ctx,
 		r.LinodeApiKey,
 		scope.PlacementGroupScopeParams{
-			Client:               r.Client,
+			Client:               r.TracedClient(),
 			LinodePlacementGroup: linodeplacementgroup,
 		},
 	)
@@ -291,7 +293,11 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 //
 //nolint:dupl // this is same as Placement Group, worth making generic later.
 func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodePlacementGroupMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodePlacementGroupList{}, mgr.GetScheme())
+	linodePlacementGroupMapper, err := kutil.ClusterToTypedObjectsMapper(
+		r.TracedClient(),
+		&infrav1alpha2.LinodePlacementGroupList{},
+		mgr.GetScheme(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodePlacementGroups: %w", err)
 	}
@@ -312,10 +318,14 @@ func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, opti
 		&clusterv1.Cluster{},
 		handler.EnqueueRequestsFromMapFunc(linodePlacementGroupMapper),
 		builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
-	).Complete(r)
+	).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
 	return nil
+}
+
+func (r *LinodePlacementGroupReconciler) TracedClient() client.Client {
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
 }

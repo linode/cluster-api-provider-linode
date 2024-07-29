@@ -44,6 +44,8 @@ import (
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
+	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
+	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -81,7 +83,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 	logger := r.Logger.WithValues("name", req.NamespacedName.String())
 
 	objectStorageBucket := &infrav1alpha1.LinodeObjectStorageBucket{}
-	if err := r.Client.Get(ctx, req.NamespacedName, objectStorageBucket); err != nil {
+	if err := r.TracedClient().Get(ctx, req.NamespacedName, objectStorageBucket); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			logger.Error(err, "Failed to fetch LinodeObjectStorageBucket", "name", req.NamespacedName.String())
 		}
@@ -93,7 +95,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		ctx,
 		r.LinodeApiKey,
 		scope.ObjectStorageBucketScopeParams{
-			Client: r.Client,
+			Client: r.TracedClient(),
 			Bucket: objectStorageBucket,
 			Logger: &logger,
 		},
@@ -259,7 +261,11 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeObjectStorageBucketMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha1.LinodeObjectStorageBucketList{}, mgr.GetScheme())
+	linodeObjectStorageBucketMapper, err := kutil.ClusterToTypedObjectsMapper(
+		r.TracedClient(),
+		&infrav1alpha1.LinodeObjectStorageBucketList{},
+		mgr.GetScheme(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeObjectStorageBuckets: %w", err)
 	}
@@ -276,10 +282,14 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager,
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeObjectStorageBucketMapper),
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
-		).Complete(r)
+		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
 	return nil
+}
+
+func (r *LinodeObjectStorageBucketReconciler) TracedClient() client.Client {
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
 }

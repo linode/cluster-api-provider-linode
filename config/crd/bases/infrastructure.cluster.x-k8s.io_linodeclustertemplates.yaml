@@ -188,4 +188,219 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+  - name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: LinodeClusterTemplate is the Schema for the linodeclustertemplates
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: LinodeClusterTemplateSpec defines the desired state of LinodeClusterTemplate
+            properties:
+              template:
+                description: LinodeClusterTemplateResource describes the data needed
+                  to create a LinodeCluster from a template.
+                properties:
+                  spec:
+                    description: LinodeClusterSpec defines the desired state of LinodeCluster
+                    properties:
+                      controlPlaneEndpoint:
+                        description: |-
+                          ControlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane.
+                          If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used.
+                        properties:
+                          host:
+                            description: The hostname on which the API server is serving.
+                            type: string
+                          port:
+                            description: The port on which the API server is serving.
+                            format: int32
+                            type: integer
+                        required:
+                        - host
+                        - port
+                        type: object
+                      credentialsRef:
+                        description: |-
+                          CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
+                          supplied then the credentials of the controller will be used.
+                        properties:
+                          name:
+                            description: name is unique within a namespace to reference
+                              a secret resource.
+                            type: string
+                          namespace:
+                            description: namespace defines the space within which
+                              the secret name must be unique.
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      network:
+                        description: NetworkSpec encapsulates all things related to
+                          Linode network.
+                        properties:
+                          additionalPorts:
+                            description: additionalPorts contains list of ports to
+                              be configured with NodeBalancer.
+                            items:
+                              properties:
+                                nodeBalancerConfigID:
+                                  description: nodeBalancerConfigID is the config
+                                    ID of port's NodeBalancer config.
+                                  type: integer
+                                port:
+                                  description: port configured on the NodeBalancer.
+                                    It must be valid port range (1-65535).
+                                  maximum: 65535
+                                  minimum: 1
+                                  type: integer
+                              required:
+                              - port
+                              type: object
+                            type: array
+                          apiserverLoadBalancerPort:
+                            description: |-
+                              apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
+                              If omitted, default value is 6443.
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          apiserverNodeBalancerConfigID:
+                            description: apiserverNodeBalancerConfigID is the config
+                              ID of api server NodeBalancer config.
+                            type: integer
+                          dnsProvider:
+                            description: |-
+                              DNSProvider is provider who manages the domain
+                              Ignored if the LoadBalancerType is set to anything other than dns
+                              If not set, defaults linode dns
+                            enum:
+                            - linode
+                            - akamai
+                            type: string
+                          dnsRootDomain:
+                            description: |-
+                              DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
+                              Ignored if the LoadBalancerType is set to anything other than dns
+                            type: string
+                          dnsTTLsec:
+                            description: |-
+                              DNSTTLSec is the TTL for the domain record
+                              Ignored if the LoadBalancerType is set to anything other than dns
+                              If not set, defaults to 30
+                            type: integer
+                          dnsUniqueIdentifier:
+                            description: |-
+                              DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
+                              DNS record
+                              Ignored if the LoadBalancerType is set to anything other than dns
+                              If not set, CAPL will create a unique identifier for you
+                            type: string
+                          loadBalancerType:
+                            description: LoadBalancerType is the type of load balancer
+                              to use, defaults to NodeBalancer if not otherwise set
+                            enum:
+                            - NodeBalancer
+                            - dns
+                            type: string
+                          nodeBalancerID:
+                            description: NodeBalancerID is the id of NodeBalancer.
+                            type: integer
+                        type: object
+                      region:
+                        description: The Linode Region the LinodeCluster lives in.
+                        type: string
+                      vpcRef:
+                        description: |-
+                          ObjectReference contains enough information to let you inspect or modify the referred object.
+                          ---
+                          New uses of this type are discouraged because of difficulty describing its usage when embedded in APIs.
+                           1. Ignored fields.  It includes many fields which are not generally honored.  For instance, ResourceVersion and FieldPath are both very rarely valid in actual usage.
+                           2. Invalid usage help.  It is impossible to add specific help for individual usage.  In most embedded usages, there are particular
+                              restrictions like, "must refer only to types A and B" or "UID not honored" or "name must be restricted".
+                              Those cannot be well described when embedded.
+                           3. Inconsistent validation.  Because the usages are different, the validation rules are different by usage, which makes it hard for users to predict what will happen.
+                           4. The fields are both imprecise and overly precise.  Kind is not a precise mapping to a URL. This can produce ambiguity
+                              during interpretation and require a REST mapping.  In most cases, the dependency is on the group,resource tuple
+                              and the version of the actual struct is irrelevant.
+                           5. We cannot easily change it.  Because this type is embedded in many locations, updates to this type
+                              will affect numerous schemas.  Don't make new APIs embed an underspecified API type they do not control.
+
+
+                          Instead of using this type, create a locally provided and used type that is well-focused on your reference.
+                          For example, ServiceReferences for admission registration: https://github.com/kubernetes/api/blob/release-1.17/admissionregistration/v1/types.go#L533 .
+                        properties:
+                          apiVersion:
+                            description: API version of the referent.
+                            type: string
+                          fieldPath:
+                            description: |-
+                              If referring to a piece of an object instead of an entire object, this string
+                              should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                              For example, if the object reference is to a container within a pod, this would take on a value like:
+                              "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                              the event) or if no container name is specified "spec.containers[2]" (container with
+                              index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                              referencing a part of an object.
+                              TODO: this design is not final and this field is subject to change in the future.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind of the referent.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                            type: string
+                          name:
+                            description: |-
+                              Name of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            type: string
+                          resourceVersion:
+                            description: |-
+                              Specific resourceVersion to which this reference is made, if any.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                            type: string
+                          uid:
+                            description: |-
+                              UID of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                    required:
+                    - region
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+        type: object
+    served: true
     storage: true

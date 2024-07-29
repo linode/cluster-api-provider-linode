@@ -109,7 +109,7 @@ func (r *LinodePlacementGroup) validateLinodePlacementGroupSpec(ctx context.Cont
 	if err := validatePlacementGroupLabel(r.Name, field.NewPath("metadata").Child("name")); err != nil {
 		errs = append(errs, err)
 	}
-	// isStrict is immutable, no need to verify again.
+	// PlacementGroupPolicy is immutable, no need to verify again.
 	if len(errs) == 0 {
 		return nil
 	}

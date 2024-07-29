@@ -48,6 +48,8 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
+	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
+	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -118,7 +120,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	log := ctrl.LoggerFrom(ctx).WithName("LinodeMachineReconciler").WithValues("name", req.NamespacedName.String())
 
 	linodeMachine := &infrav1alpha2.LinodeMachine{}
-	if err := r.Client.Get(ctx, req.NamespacedName, linodeMachine); err != nil {
+	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeMachine); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch LinodeMachine")
 		}
@@ -142,7 +144,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		r.LinodeApiKey,
 		r.LinodeDNSAPIKey,
 		scope.MachineScopeParams{
-			Client:        r.Client,
+			Client:        r.TracedClient(),
 			Cluster:       cluster,
 			Machine:       machine,
 			LinodeCluster: &infrav1alpha2.LinodeCluster{},
@@ -221,7 +223,7 @@ func (r *LinodeMachineReconciler) reconcile(
 		Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
 	}
 
-	if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
+	if err := r.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
 		}
@@ -740,7 +742,11 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodeMachineList{}, mgr.GetScheme())
+	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(
+		r.TracedClient(),
+		&infrav1alpha2.LinodeMachineList{},
+		mgr.GetScheme(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
 	}
@@ -762,10 +768,14 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
 		).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
-		Complete(r)
+		Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
 	return nil
+}
+
+func (r *LinodeMachineReconciler) TracedClient() client.Client {
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
 }

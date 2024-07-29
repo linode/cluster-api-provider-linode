@@ -14,26 +14,26 @@ patches:
 
   - target:
       group: infrastructure.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1alpha2
       kind: LinodeMachineTemplate
       name: .*md-0
     options:
       allowNameChange: true
     patch: |-
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
         name: kubeadm-worker
 
   - target:
       group: infrastructure.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1alpha2
       kind: LinodeMachineTemplate
       name: .*control-plane
     options:
       allowNameChange: true
     patch: |-
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
         name: kubeadm-control-plane
