@@ -44,6 +44,8 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
+	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -82,7 +84,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	log := ctrl.LoggerFrom(ctx).WithName("LinodeVPCReconciler").WithValues("name", req.NamespacedName.String())
 
 	linodeVPC := &infrav1alpha2.LinodeVPC{}
-	if err := r.Client.Get(ctx, req.NamespacedName, linodeVPC); err != nil {
+	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeVPC); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch LinodeVPC")
 		}
@@ -94,7 +96,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		ctx,
 		r.LinodeApiKey,
 		scope.VPCScopeParams{
-			Client:    r.Client,
+			Client:    r.TracedClient(),
 			LinodeVPC: linodeVPC,
 		},
 	)
@@ -321,7 +323,11 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 //
 //nolint:dupl // this is same as Placement Group, worth making generic later.
 func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeVPCMapper, err := kutil.ClusterToTypedObjectsMapper(r.Client, &infrav1alpha2.LinodeVPCList{}, mgr.GetScheme())
+	linodeVPCMapper, err := kutil.ClusterToTypedObjectsMapper(
+		r.TracedClient(),
+		&infrav1alpha2.LinodeVPCList{},
+		mgr.GetScheme(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for LinodeVPCs: %w", err)
 	}
@@ -342,10 +348,14 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 		&clusterv1.Cluster{},
 		handler.EnqueueRequestsFromMapFunc(linodeVPCMapper),
 		builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
-	).Complete(r)
+	).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
 
 	return nil
+}
+
+func (r *LinodeVPCReconciler) TracedClient() client.Client {
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
 }

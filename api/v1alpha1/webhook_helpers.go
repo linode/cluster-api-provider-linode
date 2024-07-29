@@ -28,6 +28,7 @@ var (
 	// defaultLinodeClient is an unauthenticated Linode client
 	defaultLinodeClient = linodeclient.NewLinodeClientWithTracing(
 		ptr.To(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
+		linodeclient.DefaultDecorator(),
 	)
 )
 

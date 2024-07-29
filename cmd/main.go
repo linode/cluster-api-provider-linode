@@ -43,7 +43,6 @@ import (
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/controller"
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
-	"github.com/linode/cluster-api-provider-linode/observability/wrappers/reconciler"
 	"github.com/linode/cluster-api-provider-linode/version"
 
 	_ "go.uber.org/automaxprocs"
@@ -164,64 +163,54 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodeClusterReconciler{
-			Client:           mgr.GetClient(),
-			Recorder:         mgr.GetEventRecorderFor("LinodeClusterReconciler"),
-			WatchFilterValue: clusterWatchFilter,
-			LinodeApiKey:     linodeToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeClusterConcurrency}); err != nil {
+	if err = (&controller.LinodeClusterReconciler{
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorderFor("LinodeClusterReconciler"),
+		WatchFilterValue: clusterWatchFilter,
+		LinodeApiKey:     linodeToken,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeClusterConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
 		os.Exit(1)
 	}
 
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodeMachineReconciler{
-			Client:           mgr.GetClient(),
-			Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
-			WatchFilterValue: machineWatchFilter,
-			LinodeApiKey:     linodeToken,
-			LinodeDNSAPIKey:  linodeDNSToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
+	if err = (&controller.LinodeMachineReconciler{
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorderFor("LinodeMachineReconciler"),
+		WatchFilterValue: machineWatchFilter,
+		LinodeApiKey:     linodeToken,
+		LinodeDNSAPIKey:  linodeDNSToken,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
 	}
 
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodeVPCReconciler{
-			Client:           mgr.GetClient(),
-			Recorder:         mgr.GetEventRecorderFor("LinodeVPCReconciler"),
-			WatchFilterValue: clusterWatchFilter,
-			LinodeApiKey:     linodeToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeVPCConcurrency}); err != nil {
+	if err = (&controller.LinodeVPCReconciler{
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorderFor("LinodeVPCReconciler"),
+		WatchFilterValue: clusterWatchFilter,
+		LinodeApiKey:     linodeToken,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeVPCConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)
 	}
 
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodeObjectStorageBucketReconciler{
-			Client:           mgr.GetClient(),
-			Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-			Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
-			WatchFilterValue: objectStorageBucketWatchFilter,
-			LinodeApiKey:     linodeToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeObjectStorageBucketConcurrency}); err != nil {
+	if err = (&controller.LinodeObjectStorageBucketReconciler{
+		Client:           mgr.GetClient(),
+		Logger:           ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
+		Recorder:         mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
+		WatchFilterValue: objectStorageBucketWatchFilter,
+		LinodeApiKey:     linodeToken,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeObjectStorageBucketConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
 
-	if err = reconciler.NewReconcilerWithTracing(
-		&controller.LinodePlacementGroupReconciler{
-			Client:           mgr.GetClient(),
-			Recorder:         mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
-			WatchFilterValue: clusterWatchFilter,
-			LinodeApiKey:     linodeToken,
-		},
-	).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodePlacementGroupConcurrency}); err != nil {
+	if err = (&controller.LinodePlacementGroupReconciler{
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
+		WatchFilterValue: clusterWatchFilter,
+		LinodeApiKey:     linodeToken,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodePlacementGroupConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodePlacementGroup")
 		os.Exit(1)
 	}
