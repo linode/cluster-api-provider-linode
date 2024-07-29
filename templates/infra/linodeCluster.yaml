@@ -11,5 +11,3 @@ spec:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
     kind: LinodeVPC
     name: ${VPC_NAME:=${CLUSTER_NAME}}
-  network:
-    apiserverLoadBalancerPort: ${APISERVER_PORT:=6443}
