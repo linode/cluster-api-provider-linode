@@ -109,6 +109,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 	return r.reconcile(ctx, bScope)
 }
 
+//nolint:dupl // This follows the pattern used for the LinodeObjectStorageKey controller.
 func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (res ctrl.Result, reterr error) {
 	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageBucket changes.
 	defer func() {
@@ -260,6 +261,8 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 }
 
 // SetupWithManager sets up the controller with the Manager.
+//
+//nolint:dupl // This follows the pattern used for the LinodeObjectStorageBucket controller.
 func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
 	linodeObjectStorageBucketMapper, err := kutil.ClusterToTypedObjectsMapper(
 		r.TracedClient(),

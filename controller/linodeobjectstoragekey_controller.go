@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/go-logr/logr"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
@@ -48,7 +49,6 @@ import (
 	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
-	"github.com/linode/linodego"
 )
 
 // LinodeObjectStorageKeyReconciler reconciles a LinodeObjectStorageKey object
@@ -113,6 +113,7 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 	return r.reconcile(ctx, keyScope)
 }
 
+//nolint:dupl // This follows the pattern used for the LinodeObjectStorageBucket controller.
 func (r *LinodeObjectStorageKeyReconciler) reconcile(ctx context.Context, keyScope *scope.ObjectStorageKeyScope) (res ctrl.Result, reterr error) {
 	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageKey changes.
 	defer func() {
@@ -152,7 +153,6 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 	var keyForSecret *linodego.ObjectStorageKey
 
 	switch {
-
 	// If no access key exists or key rotation is requested, make a new key
 	case keyScope.ShouldInitKey(), keyScope.ShouldRotateKey():
 		key, err := services.RotateObjectStorageKey(ctx, keyScope)
@@ -264,6 +264,8 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 }
 
 // SetupWithManager sets up the controller with the Manager.
+//
+//nolint:dupl // This follows the pattern used for the LinodeObjectStorageBucket controller.
 func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
 	linodeObjectStorageKeyMapper, err := kutil.ClusterToTypedObjectsMapper(r.TracedClient(), &infrav1alpha2.LinodeObjectStorageKeyList{}, mgr.GetScheme())
 	if err != nil {

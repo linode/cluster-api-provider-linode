@@ -65,6 +65,7 @@ func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParam
 	return nil
 }
 
+//nolint:dupl // TODO: Remove fields related to key provisioning from the bucket resource.
 func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params ObjectStorageBucketScopeParams) (*ObjectStorageBucketScope, error) {
 	if err := validateObjectStorageBucketScopeParams(params); err != nil {
 		return nil, err

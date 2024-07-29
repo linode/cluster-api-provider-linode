@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-	"github.com/linode/linodego"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
@@ -45,6 +45,7 @@ func validateObjectStorageKeyScopeParams(params ObjectStorageKeyScopeParams) err
 	return nil
 }
 
+//nolint:dupl // Temporary duplicate until key provisioning is removed from the bucket resource.
 func NewObjectStorageKeyScope(ctx context.Context, apiKey string, params ObjectStorageKeyScopeParams) (*ObjectStorageKeyScope, error) {
 	if err := validateObjectStorageKeyScopeParams(params); err != nil {
 		return nil, err
@@ -129,7 +130,6 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 	// If the desired secret is of ClusterResourceSet type, encapsulate the secret.
 	// Bucket details are retrieved from the first referenced LinodeObjectStorageBucket in the access key.
 	if s.Key.Spec.SecretType == clusteraddonsv1.ClusterResourceSetSecretType {
-
 		// This should never run since the CRD has a validation marker to ensure bucketAccess has at least one item.
 		if len(s.Key.Spec.BucketAccess) == 0 {
 			return nil, fmt.Errorf("unable to generate %s; spec.bucketAccess must not be empty", clusteraddonsv1.ClusterResourceSetSecretType)
