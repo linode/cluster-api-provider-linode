@@ -107,9 +107,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				InstanceID: ptr.To(0),
-				Type:       "g6-nanode-1",
-				Image:      rutil.DefaultMachineControllerLinodeImage,
+				InstanceID:     ptr.To(0),
+				Type:           "g6-nanode-1",
+				Image:          rutil.DefaultMachineControllerLinodeImage,
+				DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
 			},
 		}
 		reconciler = &LinodeMachineReconciler{
@@ -141,7 +142,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
 			After(listInst).
-			Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
 		getImage := mockLinodeClient.EXPECT().
 			GetImage(ctx, gomock.Any()).
 			After(getRegion).
@@ -227,7 +228,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
 				After(listInst).
-				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
@@ -309,7 +310,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
 				After(listInst).
-				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
@@ -460,7 +461,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
 				After(listInst).
-				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
