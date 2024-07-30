@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
-	"github.com/google/go-cmp/cmp"
 	"github.com/linode/linodego"
 	"golang.org/x/exp/slices"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
@@ -33,6 +32,13 @@ type DNSOptions struct {
 	DNSTTLSec     int
 }
 
+func isClusterNetworkSpecEmpty(networkSpec v1alpha2.NetworkSpec) bool {
+	return networkSpec.DNSProvider == "" &&
+		networkSpec.DNSRootDomain == "" &&
+		networkSpec.DNSTTLSec == 0 &&
+		networkSpec.DNSUniqueIdentifier == ""
+}
+
 // EnsureDNSEntries ensures the domainrecord on Linode Cloud Manager is created, updated, or deleted based on operation passed
 func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string) error {
 	// Check if instance is a control plane node
@@ -40,9 +46,9 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 		return nil
 	}
 
-	// Verify that the ClusterNetworkSpec is set
-	if cmp.Equal(mscope.LinodeMachine.Status.ClusterNetworkSpec, v1alpha2.NetworkSpec{}) {
-		return errors.New("ClusterNetworkSpec not available in LinodeMachineStatus")
+	// Verify that the needed ClusterNetworkSpec fields are set
+	if isClusterNetworkSpecEmpty(mscope.LinodeMachine.Status.ClusterNetworkSpec) {
+		return errors.New("required ClusterNetworkSpec fields are not available in LinodeMachineStatus")
 	}
 
 	// Get the public IP that was assigned
