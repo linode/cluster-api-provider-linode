@@ -184,9 +184,9 @@ func (r *LinodeMachineReconciler) reconcile(
 			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
-		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
+		// Always close the scope when exiting this function so we can persist any LinodeMachine and LinodeCluster changes.
 		// This ignores any resource not found errors when reconciling deletions.
-		if patchErr := machineScope.CloseMachine(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
+		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch LinodeMachine")
 
 			err = errors.Join(err, patchErr)
