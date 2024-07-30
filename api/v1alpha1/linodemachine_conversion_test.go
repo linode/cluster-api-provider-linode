@@ -120,11 +120,6 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 				Name:      "cred-secret",
 			},
 		},
-		Status: infrav1alpha2.LinodeMachineStatus{
-			ClusterNetworkSpec: infrav1alpha2.NetworkSpec{
-				AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{},
-			},
-		},
 	}
 	srcList := &LinodeMachineList{
 		Items: append([]LinodeMachine{}, *src),
@@ -214,11 +209,6 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 				Kind:      "LinodePlacementGroup",
 				Name:      "test-placement-group",
 				Namespace: "default",
-			},
-		},
-		Status: infrav1alpha2.LinodeMachineStatus{
-			ClusterNetworkSpec: infrav1alpha2.NetworkSpec{
-				AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{},
 			},
 		},
 	}
