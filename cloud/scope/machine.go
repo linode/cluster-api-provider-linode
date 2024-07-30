@@ -129,21 +129,31 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 	}, nil
 }
 
-// PatchObject persists the machine configuration and status.
-func (s *MachineScope) PatchObject(ctx context.Context) error {
+// PatchMachine persists the machine configuration and status.
+func (s *MachineScope) PatchMachine(ctx context.Context) error {
 	return s.PatchHelper.Patch(ctx, s.LinodeMachine)
 }
 
-// Close closes the current scope persisting the machine configuration and status.
-func (s *MachineScope) Close(ctx context.Context) error {
-	return s.PatchObject(ctx)
+// CloseMachine closes the current scope persisting the machine configuration and status.
+func (s *MachineScope) CloseMachine(ctx context.Context) error {
+	return s.PatchMachine(ctx)
+}
+
+// PatchCluster persists the machine configuration and status.
+func (s *MachineScope) PatchCluster(ctx context.Context) error {
+	return s.PatchHelper.Patch(ctx, s.LinodeCluster)
+}
+
+// CloseCluster closes the current scope persisting the machine configuration and status.
+func (s *MachineScope) CloseCluster(ctx context.Context) error {
+	return s.PatchCluster(ctx)
 }
 
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *MachineScope) AddFinalizer(ctx context.Context) error {
 	if controllerutil.AddFinalizer(s.LinodeMachine, infrav1alpha2.MachineFinalizer) {
-		return s.Close(ctx)
+		return s.CloseMachine(ctx)
 	}
 
 	return nil
@@ -153,7 +163,7 @@ func (s *MachineScope) AddFinalizer(ctx context.Context) error {
 // object to avoid any race conditions.
 func (s *MachineScope) AddLinodeClusterFinalizer(ctx context.Context) error {
 	if controllerutil.AddFinalizer(s.LinodeCluster, s.LinodeMachine.Name) {
-		return s.Close(ctx)
+		return s.CloseCluster(ctx)
 	}
 
 	return nil

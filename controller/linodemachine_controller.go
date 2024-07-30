@@ -102,6 +102,7 @@ type LinodeMachineReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines/finalizers,verbs=update
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
 
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;watch;list
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list
@@ -185,7 +186,7 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
 		// This ignores any resource not found errors when reconciling deletions.
-		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
+		if patchErr := machineScope.CloseMachine(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch LinodeMachine")
 
 			err = errors.Join(err, patchErr)
