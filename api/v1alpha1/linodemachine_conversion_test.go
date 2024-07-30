@@ -28,6 +28,7 @@ import (
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	v1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -120,7 +121,11 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 				Name:      "cred-secret",
 			},
 		},
-		Status: infrav1alpha2.LinodeMachineStatus{},
+		Status: infrav1alpha2.LinodeMachineStatus{
+			ClusterNetworkSpec: v1alpha2.NetworkSpec{
+				AdditionalPorts: []v1alpha2.LinodeNBPortConfig{},
+			},
+		},
 	}
 	srcList := &LinodeMachineList{
 		Items: append([]LinodeMachine{}, *src),
@@ -212,7 +217,11 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 				Namespace: "default",
 			},
 		},
-		Status: infrav1alpha2.LinodeMachineStatus{},
+		Status: infrav1alpha2.LinodeMachineStatus{
+			ClusterNetworkSpec: v1alpha2.NetworkSpec{
+				AdditionalPorts: []v1alpha2.LinodeNBPortConfig{},
+			},
+		},
 	}
 	expectedDst := &LinodeMachine{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-machine"},

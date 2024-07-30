@@ -462,8 +462,6 @@ func (r *LinodeMachineReconciler) removeMachineFromLB(
 			logger.Error(err, "Failed to remove IP from DNS")
 			return err
 		}
-	default:
-		return errors.New("LBType in LinodeMachine status not set to either Nodebalacner of dns")
 	}
 	return nil
 }

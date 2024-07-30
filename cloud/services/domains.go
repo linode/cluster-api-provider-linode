@@ -3,17 +3,20 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/netip"
 	"strings"
 	"sync"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/google/go-cmp/cmp"
 	"github.com/linode/linodego"
 	"golang.org/x/exp/slices"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 
+	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -36,6 +39,16 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 	if !kutil.IsControlPlaneMachine(mscope.Machine) {
 		return nil
 	}
+
+	if cmp.Equal(mscope.LinodeMachine.Status.ClusterNetworkSpec, v1alpha2.NetworkSpec{}) {
+		return errors.New("ClusterNetworkSpec not available in LinodeMachineStatus")
+	}
+
+	// if mscope.LinodeMachine.Status.ClusterNetworkSpec == (v1alpha2.NetworkSpec{
+	// 	AdditionalPorts: []v1alpha2.LinodeNBPortConfig{},
+	// }) {
+	// 	return errors.New("ClusterNetworkSpec not available in LinodeMachineStatus")
+	// }
 
 	// Get the public IP that was assigned
 	var dnss DNSEntries
