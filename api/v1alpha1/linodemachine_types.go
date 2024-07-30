@@ -137,6 +137,9 @@ type LinodeMachineStatus struct {
 	// Addresses contains the Linode instance associated addresses.
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
+	// ClusterNetworkSpec is the type of LoadBalancer being used
+	ClusterNetworkSpec NetworkSpec `json:"clusterNetworkSpec,omitempty"`
+
 	// InstanceState is the state of the Linode instance for this machine.
 	// +optional
 	InstanceState *linodego.InstanceStatus `json:"instanceState,omitempty"`

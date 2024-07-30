@@ -757,6 +757,9 @@ func autoConvert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in *v1
 func autoConvert_v1alpha1_LinodeMachineStatus_To_v1alpha2_LinodeMachineStatus(in *LinodeMachineStatus, out *v1alpha2.LinodeMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Addresses = *(*[]v1beta1.MachineAddress)(unsafe.Pointer(&in.Addresses))
+	if err := Convert_v1alpha1_NetworkSpec_To_v1alpha2_NetworkSpec(&in.ClusterNetworkSpec, &out.ClusterNetworkSpec, s); err != nil {
+		return err
+	}
 	out.InstanceState = (*linodego.InstanceStatus)(unsafe.Pointer(in.InstanceState))
 	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))
@@ -772,6 +775,9 @@ func Convert_v1alpha1_LinodeMachineStatus_To_v1alpha2_LinodeMachineStatus(in *Li
 func autoConvert_v1alpha2_LinodeMachineStatus_To_v1alpha1_LinodeMachineStatus(in *v1alpha2.LinodeMachineStatus, out *LinodeMachineStatus, s conversion.Scope) error {
 	out.Ready = in.Ready
 	out.Addresses = *(*[]v1beta1.MachineAddress)(unsafe.Pointer(&in.Addresses))
+	if err := Convert_v1alpha2_NetworkSpec_To_v1alpha1_NetworkSpec(&in.ClusterNetworkSpec, &out.ClusterNetworkSpec, s); err != nil {
+		return err
+	}
 	out.InstanceState = (*linodego.InstanceStatus)(unsafe.Pointer(in.InstanceState))
 	out.FailureReason = (*errors.MachineStatusError)(unsafe.Pointer(in.FailureReason))
 	out.FailureMessage = (*string)(unsafe.Pointer(in.FailureMessage))

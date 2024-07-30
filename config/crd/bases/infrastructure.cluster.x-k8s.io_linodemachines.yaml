@@ -285,6 +285,31 @@ spec:
                   - type
                   type: object
                 type: array
+              clusterNetworkSpec:
+                description: ClusterNetworkSpec is the type of LoadBalancer being
+                  used
+                properties:
+                  loadBalancerPort:
+                    description: LoadBalancerPort used by the api server. It must
+                      be valid ports range (1-65535). If omitted, default value is
+                      6443.
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  loadBalancerType:
+                    description: LoadBalancerType is the type of load balancer to
+                      use, defaults to NodeBalancer if not otherwise set
+                    enum:
+                    - NodeBalancer
+                    type: string
+                  nodeBalancerConfigID:
+                    description: NodeBalancerConfigID is the config ID of api server
+                      NodeBalancer.
+                    type: integer
+                  nodeBalancerID:
+                    description: NodeBalancerID is the id of api server NodeBalancer.
+                    type: integer
+                type: object
               conditions:
                 description: Conditions defines current service state of the LinodeMachine.
                 items:
@@ -721,6 +746,78 @@ spec:
                   - type
                   type: object
                 type: array
+              clusterNetworkSpec:
+                description: ClusterNetworkSpec is the type of LoadBalancer being
+                  used
+                properties:
+                  additionalPorts:
+                    description: additionalPorts contains list of ports to be configured
+                      with NodeBalancer.
+                    items:
+                      properties:
+                        nodeBalancerConfigID:
+                          description: nodeBalancerConfigID is the config ID of port's
+                            NodeBalancer config.
+                          type: integer
+                        port:
+                          description: port configured on the NodeBalancer. It must
+                            be valid port range (1-65535).
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
+                      required:
+                      - port
+                      type: object
+                    type: array
+                  apiserverLoadBalancerPort:
+                    description: |-
+                      apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
+                      If omitted, default value is 6443.
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  apiserverNodeBalancerConfigID:
+                    description: apiserverNodeBalancerConfigID is the config ID of
+                      api server NodeBalancer config.
+                    type: integer
+                  dnsProvider:
+                    description: |-
+                      DNSProvider is provider who manages the domain
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                      If not set, defaults linode dns
+                    enum:
+                    - linode
+                    - akamai
+                    type: string
+                  dnsRootDomain:
+                    description: |-
+                      DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                    type: string
+                  dnsTTLsec:
+                    description: |-
+                      DNSTTLSec is the TTL for the domain record
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                      If not set, defaults to 30
+                    type: integer
+                  dnsUniqueIdentifier:
+                    description: |-
+                      DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
+                      DNS record
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                      If not set, CAPL will create a unique identifier for you
+                    type: string
+                  loadBalancerType:
+                    description: LoadBalancerType is the type of load balancer to
+                      use, defaults to NodeBalancer if not otherwise set
+                    enum:
+                    - NodeBalancer
+                    - dns
+                    type: string
+                  nodeBalancerID:
+                    description: NodeBalancerID is the id of NodeBalancer.
+                    type: integer
+                type: object
               conditions:
                 description: Conditions defines current service state of the LinodeMachine.
                 items:

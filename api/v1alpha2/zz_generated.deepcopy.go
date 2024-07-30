@@ -467,6 +467,7 @@ func (in *LinodeMachineStatus) DeepCopyInto(out *LinodeMachineStatus) {
 		*out = make([]v1beta1.MachineAddress, len(*in))
 		copy(*out, *in)
 	}
+	in.ClusterNetworkSpec.DeepCopyInto(&out.ClusterNetworkSpec)
 	if in.InstanceState != nil {
 		in, out := &in.InstanceState, &out.InstanceState
 		*out = new(linodego.InstanceStatus)

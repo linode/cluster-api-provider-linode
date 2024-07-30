@@ -405,6 +405,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
+		machineScope.LinodeMachine.Status.ClusterNetworkSpec = machineScope.LinodeCluster.Spec.Network
 		if err := r.addMachineToLB(ctx, machineScope); err != nil {
 			logger.Error(err, "Failed to add machine to LB")
 
@@ -432,7 +433,7 @@ func (r *LinodeMachineReconciler) addMachineToLB(
 	machineScope *scope.MachineScope,
 ) error {
 	logger := logr.FromContextOrDiscard(ctx)
-	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
+	if machineScope.LinodeMachine.Status.ClusterNetworkSpec.LoadBalancerType != "dns" {
 		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
 			return err
 		}
@@ -450,16 +451,19 @@ func (r *LinodeMachineReconciler) removeMachineFromLB(
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
 ) error {
-	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
+	switch machineScope.LinodeMachine.Status.ClusterNetworkSpec.LoadBalancerType {
+	case "NodeBalancer":
 		if err := services.DeleteNodeFromNB(ctx, logger, machineScope); err != nil {
 			logger.Error(err, "Failed to remove node from Node Balancer backend")
 			return err
 		}
-	} else if machineScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
+	case "dns":
 		if err := services.EnsureDNSEntries(ctx, machineScope, "delete"); err != nil {
 			logger.Error(err, "Failed to remove IP from DNS")
 			return err
 		}
+	default:
+		return errors.New("LBType in LinodeMachine status not set to either Nodebalacner of dns")
 	}
 	return nil
 }
