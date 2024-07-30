@@ -28,7 +28,6 @@ import (
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-	v1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -122,8 +121,8 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 			},
 		},
 		Status: infrav1alpha2.LinodeMachineStatus{
-			ClusterNetworkSpec: v1alpha2.NetworkSpec{
-				AdditionalPorts: []v1alpha2.LinodeNBPortConfig{},
+			ClusterNetworkSpec: infrav1alpha2.NetworkSpec{
+				AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{},
 			},
 		},
 	}
@@ -218,8 +217,8 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 			},
 		},
 		Status: infrav1alpha2.LinodeMachineStatus{
-			ClusterNetworkSpec: v1alpha2.NetworkSpec{
-				AdditionalPorts: []v1alpha2.LinodeNBPortConfig{},
+			ClusterNetworkSpec: infrav1alpha2.NetworkSpec{
+				AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{},
 			},
 		},
 	}

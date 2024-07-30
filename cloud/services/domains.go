@@ -40,15 +40,10 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 		return nil
 	}
 
+	// Verify that the ClusterNetworkSpec is set
 	if cmp.Equal(mscope.LinodeMachine.Status.ClusterNetworkSpec, v1alpha2.NetworkSpec{}) {
 		return errors.New("ClusterNetworkSpec not available in LinodeMachineStatus")
 	}
-
-	// if mscope.LinodeMachine.Status.ClusterNetworkSpec == (v1alpha2.NetworkSpec{
-	// 	AdditionalPorts: []v1alpha2.LinodeNBPortConfig{},
-	// }) {
-	// 	return errors.New("ClusterNetworkSpec not available in LinodeMachineStatus")
-	// }
 
 	// Get the public IP that was assigned
 	var dnss DNSEntries
