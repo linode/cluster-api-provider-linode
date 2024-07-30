@@ -26,7 +26,8 @@ type MachineScopeParams struct {
 
 type MachineScope struct {
 	Client              K8sClient
-	PatchHelper         *patch.Helper
+	MachinePatchHelper  *patch.Helper
+	ClusterPatchHelper  *patch.Helper
 	Cluster             *clusterv1.Cluster
 	Machine             *clusterv1.Machine
 	LinodeClient        LinodeClient
@@ -111,14 +112,20 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		return nil, fmt.Errorf("failed to create akamai dns client: %w", err)
 	}
 
-	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
+	machineHelper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init patch helper: %w", err)
+		return nil, fmt.Errorf("failed to init machine patch helper: %w", err)
+	}
+
+	clusterHelper, err := patch.NewHelper(params.LinodeCluster, params.Client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to init cluster patch helper: %w", err)
 	}
 
 	return &MachineScope{
 		Client:              params.Client,
-		PatchHelper:         helper,
+		MachinePatchHelper:  machineHelper,
+		ClusterPatchHelper:  clusterHelper,
 		Cluster:             params.Cluster,
 		Machine:             params.Machine,
 		LinodeClient:        linodeClient,
@@ -131,10 +138,10 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 
 // PatchObjects persists the machine configuration and status.
 func (s *MachineScope) PatchObjects(ctx context.Context) error {
-	if err := s.PatchHelper.Patch(ctx, s.LinodeMachine); err != nil {
+	if err := s.MachinePatchHelper.Patch(ctx, s.LinodeMachine); err != nil {
 		return err
 	}
-	return s.PatchHelper.Patch(ctx, s.LinodeCluster)
+	return s.ClusterPatchHelper.Patch(ctx, s.LinodeCluster)
 }
 
 // Close closes the current scope persisting the machine configuration and status.
