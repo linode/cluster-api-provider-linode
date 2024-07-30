@@ -32,9 +32,9 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 For Regions and Images that do not yet support Akamai's cloud-init datasource CAPL will automatically use a stackscript shim
 to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
 ```
-```admonish warning
-By default, clusters are provisioned within VPC. For Regions which do not have [VPC support](https://www.linode.com/docs/products/networking/vpc/#availability) yet, use the [VPCLess](./flavors/vpcless.md) flavor to have clusters provisioned.
-```
+~~~admonish warning
+By default, clusters are provisioned within VPC with disk encryption enabled. For Regions which do not have [VPC support](https://www.linode.com/docs/products/networking/vpc/#availability) yet, use the [VPCLess](./flavors/vpcless.md) flavor to have clusters provisioned. For disabling disk encryption, set `spec.template.spec.diskEncryption=disabled` in your generated LinodeMachineTemplate resources when creating a CAPL cluster.
+~~~
 
 ## Install CAPL on your management cluster
 ```admonish warning

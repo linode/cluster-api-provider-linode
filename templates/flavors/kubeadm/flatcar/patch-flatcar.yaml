@@ -1,0 +1,119 @@
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  name: "${CLUSTER_NAME}-control-plane"
+spec:
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+  kubeadmConfigSpec:
+    joinConfiguration:
+      nodeRegistration:
+        name: $${COREOS_AKAMAI_INSTANCE_LABEL}
+        kubeletExtraArgs:
+          provider-id: linode://$${COREOS_AKAMAI_INSTANCE_ID}
+    initConfiguration:
+      nodeRegistration:
+        name: $${COREOS_AKAMAI_INSTANCE_LABEL}
+        kubeletExtraArgs:
+          provider-id: linode://$${COREOS_AKAMAI_INSTANCE_ID}
+    format: ignition
+    ignition:
+      containerLinuxConfig:
+        additionalConfig: |
+          storage:
+            links:
+              - path: /etc/extensions/kubernetes.raw
+                hard: false
+                target: /opt/extensions/kubernetes/kubernetes-${KUBERNETES_VERSION}-x86-64.raw
+            files:
+              - path: /opt/extensions/kubernetes/kubernetes-${KUBERNETES_VERSION}-x86-64.raw
+                contents:
+                  remote:
+                    url: https://github.com/flatcar/sysext-bakery/releases/download/latest/kubernetes-${KUBERNETES_VERSION}-x86-64.raw
+          systemd:
+            units:
+              - name: kubeadm.service
+                enabled: true
+                dropins:
+                  - name: 10-flatcar.conf
+                    contents: |
+                      [Unit]
+                      Requires=containerd.service coreos-metadata.service
+                      After=containerd.service coreos-metadata.service
+                      [Service]
+                      EnvironmentFile=/run/metadata/flatcar
+    preKubeadmCommands:
+      - export COREOS_AKAMAI_INSTANCE_LABEL=$${COREOS_AKAMAI_INSTANCE_LABEL}
+      - export COREOS_AKAMAI_INSTANCE_ID=$${COREOS_AKAMAI_INSTANCE_ID}
+      - export COREOS_AKAMAI_PRIVATE_IPV4_0=$${COREOS_AKAMAI_PRIVATE_IPV4_0}
+      - ip addr add "$${COREOS_AKAMAI_PRIVATE_IPV4_0}" dev eth0
+      - envsubst < /etc/kubeadm.yml > /etc/kubeadm.yml.tmp
+      - mv /etc/kubeadm.yml.tmp /etc/kubeadm.yml
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          name: $${COREOS_AKAMAI_INSTANCE_LABEL}
+          kubeletExtraArgs:
+            provider-id: linode://$${COREOS_AKAMAI_INSTANCE_ID}
+      preKubeadmCommands:
+        - export COREOS_AKAMAI_INSTANCE_LABEL=$${COREOS_AKAMAI_INSTANCE_LABEL}
+        - export COREOS_AKAMAI_INSTANCE_ID=$${COREOS_AKAMAI_INSTANCE_ID}
+        - export COREOS_AKAMAI_PRIVATE_IPV4_0=$${COREOS_AKAMAI_PRIVATE_IPV4_0}
+        - ip addr add "$${COREOS_AKAMAI_PRIVATE_IPV4_0}" dev eth0
+        - envsubst < /etc/kubeadm.yml > /etc/kubeadm.yml.tmp
+        - mv /etc/kubeadm.yml.tmp /etc/kubeadm.yml
+      format: ignition
+      ignition:
+        containerLinuxConfig:
+          additionalConfig: |
+            storage:
+              links:
+                - path: /etc/extensions/kubernetes.raw
+                  hard: false
+                  target: /opt/extensions/kubernetes/kubernetes-${KUBERNETES_VERSION}-x86-64.raw
+              files:
+                - path: /opt/extensions/kubernetes/kubernetes-${KUBERNETES_VERSION}-x86-64.raw
+                  contents:
+                    remote:
+                      url: https://github.com/flatcar/sysext-bakery/releases/download/latest/kubernetes-${KUBERNETES_VERSION}-x86-64.raw
+            systemd:
+              units:
+                - name: kubeadm.service
+                  enabled: true
+                  dropins:
+                    - name: 10-flatcar.conf
+                      contents: |
+                        [Unit]
+                        Requires=containerd.service coreos-metadata.service
+                        After=containerd.service coreos-metadata.service
+                        [Service]
+                        EnvironmentFile=/run/metadata/flatcar
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-md-0
+spec:
+  template:
+    spec:
+      image: ${FLATCAR_IMAGE_NAME}
+      configuration:
+        kernel: linode/direct-disk
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-control-plane
+spec:
+  template:
+    spec:
+      image: ${FLATCAR_IMAGE_NAME}
+      configuration:
+        kernel: linode/direct-disk

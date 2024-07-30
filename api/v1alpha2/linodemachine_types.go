@@ -74,6 +74,10 @@ type LinodeMachineSpec struct {
 	// DataDisks is a map of any additional disks to add to an instance,
 	// The sum of these disks + the OSDisk must not be more than allowed on a linodes plan
 	DataDisks map[string]*InstanceDisk `json:"dataDisks,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:Enum=enabled;disabled
+	// DiskEncryption determines if the disks of the instance should be encrypted.
+	DiskEncryption string `json:"diskEncryption,omitempty"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials
 	// to use for provisioning this machine. If not supplied then these
@@ -83,6 +87,10 @@ type LinodeMachineSpec struct {
 	//   3. Controller
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
+
+	// Configuration is the Akamai instance configuration OS,
+	// if not specified this defaults to the default configuration associated to the instance.
+	Configuration *InstanceConfiguration `json:"configuration,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
@@ -108,6 +116,12 @@ type InstanceDisk struct {
 type InstanceMetadataOptions struct {
 	// UserData expects a Base64-encoded string
 	UserData string `json:"userData,omitempty"`
+}
+
+// InstanceConfiguration defines the instance configuration
+type InstanceConfiguration struct {
+	// Kernel is a Kernel ID to boot a Linode with. (e.g linode/latest-64bit)
+	Kernel string `json:"kernel,omitempty"`
 }
 
 // InstanceConfigInterfaceCreateOptions defines network interface config
