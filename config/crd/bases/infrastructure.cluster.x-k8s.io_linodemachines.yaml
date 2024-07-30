@@ -285,31 +285,6 @@ spec:
                   - type
                   type: object
                 type: array
-              clusterNetworkSpec:
-                description: ClusterNetworkSpec is the NetworkSpec being used on the
-                  LinodeCluster
-                properties:
-                  loadBalancerPort:
-                    description: LoadBalancerPort used by the api server. It must
-                      be valid ports range (1-65535). If omitted, default value is
-                      6443.
-                    maximum: 65535
-                    minimum: 1
-                    type: integer
-                  loadBalancerType:
-                    description: LoadBalancerType is the type of load balancer to
-                      use, defaults to NodeBalancer if not otherwise set
-                    enum:
-                    - NodeBalancer
-                    type: string
-                  nodeBalancerConfigID:
-                    description: NodeBalancerConfigID is the config ID of api server
-                      NodeBalancer.
-                    type: integer
-                  nodeBalancerID:
-                    description: NodeBalancerID is the id of api server NodeBalancer.
-                    type: integer
-                type: object
               conditions:
                 description: Conditions defines current service state of the LinodeMachine.
                 items:
