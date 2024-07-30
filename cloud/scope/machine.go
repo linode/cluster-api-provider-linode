@@ -149,6 +149,16 @@ func (s *MachineScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
+// AddLinodeClusterFinalizer adds a finalizer if not present and immediately patches the
+// object to avoid any race conditions.
+func (s *MachineScope) AddLinodeClusterFinalizer(ctx context.Context) error {
+	if controllerutil.AddFinalizer(s.LinodeCluster, s.LinodeMachine.Name) {
+		return s.Close(ctx)
+	}
+
+	return nil
+}
+
 // GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
 func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 	if m.Machine.Spec.Bootstrap.DataSecretName == nil {
