@@ -286,8 +286,8 @@ spec:
                   type: object
                 type: array
               clusterNetworkSpec:
-                description: ClusterNetworkSpec is the type of LoadBalancer being
-                  used
+                description: ClusterNetworkSpec is the NetworkSpec being used on the
+                  LinodeCluster
                 properties:
                   loadBalancerPort:
                     description: LoadBalancerPort used by the api server. It must
@@ -747,8 +747,8 @@ spec:
                   type: object
                 type: array
               clusterNetworkSpec:
-                description: ClusterNetworkSpec is the type of LoadBalancer being
-                  used
+                description: ClusterNetworkSpec is the NetworkSpec being used on the
+                  LinodeCluster
                 properties:
                   additionalPorts:
                     description: additionalPorts contains list of ports to be configured
