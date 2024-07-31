@@ -38,8 +38,8 @@ const (
 	DefaultMachineControllerWaitForRunningTimeout = 20 * time.Minute
 	// DefaultMachineControllerRetryDelay is the default requeue delay if there is an error.
 	DefaultMachineControllerRetryDelay = 10 * time.Second
-	// DefaultMachineControllerLinodeErrorRetryDelay is the default requeue delay if there is a Linode API error.
-	DefaultMachineControllerLinodeErrorRetryDelay = time.Minute
+	// DefaultLinodeTooManyRequestsErrorRetryDelay is the default requeue delay if there is a Linode API error.
+	DefaultLinodeTooManyRequestsErrorRetryDelay = time.Minute
 
 	// DefaultVPCControllerReconcileDelay is the default requeue delay when a reconcile operation fails.
 	DefaultVPCControllerReconcileDelay = 5 * time.Second

@@ -262,12 +262,12 @@ func (r *LinodeMachineReconciler) reconcile(
 }
 
 func retryIfTransient(err error) (ctrl.Result, error) {
-	if util.IsTransientError(err) {
+	if util.IsRetryableError(err) {
+		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
+			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
+		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-	} else if util.IsRetryableLinodeError(err) {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerLinodeErrorRetryDelay}, nil
 	}
-
 	return ctrl.Result{}, err
 }
 
@@ -315,9 +315,12 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		}
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil {
-			if util.IsRetryableLinodeError(err) {
+			if util.IsRetryableError(err) {
 				logger.Error(err, "Failed to create Linode instance due to API error, requeing")
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerLinodeErrorRetryDelay}, nil
+				if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
+					return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
+				}
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 			}
 			logger.Error(err, "Failed to create Linode machine instance")
 

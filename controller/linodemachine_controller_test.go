@@ -295,7 +295,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerLinodeErrorRetryDelay))
+			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
 		})
 	})
 
@@ -949,7 +949,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerLinodeErrorRetryDelay))
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode machine InstanceCreateOptions"))
 					})),
 					Path(Result("create requeues when failing to create instance", func(ctx context.Context, mck Mock) {
@@ -961,7 +961,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerLinodeErrorRetryDelay))
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode instance due to API error"))
 					})),
 					Path(Result("create requeues when failing to update instance config", func(ctx context.Context, mck Mock) {
@@ -991,7 +991,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerLinodeErrorRetryDelay))
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to update default instance configuration"))
 					})),
 					Path(Result("create requeues when failing to get instance config", func(ctx context.Context, mck Mock) {
@@ -1031,7 +1031,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerLinodeErrorRetryDelay))
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to get default instance configuration"))
 					})),
 				),
