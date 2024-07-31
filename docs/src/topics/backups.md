@@ -31,13 +31,13 @@ Using this feature requires enabling Object Storage in the account where the res
 The following is the minimal required configuration needed to provision an Object Storage bucket and set of access keys.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeObjectStorageBucket
 metadata:
   name: <unique-bucket-label>
   namespace: <namespace>
 spec:
-  cluster: <object-storage-region>
+  region: <object-storage-region>
   secretType: Opaque
 ```
 
@@ -58,7 +58,7 @@ metadata:
   name: <unique-bucket-label>-bucket-details
   namespace: <same-namespace-as-object-storage-bucket>
   ownerReferences:
-    - apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    - apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeObjectStorageBucket
       name: <unique-bucket-label>
       controller: true
@@ -80,7 +80,7 @@ The bucket-details secret is owned and managed by CAPL during the life of the `L
 The following configuration with `keyGeneration` set to a new value (different from `.status.lastKeyGeneration`) will instruct CAPL to rotate the access keys.
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeObjectStorageBucket
 metadata:
   name: <unique-bucket-label>
@@ -98,7 +98,7 @@ spec:
 Upon successful provisioning of a bucket and keys, the `LinodeObjectStorageBucket` resource's status will resemble the following:
 
 ```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeObjectStorageBucket
 metadata:
   name: <unique-bucket-label>

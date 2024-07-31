@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
-	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -68,13 +68,13 @@ type accessKeySecret struct {
 var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
-	obj := infrav1.LinodeObjectStorageBucket{
+	obj := infrav1alpha2.LinodeObjectStorageBucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lifecycle",
 			Namespace: "default",
 		},
-		Spec: infrav1.LinodeObjectStorageBucketSpec{
-			Cluster: "cluster",
+		Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+			Region: "region",
 		},
 	}
 
@@ -106,19 +106,19 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 	suite.Run(
 		OneOf(
 			Path(Call("bucket is created", func(ctx context.Context, mck Mock) {
-				getBucket := mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
+				getBucket := mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Region, gomock.Any()).Return(nil, nil)
 				mck.LinodeClient.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).
 					After(getBucket).
 					Return(&linodego.ObjectStorageBucket{
 						Label:    obj.Name,
-						Region:   obj.Spec.Cluster,
+						Region:   obj.Spec.Region,
 						Created:  util.Pointer(time.Now()),
 						Hostname: "hostname",
 					}, nil)
 			})),
 			Path(
 				Call("bucket is not created", func(ctx context.Context, mck Mock) {
-					getBucket := mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, nil)
+					getBucket := mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Region, gomock.Any()).Return(nil, nil)
 					mck.LinodeClient.EXPECT().CreateObjectStorageBucket(gomock.Any(), gomock.Any()).After(getBucket).Return(nil, errors.New("create bucket error"))
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
@@ -177,7 +177,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 			var key accessKeySecret
 			Expect(yaml.Unmarshal(secret.Data["bucket-details-secret.yaml"], &key)).NotTo(HaveOccurred())
 			Expect(key.StringData.BucketName).To(Equal("lifecycle"))
-			Expect(key.StringData.BucketRegion).To(Equal("cluster"))
+			Expect(key.StringData.BucketRegion).To(Equal("region"))
 			Expect(key.StringData.BucketEndpoint).To(Equal("hostname"))
 			Expect(key.StringData.AccessKeyRW).To(Equal("access-key-0"))
 			Expect(key.StringData.SecretKeyRW).To(Equal("secret-key-0"))
@@ -199,17 +199,17 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		}),
 		OneOf(
 			Path(Call("bucket is retrieved on update", func(ctx context.Context, mck Mock) {
-				mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).
+				mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Region, gomock.Any()).
 					Return(&linodego.ObjectStorageBucket{
 						Label:    obj.Name,
-						Region:   obj.Spec.Cluster,
+						Region:   obj.Spec.Region,
 						Created:  util.Pointer(time.Now()),
 						Hostname: "hostname",
 					}, nil)
 			})),
 			Path(
 				Call("bucket is not retrieved on update", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Cluster, gomock.Any()).Return(nil, errors.New("get bucket error"))
+					mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Region, gomock.Any()).Return(nil, errors.New("get bucket error"))
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					bScope.LinodeClient = mck.LinodeClient
@@ -300,7 +300,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					var key accessKeySecret
 					Expect(yaml.Unmarshal(secret.Data["bucket-details-secret.yaml"], &key)).NotTo(HaveOccurred())
 					Expect(key.StringData.BucketName).To(Equal("lifecycle"))
-					Expect(key.StringData.BucketRegion).To(Equal("cluster"))
+					Expect(key.StringData.BucketRegion).To(Equal("region"))
 					Expect(key.StringData.BucketEndpoint).To(Equal("hostname"))
 					Expect(key.StringData.AccessKeyRW).To(Equal("access-key-2"))
 					Expect(key.StringData.SecretKeyRW).To(Equal("secret-key-2"))
@@ -372,14 +372,14 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 
 		// Reset obj to base state to be modified in each test path.
 		// We can use a consistent name since these tests are stateless.
-		bScope.Bucket = &infrav1.LinodeObjectStorageBucket{
+		bScope.Bucket = &infrav1alpha2.LinodeObjectStorageBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
 				Namespace: "default",
 				UID:       "12345",
 			},
-			Spec: infrav1.LinodeObjectStorageBucketSpec{
-				Cluster: "cluster",
+			Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+				Region: "region",
 			},
 		}
 	})
@@ -425,7 +425,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			Expect(err.Error()).To(ContainSubstring("failed to create object storage bucket scope"))
 			Expect(mck.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
 		}),
-		Call("scheme with no infrav1alpha1", func(ctx context.Context, mck Mock) {
+		Call("scheme with no infrav1alpha2", func(ctx context.Context, mck Mock) {
 			prev := mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
 			mck.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(2)
 		}),

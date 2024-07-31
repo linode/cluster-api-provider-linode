@@ -56,7 +56,6 @@ import (
 
 const (
 	linodeBusyCode        = 400
-	linodeTooManyRequests = 429
 	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
@@ -262,6 +261,16 @@ func (r *LinodeMachineReconciler) reconcile(
 	return
 }
 
+func retryIfTransient(err error) (ctrl.Result, error) {
+	if util.IsRetryableError(err) {
+		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
+			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
+		}
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+	}
+	return ctrl.Result{}, err
+}
+
 func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
@@ -302,16 +311,15 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
-			if util.IsTransientError(err) {
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-			}
-
-			return ctrl.Result{}, err
+			return retryIfTransient(err)
 		}
 		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 		if err != nil {
-			if linodego.ErrHasStatus(err, linodeTooManyRequests) || linodego.ErrHasStatus(err, linodego.ErrorFromError) {
+			if util.IsRetryableError(err) {
 				logger.Error(err, "Failed to create Linode instance due to API error, requeing")
+				if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
+					return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
+				}
 				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 			}
 			logger.Error(err, "Failed to create Linode machine instance")
@@ -337,6 +345,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	return r.reconcileInstanceCreate(ctx, logger, machineScope, linodeInstance)
 }
 
+//nolint:cyclop,gocognit // It is ok for the moment but need larger refactor.
 func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	ctx context.Context,
 	logger logr.Logger,
@@ -355,6 +364,19 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		}
 
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightConfigured)
+	}
+
+	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
+		instanceConfig, err := r.getDefaultInstanceConfig(ctx, machineScope, linodeInstance.ID)
+		if err != nil {
+			logger.Error(err, "Failed to get default instance configuration")
+			return retryIfTransient(err)
+		}
+
+		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, linodeInstance.ID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Kernel: machineScope.LinodeMachine.Spec.Configuration.Kernel}); err != nil {
+			logger.Error(err, "Failed to update default instance configuration")
+			return retryIfTransient(err)
+		}
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
@@ -529,16 +551,14 @@ func (r *LinodeMachineReconciler) resizeRootDisk(
 	if reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized) {
 		return nil
 	}
-	// get the default instance config
-	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
-	if err != nil || len(configs) == 0 {
-		logger.Error(err, "Failed to list instance configs")
+
+	instanceConfig, err := r.getDefaultInstanceConfig(ctx, machineScope, linodeInstanceID)
+	if err != nil {
+		logger.Error(err, "Failed to get default instance configuration")
 
 		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
-
 		return err
 	}
-	instanceConfig := configs[0]
 
 	if instanceConfig.Devices.SDA == nil {
 		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "root disk not yet ready")
@@ -778,4 +798,17 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 
 func (r *LinodeMachineReconciler) TracedClient() client.Client {
 	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
+}
+
+func (r *LinodeMachineReconciler) getDefaultInstanceConfig(
+	ctx context.Context,
+	machineScope *scope.MachineScope,
+	linodeInstanceID int,
+) (linodego.InstanceConfig, error) {
+	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
+	if err != nil || len(configs) == 0 {
+		return linodego.InstanceConfig{}, fmt.Errorf("failing to list instance configurations: %w", err)
+	}
+
+	return configs[0], nil
 }

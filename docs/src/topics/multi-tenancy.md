@@ -53,7 +53,7 @@ spec:
   ...
 ---
 # Example: LinodeObjectStorageBucket
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeObjectStorageBucket
 metadata:
   name: test-bucket

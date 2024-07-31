@@ -1,7 +1,7 @@
 # Cilium BGP Load-Balancing
 
 This flavor creates special labeled worker nodes for ingress which leverage Cilium's
-[BGP Control Plane](https://docs.cilium.io/en/stable/network/bgp-control-plane/)
+[BGP Control Plane](https://docs.cilium.io/en/stable/network/bgp-control-plane/bgp-control-plane/)
 and [LB IPAM](https://docs.cilium.io/en/stable/network/lb-ipam/) support.
 
 With this flavor, Services exposed via `type: LoadBalancer` automatically get

@@ -456,6 +456,16 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              configuration:
+                description: |-
+                  Configuration is the Akamai instance configuration OS,
+                  if not specified this defaults to the default configuration associated to the instance.
+                properties:
+                  kernel:
+                    description: Kernel is a Kernel ID to boot a Linode with. (e.g
+                      linode/latest-64bit)
+                    type: string
+                type: object
               credentialsRef:
                 description: |-
                   CredentialsRef is a reference to a Secret that contains the credentials
@@ -511,6 +521,16 @@ spec:
                   DataDisks is a map of any additional disks to add to an instance,
                   The sum of these disks + the OSDisk must not be more than allowed on a linodes plan
                 type: object
+              diskEncryption:
+                description: DiskEncryption determines if the disks of the instance
+                  should be encrypted.
+                enum:
+                - enabled
+                - disabled
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               firewallID:
                 type: integer
                 x-kubernetes-validations:

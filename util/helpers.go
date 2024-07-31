@@ -34,22 +34,15 @@ func UnwrapError(err error) error {
 	return err
 }
 
-// IsTransientError determines if the error is transient, meaning a controller that
+// IsRetryableError determines if the error is retryable, meaning a controller that
 // encounters this error should requeue reconciliation to try again later
-func IsTransientError(err error) bool {
-	if linodego.ErrHasStatus(
+func IsRetryableError(err error) bool {
+	return linodego.ErrHasStatus(
 		err,
 		http.StatusTooManyRequests,
 		http.StatusInternalServerError,
 		http.StatusBadGateway,
 		http.StatusGatewayTimeout,
-		http.StatusServiceUnavailable) {
-		return true
-	}
-
-	if errors.Is(err, http.ErrHandlerTimeout) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF) {
-		return true
-	}
-
-	return false
+		http.StatusServiceUnavailable,
+		linodego.ErrorFromError) || errors.Is(err, http.ErrHandlerTimeout) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF)
 }

@@ -52,16 +52,16 @@ func TestIgnoreLinodeAPIError(t *testing.T) {
 	}
 }
 
-func TestIsTransientError(t *testing.T) {
+func TestIsRetryableError(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name        string
-		err         error
-		shouldRetry bool
+		name string
+		err  error
+		want bool
 	}{{
-		name:        "unexpected EOF",
-		err:         io.ErrUnexpectedEOF,
-		shouldRetry: true,
+		name: "unexpected EOF",
+		err:  io.ErrUnexpectedEOF,
+		want: true,
 	}, {
 		name: "not found Linode API error",
 		err: &linodego.Error{
@@ -69,7 +69,7 @@ func TestIsTransientError(t *testing.T) {
 			Code:     http.StatusNotFound,
 			Message:  "not found",
 		},
-		shouldRetry: false,
+		want: false,
 	}, {
 		name: "Rate limiting Linode API error",
 		err: &linodego.Error{
@@ -77,14 +77,14 @@ func TestIsTransientError(t *testing.T) {
 			Code:     http.StatusTooManyRequests,
 			Message:  "rate limited",
 		},
-		shouldRetry: true,
+		want: true,
 	}}
 	for _, tt := range tests {
 		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			if testcase.shouldRetry != IsTransientError(testcase.err) {
-				t.Errorf("wanted %v, got %v", testcase.shouldRetry, IsTransientError(testcase.err))
+			if testcase.want != IsRetryableError(testcase.err) {
+				t.Errorf("wanted %v, got %v", testcase.want, IsRetryableError(testcase.err))
 			}
 		})
 	}
