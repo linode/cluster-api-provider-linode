@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -13,7 +12,6 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/edgegrid"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/session"
 	"github.com/linode/linodego"
-	"golang.org/x/oauth2"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -49,16 +47,8 @@ func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (L
 		return nil, errors.New("missing Linode API key")
 	}
 
-	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: apiKey})
-
-	oauth2Client := &http.Client{
-		Transport: &oauth2.Transport{
-			Source: tokenSource,
-		},
-		Timeout: timeout,
-	}
-	linodeClient := linodego.NewClient(oauth2Client)
-
+	linodeClient := linodego.NewClient(nil)
+	linodeClient.SetToken(apiKey)
 	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
 	for _, opt := range opts {
