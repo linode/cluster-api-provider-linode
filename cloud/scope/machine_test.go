@@ -119,7 +119,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 				s := runtime.NewScheme()
 				infrav1alpha2.AddToScheme(s)
 				return s
-			})
+			}).AnyTimes()
 		}),
 		OneOf(
 			Path(Call("scheme 2", func(ctx context.Context, mck Mock) {
@@ -127,7 +127,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha2.AddToScheme(s)
 					return s
-				})
+				}).AnyTimes()
 			})),
 			Path(Result("has finalizer", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
@@ -238,11 +238,11 @@ func TestNewMachineScope(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha2.AddToScheme(s)
 					return s
-				})
+				}).AnyTimes()
 			})),
 			Path(
 				Call("invalid scheme", func(ctx context.Context, mck Mock) {
-					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
+					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme()).AnyTimes()
 				}),
 				Result("cannot init patch helper", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
@@ -252,7 +252,7 @@ func TestNewMachineScope(t *testing.T) {
 						LinodeCluster: &infrav1alpha2.LinodeCluster{},
 						LinodeMachine: &infrav1alpha2.LinodeMachine{},
 					})
-					require.ErrorContains(t, err, "failed to init patch helper")
+					require.ErrorContains(t, err, "failed to init machine patch helper")
 					assert.Nil(t, mScope)
 				}),
 			),
@@ -422,7 +422,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha2.AddToScheme(s)
 					return s
-				})
+				}).AnyTimes()
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
@@ -450,7 +450,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha2.AddToScheme(s)
 					return s
-				})
+				}).AnyTimes()
 			},
 		},
 	}
@@ -516,7 +516,7 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha2.AddToScheme(s)
 					return s
-				})
+				}).AnyTimes()
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
@@ -544,7 +544,7 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 					s := runtime.NewScheme()
 					infrav1alpha2.AddToScheme(s)
 					return s
-				})
+				}).AnyTimes()
 			},
 		},
 	}
