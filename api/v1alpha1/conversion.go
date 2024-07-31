@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/conversion"
+	"strings"
 
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
@@ -55,9 +56,18 @@ func Convert_v1alpha1_LinodeObjectStorageBucketSpec_To_v1alpha2_LinodeObjectStor
 
 func Convert_v1alpha2_LinodeObjectStorageBucketSpec_To_v1alpha1_LinodeObjectStorageBucketSpec(in *infrastructurev1alpha2.LinodeObjectStorageBucketSpec, out *LinodeObjectStorageBucketSpec, s conversion.Scope) error {
 	// WARNING: in.Region requires manual conversion: does not exist in peer-type
-	out.Cluster = in.Region + "-1"
+	out.Cluster = in.Region
 	out.CredentialsRef = in.CredentialsRef
 	out.KeyGeneration = in.KeyGeneration
 	out.SecretType = in.SecretType
 	return nil
+}
+
+func Convert_v1alpha2_LinodeObjectStorageBucket_To_v1alpha1_LinodeObjectStorageBucket(in *infrastructurev1alpha2.LinodeObjectStorageBucket, out *LinodeObjectStorageBucket, s conversion.Scope) error {
+	if in.Status.Ready {
+		in.Spec.Region = strings.Split(*in.Status.Hostname, ".")[1]
+	} else {
+		in.Spec.Region = in.Spec.Region + "-1"
+	}
+	return autoConvert_v1alpha2_LinodeObjectStorageBucket_To_v1alpha1_LinodeObjectStorageBucket(in, out, s)
 }

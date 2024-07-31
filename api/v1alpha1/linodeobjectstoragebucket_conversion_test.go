@@ -105,7 +105,7 @@ func TestLinodeObjectStorageBucketFrom(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-bucket",
 			Annotations: map[string]string{
-				ConversionDataAnnotation: `{"spec":{"credentialsRef":{"name":"cred-secret","namespace":"default"},"keyGeneration":1,"region":"us-mia","secretType":"Opaque"},"status":{"ready":false}}`,
+				ConversionDataAnnotation: `{"spec":{"credentialsRef":{"name":"cred-secret","namespace":"default"},"keyGeneration":1,"region":"us-mia-1","secretType":"Opaque"},"status":{"ready":false}}`,
 			},
 		},
 		Spec: LinodeObjectStorageBucketSpec{
