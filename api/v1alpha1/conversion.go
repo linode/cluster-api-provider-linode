@@ -65,7 +65,7 @@ func Convert_v1alpha2_LinodeObjectStorageBucketSpec_To_v1alpha1_LinodeObjectStor
 }
 
 func Convert_v1alpha2_LinodeObjectStorageBucket_To_v1alpha1_LinodeObjectStorageBucket(in *infrastructurev1alpha2.LinodeObjectStorageBucket, out *LinodeObjectStorageBucket, scope conversion.Scope) error {
-	if in.Status.Ready {
+	if in.Status.Hostname != nil && *in.Status.Hostname != "" {
 		in.Spec.Region = strings.Split(*in.Status.Hostname, ".")[1]
 	} else {
 		in.Spec.Region += "-1"
