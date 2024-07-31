@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -225,7 +224,6 @@ func DeleteNodeFromNB(
 			return err
 		}
 	}
-	controllerutil.RemoveFinalizer(machineScope.LinodeCluster, machineScope.LinodeMachine.Name)
 
 	return nil
 }
