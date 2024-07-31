@@ -181,7 +181,7 @@ func AddNodeToNB(
 		}
 	}
 
-	return machineScope.AddLinodeClusterFinalizer(ctx)
+	return nil
 }
 
 // DeleteNodeFromNB removes a backend Node from the Node Balancer configuration

@@ -13,7 +13,6 @@ import (
 	"golang.org/x/exp/slices"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -46,22 +45,10 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 	}
 
 	if mscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
-		if err = EnsureAkamaiDNSEntries(ctx, mscope, operation, dnsEntries); err != nil {
-			return err
-		}
-	} else {
-		if err = EnsureLinodeDNSEntries(ctx, mscope, operation, dnsEntries); err != nil {
-			return err
-		}
+		return EnsureAkamaiDNSEntries(ctx, mscope, operation, dnsEntries)
 	}
 
-	if operation == "create" {
-		err = mscope.AddLinodeClusterFinalizer(ctx)
-	} else if operation == "delete" {
-		controllerutil.RemoveFinalizer(mscope.LinodeCluster, mscope.LinodeMachine.Name)
-	}
-
-	return err
+	return EnsureLinodeDNSEntries(ctx, mscope, operation, dnsEntries)
 }
 
 // EnsureLinodeDNSEntries ensures the domainrecord on Linode Cloud Manager is created, updated, or deleted based on operation passed
