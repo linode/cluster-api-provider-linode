@@ -26,10 +26,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusteraddonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -355,5 +360,178 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 				}),
 			),
 		),
+	)
+})
+
+var _ = Describe("errors", Label("key", "errors"), func() {
+	suite := NewControllerSuite(
+		GinkgoT(),
+		mock.MockLinodeClient{},
+		mock.MockK8sClient{},
+	)
+
+	reconciler := LinodeObjectStorageKeyReconciler{}
+	keyScope := scope.ObjectStorageKeyScope{}
+
+	suite.BeforeEach(func(_ context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+		keyScope.Logger = mck.Logger()
+
+		// Reset obj to base state to be modified in each test path.
+		// We can use a consistent name since these tests are stateless.
+		keyScope.Key = &infrav1.LinodeObjectStorageKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mock",
+				Namespace: "default",
+			},
+			Spec: infrav1.LinodeObjectStorageKeySpec{
+				BucketAccess: []infrav1.BucketAccessRef{
+					{
+						BucketName:  "mybucket",
+						Permissions: "read_only",
+						Region:      "us-ord",
+					},
+				},
+			},
+		}
+	})
+
+	suite.Run(
+		OneOf(
+			Path(Call("resource can be fetched", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			})),
+			Path(
+				Call("resource is not found", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "mock"))
+				}),
+				Result("no error", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{
+						NamespacedName: client.ObjectKeyFromObject(keyScope.Key),
+					})
+					Expect(err).NotTo(HaveOccurred())
+				}),
+			),
+			Path(
+				Call("resource can't be fetched", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("non-404 error"))
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
+					reconciler.Logger = keyScope.Logger
+					_, err := reconciler.Reconcile(ctx, reconcile.Request{
+						NamespacedName: client.ObjectKeyFromObject(keyScope.Key),
+					})
+					Expect(err.Error()).To(ContainSubstring("non-404 error"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeObjectStorageKey"))
+				}),
+			),
+		),
+		Result("scope params is missing args", func(ctx context.Context, mck Mock) {
+			reconciler.Client = mck.K8sClient
+			reconciler.Logger = keyScope.Logger
+			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(keyScope.Key),
+			})
+			Expect(err.Error()).To(ContainSubstring("failed to create object storage key scope"))
+			Expect(mck.Logs()).To(ContainSubstring("Failed to create object storage key scope"))
+		}),
+		Call("scheme with no infrav1alpha1", func(ctx context.Context, mck Mock) {
+			prev := mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
+			mck.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(2)
+		}),
+		Result("error", func(ctx context.Context, mck Mock) {
+			keyScope.Client = mck.K8sClient
+
+			patchHelper, err := patch.NewHelper(keyScope.Key, mck.K8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			keyScope.PatchHelper = patchHelper
+
+			_, err = reconciler.reconcile(ctx, &keyScope)
+			Expect(err.Error()).To(ContainSubstring("no kind is registered"))
+		}),
+		OneOf(
+			Path(
+				Call("failed check for deleted secret", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("api error"))
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					keyScope.Key.Spec.KeyGeneration = 1
+					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
+					keyScope.Key.Status.SecretName = ptr.To("mock-obj-key")
+					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
+
+					keyScope.LinodeClient = mck.LinodeClient
+					keyScope.Client = mck.K8sClient
+					err := reconciler.reconcileApply(ctx, &keyScope)
+					Expect(err.Error()).To(ContainSubstring("api error"))
+					Expect(mck.Events()).To(ContainSubstring("api error"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed check for access key secret"))
+				}),
+			),
+			Path(Call("secret deleted", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-obj-key"))
+			})),
+		),
+		Call("get key", func(ctx context.Context, mck Mock) {
+			mck.LinodeClient.EXPECT().GetObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{ID: 1}, nil)
+		}),
+		OneOf(
+			Path(
+				Call("secret resource creation fails", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme).AnyTimes()
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, "mock-obj-key"))
+					mck.K8sClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("secret creation error"))
+				}),
+				Result("creation error", func(ctx context.Context, mck Mock) {
+					keyScope.Key.Spec.KeyGeneration = 1
+					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
+					keyScope.Key.Status.SecretName = ptr.To("mock-obj-key")
+					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
+
+					keyScope.LinodeClient = mck.LinodeClient
+					keyScope.Client = mck.K8sClient
+					err := reconciler.reconcileApply(ctx, &keyScope)
+					Expect(err.Error()).To(ContainSubstring("secret creation error"))
+					Expect(mck.Events()).To(ContainSubstring("key retrieved"))
+					Expect(mck.Events()).To(ContainSubstring("secret creation error"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to apply key secret"))
+				}),
+			),
+			Path(
+				Call("secret generation fails", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					keyScope.Key.Spec.KeyGeneration = 1
+					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
+					keyScope.Key.Status.SecretName = ptr.To("mock-obj-key")
+					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
+
+					keyScope.LinodeClient = mck.LinodeClient
+					keyScope.Client = mck.K8sClient
+					err := reconciler.reconcileApply(ctx, &keyScope)
+					Expect(err.Error()).To(ContainSubstring("no kind is registered"))
+					Expect(mck.Events()).To(ContainSubstring("key retrieved"))
+					Expect(mck.Events()).To(ContainSubstring("no kind is registered"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to generate key secret"))
+				}),
+			),
+		),
+		Once("finalizer is missing", func(ctx context.Context, _ Mock) {
+			keyScope.Key.Status.AccessKeyRef = ptr.To(1)
+			keyScope.Key.ObjectMeta.Finalizers = []string{}
+		}),
+		Call("revoke key", func(ctx context.Context, mck Mock) {
+			mck.LinodeClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)
+		}),
+		Result("error", func(ctx context.Context, mck Mock) {
+			keyScope.LinodeClient = mck.LinodeClient
+			keyScope.Client = mck.K8sClient
+			err := reconciler.reconcileDelete(ctx, &keyScope)
+			Expect(err.Error()).To(ContainSubstring("failed to remove finalizer from key"))
+			Expect(mck.Events()).To(ContainSubstring("failed to remove finalizer from key"))
+		}),
 	)
 })

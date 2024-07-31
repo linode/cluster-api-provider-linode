@@ -123,6 +123,10 @@ var secretTypeExpectedKey = map[corev1.SecretType]string{
 // GenerateKeySecret returns a secret suitable for submission to the Kubernetes API.
 // The secret is expected to contain keys for accessing the bucket, as well as owner and controller references.
 func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *linodego.ObjectStorageKey) (*corev1.Secret, error) {
+	if key == nil {
+		return nil, errors.New("expected non-nil object storage key")
+	}
+
 	var secretStringData map[string]string
 
 	secretName := fmt.Sprintf(accessKeySecretNameTemplate, s.Key.Name)

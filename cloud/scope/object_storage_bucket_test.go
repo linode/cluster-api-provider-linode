@@ -296,7 +296,7 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 	}
 }
 
-func TestGenerateKeySecret(t *testing.T) {
+func TestGenerateKeySecretBucket(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name        string
