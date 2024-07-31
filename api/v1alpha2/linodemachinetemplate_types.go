@@ -33,6 +33,7 @@ type LinodeMachineTemplateResource struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:storageversion
 // +kubebuilder:resource:path=linodemachinetemplates,scope=Namespaced,categories=cluster-api,shortName=lmt
+// +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 
 // LinodeMachineTemplate is the Schema for the linodemachinetemplates API
 type LinodeMachineTemplate struct {
