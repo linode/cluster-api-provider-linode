@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
@@ -36,13 +36,13 @@ stringData:
 
 type ObjectStorageBucketScopeParams struct {
 	Client K8sClient
-	Bucket *infrav1alpha1.LinodeObjectStorageBucket
+	Bucket *infrav1alpha2.LinodeObjectStorageBucket
 	Logger *logr.Logger
 }
 
 type ObjectStorageBucketScope struct {
 	Client       K8sClient
-	Bucket       *infrav1alpha1.LinodeObjectStorageBucket
+	Bucket       *infrav1alpha2.LinodeObjectStorageBucket
 	Logger       logr.Logger
 	LinodeClient LinodeClient
 	PatchHelper  *patch.Helper
@@ -111,7 +111,7 @@ func (s *ObjectStorageBucketScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.Bucket, infrav1alpha1.ObjectStorageBucketFinalizer) {
+	if controllerutil.AddFinalizer(s.Bucket, infrav1alpha2.ObjectStorageBucketFinalizer) {
 		return s.Close(ctx)
 	}
 
