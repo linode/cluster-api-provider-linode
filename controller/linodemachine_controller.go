@@ -423,6 +423,13 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	if kutil.IsControlPlaneMachine(machineScope.Machine) {
 		// Add the finalizer if not already there
 		if err := machineScope.AddLinodeClusterFinalizer(ctx); err != nil {
+			logger.Error(err, "Failed to add linodecluster finalizer")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 		}
 	}
