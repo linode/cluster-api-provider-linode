@@ -80,6 +80,8 @@ func main() {
 		// Environment variables
 		linodeToken    = os.Getenv("LINODE_TOKEN")
 		linodeDNSToken = os.Getenv("LINODE_DNS_TOKEN")
+		linodeDNSURL   = os.Getenv("LINODE_DNS_URL")
+		linodeDNSCA    = os.Getenv("LINODE_DNS_CA")
 
 		machineWatchFilter             string
 		clusterWatchFilter             string
@@ -180,6 +182,8 @@ func main() {
 		WatchFilterValue: machineWatchFilter,
 		LinodeApiKey:     linodeToken,
 		LinodeDNSAPIKey:  linodeDNSToken,
+		LinodeDNSURL:     linodeDNSURL,
+		LinodeDNSCA:      linodeDNSCA,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)

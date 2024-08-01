@@ -53,7 +53,7 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(ctx context.Context, apiKey, dnsKey, dnsUrl, dnsCa string, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 	linodeDomainsClient, err := CreateLinodeClient(dnsKey, defaultClientTimeout,
-		WithRetryCount(0),
+		WithRetryCount(0), WithBaseUrl(dnsUrl), WithRootCertificate(dnsCa),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
