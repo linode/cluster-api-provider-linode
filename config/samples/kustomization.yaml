@@ -7,6 +7,7 @@ resources:
 - infrastructure_v1alpha1_linodevpc.yaml
 - infrastructure_v1alpha1_linodeobjectstoragebucket.yaml
 - infrastructure_v1alpha2_linodecluster.yaml
+- infrastructure_v1alpha1_linodeobjectstoragekey.yaml
 - infrastructure_v1alpha2_linodemachine.yaml
 - infrastructure_v1alpha2_linodevpc.yaml
 - infrastructure_v1alpha2_linodeobjectstoragebucket.yaml

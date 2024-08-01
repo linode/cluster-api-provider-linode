@@ -54,7 +54,7 @@ func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBuc
 		{"read_only", "ro"},
 	} {
 		keyLabel := fmt.Sprintf("%s-%s", bScope.Bucket.Name, permission.suffix)
-		key, err := createObjectStorageKey(ctx, bScope, keyLabel, permission.name)
+		key, err := createObjectStorageKeyForBucket(ctx, bScope, keyLabel, permission.name)
 		if err != nil {
 			return newKeys, err
 		}
@@ -72,7 +72,7 @@ func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBuc
 	return newKeys, nil
 }
 
-func createObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBucketScope, label, permission string) (*linodego.ObjectStorageKey, error) {
+func createObjectStorageKeyForBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope, label, permission string) (*linodego.ObjectStorageKey, error) {
 	opts := linodego.ObjectStorageKeyCreateOptions{
 		Label: label,
 		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
