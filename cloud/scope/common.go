@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -47,7 +48,11 @@ func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (L
 		return nil, errors.New("missing Linode API key")
 	}
 
-	newClient := linodego.NewClient(nil)
+	httpClient := &http.Client{
+		Timeout: timeout,
+	}
+
+	newClient := linodego.NewClient(httpClient)
 	newClient.SetToken(apiKey)
 	newClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
