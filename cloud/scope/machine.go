@@ -7,8 +7,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -26,8 +28,7 @@ type MachineScopeParams struct {
 
 type MachineScope struct {
 	Client              K8sClient
-	MachinePatchHelper  *patch.Helper
-	ClusterPatchHelper  *patch.Helper
+	PatchHelper         *patch.Helper
 	Cluster             *clusterv1.Cluster
 	Machine             *clusterv1.Machine
 	LinodeClient        LinodeClient
@@ -112,20 +113,14 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		return nil, fmt.Errorf("failed to create akamai dns client: %w", err)
 	}
 
-	machineHelper, err := patch.NewHelper(params.LinodeMachine, params.Client)
+	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init machine patch helper: %w", err)
-	}
-
-	clusterHelper, err := patch.NewHelper(params.LinodeCluster, params.Client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init cluster patch helper: %w", err)
+		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	return &MachineScope{
 		Client:              params.Client,
-		MachinePatchHelper:  machineHelper,
-		ClusterPatchHelper:  clusterHelper,
+		PatchHelper:         helper,
 		Cluster:             params.Cluster,
 		Machine:             params.Machine,
 		LinodeClient:        linodeClient,
@@ -136,17 +131,14 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 	}, nil
 }
 
-// PatchObjects persists the machine configuration and status.
-func (s *MachineScope) PatchObjects(ctx context.Context) error {
-	if err := s.MachinePatchHelper.Patch(ctx, s.LinodeMachine); err != nil {
-		return err
-	}
-	return s.ClusterPatchHelper.Patch(ctx, s.LinodeCluster)
+// PatchObject persists the machine configuration and status.
+func (s *MachineScope) PatchObject(ctx context.Context) error {
+	return s.PatchHelper.Patch(ctx, s.LinodeMachine)
 }
 
 // Close closes the current scope persisting the machine configuration and status.
 func (s *MachineScope) Close(ctx context.Context) error {
-	return s.PatchObjects(ctx)
+	return s.PatchObject(ctx)
 }
 
 // AddFinalizer adds a finalizer if not present and immediately patches the
@@ -162,10 +154,40 @@ func (s *MachineScope) AddFinalizer(ctx context.Context) error {
 // AddLinodeClusterFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *MachineScope) AddLinodeClusterFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.LinodeCluster, s.LinodeMachine.Name) {
-		return s.Close(ctx)
+	if !controllerutil.AddFinalizer(s.LinodeCluster, s.LinodeMachine.Name) {
+		return fmt.Errorf("failed to add finalizer to linodecluster %s for %s machine", s.LinodeCluster.Name, s.LinodeMachine.Name)
 	}
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		clusterKey := client.ObjectKeyFromObject(s.LinodeCluster)
+		if err := s.Client.Get(ctx, clusterKey, s.LinodeCluster); err != nil {
+			return err
+		}
+		err := s.Client.Update(ctx, s.LinodeCluster)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+// AddLinodeClusterFinalizer adds a finalizer if not present and immediately patches the
+// object to avoid any race conditions.
+func (s *MachineScope) RemoveLinodeClusterFinalizer(ctx context.Context) error {
+	if !controllerutil.RemoveFinalizer(s.LinodeCluster, s.LinodeMachine.Name) {
+		return fmt.Errorf("failed to remove finalizer from linodecluster %s for %s machine", s.LinodeCluster.Name, s.LinodeMachine.Name)
+	}
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		clusterKey := client.ObjectKeyFromObject(s.LinodeCluster)
+		if err := s.Client.Get(ctx, clusterKey, s.LinodeCluster); err != nil {
+			return err
+		}
+		err := s.Client.Update(ctx, s.LinodeCluster)
+		return err
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
