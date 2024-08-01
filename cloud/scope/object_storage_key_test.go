@@ -197,7 +197,7 @@ func TestNewObjectStorageKeyScope(t *testing.T) {
 					Logger: &logr.Logger{},
 				},
 			},
-			expectedErr: fmt.Errorf("failed to create linode client: missing Linode API key"),
+			expectedErr: fmt.Errorf("failed to create linode client: token cannot be empty"),
 			expects:     func(mock *mock.MockK8sClient) {},
 		},
 	}
@@ -215,7 +215,7 @@ func TestNewObjectStorageKeyScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewObjectStorageKeyScope(context.Background(), testcase.args.apiKey, testcase.args.params)
+			got, err := NewObjectStorageKeyScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedErr != nil {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())
@@ -276,7 +276,7 @@ func TestObjectStrorageKeyAddFinalizer(t *testing.T) {
 
 			keyScope, err := NewObjectStorageKeyScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				ObjectStorageKeyScopeParams{
 					Client: mockK8sClient,
 					Key:    testcase.Key,

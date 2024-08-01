@@ -165,7 +165,7 @@ func TestNewVPCScope(t *testing.T) {
 				},
 			},
 			expects:       func(mock *mock.MockK8sClient) {},
-			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
+			expectedError: fmt.Errorf("failed to create linode client: token cannot be empty"),
 		},
 		{
 			name: "Error - Pass in valid args but get an error when creating a new patch helper",
@@ -194,7 +194,7 @@ func TestNewVPCScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewVPCScope(context.Background(), testcase.args.apiKey, testcase.args.params)
+			got, err := NewVPCScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -259,7 +259,7 @@ func TestVPCScopeMethods(t *testing.T) {
 
 			vScope, err := NewVPCScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
 					LinodeVPC: testcase.LinodeVPC,
@@ -353,7 +353,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 
 			vScope, err := NewVPCScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
 					LinodeVPC: testcase.LinodeVPC,
@@ -443,7 +443,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 
 			vScope, err := NewVPCScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
 					LinodeVPC: testcase.LinodeVPC,

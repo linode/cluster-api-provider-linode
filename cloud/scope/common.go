@@ -43,9 +43,22 @@ func WithRetryCount(c int) Option {
 	}
 }
 
-func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (LinodeClient, error) {
-	if apiKey == "" {
-		return nil, errors.New("missing Linode API key")
+type ClientConfig struct {
+	Token               string
+	BaseUrl             string
+	RootCertificatePath string
+
+	Timeout time.Duration
+}
+
+func CreateLinodeClient(config ClientConfig, opts ...Option) (LinodeClient, error) {
+	if config.Token == "" {
+		return nil, errors.New("token cannot be empty")
+	}
+
+	timeout := defaultClientTimeout
+	if config.Timeout != 0 {
+		timeout = config.Timeout
 	}
 
 	httpClient := &http.Client{
@@ -53,7 +66,13 @@ func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (L
 	}
 
 	newClient := linodego.NewClient(httpClient)
-	newClient.SetToken(apiKey)
+	newClient.SetToken(config.Token)
+	if config.RootCertificatePath != "" {
+		newClient.SetRootCertificate(config.RootCertificatePath)
+	}
+	if config.BaseUrl != "" {
+		newClient.SetBaseURL(config.BaseUrl)
+	}
 	newClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
 	for _, opt := range opts {

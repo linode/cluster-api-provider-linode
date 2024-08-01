@@ -52,10 +52,10 @@ import (
 // LinodeClusterReconciler reconciles a LinodeCluster object
 type LinodeClusterReconciler struct {
 	client.Client
-	Recorder         record.EventRecorder
-	LinodeApiKey     string
-	WatchFilterValue string
-	ReconcileTimeout time.Duration
+	Recorder           record.EventRecorder
+	LinodeClientConfig scope.ClientConfig
+	WatchFilterValue   string
+	ReconcileTimeout   time.Duration
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
@@ -91,7 +91,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// Create the cluster scope.
 	clusterScope, err := scope.NewClusterScope(
 		ctx,
-		r.LinodeApiKey,
+		r.LinodeClientConfig,
 		scope.ClusterScopeParams{
 			Client:        r.TracedClient(),
 			Cluster:       cluster,

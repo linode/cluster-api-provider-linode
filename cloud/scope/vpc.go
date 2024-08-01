@@ -56,7 +56,7 @@ func validateVPCScopeParams(params VPCScopeParams) error {
 // This is meant to be called for each reconcile iteration.
 //
 //nolint:dupl // this is the same as PlacementGroups - worth making into generics later.
-func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VPCScope, error) {
+func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VPCScopeParams) (*VPCScope, error) {
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -68,9 +68,9 @@ func NewVPCScope(ctx context.Context, apiKey string, params VPCScopeParams) (*VP
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(apiToken)
+		linodeClientConfig.Token = string(apiToken)
 	}
-	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout,
+	linodeClient, err := CreateLinodeClient(linodeClientConfig,
 		WithRetryCount(0),
 	)
 	if err != nil {

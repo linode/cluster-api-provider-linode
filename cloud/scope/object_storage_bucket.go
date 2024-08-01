@@ -66,7 +66,7 @@ func validateObjectStorageBucketScopeParams(params ObjectStorageBucketScopeParam
 }
 
 //nolint:dupl // TODO: Remove fields related to key provisioning from the bucket resource.
-func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params ObjectStorageBucketScopeParams) (*ObjectStorageBucketScope, error) {
+func NewObjectStorageBucketScope(ctx context.Context, linodeClientConfig ClientConfig, params ObjectStorageBucketScopeParams) (*ObjectStorageBucketScope, error) {
 	if err := validateObjectStorageBucketScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -78,9 +78,10 @@ func NewObjectStorageBucketScope(ctx context.Context, apiKey string, params Obje
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(apiToken)
+		linodeClientConfig.Token = string(apiToken)
 	}
-	linodeClient, err := CreateLinodeClient(apiKey, clientTimeout)
+	linodeClientConfig.Timeout = clientTimeout
+	linodeClient, err := CreateLinodeClient(linodeClientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}

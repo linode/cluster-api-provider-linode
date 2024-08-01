@@ -45,8 +45,7 @@ func validateObjectStorageKeyScopeParams(params ObjectStorageKeyScopeParams) err
 	return nil
 }
 
-//nolint:dupl // Temporary duplicate until key provisioning is removed from the bucket resource.
-func NewObjectStorageKeyScope(ctx context.Context, apiKey string, params ObjectStorageKeyScopeParams) (*ObjectStorageKeyScope, error) {
+func NewObjectStorageKeyScope(ctx context.Context, linodeClientConfig ClientConfig, params ObjectStorageKeyScopeParams) (*ObjectStorageKeyScope, error) {
 	if err := validateObjectStorageKeyScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -55,12 +54,13 @@ func NewObjectStorageKeyScope(ctx context.Context, apiKey string, params ObjectS
 	if params.Key.Spec.CredentialsRef != nil {
 		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
 		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.Key.Spec.CredentialsRef, params.Key.GetNamespace(), "apiToken")
-		if err != nil {
+		if err != nil || len(apiToken) == 0 {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(apiToken)
+		linodeClientConfig.Token = string(apiToken)
 	}
-	linodeClient, err := CreateLinodeClient(apiKey, clientTimeout)
+	linodeClientConfig.Timeout = clientTimeout
+	linodeClient, err := CreateLinodeClient(linodeClientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
