@@ -130,17 +130,19 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 				})
 			})),
 			Path(Result("has finalizer", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-					Client:        mck.K8sClient,
-					Cluster:       &clusterv1.Cluster{},
-					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha2.LinodeMachine{
-						ObjectMeta: metav1.ObjectMeta{
-							Finalizers: []string{infrav1alpha2.MachineFinalizer},
+				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", "dnsUrl", "dnsCaPath",
+					MachineScopeParams{
+						Client:        mck.K8sClient,
+						Cluster:       &clusterv1.Cluster{},
+						Machine:       &clusterv1.Machine{},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{
+							ObjectMeta: metav1.ObjectMeta{
+								Finalizers: []string{infrav1alpha2.MachineFinalizer},
+							},
 						},
 					},
-				})
+				)
 				require.NoError(t, err)
 				assert.NoError(t, mScope.AddFinalizer(ctx))
 				require.Len(t, mScope.LinodeMachine.Finalizers, 1)
@@ -153,13 +155,14 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil)
 				}),
 				Result("finalizer added", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-						Client:        mck.K8sClient,
-						Cluster:       &clusterv1.Cluster{},
-						Machine:       &clusterv1.Machine{},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{},
-					})
+					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", "dnsUrl", "dnsCaPath",
+						MachineScopeParams{
+							Client:        mck.K8sClient,
+							Cluster:       &clusterv1.Cluster{},
+							Machine:       &clusterv1.Machine{},
+							LinodeCluster: &infrav1alpha2.LinodeCluster{},
+							LinodeMachine: &infrav1alpha2.LinodeMachine{},
+						})
 					require.NoError(t, err)
 					assert.NoError(t, mScope.AddFinalizer(ctx))
 					require.Len(t, mScope.LinodeMachine.Finalizers, 1)
@@ -171,13 +174,14 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("fail"))
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-						Client:        mck.K8sClient,
-						Cluster:       &clusterv1.Cluster{},
-						Machine:       &clusterv1.Machine{},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{},
-					})
+					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", "dnsUrl", "dnsCaPath",
+						MachineScopeParams{
+							Client:        mck.K8sClient,
+							Cluster:       &clusterv1.Cluster{},
+							Machine:       &clusterv1.Machine{},
+							LinodeCluster: &infrav1alpha2.LinodeCluster{},
+							LinodeMachine: &infrav1alpha2.LinodeMachine{},
+						})
 					require.NoError(t, err)
 
 					assert.Error(t, mScope.AddFinalizer(ctx))
@@ -193,12 +197,12 @@ func TestNewMachineScope(t *testing.T) {
 	NewSuite(t, mock.MockK8sClient{}).Run(
 		OneOf(
 			Path(Result("invalid params", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{})
+				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", "dnsUrl", "dnsCaPath", MachineScopeParams{})
 				require.ErrorContains(t, err, "is required")
 				assert.Nil(t, mScope)
 			})),
 			Path(Result("no token", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, "", "", MachineScopeParams{
+				mScope, err := NewMachineScope(ctx, "", "", "dnsUrl", "dnsCaPath", MachineScopeParams{
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
@@ -213,7 +217,7 @@ func TestNewMachineScope(t *testing.T) {
 					mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "example"))
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "", "", MachineScopeParams{
+					mScope, err := NewMachineScope(ctx, "", "", "dnsUrl", "dnsCaPath", MachineScopeParams{
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
@@ -245,7 +249,7 @@ func TestNewMachineScope(t *testing.T) {
 					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
 				}),
 				Result("cannot init patch helper", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", "dnsUrl", "dnsCaPath", MachineScopeParams{
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
@@ -270,7 +274,7 @@ func TestNewMachineScope(t *testing.T) {
 					}).AnyTimes()
 			})),
 			Path(Result("default credentials", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", "dnsUrl", "dnsCaPath", MachineScopeParams{
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
@@ -283,7 +287,7 @@ func TestNewMachineScope(t *testing.T) {
 		),
 		OneOf(
 			Path(Result("credentials from LinodeMachine credentialsRef", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, "", "", MachineScopeParams{
+				mScope, err := NewMachineScope(ctx, "", "", "dnsUrl", "dnsCaPath", MachineScopeParams{
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
@@ -301,7 +305,7 @@ func TestNewMachineScope(t *testing.T) {
 				assert.NotNil(t, mScope)
 			})),
 			Path(Result("credentials from LinodeCluster credentialsRef", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", "dnsUrl", "dnsCaPath", MachineScopeParams{
 					Client:  mck.K8sClient,
 					Cluster: &clusterv1.Cluster{},
 					Machine: &clusterv1.Machine{},
@@ -470,6 +474,8 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 				context.Background(),
 				"apiToken",
 				"dnsToken",
+				"dnsUrl",
+				"dnsCaPath",
 				MachineScopeParams{
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},
@@ -564,6 +570,8 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 				context.Background(),
 				"apiToken",
 				"dnsToken",
+				"dnsUrl",
+				"dnsCaPath",
 				MachineScopeParams{
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},
