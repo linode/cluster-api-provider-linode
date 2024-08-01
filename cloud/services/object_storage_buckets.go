@@ -16,11 +16,11 @@ import (
 func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
 	bucket, err := bScope.LinodeClient.GetObjectStorageBucket(
 		ctx,
-		bScope.Bucket.Spec.Cluster,
+		bScope.Bucket.Spec.Region,
 		bScope.Bucket.Name,
 	)
 	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-		return nil, fmt.Errorf("failed to get bucket from cluster %s: %w", bScope.Bucket.Spec.Cluster, err)
+		return nil, fmt.Errorf("failed to get bucket from region %s: %w", bScope.Bucket.Spec.Region, err)
 	}
 	if bucket != nil {
 		bScope.Logger.Info("Bucket exists")
@@ -29,7 +29,7 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 	}
 
 	opts := linodego.ObjectStorageBucketCreateOptions{
-		Region: bScope.Bucket.Spec.Cluster,
+		Region: bScope.Bucket.Spec.Region,
 		Label:  bScope.Bucket.Name,
 		ACL:    linodego.ACLPrivate,
 	}
@@ -78,7 +78,7 @@ func createObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBuck
 		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 			{
 				BucketName:  bScope.Bucket.Name,
-				Region:      bScope.Bucket.Spec.Cluster,
+				Region:      bScope.Bucket.Spec.Region,
 				Permissions: permission,
 			},
 		},

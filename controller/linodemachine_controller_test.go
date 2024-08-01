@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -853,9 +854,10 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
-			InstanceID: ptr.To(0),
-			Type:       "g6-nanode-1",
-			Image:      rutil.DefaultMachineControllerLinodeImage,
+			InstanceID:    ptr.To(0),
+			Type:          "g6-nanode-1",
+			Image:         rutil.DefaultMachineControllerLinodeImage,
+			Configuration: &infrav1alpha2.InstanceConfiguration{Kernel: "test"},
 		},
 	}
 	machineKey := client.ObjectKeyFromObject(linodeMachine)
@@ -976,7 +978,112 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 				),
 			),
 			Path(
+				Call("machine is not created because there were too many requests", func(ctx context.Context, mck Mock) {
+					listInst := mck.LinodeClient.EXPECT().
+						ListInstances(ctx, gomock.Any()).
+						Return([]linodego.Instance{}, nil)
+					mck.LinodeClient.EXPECT().
+						GetRegion(ctx, gomock.Any()).
+						After(listInst).
+						Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+				}),
+				OneOf(
+					Path(Result("create requeues when failing to create instance config", func(ctx context.Context, mck Mock) {
+						mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
+						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode machine InstanceCreateOptions"))
+					})),
+					Path(Result("create requeues when failing to create instance", func(ctx context.Context, mck Mock) {
+						getImage := mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
+							After(getImage).
+							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
+						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode instance due to API error"))
+					})),
+					Path(Result("create requeues when failing to update instance config", func(ctx context.Context, mck Mock) {
+						getImage := mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+						createInst := mck.LinodeClient.EXPECT().
+							CreateInstance(ctx, gomock.Any()).
+							After(getImage).
+							Return(&linodego.Instance{
+								ID:     123,
+								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+								IPv6:   "fd00::",
+								Status: linodego.InstanceOffline,
+							}, nil)
+						listInstConfigs := mck.LinodeClient.EXPECT().
+							ListInstanceConfigs(ctx, 123, gomock.Any()).
+							After(createInst).
+							Return([]linodego.InstanceConfig{{
+								Devices: &linodego.InstanceConfigDeviceMap{
+									SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+								},
+							}}, nil)
+						mck.LinodeClient.EXPECT().
+							UpdateInstanceConfig(ctx, 123, 0, gomock.Any()).
+							After(listInstConfigs).
+							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
+						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to update default instance configuration"))
+					})),
+					Path(Result("create requeues when failing to get instance config", func(ctx context.Context, mck Mock) {
+						getImage := mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+						createInst := mck.LinodeClient.EXPECT().
+							CreateInstance(ctx, gomock.Any()).
+							After(getImage).
+							Return(&linodego.Instance{
+								ID:     123,
+								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+								IPv6:   "fd00::",
+								Status: linodego.InstanceOffline,
+							}, nil)
+						updateInstConfig := mck.LinodeClient.EXPECT().
+							UpdateInstanceConfig(ctx, 123, 0, gomock.Any()).
+							After(createInst).
+							Return(nil, nil).AnyTimes()
+						getAddrs := mck.LinodeClient.EXPECT().
+							GetInstanceIPAddresses(ctx, 123).
+							After(updateInstConfig).
+							Return(&linodego.InstanceIPAddressResponse{
+								IPv4: &linodego.InstanceIPv4Response{
+									Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+									Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+								},
+								IPv6: &linodego.InstanceIPv6Response{
+									SLAAC: &linodego.InstanceIP{
+										Address: "fd00::",
+									},
+								},
+							}, nil).AnyTimes()
+						mck.LinodeClient.EXPECT().
+							ListInstanceConfigs(ctx, 123, gomock.Any()).
+							After(getAddrs).
+							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
+						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to get default instance configuration"))
+					})),
+				),
+			),
+			Path(
 				Call("machine is created", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.Configuration = nil
 				}),
 				OneOf(
 					Path(Result("creates a worker machine without disks", func(ctx context.Context, mck Mock) {
