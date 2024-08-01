@@ -68,6 +68,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	}
 
 	linodeCluster := infrav1alpha2.LinodeCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: defaultNamespace,
+			Name:      "test-cluster",
+			Labels:    make(map[string]string),
+		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
