@@ -135,6 +135,7 @@ func main() {
 		os.Exit(1)
 	}
 	if linodeDNSToken == "" {
+		setupLog.Info("LINODE_DNS_TOKEN not provided, defaulting to the value of LINODE_TOKEN")
 		linodeDNSToken = linodeToken
 	}
 
