@@ -423,7 +423,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	if kutil.IsControlPlaneMachine(machineScope.Machine) {
 		// Add the finalizer if not already there
 		if err := machineScope.AddLinodeClusterFinalizer(ctx); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 		}
 	}
 
@@ -723,10 +723,9 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
 		return ctrl.Result{}, fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
-	if controllerutil.ContainsFinalizer(machineScope.LinodeCluster, machineScope.LinodeMachine.Name) {
-		if !controllerutil.RemoveFinalizer(machineScope.LinodeCluster, machineScope.LinodeMachine.Name) {
-			return ctrl.Result{}, errors.New("Failed to remove linodecluster finalizer for this machine")
-		}
+	controllerutil.RemoveFinalizer(machineScope.LinodeCluster, machineScope.LinodeMachine.Name)
+	if err := machineScope.Client.Update(ctx, machineScope.LinodeCluster); err != nil {
+		return ctrl.Result{}, fmt.Errorf("remove finalizer from LinodeCluster %s/%s: %w", machineScope.LinodeCluster.Namespace, machineScope.LinodeCluster.Name, err)
 	}
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
