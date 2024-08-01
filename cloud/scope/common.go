@@ -47,16 +47,16 @@ func CreateLinodeClient(apiKey string, timeout time.Duration, opts ...Option) (L
 		return nil, errors.New("missing Linode API key")
 	}
 
-	linodeClient := linodego.NewClient(nil)
-	linodeClient.SetToken(apiKey)
-	linodeClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
+	newClient := linodego.NewClient(nil)
+	newClient.SetToken(apiKey)
+	newClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
 	for _, opt := range opts {
-		opt.set(&linodeClient)
+		opt.set(&newClient)
 	}
 
 	return linodeclient.NewLinodeClientWithTracing(
-		&linodeClient,
+		&newClient,
 		linodeclient.DefaultDecorator(),
 	), nil
 }
