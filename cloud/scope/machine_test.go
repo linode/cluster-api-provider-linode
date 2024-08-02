@@ -168,7 +168,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 			),
 			Path(
 				Call("unable to patch", func(ctx context.Context, mck Mock) {
-					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("fail"))
+					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("fail")).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{

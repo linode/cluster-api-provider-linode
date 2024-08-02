@@ -453,6 +453,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
 			Expect(err).NotTo(HaveOccurred())
 			mScope.ClusterPatchHelper = clusterPatchHelper
+			Expect(k8sClient.Create(ctx, &linodeCluster)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &linodeMachine)).To(Succeed())
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
@@ -462,7 +464,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
-			// Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
