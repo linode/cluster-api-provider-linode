@@ -16,7 +16,7 @@ spec:
         app: ${CLUSTER_NAME}-cluster-autoscaler
     spec:
       containers:
-        - image: registry.k8s.io/autoscaling/cluster-autoscaler:${CLUSTER_AUTOSCALER_VERSION:=v9.37.0}
+        - image: registry.k8s.io/autoscaling/cluster-autoscaler:${CLUSTER_AUTOSCALER_VERSION:=v1.30.2}
           name: cluster-autoscaler
           command: [/cluster-autoscaler]
           args:
