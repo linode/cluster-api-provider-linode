@@ -18,6 +18,11 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
+const (
+	patchRetryAttempts = 5
+	patchRetryInterval = 100 * time.Millisecond
+)
+
 type MachineScopeParams struct {
 	Client        K8sClient
 	Cluster       *clusterv1.Cluster
@@ -152,12 +157,12 @@ func (s *MachineScope) CloseAll(ctx context.Context) error {
 // MachineClose persists the linodemachine configuration and status.
 func (s *MachineScope) MachineClose(ctx context.Context) error {
 	var err error
-	for i := 0; i < 5; i++ {
+	for i := 0; i < patchRetryAttempts; i++ {
 		err = s.MachinePatchHelper.Patch(ctx, s.LinodeMachine)
 		if err == nil {
 			return nil
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(patchRetryInterval)
 	}
 	return err
 }
@@ -165,12 +170,12 @@ func (s *MachineScope) MachineClose(ctx context.Context) error {
 // ClusterClose persists the linodecluster configuration and status.
 func (s *MachineScope) ClusterClose(ctx context.Context) error {
 	var err error
-	for i := 0; i < 5; i++ {
+	for i := 0; i < patchRetryAttempts; i++ {
 		err = s.ClusterPatchHelper.Patch(ctx, s.LinodeCluster)
 		if err == nil {
 			return nil
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(patchRetryInterval)
 	}
 	return err
 }
