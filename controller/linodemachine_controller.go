@@ -739,9 +739,19 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
 		return ctrl.Result{}, fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
-	controllerutil.RemoveFinalizer(machineScope.LinodeCluster, machineScope.LinodeMachine.Name)
-	if err := machineScope.Client.Update(ctx, machineScope.LinodeCluster); err != nil {
-		return ctrl.Result{}, fmt.Errorf("remove finalizer from LinodeCluster %s/%s: %w", machineScope.LinodeCluster.Namespace, machineScope.LinodeCluster.Name, err)
+
+	if kutil.IsControlPlaneMachine(machineScope.Machine) {
+		// Add the finalizer if not already there
+		if err := machineScope.RemoveLinodeClusterFinalizer(ctx); err != nil {
+			logger.Error(err, "Failed to remove linodecluster finalizer")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+		}
 	}
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {

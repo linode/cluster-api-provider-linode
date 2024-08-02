@@ -68,6 +68,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	}
 
 	linodeCluster := infrav1alpha2.LinodeCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mock",
+			Namespace: defaultNamespace,
+		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
@@ -1187,6 +1191,17 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 			InstanceID: &instanceID,
 		},
 	}
+	machine := &clusterv1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Labels:    make(map[string]string),
+		},
+		Spec: clusterv1.MachineSpec{
+			Bootstrap: clusterv1.Bootstrap{
+				DataSecretName: ptr.To("test-bootstrap-secret"),
+			},
+		},
+	}
 
 	ctlrSuite := NewControllerSuite(
 		GinkgoT(),
@@ -1198,6 +1213,7 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 	mScope := &scope.MachineScope{
 		LinodeCluster: linodeCluster,
 		LinodeMachine: linodeMachine,
+		Machine:       machine,
 	}
 
 	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
