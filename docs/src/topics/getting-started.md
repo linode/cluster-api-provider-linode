@@ -28,6 +28,20 @@ export LINODE_TOKEN=<your linode PAT>
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
 ```
+
+Optionally, provide an alternative Linode API client configuration for provisioning domain resources.
+If not provided, the above-mentioned configuration will be used.
+```bash
+export LINODE_DNS_URL=custom.api.linode.com
+export LINODE_DNS_CA=/path/to/cacert.pem
+export LINODE_DNS_TOKEN=<your Linode PAT for the API instance at LINODE_DNS_URL>
+```
+
+```admonish info
+This project uses [linodego](https://github.com/linode/linodego) for Linode API interaction. 
+Please refer to it for more details on environment variables used for client configuration.
+```
+
 ```admonish warning
 For Regions and Images that do not yet support Akamai's cloud-init datasource CAPL will automatically use a stackscript shim
 to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
