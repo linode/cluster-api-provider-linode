@@ -2,6 +2,8 @@ package scope
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/http"
@@ -61,8 +63,23 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (LinodeClient, erro
 		timeout = config.Timeout
 	}
 
+	// Use system cert pool if root CA cert was not provided explicitly for this client.
+	// Works around linodego not using system certs if LINODE_CA is provided,
+	// which affects all clients spawned via linodego.NewClient
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	if config.RootCertificatePath == "" {
+		systemCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load system cert pool: %w", err)
+		}
+		tlsConfig.RootCAs = systemCertPool
+	}
+
 	httpClient := &http.Client{
 		Timeout: timeout,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
 	}
 
 	newClient := linodego.NewClient(httpClient)
