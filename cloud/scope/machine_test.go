@@ -187,6 +187,119 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 	)
 }
 
+func TestLinodeClusterFinalizer(t *testing.T) {
+	t.Parallel()
+
+	NewSuite(t, mock.MockK8sClient{}).Run(
+		Call("scheme 1", func(ctx context.Context, mck Mock) {
+			mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+				s := runtime.NewScheme()
+				infrav1alpha2.AddToScheme(s)
+				return s
+			}).AnyTimes()
+		}),
+		OneOf(
+			Path(Call("scheme 2", func(ctx context.Context, mck Mock) {
+				mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				}).AnyTimes()
+			})),
+			Path(Result("has finalizer", func(ctx context.Context, mck Mock) {
+				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+					Client:        mck.K8sClient,
+					Cluster:       &clusterv1.Cluster{},
+					Machine:       &clusterv1.Machine{},
+					LinodeMachine: &infrav1alpha2.LinodeMachine{},
+					LinodeCluster: &infrav1alpha2.LinodeCluster{
+						ObjectMeta: metav1.ObjectMeta{
+							Finalizers: []string{"test"},
+						},
+					},
+				})
+				require.NoError(t, err)
+				assert.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
+				require.Len(t, mScope.LinodeCluster.Finalizers, 1)
+				assert.Equal(t, "test", mScope.LinodeCluster.Finalizers[0])
+			})),
+		),
+		OneOf(
+			Path(
+				Call("able to patch", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				}),
+				Result("finalizer added when it is a control plane node", func(ctx context.Context, mck Mock) {
+					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+						Client:  mck.K8sClient,
+						Cluster: &clusterv1.Cluster{},
+						Machine: &clusterv1.Machine{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: make(map[string]string),
+							},
+						},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test",
+							},
+						},
+					})
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					require.NoError(t, err)
+					assert.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
+					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
+					assert.Equal(t, mScope.LinodeMachine.Name, mScope.LinodeCluster.Finalizers[0])
+				}),
+			),
+			Path(
+				Result("no finalizer added when it is a worker node", func(ctx context.Context, mck Mock) {
+					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+						Client:        mck.K8sClient,
+						Cluster:       &clusterv1.Cluster{},
+						Machine:       &clusterv1.Machine{},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test",
+							},
+						},
+					})
+					require.NoError(t, err)
+					assert.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
+					require.Len(t, mScope.LinodeMachine.Finalizers, 0)
+				}),
+			),
+			Path(
+				Call("unable to patch when it is a control plane node", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("fail")).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+						Client:  mck.K8sClient,
+						Cluster: &clusterv1.Cluster{},
+						Machine: &clusterv1.Machine{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: make(map[string]string),
+							},
+						},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test",
+							},
+						},
+					})
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					require.NoError(t, err)
+
+					assert.Error(t, mScope.AddLinodeClusterFinalizer(ctx))
+				}),
+			),
+		),
+	)
+}
+
 func TestNewMachineScope(t *testing.T) {
 	t.Parallel()
 
