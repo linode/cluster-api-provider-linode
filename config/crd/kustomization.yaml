@@ -16,6 +16,7 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_linodevpcs.yaml
 - bases/infrastructure.cluster.x-k8s.io_linodeobjectstoragebuckets.yaml
 - bases/infrastructure.cluster.x-k8s.io_linodeplacementgroups.yaml
+- bases/infrastructure.cluster.x-k8s.io_linodeobjectstoragekeys.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

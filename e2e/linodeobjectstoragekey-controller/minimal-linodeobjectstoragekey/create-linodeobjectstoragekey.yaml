@@ -1,0 +1,9 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  name: ($key)
+spec:
+  bucketAccess:
+    - bucketName: ($key)
+      permissions: read_only
+      region: us-sea

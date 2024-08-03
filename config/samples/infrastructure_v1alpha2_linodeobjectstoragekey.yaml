@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  labels:
+    app.kubernetes.io/name: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+  name: linodeobjectstoragekey-sample
+spec:
+  bucketAccess:
+    - bucketName: linodeobjectstoragebucket-sample
+      permissions: read_only
+      region: us-ord
