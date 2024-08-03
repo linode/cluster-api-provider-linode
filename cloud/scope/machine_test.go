@@ -142,7 +142,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 					},
 				})
 				require.NoError(t, err)
-				assert.NoError(t, mScope.AddFinalizer(ctx))
+				require.NoError(t, mScope.AddFinalizer(ctx))
 				require.Len(t, mScope.LinodeMachine.Finalizers, 1)
 				assert.Equal(t, infrav1alpha2.MachineFinalizer, mScope.LinodeMachine.Finalizers[0])
 			})),
@@ -161,7 +161,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 						LinodeMachine: &infrav1alpha2.LinodeMachine{},
 					})
 					require.NoError(t, err)
-					assert.NoError(t, mScope.AddFinalizer(ctx))
+					require.NoError(t, mScope.AddFinalizer(ctx))
 					require.Len(t, mScope.LinodeMachine.Finalizers, 1)
 					assert.Equal(t, infrav1alpha2.MachineFinalizer, mScope.LinodeMachine.Finalizers[0])
 				}),
@@ -219,10 +219,42 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 					},
 				})
 				require.NoError(t, err)
-				assert.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
+				require.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
 				require.Len(t, mScope.LinodeCluster.Finalizers, 1)
 				assert.Equal(t, "test", mScope.LinodeCluster.Finalizers[0])
 			})),
+			Path(
+				Call("remove finalizers", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				}),
+				Result("remove finalizer", func(ctx context.Context, mck Mock) {
+					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+						Client:  mck.K8sClient,
+						Cluster: &clusterv1.Cluster{},
+						Machine: &clusterv1.Machine{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: make(map[string]string),
+							},
+						},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test",
+							},
+						},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Finalizers: []string{"test"},
+							},
+						},
+					})
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					require.NoError(t, err)
+					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
+					assert.Equal(t, "test", mScope.LinodeCluster.Finalizers[0])
+					require.NoError(t, mScope.RemoveLinodeClusterFinalizer(ctx))
+					require.Empty(t, mScope.LinodeCluster.Finalizers)
+				}),
+			),
 		),
 		OneOf(
 			Path(
@@ -247,7 +279,7 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 					})
 					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 					require.NoError(t, err)
-					assert.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
+					require.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
 					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
 					assert.Equal(t, mScope.LinodeMachine.Name, mScope.LinodeCluster.Finalizers[0])
 				}),
@@ -266,8 +298,8 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 						},
 					})
 					require.NoError(t, err)
-					assert.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
-					require.Len(t, mScope.LinodeMachine.Finalizers, 0)
+					require.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
+					require.Empty(t, mScope.LinodeMachine.Finalizers)
 				}),
 			),
 			Path(
