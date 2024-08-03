@@ -25,6 +25,8 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
+const isControlPlane = "true"
+
 func TestValidateMachineScopeParams(t *testing.T) {
 	t.Parallel()
 	type args struct {
@@ -248,7 +250,7 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 							},
 						},
 					})
-					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
 					assert.Equal(t, "test", mScope.LinodeCluster.Finalizers[0])
@@ -281,7 +283,7 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 							},
 						},
 					})
-					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
 					assert.Equal(t, "test", mScope.LinodeCluster.Finalizers[0])
@@ -317,7 +319,7 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 							},
 						},
 					})
-					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
 					assert.Equal(t, "test", mScope.LinodeCluster.Finalizers[0])
@@ -348,7 +350,7 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 							},
 						},
 					})
-					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 					require.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
 					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
@@ -393,7 +395,7 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 							},
 						},
 					})
-					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 
 					assert.Error(t, mScope.AddLinodeClusterFinalizer(ctx))
