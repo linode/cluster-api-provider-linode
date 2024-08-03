@@ -257,7 +257,7 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 				}),
 			),
 			Path(
-				Call("testing patch helper", func(ctx context.Context, mck Mock) {
+				Call("success patch helper", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
 				Result("remove finalizer", func(ctx context.Context, mck Mock) {
@@ -290,6 +290,40 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 					require.NoError(t, mScope.CloseAll(ctx))
 					require.Empty(t, mScope.LinodeCluster.Finalizers)
 					require.Empty(t, mScope.LinodeMachine.Finalizers)
+				}),
+			),
+			Path(
+				Call("fail patch helper", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("failed to patch")).AnyTimes()
+				}),
+				Result("remove finalizer", func(ctx context.Context, mck Mock) {
+					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
+						Client:  mck.K8sClient,
+						Cluster: &clusterv1.Cluster{},
+						Machine: &clusterv1.Machine{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels: make(map[string]string),
+							},
+						},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:       "test",
+								Finalizers: []string{"test"},
+							},
+						},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Finalizers: []string{"test"},
+							},
+						},
+					})
+					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
+					require.NoError(t, err)
+					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
+					assert.Equal(t, "test", mScope.LinodeCluster.Finalizers[0])
+					controllerutil.RemoveFinalizer(mScope.LinodeCluster, mScope.LinodeMachine.Name)
+					controllerutil.RemoveFinalizer(mScope.LinodeMachine, mScope.LinodeMachine.Name)
+					require.ErrorContains(t, mScope.CloseAll(ctx), "failed to patch")
 				}),
 			),
 		),
