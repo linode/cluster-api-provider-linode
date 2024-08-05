@@ -264,6 +264,15 @@ clean-release-git: ## Restores the git files usually modified during a release
 clean-release: clean-release-git
 	rm -rf $(RELEASE_DIR)
 
+.PHONY: clean-child-clusters
+clean-child-clusters:
+	@for cluster in $$($(KUBECTL) get clusters -o name); do \
+		$(KUBECTL) delete $$cluster; \
+	done
+	@for vpc in $$($(KUBECTL) get linodevpc -o name); do \
+		$(KUBECTL) delete $$vpc; \
+	done
+
 ## --------------------------------------
 ## Build Dependencies
 ## --------------------------------------
