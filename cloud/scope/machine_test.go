@@ -223,17 +223,21 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 				}).AnyTimes()
 			})),
 			Path(Result("has finalizer", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-					Client:        mck.K8sClient,
-					Cluster:       &clusterv1.Cluster{},
-					Machine:       &clusterv1.Machine{},
-					LinodeMachine: &infrav1alpha2.LinodeMachine{},
-					LinodeCluster: &infrav1alpha2.LinodeCluster{
-						ObjectMeta: metav1.ObjectMeta{
-							Finalizers: []string{"test"},
+				mScope, err := NewMachineScope(
+					ctx,
+					ClientConfig{Token: "apiToken"},
+					ClientConfig{Token: "dnsToken"},
+					MachineScopeParams{
+						Client:        mck.K8sClient,
+						Cluster:       &clusterv1.Cluster{},
+						Machine:       &clusterv1.Machine{},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							ObjectMeta: metav1.ObjectMeta{
+								Finalizers: []string{"test"},
+							},
 						},
-					},
-				})
+					})
 				require.NoError(t, err)
 				require.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
 				require.Len(t, mScope.LinodeCluster.Finalizers, 1)
@@ -244,25 +248,29 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
 				Result("remove finalizer", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-						Client:  mck.K8sClient,
-						Cluster: &clusterv1.Cluster{},
-						Machine: &clusterv1.Machine{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: make(map[string]string),
+					mScope, err := NewMachineScope(
+						ctx,
+						ClientConfig{Token: "apiToken"},
+						ClientConfig{Token: "dnsToken"},
+						MachineScopeParams{
+							Client:  mck.K8sClient,
+							Cluster: &clusterv1.Cluster{},
+							Machine: &clusterv1.Machine{
+								ObjectMeta: metav1.ObjectMeta{
+									Labels: make(map[string]string),
+								},
 							},
-						},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "test",
+							LinodeMachine: &infrav1alpha2.LinodeMachine{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "test",
+								},
 							},
-						},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{
-							ObjectMeta: metav1.ObjectMeta{
-								Finalizers: []string{"test"},
+							LinodeCluster: &infrav1alpha2.LinodeCluster{
+								ObjectMeta: metav1.ObjectMeta{
+									Finalizers: []string{"test"},
+								},
 							},
-						},
-					})
+						})
 					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
@@ -276,26 +284,30 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
 				Result("remove finalizer", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-						Client:  mck.K8sClient,
-						Cluster: &clusterv1.Cluster{},
-						Machine: &clusterv1.Machine{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: make(map[string]string),
+					mScope, err := NewMachineScope(
+						ctx,
+						ClientConfig{Token: "apiToken"},
+						ClientConfig{Token: "dnsToken"},
+						MachineScopeParams{
+							Client:  mck.K8sClient,
+							Cluster: &clusterv1.Cluster{},
+							Machine: &clusterv1.Machine{
+								ObjectMeta: metav1.ObjectMeta{
+									Labels: make(map[string]string),
+								},
 							},
-						},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:       "test",
-								Finalizers: []string{"test"},
+							LinodeMachine: &infrav1alpha2.LinodeMachine{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:       "test",
+									Finalizers: []string{"test"},
+								},
 							},
-						},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{
-							ObjectMeta: metav1.ObjectMeta{
-								Finalizers: []string{"test"},
+							LinodeCluster: &infrav1alpha2.LinodeCluster{
+								ObjectMeta: metav1.ObjectMeta{
+									Finalizers: []string{"test"},
+								},
 							},
-						},
-					})
+						})
 					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
@@ -312,26 +324,30 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("failed to patch")).AnyTimes()
 				}),
 				Result("remove finalizer", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-						Client:  mck.K8sClient,
-						Cluster: &clusterv1.Cluster{},
-						Machine: &clusterv1.Machine{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: make(map[string]string),
+					mScope, err := NewMachineScope(
+						ctx,
+						ClientConfig{Token: "apiToken"},
+						ClientConfig{Token: "dnsToken"},
+						MachineScopeParams{
+							Client:  mck.K8sClient,
+							Cluster: &clusterv1.Cluster{},
+							Machine: &clusterv1.Machine{
+								ObjectMeta: metav1.ObjectMeta{
+									Labels: make(map[string]string),
+								},
 							},
-						},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:       "test",
-								Finalizers: []string{"test"},
+							LinodeMachine: &infrav1alpha2.LinodeMachine{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:       "test",
+									Finalizers: []string{"test"},
+								},
 							},
-						},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{
-							ObjectMeta: metav1.ObjectMeta{
-								Finalizers: []string{"test"},
+							LinodeCluster: &infrav1alpha2.LinodeCluster{
+								ObjectMeta: metav1.ObjectMeta{
+									Finalizers: []string{"test"},
+								},
 							},
-						},
-					})
+						})
 					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 					require.Len(t, mScope.LinodeCluster.Finalizers, 1)
@@ -348,21 +364,25 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
 				Result("finalizer added when it is a control plane node", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-						Client:  mck.K8sClient,
-						Cluster: &clusterv1.Cluster{},
-						Machine: &clusterv1.Machine{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: make(map[string]string),
+					mScope, err := NewMachineScope(
+						ctx,
+						ClientConfig{Token: "apiToken"},
+						ClientConfig{Token: "dnsToken"},
+						MachineScopeParams{
+							Client:  mck.K8sClient,
+							Cluster: &clusterv1.Cluster{},
+							Machine: &clusterv1.Machine{
+								ObjectMeta: metav1.ObjectMeta{
+									Labels: make(map[string]string),
+								},
 							},
-						},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "test",
+							LinodeCluster: &infrav1alpha2.LinodeCluster{},
+							LinodeMachine: &infrav1alpha2.LinodeMachine{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "test",
+								},
 							},
-						},
-					})
+						})
 					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 					require.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
@@ -372,17 +392,21 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 			),
 			Path(
 				Result("no finalizer added when it is a worker node", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-						Client:        mck.K8sClient,
-						Cluster:       &clusterv1.Cluster{},
-						Machine:       &clusterv1.Machine{},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "test",
+					mScope, err := NewMachineScope(
+						ctx,
+						ClientConfig{Token: "apiToken"},
+						ClientConfig{Token: "dnsToken"},
+						MachineScopeParams{
+							Client:        mck.K8sClient,
+							Cluster:       &clusterv1.Cluster{},
+							Machine:       &clusterv1.Machine{},
+							LinodeCluster: &infrav1alpha2.LinodeCluster{},
+							LinodeMachine: &infrav1alpha2.LinodeMachine{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "test",
+								},
 							},
-						},
-					})
+						})
 					require.NoError(t, err)
 					require.NoError(t, mScope.AddLinodeClusterFinalizer(ctx))
 					require.Empty(t, mScope.LinodeMachine.Finalizers)
@@ -393,21 +417,25 @@ func TestLinodeClusterFinalizer(t *testing.T) {
 					mck.K8sClient.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).Return(errors.New("fail")).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, "apiToken", "dnsToken", MachineScopeParams{
-						Client:  mck.K8sClient,
-						Cluster: &clusterv1.Cluster{},
-						Machine: &clusterv1.Machine{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: make(map[string]string),
+					mScope, err := NewMachineScope(
+						ctx,
+						ClientConfig{Token: "apiToken"},
+						ClientConfig{Token: "dnsToken"},
+						MachineScopeParams{
+							Client:  mck.K8sClient,
+							Cluster: &clusterv1.Cluster{},
+							Machine: &clusterv1.Machine{
+								ObjectMeta: metav1.ObjectMeta{
+									Labels: make(map[string]string),
+								},
 							},
-						},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "test",
+							LinodeCluster: &infrav1alpha2.LinodeCluster{},
+							LinodeMachine: &infrav1alpha2.LinodeMachine{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "test",
+								},
 							},
-						},
-					})
+						})
 					mScope.Machine.Labels[clusterv1.MachineControlPlaneLabel] = isControlPlane
 					require.NoError(t, err)
 
