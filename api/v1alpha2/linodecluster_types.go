@@ -113,21 +113,9 @@ type NetworkSpec struct {
 	// +kubebuilder:validation:Enum=linode;akamai
 	// +optional
 	DNSProvider string `json:"dnsProvider,omitempty"`
-	// DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
-	// Ignored if the LoadBalancerType is set to anything other than dns
+	// DNSConfig is used to set up the DNS config for the loadbalancer
 	// +optional
-	DNSRootDomain string `json:"dnsRootDomain,omitempty"`
-	// DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
-	// DNS record
-	// Ignored if the LoadBalancerType is set to anything other than dns
-	// If not set, CAPL will create a unique identifier for you
-	// +optional
-	DNSUniqueIdentifier string `json:"dnsUniqueIdentifier,omitempty"`
-	// DNSTTLSec is the TTL for the domain record
-	// Ignored if the LoadBalancerType is set to anything other than dns
-	// If not set, defaults to 30
-	// +optional
-	DNSTTLSec int `json:"dnsTTLsec,omitempty"`
+	DNSConfig DNSConfig `json:"dnsConfig,omitempty"`
 	// apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
 	// If omitted, default value is 6443.
 	// +kubebuilder:validation:Minimum=1
@@ -153,6 +141,27 @@ type LinodeNBPortConfig struct {
 	// nodeBalancerConfigID is the config ID of port's NodeBalancer config.
 	// +optional
 	NodeBalancerConfigID *int `json:"nodeBalancerConfigID,omitempty"`
+}
+
+type DNSConfig struct {
+	// DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
+	// Ignored if the LoadBalancerType is set to anything other than dns
+	// +optional
+	DNSRootDomain string `json:"dnsRootDomain,omitempty"`
+	// DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
+	// DNS record
+	// Ignored if the LoadBalancerType is set to anything other than dns
+	// If not set, CAPL will create a unique identifier for you
+	// +optional
+	DNSUniqueIdentifier string `json:"dnsUniqueIdentifier,omitempty"`
+	// DNSTTLSec is the TTL for the domain record
+	// Ignored if the LoadBalancerType is set to anything other than dns
+	// If not set, defaults to 30
+	// +optional
+	DNSTTLSec int `json:"dnsTTLsec,omitempty"`
+	// DNSEndpointOverride is used to override CAPL's construction of the controlplane endpoint
+	// +optional
+	DNSEndpointOverride string `json:"dnsEndpointOverride,omitempty"`
 }
 
 // +kubebuilder:object:root=true

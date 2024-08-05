@@ -1179,9 +1179,7 @@ func autoConvert_v1alpha1_NetworkSpec_To_v1alpha2_NetworkSpec(in *NetworkSpec, o
 func autoConvert_v1alpha2_NetworkSpec_To_v1alpha1_NetworkSpec(in *v1alpha2.NetworkSpec, out *NetworkSpec, s conversion.Scope) error {
 	out.LoadBalancerType = in.LoadBalancerType
 	// WARNING: in.DNSProvider requires manual conversion: does not exist in peer-type
-	// WARNING: in.DNSRootDomain requires manual conversion: does not exist in peer-type
-	// WARNING: in.DNSUniqueIdentifier requires manual conversion: does not exist in peer-type
-	// WARNING: in.DNSTTLSec requires manual conversion: does not exist in peer-type
+	// WARNING: in.DNSConfig requires manual conversion: does not exist in peer-type
 	// WARNING: in.ApiserverLoadBalancerPort requires manual conversion: does not exist in peer-type
 	out.NodeBalancerID = (*int)(unsafe.Pointer(in.NodeBalancerID))
 	// WARNING: in.ApiserverNodeBalancerConfigID requires manual conversion: does not exist in peer-type

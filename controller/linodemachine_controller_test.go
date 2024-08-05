@@ -647,10 +647,12 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 	linodeCluster := infrav1alpha2.LinodeCluster{
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Network: infrav1alpha2.NetworkSpec{
-				LoadBalancerType:    "dns",
-				DNSRootDomain:       "lkedevs.net",
-				DNSUniqueIdentifier: "abc123",
-				DNSTTLSec:           30,
+				LoadBalancerType: "dns",
+				DNSConfig: infrav1alpha2.DNSConfig{
+					DNSRootDomain:       "lkedevs.net",
+					DNSUniqueIdentifier: "abc123",
+					DNSTTLSec:           30,
+				},
 			},
 		},
 	}
@@ -1226,10 +1228,12 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
 			Network: infrav1alpha2.NetworkSpec{
-				LoadBalancerType:    "dns",
-				DNSRootDomain:       "lkedevs.net",
-				DNSUniqueIdentifier: "abc123",
-				DNSTTLSec:           30,
+				LoadBalancerType: "dns",
+				DNSConfig: infrav1alpha2.DNSConfig{
+					DNSRootDomain:       "lkedevs.net",
+					DNSUniqueIdentifier: "abc123",
+					DNSTTLSec:           30,
+				},
 			},
 		},
 	}

@@ -52,10 +52,12 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "akafn.com",
-							DNSUniqueIdentifier: "test-hash",
-							DNSProvider:         "akamai",
+							LoadBalancerType: "dns",
+							DNSProvider:      "akamai",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "akafn.com",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -112,10 +114,12 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "akafn.com",
-							DNSUniqueIdentifier: "test-hash",
-							DNSProvider:         "akamai",
+							LoadBalancerType: "dns",
+							DNSProvider:      "akamai",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "akafn.com",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -203,10 +207,12 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "akafn.com",
-							DNSUniqueIdentifier: "test-hash",
-							DNSProvider:         "akamai",
+							LoadBalancerType: "dns",
+							DNSProvider:      "akamai",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "akafn.com",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -270,10 +276,12 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "akafn.com",
-							DNSUniqueIdentifier: "test-hash",
-							DNSProvider:         "akamai",
+							LoadBalancerType: "dns",
+							DNSProvider:      "akamai",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "akafn.com",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -363,9 +371,11 @@ func TestAddIPToDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -433,10 +443,12 @@ func TestAddIPToDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
-							DNSTTLSec:           100,
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+								DNSTTLSec:           100,
+							},
 						},
 					},
 				},
@@ -504,9 +516,11 @@ func TestAddIPToDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -569,9 +583,11 @@ func TestAddIPToDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -640,9 +656,11 @@ func TestAddIPToDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -704,9 +722,11 @@ func TestAddIPToDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -758,9 +778,11 @@ func TestAddIPToDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -855,9 +877,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -927,11 +951,12 @@ func TestDeleteIPFromDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
-						},
-					},
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
+						}},
 				},
 				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
@@ -999,9 +1024,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -1043,9 +1070,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -1101,9 +1130,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},
@@ -1164,9 +1195,11 @@ func TestDeleteIPFromDNS(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:    "dns",
-							DNSRootDomain:       "lkedevs.net",
-							DNSUniqueIdentifier: "test-hash",
+							LoadBalancerType: "dns",
+							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSRootDomain:       "lkedevs.net",
+								DNSUniqueIdentifier: "test-hash",
+							},
 						},
 					},
 				},

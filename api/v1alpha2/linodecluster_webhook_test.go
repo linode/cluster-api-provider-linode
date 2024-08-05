@@ -124,9 +124,11 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 			Spec: LinodeClusterSpec{
 				Region: "us-ord",
 				Network: NetworkSpec{
-					LoadBalancerType:    "dns",
-					DNSRootDomain:       "test.net",
-					DNSUniqueIdentifier: "abc123",
+					LoadBalancerType: "dns",
+					DNSConfig: DNSConfig{
+						DNSRootDomain:       "test.net",
+						DNSUniqueIdentifier: "abc123",
+					},
 				},
 			},
 		}
@@ -138,9 +140,11 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 			Spec: LinodeClusterSpec{
 				Region: "us-ord",
 				Network: NetworkSpec{
-					LoadBalancerType:    "dns",
-					DNSRootDomain:       "",
-					DNSUniqueIdentifier: "abc123",
+					LoadBalancerType: "dns",
+					DNSConfig: DNSConfig{
+						DNSRootDomain:       "",
+						DNSUniqueIdentifier: "abc123",
+					},
 				},
 			},
 		}
@@ -152,9 +156,11 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 			Spec: LinodeClusterSpec{
 				Region: "us-ord",
 				Network: NetworkSpec{
-					LoadBalancerType:    "dns",
-					DNSRootDomain:       "test.net",
-					DNSUniqueIdentifier: "",
+					LoadBalancerType: "dns",
+					DNSConfig: DNSConfig{
+						DNSRootDomain:       "test.net",
+						DNSUniqueIdentifier: "",
+					},
 				},
 			},
 		}
