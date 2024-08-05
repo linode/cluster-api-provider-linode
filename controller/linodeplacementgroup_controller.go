@@ -54,11 +54,11 @@ import (
 // LinodePlacementGroupReconciler reconciles a LinodePlacementGroup object
 type LinodePlacementGroupReconciler struct {
 	client.Client
-	Recorder         record.EventRecorder
-	LinodeApiKey     string
-	WatchFilterValue string
-	Scheme           *runtime.Scheme
-	ReconcileTimeout time.Duration
+	Recorder           record.EventRecorder
+	LinodeClientConfig scope.ClientConfig
+	WatchFilterValue   string
+	Scheme             *runtime.Scheme
+	ReconcileTimeout   time.Duration
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeplacementgroups,verbs=get;list;watch;create;update;patch;delete
@@ -88,7 +88,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 
 	pgScope, err := scope.NewPlacementGroupScope(
 		ctx,
-		r.LinodeApiKey,
+		r.LinodeClientConfig,
 		scope.PlacementGroupScopeParams{
 			Client:               r.TracedClient(),
 			LinodePlacementGroup: linodeplacementgroup,

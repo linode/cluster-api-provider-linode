@@ -157,7 +157,7 @@ func TestClusterScopeMethods(t *testing.T) {
 
 			cScope, err := NewClusterScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				ClusterScopeParams{
 					Cluster:       testcase.fields.Cluster,
 					LinodeCluster: testcase.fields.LinodeCluster,
@@ -297,7 +297,7 @@ func TestNewClusterScope(t *testing.T) {
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
 				},
 			},
-			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
+			expectedError: fmt.Errorf("failed to create linode client: token cannot be empty"),
 			expects:       func(mock *mock.MockK8sClient) {},
 		},
 	}
@@ -316,7 +316,7 @@ func TestNewClusterScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewClusterScope(context.Background(), testcase.args.apiKey, testcase.args.params)
+			got, err := NewClusterScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -411,7 +411,7 @@ func TestClusterAddCredentialsRefFinalizer(t *testing.T) {
 
 			cScope, err := NewClusterScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				ClusterScopeParams{
 					Cluster:       testcase.fields.Cluster,
 					LinodeCluster: testcase.fields.LinodeCluster,
@@ -512,7 +512,7 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 
 			cScope, err := NewClusterScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				ClusterScopeParams{
 					Cluster:       testcase.fields.Cluster,
 					LinodeCluster: testcase.fields.LinodeCluster,

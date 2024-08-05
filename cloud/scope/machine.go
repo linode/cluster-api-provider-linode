@@ -61,7 +61,7 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(ctx context.Context, linodeClientConfig, dnsClientConfig ClientConfig, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -92,22 +92,22 @@ func NewMachineScope(ctx context.Context, apiKey, dnsKey string, params MachineS
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(apiToken)
+		linodeClientConfig.Token = string(apiToken)
 
 		dnsToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "dnsToken")
 		if err != nil || len(dnsToken) == 0 {
 			dnsToken = apiToken
 		}
-		dnsKey = string(dnsToken)
+		dnsClientConfig.Token = string(dnsToken)
 	}
 
-	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout,
+	linodeClient, err := CreateLinodeClient(linodeClientConfig,
 		WithRetryCount(0),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
-	linodeDomainsClient, err := CreateLinodeClient(dnsKey, defaultClientTimeout,
+	linodeDomainsClient, err := CreateLinodeClient(dnsClientConfig,
 		WithRetryCount(0),
 	)
 	if err != nil {

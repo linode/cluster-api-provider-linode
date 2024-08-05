@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -22,19 +23,28 @@ func TestCreateLinodeClient(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		apiKey      string
-		expectedErr error
+		name                string
+		token               string
+		baseUrl             string
+		rootCertificatePath string
+		timeout             time.Duration
+		expectedErr         error
 	}{
 		{
-			"Success - Valid API Key",
+			"Success - Valid API token",
 			"test-key",
+			"",
+			"",
+			0,
 			nil,
 		},
 		{
-			"Error - Empty API Key",
+			"Error - Empty API token",
 			"",
-			errors.New("missing Linode API key"),
+			"",
+			"",
+			0,
+			errors.New("token cannot be empty"),
 		},
 	}
 
@@ -42,9 +52,13 @@ func TestCreateLinodeClient(t *testing.T) {
 		testCase := tt
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-
-			got, err := CreateLinodeClient(testCase.apiKey, defaultClientTimeout)
-
+			clientConfig := ClientConfig{
+				Token:               testCase.token,
+				Timeout:             testCase.timeout,
+				BaseUrl:             testCase.baseUrl,
+				RootCertificatePath: testCase.rootCertificatePath,
+			}
+			got, err := CreateLinodeClient(clientConfig)
 			if testCase.expectedErr != nil {
 				assert.EqualError(t, err, testCase.expectedErr.Error())
 			} else {
