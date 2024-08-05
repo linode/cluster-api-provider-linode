@@ -53,11 +53,11 @@ import (
 // LinodeVPCReconciler reconciles a LinodeVPC object
 type LinodeVPCReconciler struct {
 	client.Client
-	Recorder         record.EventRecorder
-	LinodeApiKey     string
-	WatchFilterValue string
-	Scheme           *runtime.Scheme
-	ReconcileTimeout time.Duration
+	Recorder           record.EventRecorder
+	LinodeClientConfig scope.ClientConfig
+	WatchFilterValue   string
+	Scheme             *runtime.Scheme
+	ReconcileTimeout   time.Duration
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs,verbs=get;list;watch;create;update;patch;delete
@@ -94,7 +94,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	vpcScope, err := scope.NewVPCScope(
 		ctx,
-		r.LinodeApiKey,
+		r.LinodeClientConfig,
 		scope.VPCScopeParams{
 			Client:    r.TracedClient(),
 			LinodeVPC: linodeVPC,

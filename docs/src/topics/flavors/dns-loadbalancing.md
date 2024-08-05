@@ -26,7 +26,18 @@ With these changes, the controlPlaneEndpoint is set to `<domain-name>-<uniqueid>
 The controller will create A/AAAA and TXT records under [the Domains tab in the Linode Cloud Manager.](https://cloud.linode.com/domains) or Akamai Edge DNS depending on the provider.
 
  ### Linode Domains:
-Using the `LINODE_DNS_TOKEN` env var, you can pass the [API token of a different account](https://cloud.linode.com/profile/tokens) if the Domain has been created in another acount under Linode CM
+Using the `LINODE_DNS_TOKEN` env var, you can pass the [API token of a different account](https://cloud.linode.com/profile/tokens) if the Domain has been created in another acount under Linode CM:
+
+```bash
+export LINODE_DNS_TOKEN=<your Linode PAT>
+```
+
+Optionally, provide an alternative Linode API URL and root CA certificate.
+
+```bash
+export LINODE_DNS_URL=custom.api.linode.com
+export LINODE_DNS_CA=/path/to/cacert.pem
+```
 
 ### Akamai Domains:
 For the controller to authenticate with the Edge DNS API, you'll need to set the following env vars when creating the mgmt cluster.

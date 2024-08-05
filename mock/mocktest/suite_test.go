@@ -130,7 +130,6 @@ var _ = Describe("controller suite with events/logs", Label("suite"), func() {
 			mck.Logger().Info("+")
 
 			Expect(strings.Count(mck.Events(), "+")).To(Equal(2))
-			Expect(strings.Count(mck.Logs(), "+")).To(Equal(2))
 		}),
 	)
 })

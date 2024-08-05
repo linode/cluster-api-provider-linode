@@ -197,7 +197,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 					Logger: &logr.Logger{},
 				},
 			},
-			expectedErr: fmt.Errorf("failed to create linode client: missing Linode API key"),
+			expectedErr: fmt.Errorf("failed to create linode client: token cannot be empty"),
 			expects:     func(mock *mock.MockK8sClient) {},
 		},
 	}
@@ -215,7 +215,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewObjectStorageBucketScope(context.Background(), testcase.args.apiKey, testcase.args.params)
+			got, err := NewObjectStorageBucketScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedErr != nil {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())
@@ -275,7 +275,7 @@ func TestObjectStorageBucketScopeMethods(t *testing.T) {
 
 			objScope, err := NewObjectStorageBucketScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				ObjectStorageBucketScopeParams{
 					Client: mockK8sClient,
 					Bucket: testcase.Bucket,
