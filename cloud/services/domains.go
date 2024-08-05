@@ -44,7 +44,7 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 		return err
 	}
 
-	if mscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
+	if mscope.LinodeCluster.Spec.Network.DNSConfig.DNSProvider == "akamai" {
 		return EnsureAkamaiDNSEntries(ctx, mscope, operation, dnsEntries)
 	}
 

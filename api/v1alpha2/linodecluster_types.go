@@ -107,12 +107,6 @@ type NetworkSpec struct {
 	// +kubebuilder:validation:Enum=NodeBalancer;dns
 	// +optional
 	LoadBalancerType string `json:"loadBalancerType,omitempty"`
-	// DNSProvider is provider who manages the domain
-	// Ignored if the LoadBalancerType is set to anything other than dns
-	// If not set, defaults linode dns
-	// +kubebuilder:validation:Enum=linode;akamai
-	// +optional
-	DNSProvider string `json:"dnsProvider,omitempty"`
 	// DNSConfig is used to set up the DNS config for the loadbalancer
 	// +optional
 	DNSConfig DNSConfig `json:"dnsConfig,omitempty"`
@@ -144,6 +138,12 @@ type LinodeNBPortConfig struct {
 }
 
 type DNSConfig struct {
+	// DNSProvider is provider who manages the domain
+	// Ignored if the LoadBalancerType is set to anything other than dns
+	// If not set, defaults linode dns
+	// +kubebuilder:validation:Enum=linode;akamai
+	// +optional
+	DNSProvider string `json:"dnsProvider,omitempty"`
 	// DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
 	// Ignored if the LoadBalancerType is set to anything other than dns
 	// +optional

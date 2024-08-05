@@ -47,7 +47,6 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 	controlPlaneEndpointHost := "10.0.0.1"
 	controlPlaneEndpointPort := 6443
 	clusterName := "cluster-lifecycle"
-	clusterNameSpace := "default"
 	ownerRef := metav1.OwnerReference{
 		Name:       clusterName,
 		APIVersion: "cluster.x-k8s.io/v1beta1",
@@ -57,7 +56,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 	ownerRefs := []metav1.OwnerReference{ownerRef}
 	metadata := metav1.ObjectMeta{
 		Name:            clusterName,
-		Namespace:       clusterNameSpace,
+		Namespace:       defaultNamespace,
 		OwnerReferences: ownerRefs,
 	}
 	linodeCluster := infrav1alpha2.LinodeCluster{
@@ -258,7 +257,6 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 	controlPlaneEndpointHost := "cluster-lifecycle-dns-abc123.lkedevs.net"
 	controlPlaneEndpointPort := 1000
 	clusterName := "cluster-lifecycle-dns"
-	clusterNameSpace := "default"
 	ownerRef := metav1.OwnerReference{
 		Name:       clusterName,
 		APIVersion: "cluster.x-k8s.io/v1beta1",
@@ -268,7 +266,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 	ownerRefs := []metav1.OwnerReference{ownerRef}
 	metadata := metav1.ObjectMeta{
 		Name:            clusterName,
-		Namespace:       clusterNameSpace,
+		Namespace:       defaultNamespace,
 		OwnerReferences: ownerRefs,
 	}
 
@@ -340,7 +338,6 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), func() {
 	nodebalancerID := 1
 	clusterName := "cluster-delete"
-	clusterNameSpace := "default"
 	ownerRef := metav1.OwnerReference{
 		Name:       clusterName,
 		APIVersion: "cluster.x-k8s.io/v1beta1",
@@ -350,7 +347,7 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 	ownerRefs := []metav1.OwnerReference{ownerRef}
 	metadata := metav1.ObjectMeta{
 		Name:            clusterName,
-		Namespace:       clusterNameSpace,
+		Namespace:       defaultNamespace,
 		OwnerReferences: ownerRefs,
 	}
 
@@ -428,7 +425,6 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 	controlPlaneEndpointHost := "dns-override-endpoint-abc123.lkedevs.net"
 	controlPlaneEndpointPort := 1000
 	clusterName := "dns-override-endpoint"
-	clusterNameSpace := "default"
 	ownerRef := metav1.OwnerReference{
 		Name:       clusterName,
 		APIVersion: "cluster.x-k8s.io/v1beta1",
@@ -438,7 +434,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 	ownerRefs := []metav1.OwnerReference{ownerRef}
 	metadata := metav1.ObjectMeta{
 		Name:            clusterName,
-		Namespace:       clusterNameSpace,
+		Namespace:       defaultNamespace,
 		OwnerReferences: ownerRefs,
 	}
 

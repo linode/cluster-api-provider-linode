@@ -53,8 +53,8 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType: "dns",
-							DNSProvider:      "akamai",
 							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSProvider:         "akamai",
 								DNSRootDomain:       "akafn.com",
 								DNSUniqueIdentifier: "test-hash",
 							},
@@ -115,8 +115,8 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType: "dns",
-							DNSProvider:      "akamai",
 							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSProvider:         "akamai",
 								DNSRootDomain:       "akafn.com",
 								DNSUniqueIdentifier: "test-hash",
 							},
@@ -208,8 +208,8 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType: "dns",
-							DNSProvider:      "akamai",
 							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSProvider:         "akamai",
 								DNSRootDomain:       "akafn.com",
 								DNSUniqueIdentifier: "test-hash",
 							},
@@ -277,8 +277,8 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType: "dns",
-							DNSProvider:      "akamai",
 							DNSConfig: infrav1alpha2.DNSConfig{
+								DNSProvider:         "akamai",
 								DNSRootDomain:       "akafn.com",
 								DNSUniqueIdentifier: "test-hash",
 							},

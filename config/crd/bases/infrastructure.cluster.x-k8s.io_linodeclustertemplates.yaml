@@ -295,6 +295,15 @@ spec:
                                 description: DNSEndpointOverride is used to override
                                   CAPL's construction of the controlplane endpoint
                                 type: string
+                              dnsProvider:
+                                description: |-
+                                  DNSProvider is provider who manages the domain
+                                  Ignored if the LoadBalancerType is set to anything other than dns
+                                  If not set, defaults linode dns
+                                enum:
+                                - linode
+                                - akamai
+                                type: string
                               dnsRootDomain:
                                 description: |-
                                   DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
@@ -314,15 +323,6 @@ spec:
                                   If not set, CAPL will create a unique identifier for you
                                 type: string
                             type: object
-                          dnsProvider:
-                            description: |-
-                              DNSProvider is provider who manages the domain
-                              Ignored if the LoadBalancerType is set to anything other than dns
-                              If not set, defaults linode dns
-                            enum:
-                            - linode
-                            - akamai
-                            type: string
                           loadBalancerType:
                             description: LoadBalancerType is the type of load balancer
                               to use, defaults to NodeBalancer if not otherwise set
