@@ -53,9 +53,9 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType:    "dns",
-							DNSProvider:         "akamai",
 							DNSRootDomain:       "akafn.com",
 							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
 						},
 					},
 				},
@@ -113,9 +113,9 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType:    "dns",
-							DNSProvider:         "akamai",
 							DNSRootDomain:       "akafn.com",
 							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
 						},
 					},
 				},
@@ -204,9 +204,9 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType:    "dns",
-							DNSProvider:         "akamai",
 							DNSRootDomain:       "akafn.com",
 							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
 						},
 					},
 				},
@@ -271,9 +271,9 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType:    "dns",
-							DNSProvider:         "akamai",
 							DNSRootDomain:       "akafn.com",
 							DNSUniqueIdentifier: "test-hash",
+							DNSProvider:         "akamai",
 						},
 					},
 				},
@@ -930,7 +930,8 @@ func TestDeleteIPFromDNS(t *testing.T) {
 							LoadBalancerType:    "dns",
 							DNSRootDomain:       "lkedevs.net",
 							DNSUniqueIdentifier: "test-hash",
-						}},
+						},
+					},
 				},
 				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					ObjectMeta: metav1.ObjectMeta{
