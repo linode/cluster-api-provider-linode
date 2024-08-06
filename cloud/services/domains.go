@@ -79,8 +79,13 @@ func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 	linodeCluster := mscope.LinodeCluster
 	linodeClusterNetworkSpec := linodeCluster.Spec.Network
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
-	fqdn := linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
+	var fqdn string
 	akaDNSClient := mscope.AkamaiDomainsClient
+	if linodeClusterNetworkSpec.DNSEndpointOverride != "" {
+		fqdn = linodeClusterNetworkSpec.DNSEndpointOverride
+	} else {
+		fqdn = linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
+	}
 
 	for _, dnsEntry := range dnsEntries {
 		recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
@@ -152,11 +157,16 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 	}
 	clusterMetadata := mscope.LinodeCluster.ObjectMeta
 	clusterSpec := mscope.LinodeCluster.Spec
-	uniqueID := ""
-	if clusterSpec.Network.DNSUniqueIdentifier != "" {
-		uniqueID = "-" + clusterSpec.Network.DNSUniqueIdentifier
+	var domainHostname string
+	if clusterSpec.Network.DNSEndpointOverride != "" {
+		domainHostname = strings.ReplaceAll(clusterSpec.Network.DNSEndpointOverride, clusterSpec.Network.DNSRootDomain, "")
+	} else {
+		uniqueID := ""
+		if clusterSpec.Network.DNSUniqueIdentifier != "" {
+			uniqueID = "-" + clusterSpec.Network.DNSUniqueIdentifier
+		}
+		domainHostname = clusterMetadata.Name + uniqueID
 	}
-	domainHostname := clusterMetadata.Name + uniqueID
 
 	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
 		recordType := linodego.RecordTypeA

@@ -104,9 +104,9 @@ func (r *LinodeCluster) validateLinodeClusterSpec(ctx context.Context, client Li
 				Type:  field.ErrorTypeRequired,
 			})
 		}
-		if r.Spec.Network.DNSUniqueIdentifier == "" {
+		if r.Spec.Network.DNSEndpointOverride == "" && r.Spec.Network.DNSUniqueIdentifier == "" {
 			errs = append(errs, &field.Error{
-				Field: "dnsUniqueIdentifier needs to be set when LoadBalancer Type is DNS",
+				Field: "Either dnsUniqueIdentifier or dnsEndpointOverride needs to be set when LoadBalancer Type is DNS",
 				Type:  field.ErrorTypeRequired,
 			})
 		}
