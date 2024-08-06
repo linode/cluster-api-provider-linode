@@ -165,7 +165,7 @@ func TestNewPlacementGroupScope(t *testing.T) {
 				},
 			},
 			expects:       func(mock *mock.MockK8sClient) {},
-			expectedError: fmt.Errorf("failed to create linode client: missing Linode API key"),
+			expectedError: fmt.Errorf("failed to create linode client: token cannot be empty"),
 		},
 		{
 			name: "Error - Pass in valid args but get an error when creating a new patch helper",
@@ -194,7 +194,7 @@ func TestNewPlacementGroupScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewPlacementGroupScope(context.Background(), testcase.args.apiKey, testcase.args.params)
+			got, err := NewPlacementGroupScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -259,7 +259,7 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 
 			pgScope, err := NewPlacementGroupScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
 					LinodePlacementGroup: testcase.LinodePlacementGroup,
@@ -353,7 +353,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 
 			pgScope, err := NewPlacementGroupScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
 					LinodePlacementGroup: testcase.LinodePlacementGroup,
@@ -443,7 +443,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 
 			pgScope, err := NewPlacementGroupScope(
 				context.Background(),
-				"test-key",
+				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
 					LinodePlacementGroup: testcase.LinodePlacementGroup,

@@ -50,7 +50,7 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 
 // NewClusterScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopeParams) (*ClusterScope, error) {
+func NewClusterScope(ctx context.Context, linodeClientConfig ClientConfig, params ClusterScopeParams) (*ClusterScope, error) {
 	if err := validateClusterScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -62,9 +62,9 @@ func NewClusterScope(ctx context.Context, apiKey string, params ClusterScopePara
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
-		apiKey = string(apiToken)
+		linodeClientConfig.Token = string(apiToken)
 	}
-	linodeClient, err := CreateLinodeClient(apiKey, defaultClientTimeout)
+	linodeClient, err := CreateLinodeClient(linodeClientConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}

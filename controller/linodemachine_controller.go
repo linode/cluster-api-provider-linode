@@ -91,11 +91,11 @@ var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
 // LinodeMachineReconciler reconciles a LinodeMachine object
 type LinodeMachineReconciler struct {
 	client.Client
-	Recorder         record.EventRecorder
-	LinodeApiKey     string
-	LinodeDNSAPIKey  string
-	WatchFilterValue string
-	ReconcileTimeout time.Duration
+	Recorder           record.EventRecorder
+	LinodeClientConfig scope.ClientConfig
+	DnsClientConfig    scope.ClientConfig
+	WatchFilterValue   string
+	ReconcileTimeout   time.Duration
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=get;list;watch;create;update;patch;delete
@@ -140,8 +140,8 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	machineScope, err := scope.NewMachineScope(
 		ctx,
-		r.LinodeApiKey,
-		r.LinodeDNSAPIKey,
+		r.LinodeClientConfig,
+		r.DnsClientConfig,
 		scope.MachineScopeParams{
 			Client:        r.TracedClient(),
 			Cluster:       cluster,

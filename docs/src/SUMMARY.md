@@ -16,6 +16,7 @@
       - [rke2](./topics/flavors/rke2.md)
       - [vpcless](./topics/flavors/vpcless.md)
       - [konnectivity (kubeadm)](./topics/flavors/konnectivity.md)
+      - [DNS based apiserver Load Balancing](./topics/flavors/dns-loadbalancing.md)
     - [Etcd](./topics/etcd.md)
     - [Backups](./topics/backups.md)
     - [Multi-Tenancy](./topics/multi-tenancy.md)
