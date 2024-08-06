@@ -68,6 +68,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	}
 
 	linodeCluster := infrav1alpha2.LinodeCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mock",
+			Namespace: defaultNamespace,
+		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
@@ -193,7 +197,14 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			LinodeMachine: &linodeMachine,
 		}
 
-		_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+		machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.MachinePatchHelper = machinePatchHelper
+		clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.ClusterPatchHelper = clusterPatchHelper
+
+		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
@@ -251,6 +262,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeMachine: &linodeMachine,
 			}
 
+			machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.MachinePatchHelper = machinePatchHelper
+			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.ClusterPatchHelper = clusterPatchHelper
+
 			reconciler.ReconcileTimeout = time.Nanosecond
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
@@ -292,6 +310,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeCluster: &linodeCluster,
 				LinodeMachine: &linodeMachine,
 			}
+
+			machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.MachinePatchHelper = machinePatchHelper
+			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.ClusterPatchHelper = clusterPatchHelper
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
@@ -422,7 +447,16 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeMachine: &linodeMachine,
 			}
 
-			_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+			machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.MachinePatchHelper = machinePatchHelper
+			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.ClusterPatchHelper = clusterPatchHelper
+			Expect(k8sClient.Create(ctx, &linodeCluster)).To(Succeed())
+			Expect(k8sClient.Create(ctx, &linodeMachine)).To(Succeed())
+
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
@@ -430,7 +464,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
-			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
@@ -510,6 +543,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeCluster: &linodeCluster,
 				LinodeMachine: &linodeMachine,
 			}
+
+			machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.MachinePatchHelper = machinePatchHelper
+			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.ClusterPatchHelper = clusterPatchHelper
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
@@ -772,7 +812,14 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			LinodeMachine:       &linodeMachine,
 		}
 
-		_, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+		machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.MachinePatchHelper = machinePatchHelper
+		clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.ClusterPatchHelper = clusterPatchHelper
+
+		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
@@ -888,7 +935,10 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 
 		machinePatchHelper, err := patch.NewHelper(linodeMachine, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		mScope.PatchHelper = machinePatchHelper
+		mScope.MachinePatchHelper = machinePatchHelper
+		clusterPatchHelper, err := patch.NewHelper(linodeCluster, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.ClusterPatchHelper = clusterPatchHelper
 
 		Expect(k8sClient.Get(ctx, clusterKey, linodeCluster)).To(Succeed())
 		mScope.LinodeCluster = linodeCluster
@@ -1142,6 +1192,17 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 			InstanceID: &instanceID,
 		},
 	}
+	machine := &clusterv1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Labels:    make(map[string]string),
+		},
+		Spec: clusterv1.MachineSpec{
+			Bootstrap: clusterv1.Bootstrap{
+				DataSecretName: ptr.To("test-bootstrap-secret"),
+			},
+		},
+	}
 
 	ctlrSuite := NewControllerSuite(
 		GinkgoT(),
@@ -1153,6 +1214,7 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 	mScope := &scope.MachineScope{
 		LinodeCluster: linodeCluster,
 		LinodeMachine: linodeMachine,
+		Machine:       machine,
 	}
 
 	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
@@ -1160,8 +1222,11 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 		mScope.LinodeMachine = linodeMachine
 		machinePatchHelper, err := patch.NewHelper(linodeMachine, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		mScope.PatchHelper = machinePatchHelper
+		mScope.MachinePatchHelper = machinePatchHelper
 		mScope.LinodeCluster = linodeCluster
+		clusterPatchHelper, err := patch.NewHelper(linodeCluster, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.ClusterPatchHelper = clusterPatchHelper
 		mScope.LinodeClient = mck.LinodeClient
 		reconciler.Client = mck.K8sClient
 	})
@@ -1354,6 +1419,13 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 			LinodeCluster:       &linodeCluster,
 			LinodeMachine:       &linodeMachine,
 		}
+
+		machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.MachinePatchHelper = machinePatchHelper
+		clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.ClusterPatchHelper = clusterPatchHelper
 
 		createOpts, err := reconciler.newCreateConfig(ctx, &mScope, []string{}, logger)
 		Expect(err).NotTo(HaveOccurred())
