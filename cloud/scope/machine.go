@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,11 +17,6 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
-)
-
-const (
-	patchRetryAttempts = 5
-	patchRetryInterval = 100 * time.Millisecond
 )
 
 type MachineScopeParams struct {
