@@ -275,11 +275,11 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
 			Network: infrav1alpha2.NetworkSpec{
-				ApiserverLoadBalancerPort: controlPlaneEndpointPort,
 				LoadBalancerType:          "dns",
 				DNSRootDomain:             "lkedevs.net",
 				DNSUniqueIdentifier:       "abc123",
-				DNSTTLSec:                 100,
+				DNSTTLSec:                 30,
+				ApiserverLoadBalancerPort: controlPlaneEndpointPort,
 			},
 		},
 	}
