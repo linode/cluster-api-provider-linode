@@ -413,10 +413,11 @@ func TestAddNodeToNBConditions(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		machineScope  *scope.MachineScope
-		expectedError error
-		expects       func(*mock.MockLinodeClient)
+		name            string
+		machineScope    *scope.MachineScope
+		expectedError   error
+		expects         func(*mock.MockLinodeClient)
+		expectK8sClient func(*mock.MockK8sClient)
 	}{
 		{
 			name: "Error - ApiserverNodeBalancerConfigID is not set",
@@ -465,6 +466,9 @@ func TestAddNodeToNBConditions(t *testing.T) {
 					},
 				}, nil)
 			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - No private IP addresses were set",
@@ -496,6 +500,9 @@ func TestAddNodeToNBConditions(t *testing.T) {
 					},
 				}, nil)
 			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - GetInstanceIPAddresses() returns an error",
@@ -523,6 +530,9 @@ func TestAddNodeToNBConditions(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("could not get instance IP addresses"))
 			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -533,10 +543,12 @@ func TestAddNodeToNBConditions(t *testing.T) {
 			defer ctrl.Finish()
 
 			MockLinodeClient := mock.NewMockLinodeClient(ctrl)
-
 			testcase.machineScope.LinodeClient = MockLinodeClient
-
 			testcase.expects(MockLinodeClient)
+
+			MockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.machineScope.Client = MockK8sClient
+			testcase.expectK8sClient(MockK8sClient)
 
 			err := AddNodeToNB(context.Background(), logr.Discard(), testcase.machineScope)
 			if testcase.expectedError != nil {
@@ -550,10 +562,11 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		machineScope  *scope.MachineScope
-		expectedError error
-		expects       func(*mock.MockLinodeClient)
+		name            string
+		machineScope    *scope.MachineScope
+		expectedError   error
+		expects         func(*mock.MockLinodeClient)
+		expectK8sClient func(*mock.MockK8sClient)
 	}{
 		{
 			name: "If the machine is not a control plane node, do nothing",
@@ -572,6 +585,9 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 				},
 			},
 			expects: func(*mock.MockLinodeClient) {},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Success - If the machine is a control plane node, add the node to the NodeBalancer",
@@ -631,6 +647,9 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 				}, nil)
 				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(2).Return(&linodego.NodeBalancerNode{}, nil)
 			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - CreateNodeBalancerNode() returns an error",
@@ -685,6 +704,9 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 				}, nil)
 				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("could not create node balancer node"))
 			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -695,10 +717,12 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 			defer ctrl.Finish()
 
 			MockLinodeClient := mock.NewMockLinodeClient(ctrl)
-
 			testcase.machineScope.LinodeClient = MockLinodeClient
-
 			testcase.expects(MockLinodeClient)
+
+			MockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.machineScope.Client = MockK8sClient
+			testcase.expectK8sClient(MockK8sClient)
 
 			err := AddNodeToNB(context.Background(), logr.Discard(), testcase.machineScope)
 			if testcase.expectedError != nil {
@@ -712,10 +736,11 @@ func TestDeleteNodeFromNB(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		machineScope  *scope.MachineScope
-		expectedError error
-		expects       func(*mock.MockLinodeClient)
+		name            string
+		machineScope    *scope.MachineScope
+		expectedError   error
+		expects         func(*mock.MockLinodeClient)
+		expectK8sClient func(*mock.MockK8sClient)
 	}{
 		// TODO: Add test cases.
 		{
@@ -735,6 +760,9 @@ func TestDeleteNodeFromNB(t *testing.T) {
 				},
 			},
 			expects: func(*mock.MockLinodeClient) {},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "NodeBalancer is already deleted",
@@ -768,6 +796,9 @@ func TestDeleteNodeFromNB(t *testing.T) {
 				},
 			},
 			expects: func(*mock.MockLinodeClient) {},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Success - Delete Node from NodeBalancer",
@@ -814,6 +845,9 @@ func TestDeleteNodeFromNB(t *testing.T) {
 				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - Deleting Apiserver Node from NodeBalancer",
@@ -853,6 +887,9 @@ func TestDeleteNodeFromNB(t *testing.T) {
 			expectedError: fmt.Errorf("error deleting node from NodeBalancer"),
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error deleting node from NodeBalancer"))
+			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
 			},
 		},
 		{
@@ -901,6 +938,9 @@ func TestDeleteNodeFromNB(t *testing.T) {
 				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error deleting node from NodeBalancer"))
 			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -912,10 +952,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 			defer ctrl.Finish()
 
 			MockLinodeClient := mock.NewMockLinodeClient(ctrl)
-
 			testcase.machineScope.LinodeClient = MockLinodeClient
-
 			testcase.expects(MockLinodeClient)
+
+			MockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.machineScope.Client = MockK8sClient
+			testcase.expectK8sClient(MockK8sClient)
 
 			err := DeleteNodeFromNB(context.Background(), logr.Discard(), testcase.machineScope)
 			if testcase.expectedError != nil {

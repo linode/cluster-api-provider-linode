@@ -22,10 +22,11 @@ import (
 func TestAddIPToEdgeDNS(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name          string
-		machineScope  *scope.MachineScope
-		expects       func(*mock.MockAkamClient)
-		expectedError error
+		name            string
+		machineScope    *scope.MachineScope
+		expects         func(*mock.MockAkamClient)
+		expectK8sClient func(*mock.MockK8sClient)
+		expectedError   error
 	}{
 		{
 			name: "Success - If DNS Provider is akamai",
@@ -86,6 +87,9 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: nil,
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Faiure - Error in creating records",
@@ -146,6 +150,9 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("create record failed")).AnyTimes()
 			},
 			expectedError: fmt.Errorf("create record failed"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -160,6 +167,10 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			testcase.machineScope.AkamaiDomainsClient = MockAkamClient
 			testcase.expects(MockAkamClient)
 
+			MockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.machineScope.Client = MockK8sClient
+			testcase.expectK8sClient(MockK8sClient)
+
 			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "create")
 			if err != nil || testcase.expectedError != nil {
 				require.ErrorContains(t, err, testcase.expectedError.Error())
@@ -171,12 +182,13 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 func TestRemoveIPFromEdgeDNS(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name          string
-		listOfIPS     []string
-		expectedList  []string
-		machineScope  *scope.MachineScope
-		expects       func(*mock.MockAkamClient)
-		expectedError error
+		name            string
+		listOfIPS       []string
+		expectedList    []string
+		machineScope    *scope.MachineScope
+		expects         func(*mock.MockAkamClient)
+		expectK8sClient func(*mock.MockK8sClient)
+		expectedError   error
 	}{
 		{
 			name: "Success - If DNS Provider is akamai",
@@ -244,6 +256,9 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			},
 			expectedError: nil,
 			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Failure - API Error",
@@ -306,6 +321,9 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("API Down"),
 			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -319,6 +337,10 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			MockAkamClient := mock.NewMockAkamClient(ctrl)
 			testcase.machineScope.AkamaiDomainsClient = MockAkamClient
 			testcase.expects(MockAkamClient)
+
+			MockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.machineScope.Client = MockK8sClient
+			testcase.expectK8sClient(MockK8sClient)
 
 			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "delete")
 			if err != nil || testcase.expectedError != nil {
@@ -335,6 +357,7 @@ func TestAddIPToDNS(t *testing.T) {
 		name                 string
 		machineScope         *scope.MachineScope
 		expects              func(*mock.MockLinodeClient)
+		expectK8sClient      func(*mock.MockK8sClient)
 		expectedDomainRecord *linodego.DomainRecord
 		expectedError        error
 	}{
@@ -407,6 +430,9 @@ func TestAddIPToDNS(t *testing.T) {
 				}, nil).AnyTimes()
 			},
 			expectedError: nil,
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Success - use custom dnsttlsec",
@@ -478,6 +504,9 @@ func TestAddIPToDNS(t *testing.T) {
 				}, nil).AnyTimes()
 			},
 			expectedError: nil,
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - CreateDomainRecord() returns an error",
@@ -543,6 +572,9 @@ func TestAddIPToDNS(t *testing.T) {
 				mockClient.EXPECT().CreateDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed to create domain record of type A")).AnyTimes()
 			},
 			expectedError: fmt.Errorf("failed to create domain record of type A"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Success - If the machine is a control plane node and record already exists, leave it alone",
@@ -614,6 +646,9 @@ func TestAddIPToDNS(t *testing.T) {
 				}, nil).AnyTimes()
 			},
 			expectedError: nil,
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Failure - Failed to get domain records",
@@ -678,6 +713,9 @@ func TestAddIPToDNS(t *testing.T) {
 				mockClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("api error")).AnyTimes()
 			},
 			expectedError: fmt.Errorf("api error"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - no public ip set",
@@ -732,6 +770,9 @@ func TestAddIPToDNS(t *testing.T) {
 				}, nil).AnyTimes()
 			},
 			expectedError: fmt.Errorf("no addresses available on the LinodeMachine resource"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - no domain found when creating",
@@ -795,6 +836,9 @@ func TestAddIPToDNS(t *testing.T) {
 				}, nil).AnyTimes()
 			},
 			expectedError: fmt.Errorf("domain lkedevs.net not found in list of domains owned by this account"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -814,6 +858,10 @@ func TestAddIPToDNS(t *testing.T) {
 			testcase.expects(MockLinodeClient)
 			testcase.expects(MockLinodeDomainsClient)
 
+			MockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.machineScope.Client = MockK8sClient
+			testcase.expectK8sClient(MockK8sClient)
+
 			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "create")
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -825,10 +873,11 @@ func TestAddIPToDNS(t *testing.T) {
 func TestDeleteIPFromDNS(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name          string
-		machineScope  *scope.MachineScope
-		expects       func(*mock.MockLinodeClient)
-		expectedError error
+		name            string
+		machineScope    *scope.MachineScope
+		expects         func(*mock.MockLinodeClient)
+		expectK8sClient func(*mock.MockK8sClient)
+		expectedError   error
 	}{
 		{
 			name: "Success - Deleted the record",
@@ -901,6 +950,9 @@ func TestDeleteIPFromDNS(t *testing.T) {
 				mockClient.EXPECT().DeleteDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: nil,
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Failure - Deleting the record fails",
@@ -973,6 +1025,9 @@ func TestDeleteIPFromDNS(t *testing.T) {
 				mockClient.EXPECT().DeleteDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to delete record")).AnyTimes()
 			},
 			expectedError: fmt.Errorf("failed to delete record"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - failed to get machine ip",
@@ -1017,6 +1072,9 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expects:       func(mockClient *mock.MockLinodeClient) {},
 			expectedError: fmt.Errorf("no addresses available on the LinodeMachine resource"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - failure in getting domain",
@@ -1075,6 +1133,9 @@ func TestDeleteIPFromDNS(t *testing.T) {
 				mockClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("cannot get the domain from the api")).AnyTimes()
 			},
 			expectedError: fmt.Errorf("cannot get the domain from the api"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - no domain found when deleting",
@@ -1138,6 +1199,9 @@ func TestDeleteIPFromDNS(t *testing.T) {
 				}, nil).AnyTimes()
 			},
 			expectedError: fmt.Errorf("domain lkedevs.net not found in list of domains owned by this account"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 		{
 			name: "Error - error listing domains when deleting",
@@ -1202,6 +1266,9 @@ func TestDeleteIPFromDNS(t *testing.T) {
 				mockClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("api error")).AnyTimes()
 			},
 			expectedError: fmt.Errorf("api error"),
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -1220,6 +1287,10 @@ func TestDeleteIPFromDNS(t *testing.T) {
 
 			testcase.expects(MockLinodeClient)
 			testcase.expects(MockLinodeDomainsClient)
+
+			MockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.machineScope.Client = MockK8sClient
+			testcase.expectK8sClient(MockK8sClient)
 
 			err := EnsureDNSEntries(context.Background(), testcase.machineScope, "delete")
 			if testcase.expectedError != nil {
