@@ -359,42 +359,37 @@ spec:
                     description: apiserverNodeBalancerConfigID is the config ID of
                       api server NodeBalancer config.
                     type: integer
-                  dnsConfig:
-                    description: DNSConfig is used to set up the DNS config for the
-                      loadbalancer
-                    properties:
-                      dnsEndpointOverride:
-                        description: DNSEndpointOverride is used to override CAPL's
-                          construction of the controlplane endpoint
-                        type: string
-                      dnsProvider:
-                        description: |-
-                          DNSProvider is provider who manages the domain
-                          Ignored if the LoadBalancerType is set to anything other than dns
-                          If not set, defaults linode dns
-                        enum:
-                        - linode
-                        - akamai
-                        type: string
-                      dnsRootDomain:
-                        description: |-
-                          DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
-                          Ignored if the LoadBalancerType is set to anything other than dns
-                        type: string
-                      dnsTTLsec:
-                        description: |-
-                          DNSTTLSec is the TTL for the domain record
-                          Ignored if the LoadBalancerType is set to anything other than dns
-                          If not set, defaults to 30
-                        type: integer
-                      dnsUniqueIdentifier:
-                        description: |-
-                          DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
-                          DNS record
-                          Ignored if the LoadBalancerType is set to anything other than dns
-                          If not set, CAPL will create a unique identifier for you
-                        type: string
-                    type: object
+                  dnsEndpointOverride:
+                    description: DNSEndpointOverride is used to override CAPL's construction
+                      of the controlplane endpoint
+                    type: string
+                  dnsProvider:
+                    description: |-
+                      DNSProvider is provider who manages the domain
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                      If not set, defaults linode dns
+                    enum:
+                    - linode
+                    - akamai
+                    type: string
+                  dnsRootDomain:
+                    description: |-
+                      DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                    type: string
+                  dnsTTLsec:
+                    description: |-
+                      DNSTTLSec is the TTL for the domain record
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                      If not set, defaults to 30
+                    type: integer
+                  dnsUniqueIdentifier:
+                    description: |-
+                      DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
+                      DNS record
+                      Ignored if the LoadBalancerType is set to anything other than dns
+                      If not set, CAPL will create a unique identifier for you
+                    type: string
                   loadBalancerType:
                     description: LoadBalancerType is the type of load balancer to
                       use, defaults to NodeBalancer if not otherwise set

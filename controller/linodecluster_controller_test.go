@@ -277,11 +277,9 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 			Network: infrav1alpha2.NetworkSpec{
 				ApiserverLoadBalancerPort: controlPlaneEndpointPort,
 				LoadBalancerType:          "dns",
-				DNSConfig: infrav1alpha2.DNSConfig{
-					DNSRootDomain:       "lkedevs.net",
-					DNSUniqueIdentifier: "abc123",
-					DNSTTLSec:           100,
-				},
+				DNSRootDomain:             "lkedevs.net",
+				DNSUniqueIdentifier:       "abc123",
+				DNSTTLSec:                 100,
 			},
 		},
 	}
@@ -445,9 +443,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 			Network: infrav1alpha2.NetworkSpec{
 				ApiserverLoadBalancerPort: controlPlaneEndpointPort,
 				LoadBalancerType:          "dns",
-				DNSConfig: infrav1alpha2.DNSConfig{
-					DNSEndpointOverride: controlPlaneEndpointHost,
-				},
+				DNSEndpointOverride:       controlPlaneEndpointHost,
 			},
 		},
 	}

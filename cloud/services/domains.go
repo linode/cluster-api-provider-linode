@@ -44,7 +44,7 @@ func EnsureDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation
 		return err
 	}
 
-	if mscope.LinodeCluster.Spec.Network.DNSConfig.DNSProvider == "akamai" {
+	if mscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
 		return EnsureAkamaiDNSEntries(ctx, mscope, operation, dnsEntries)
 	}
 
@@ -77,9 +77,9 @@ func EnsureLinodeDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 // EnsureAkamaiDNSEntries ensures the domainrecord on Akamai EDGE DNS is created, updated, or deleted based on operation passed
 func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, operation string, dnsEntries []DNSOptions) error {
 	linodeCluster := mscope.LinodeCluster
-	dnsConfig := linodeCluster.Spec.Network.DNSConfig
-	rootDomain := dnsConfig.DNSRootDomain
-	fqdn := linodeCluster.Name + "-" + dnsConfig.DNSUniqueIdentifier + "." + rootDomain
+	linodeClusterNetworkSpec := linodeCluster.Spec.Network
+	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
+	fqdn := linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
 	akaDNSClient := mscope.AkamaiDomainsClient
 
 	for _, dnsEntry := range dnsEntries {
@@ -143,8 +143,8 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 	d.mux.Lock()
 	defer d.mux.Unlock()
 	dnsTTLSec := rutil.DefaultDNSTTLSec
-	if mscope.LinodeCluster.Spec.Network.DNSConfig.DNSTTLSec != 0 {
-		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSConfig.DNSTTLSec
+	if mscope.LinodeCluster.Spec.Network.DNSTTLSec != 0 {
+		dnsTTLSec = mscope.LinodeCluster.Spec.Network.DNSTTLSec
 	}
 
 	if mscope.LinodeMachine.Status.Addresses == nil {
@@ -153,8 +153,8 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 	clusterMetadata := mscope.LinodeCluster.ObjectMeta
 	clusterSpec := mscope.LinodeCluster.Spec
 	uniqueID := ""
-	if clusterSpec.Network.DNSConfig.DNSUniqueIdentifier != "" {
-		uniqueID = "-" + clusterSpec.Network.DNSConfig.DNSUniqueIdentifier
+	if clusterSpec.Network.DNSUniqueIdentifier != "" {
+		uniqueID = "-" + clusterSpec.Network.DNSUniqueIdentifier
 	}
 	domainHostname := clusterMetadata.Name + uniqueID
 
@@ -179,7 +179,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 
 // GetDomainID gets the domains linode id
 func GetDomainID(ctx context.Context, mscope *scope.MachineScope) (int, error) {
-	rootDomain := mscope.LinodeCluster.Spec.Network.DNSConfig.DNSRootDomain
+	rootDomain := mscope.LinodeCluster.Spec.Network.DNSRootDomain
 	filter, err := json.Marshal(map[string]string{"domain": rootDomain})
 	if err != nil {
 		return 0, err
