@@ -24,7 +24,7 @@ on:
           - k3s
           - rke2
           - default-cluster
-          - kubeadm_full
+          - kubeadm-full
           - linodecluster
           - linodemachine
           - linodeobj
