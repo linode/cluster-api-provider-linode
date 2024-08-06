@@ -79,12 +79,10 @@ func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 	linodeCluster := mscope.LinodeCluster
 	linodeClusterNetworkSpec := linodeCluster.Spec.Network
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
-	var fqdn string
 	akaDNSClient := mscope.AkamaiDomainsClient
+	fqdn := linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
 	if linodeClusterNetworkSpec.DNSEndpointOverride != "" {
 		fqdn = linodeClusterNetworkSpec.DNSEndpointOverride
-	} else {
-		fqdn = linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
 	}
 
 	for _, dnsEntry := range dnsEntries {
