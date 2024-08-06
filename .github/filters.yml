@@ -14,6 +14,7 @@ kubeadm_etcd-disk:
   - templates/flavors/kubeadm/etcd-disk/*
 kubeadm_full:
   - templates/flavors/kubeadm/full/*
+  - e2e/capl-cluster-flavors/kubeadm-full-capl-cluster/*
 kubeadm_full-vpcless:
   - templates/flavors/kubeadm/full-vpcless/*
 kubeadm_self-healing:
