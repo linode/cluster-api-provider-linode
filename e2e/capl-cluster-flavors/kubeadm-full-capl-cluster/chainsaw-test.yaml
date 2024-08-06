@@ -71,9 +71,7 @@ spec:
             apiVersion: cluster.x-k8s.io/v1beta1
             kind: MachineSet
 
-    # Test if linodes are created pending
-    
-    # Test for child cluster items; konnectivity
+    # Test for child cluster items: konnectivity
     - name: Get child cluster kubeconfig
       try:
         - script:
@@ -94,23 +92,39 @@ spec:
           kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
       name: Check child cluster resources
       try:
-#        - assert:
-#            cluster: kubeadm-full-cluster
-#            file: assert-child-cluster-deployments.yaml
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-child-cluster-deployments.yaml
         - assert:
             cluster: kubeadm-full-cluster
             file: assert-child-cluster-daemonsets.yaml
       catch:
-#        - describe:
-#            cluster: kubeadm-full-cluster
-#            apiVersion: apps/v1
-#            kind: Deployment
-#            namespace: kube-system
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
         - describe:
             cluster: kubeadm-full-cluster
             apiVersion: apps/v1
             kind: DaemonSet
             namespace: kube-system
+
+    # Test to check if child cluster is deleted
+    - name: Delete child cluster
+      try:
+        - delete:
+            ref:
+              apiVersion: cluster.x-k8s.io/v1beta1
+              kind: Cluster
+              name: ($cluster)
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+              kind: LinodeVPC
+              name: ($cluster)
+        - error:
+            file: check-child-cluster-and-vpc-deleted.yaml
 
     # Delete generated manifests
     - name: Delete generated child cluster manifest yaml
