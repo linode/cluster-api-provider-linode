@@ -7,7 +7,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -156,28 +158,16 @@ func (s *MachineScope) CloseAll(ctx context.Context) error {
 
 // MachineClose persists the linodemachine configuration and status.
 func (s *MachineScope) MachineClose(ctx context.Context) error {
-	var err error
-	for i := 0; i < patchRetryAttempts; i++ {
-		err = s.MachinePatchHelper.Patch(ctx, s.LinodeMachine)
-		if err == nil {
-			return nil
-		}
-		time.Sleep(patchRetryInterval)
-	}
-	return err
+	return retry.OnError(retry.DefaultRetry, apierrors.IsConflict, func() error {
+		return s.MachinePatchHelper.Patch(ctx, s.LinodeMachine)
+	})
 }
 
 // ClusterClose persists the linodecluster configuration and status.
 func (s *MachineScope) ClusterClose(ctx context.Context) error {
-	var err error
-	for i := 0; i < patchRetryAttempts; i++ {
-		err = s.ClusterPatchHelper.Patch(ctx, s.LinodeCluster)
-		if err == nil {
-			return nil
-		}
-		time.Sleep(patchRetryInterval)
-	}
-	return err
+	return retry.OnError(retry.DefaultRetry, apierrors.IsConflict, func() error {
+		return s.ClusterPatchHelper.Patch(ctx, s.LinodeCluster)
+	})
 }
 
 // AddFinalizer adds a finalizer if not present and immediately patches the
