@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/conversion"
+	"k8s.io/utils/ptr"
 
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
@@ -50,8 +51,18 @@ func Convert_v1alpha1_LinodeObjectStorageBucketSpec_To_v1alpha2_LinodeObjectStor
 	// WARNING: in.Cluster requires manual conversion: does not exist in peer-type
 	out.Region = in.Cluster
 	out.CredentialsRef = in.CredentialsRef
-	out.KeyGeneration = in.KeyGeneration
 	out.SecretType = in.SecretType
+	return nil
+}
+func Convert_v1alpha1_LinodeObjectStorageBucketStatus_To_v1alpha2_LinodeObjectStorageBucketStatus(in *LinodeObjectStorageBucketStatus, out *infrastructurev1alpha2.LinodeObjectStorageBucketStatus, s conversion.Scope) error {
+	out.Ready = in.Ready
+	out.FailureMessage = in.FailureMessage
+	out.Conditions = in.Conditions
+	out.Hostname = in.Hostname
+	out.CreationTime = in.CreationTime
+	// WARNING: in.LastKeyGeneration requires manual conversion: does not exist in peer-type
+	// WARNING: in.KeySecretName requires manual conversion: does not exist in peer-type
+	// WARNING: in.AccessKeyRefs requires manual conversion: does not exist in peer-type
 	return nil
 }
 
@@ -59,7 +70,7 @@ func Convert_v1alpha2_LinodeObjectStorageBucketSpec_To_v1alpha1_LinodeObjectStor
 	// WARNING: in.Region requires manual conversion: does not exist in peer-type
 	out.Cluster = in.Region
 	out.CredentialsRef = in.CredentialsRef
-	out.KeyGeneration = in.KeyGeneration
+	out.KeyGeneration = ptr.To(1)
 	out.SecretType = in.SecretType
 	return nil
 }

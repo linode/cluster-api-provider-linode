@@ -59,8 +59,7 @@ func TestLinodeObjectStorageBucketConvertTo(t *testing.T) {
 				Namespace: "default",
 				Name:      "cred-secret",
 			},
-			KeyGeneration: ptr.To(1),
-			SecretType:    "Opaque",
+			SecretType: "Opaque",
 		},
 		Status: infrav1alpha2.LinodeObjectStorageBucketStatus{},
 	}
@@ -96,8 +95,7 @@ func TestLinodeObjectStorageBucketFrom(t *testing.T) {
 				Namespace: "default",
 				Name:      "cred-secret",
 			},
-			KeyGeneration: ptr.To(1),
-			SecretType:    "Opaque",
+			SecretType: "Opaque",
 		},
 		Status: infrav1alpha2.LinodeObjectStorageBucketStatus{},
 	}
@@ -105,7 +103,7 @@ func TestLinodeObjectStorageBucketFrom(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-bucket",
 			Annotations: map[string]string{
-				ConversionDataAnnotation: `{"spec":{"credentialsRef":{"name":"cred-secret","namespace":"default"},"keyGeneration":1,"region":"us-mia-1","secretType":"Opaque"},"status":{"ready":false}}`,
+				ConversionDataAnnotation: `{"spec":{"credentialsRef":{"name":"cred-secret","namespace":"default"},"region":"us-mia-1","secretType":"Opaque"},"status":{"ready":false}}`,
 			},
 		},
 		Spec: LinodeObjectStorageBucketSpec{

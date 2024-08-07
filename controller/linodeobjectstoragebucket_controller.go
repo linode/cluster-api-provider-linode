@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -156,75 +155,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
 	bScope.Bucket.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
-
-	var keys [2]*linodego.ObjectStorageKey
-	var secretDeleted bool
-
-	switch {
-	case bScope.ShouldInitKeys(), bScope.ShouldRotateKeys():
-		newKeys, err := services.RotateObjectStorageKeys(ctx, bScope)
-		if err != nil {
-			bScope.Logger.Error(err, "Failed to provision new access keys")
-			r.setFailure(bScope, err)
-
-			return err
-		}
-		bScope.Bucket.Status.AccessKeyRefs = []int{newKeys[0].ID, newKeys[1].ID}
-		keys = newKeys
-
-		r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "KeysAssigned", "Object storage keys assigned")
-
-	case bScope.Bucket.Status.AccessKeyRefs != nil:
-		secretDeleted, err = bScope.ShouldRestoreKeySecret(ctx)
-		if err != nil {
-			bScope.Logger.Error(err, "Failed to ensure access key secret exists")
-			r.setFailure(bScope, err)
-
-			return err
-		}
-
-		if secretDeleted {
-			sameKeys, err := services.GetObjectStorageKeys(ctx, bScope)
-			if err != nil {
-				bScope.Logger.Error(err, "Failed to restore access keys for deleted secret")
-				r.setFailure(bScope, err)
-
-				return err
-			}
-			keys = sameKeys
-		}
-
-		r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "KeysRetrieved", "Object storage keys retrieved")
-	}
-
-	if keys[0] != nil && keys[1] != nil {
-		secret, err := bScope.GenerateKeySecret(ctx, keys, bucket)
-		if err != nil {
-			bScope.Logger.Error(err, "Failed to generate key secret")
-			r.setFailure(bScope, err)
-
-			return err
-		}
-
-		if secretDeleted {
-			err = bScope.Client.Create(ctx, secret)
-		} else {
-			_, err = controllerutil.CreateOrUpdate(ctx, bScope.Client, secret, func() error { return nil })
-		}
-		if err != nil {
-			bScope.Logger.Error(err, "Failed to apply key secret")
-			r.setFailure(bScope, err)
-
-			return err
-		}
-		bScope.Logger.Info(fmt.Sprintf("Secret %s was applied with new access keys", secret.Name))
-
-		bScope.Bucket.Status.KeySecretName = util.Pointer(secret.Name)
-		bScope.Bucket.Status.LastKeyGeneration = bScope.Bucket.Spec.KeyGeneration
-
-		r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "KeysStored", "Object storage keys stored in secret")
-	}
-
 	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Synced", "Object storage bucket synced")
 
 	bScope.Bucket.Status.Ready = true
@@ -235,13 +165,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
 	bScope.Logger.Info("Reconciling delete")
-
-	if err := services.RevokeObjectStorageKeys(ctx, bScope); err != nil {
-		bScope.Logger.Error(err, "failed to revoke access keys; keys must be manually revoked")
-		r.setFailure(bScope, err)
-
-		return err
-	}
 
 	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha2.ObjectStorageBucketFinalizer) {
 		err := errors.New("failed to remove finalizer from bucket; unable to delete")
@@ -254,8 +177,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 	if controllerutil.ContainsFinalizer(bScope.Bucket, infrav1alpha2.GroupVersion.String()) {
 		controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha2.GroupVersion.String())
 	}
-
-	r.Recorder.Event(bScope.Bucket, clusterv1.DeletedReason, "Revoked", "Object storage keys revoked")
 
 	return nil
 }
