@@ -232,19 +232,19 @@ func (r *LinodeClusterReconciler) handleNBCreate(ctx context.Context, logger log
 }
 
 func (r *LinodeClusterReconciler) handleDNS(clusterScope *scope.ClusterScope) {
-	dnsHost := ""
-	if clusterScope.LinodeCluster.Spec.Network.DNSEndpointOverride != "" {
-		dnsHost = clusterScope.LinodeCluster.Spec.Network.DNSEndpointOverride
+	subDomain := ""
+	clusterSpec := clusterScope.LinodeCluster.Spec
+	if clusterScope.LinodeCluster.Spec.Network.DNSSubDomainOverride != "" {
+		subDomain = clusterScope.LinodeCluster.Spec.Network.DNSSubDomainOverride
 	} else {
 		clusterMetadata := clusterScope.LinodeCluster.ObjectMeta
-		clusterSpec := clusterScope.LinodeCluster.Spec
-		uniqueID := "."
+		uniqueID := ""
 		if clusterSpec.Network.DNSUniqueIdentifier != "" {
-			uniqueID = "-" + clusterSpec.Network.DNSUniqueIdentifier + "."
+			uniqueID = "-" + clusterSpec.Network.DNSUniqueIdentifier
 		}
-		subDomain := clusterMetadata.Name + uniqueID
-		dnsHost = subDomain + clusterSpec.Network.DNSRootDomain
+		subDomain = clusterMetadata.Name + uniqueID
 	}
+	dnsHost := subDomain + "." + clusterSpec.Network.DNSRootDomain
 	apiLBPort := services.DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort

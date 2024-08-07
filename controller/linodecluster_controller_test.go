@@ -420,7 +420,8 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 })
 
 var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-override-endpoint"), func() {
-	controlPlaneEndpointHost := "dns-override-endpoint-abc123.lkedevs.net"
+	subDomainOverRide := "dns-override-endpoint"
+	controlPlaneEndpointHost := "dns-override-endpoint.lkedevs.net"
 	controlPlaneEndpointPort := 1000
 	clusterName := "dns-override-endpoint"
 	ownerRef := metav1.OwnerReference{
@@ -443,7 +444,8 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 			Network: infrav1alpha2.NetworkSpec{
 				ApiserverLoadBalancerPort: controlPlaneEndpointPort,
 				LoadBalancerType:          "dns",
-				DNSEndpointOverride:       controlPlaneEndpointHost,
+				DNSSubDomainOverride:      subDomainOverRide,
+				DNSRootDomain:             "lkedevs.net",
 			},
 		},
 	}

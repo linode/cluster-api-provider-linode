@@ -80,10 +80,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, mscope *scope.MachineScope, ope
 	linodeClusterNetworkSpec := linodeCluster.Spec.Network
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
 	akaDNSClient := mscope.AkamaiDomainsClient
-	fqdn := linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
-	if linodeClusterNetworkSpec.DNSEndpointOverride != "" {
-		fqdn = linodeClusterNetworkSpec.DNSEndpointOverride
-	}
+	fqdn := getSubDomain(mscope) + "." + rootDomain
 
 	for _, dnsEntry := range dnsEntries {
 		recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
@@ -153,18 +150,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 	if mscope.LinodeMachine.Status.Addresses == nil {
 		return nil, fmt.Errorf("no addresses available on the LinodeMachine resource")
 	}
-	clusterMetadata := mscope.LinodeCluster.ObjectMeta
-	clusterSpec := mscope.LinodeCluster.Spec
-	var domainHostname string
-	if clusterSpec.Network.DNSEndpointOverride != "" {
-		domainHostname = strings.ReplaceAll(clusterSpec.Network.DNSEndpointOverride, clusterSpec.Network.DNSRootDomain, "")
-	} else {
-		uniqueID := ""
-		if clusterSpec.Network.DNSUniqueIdentifier != "" {
-			uniqueID = "-" + clusterSpec.Network.DNSUniqueIdentifier
-		}
-		domainHostname = clusterMetadata.Name + uniqueID
-	}
+	subDomain := getSubDomain(mscope)
 
 	for _, IPs := range mscope.LinodeMachine.Status.Addresses {
 		recordType := linodego.RecordTypeA
@@ -178,9 +164,9 @@ func (d *DNSEntries) getDNSEntriesToEnsure(mscope *scope.MachineScope) ([]DNSOpt
 		if !addr.Is4() {
 			recordType = linodego.RecordTypeAAAA
 		}
-		d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, recordType, dnsTTLSec})
+		d.options = append(d.options, DNSOptions{subDomain, IPs.Address, recordType, dnsTTLSec})
 	}
-	d.options = append(d.options, DNSOptions{domainHostname, mscope.LinodeMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
+	d.options = append(d.options, DNSOptions{subDomain, mscope.LinodeMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
 	return d.options, nil
 }
@@ -286,4 +272,17 @@ func IsDomainRecordOwner(ctx context.Context, mscope *scope.MachineScope, hostna
 	}
 
 	return true, nil
+}
+
+func getSubDomain(mscope *scope.MachineScope) (subDomain string) {
+	if mscope.LinodeCluster.Spec.Network.DNSSubDomainOverride != "" {
+		subDomain = mscope.LinodeCluster.Spec.Network.DNSSubDomainOverride
+	} else {
+		uniqueID := ""
+		if mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier != "" {
+			uniqueID = "-" + mscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
+		}
+		subDomain = mscope.LinodeCluster.Name + uniqueID
+	}
+	return subDomain
 }

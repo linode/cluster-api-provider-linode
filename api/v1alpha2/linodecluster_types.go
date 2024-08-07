@@ -128,9 +128,10 @@ type NetworkSpec struct {
 	// If not set, defaults to 30
 	// +optional
 	DNSTTLSec int `json:"dnsTTLsec,omitempty"`
-	// DNSEndpointOverride is used to override CAPL's construction of the controlplane endpoint
+	// DNSSubDomainOverride is used to override CAPL's construction of the controlplane endpoint
+	// If set, this will override the DNS subdomain from <clustername>-<uniqueid>.<rootdomain> to <overridevalue>.<rootdomain>
 	// +optional
-	DNSEndpointOverride string `json:"dnsEndpointOverride,omitempty"`
+	DNSSubDomainOverride string `json:"dnsSubDomainOverride,omitempty"`
 	// apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
 	// If omitted, default value is 6443.
 	// +kubebuilder:validation:Minimum=1
