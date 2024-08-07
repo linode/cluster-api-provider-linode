@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -129,6 +130,18 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 				},
 			},
 		}
+		inValidCluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "us-ord",
+				Network: NetworkSpec{
+					LoadBalancerType: "dns",
+				},
+			},
+		}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -142,5 +155,13 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 				}),
 			),
 		),
+		OneOf(
+			Path(Call("no root domain set", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			})),
+		),
+		Result("error", func(ctx context.Context, mck Mock) {
+			require.ErrorContains(t, inValidCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsRootDomain")
+		}),
 	)
 }
