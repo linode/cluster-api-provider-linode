@@ -17,8 +17,6 @@ spec:
       # Format the bucket name into a valid Kubernetes object name
       # TODO: This is over-truncated to account for the Kubernetes access key Secret
       value: (trim((truncate(($run), `52`)), '-'))
-    - name: access_keys_secret
-      value: (join('-', [($bucket), 'bucket-details']))
   template: true
   steps:
     - name: Check if CAPI provider resources exist
@@ -30,14 +28,11 @@ spec:
         - apply:
             file: create-linodeobjectstoragebucket.yaml
         - assert:
-            file: assert-obj-and-secret.yaml
+            file: assert-obj.yaml
       catch:
         - describe:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeObjectStorageBucket
-        - describe:
-            apiVersion: v1
-            kind: Secret
     - name: Check if the bucket was created
       try:
         - script:
@@ -54,31 +49,6 @@ spec:
               ($error): ~
               (json_parse($stdout)):
                 label: ($bucket)
-    - name: Test Key Generation
-      try:
-        - apply:
-            file: patch-obj.yaml
-        - assert:
-            file: assert-keygen.yaml
-      catch:
-        - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-            kind: LinodeObjectStorageBucket
-    - name: Delete LinodeObjectStorageBucket details Secret
-      try:
-        - delete:
-            ref:
-              apiVersion: v1
-              kind: Secret
-              name: (join('-', [($namespace), 'backups-bucket-details']))
-    - name: Assert LinodeObjectStorageBucket key secret exists
-      try:
-        - assert:
-            file: assert-key-secret.yaml
-      catch:
-        - describe:
-            apiVersion: v1
-            kind: Secret
     - name: Delete LinodeObjectStorageBucket
       try:
         - delete:
@@ -95,10 +65,10 @@ spec:
               curl -s \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -X DELETE \
-                "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
+                "https://api.linode.com/v4/object-storage/buckets/us-sea/$BUCKET"
             check:
               ($error): ~
     - name: Check if the LinodeObjectStorageBucket was deleted
       try:
         - error:
-            file: check-obj-and-key-deletion.yaml
+            file: check-obj-deletion.yaml
