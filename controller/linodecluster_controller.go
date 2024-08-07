@@ -28,6 +28,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -58,6 +59,7 @@ type LinodeClusterReconciler struct {
 	ReconcileTimeout   time.Duration
 }
 
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=kubeadmcontrolplanes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
@@ -145,21 +147,6 @@ func (r *LinodeClusterReconciler) reconcile(
 		return res, err
 	}
 
-	linodeMachineKey := client.ObjectKey{
-		Namespace: clusterScope.LinodeCluster.Namespace,
-		Name:      clusterScope.LinodeCluster.Name,
-	}
-
-	for _, linodeMachine := range clusterScope.LinodeMachines.Items {
-		if err := r.Get(ctx, linodeMachineKey, &linodeMachine); err != nil {
-			if err = client.IgnoreNotFound(err); err != nil {
-				return ctrl.Result{}, fmt.Errorf("get linodemachines %q: %w", linodeMachineKey, err)
-			}
-		}
-	}
-
-	logger.Info("List of all machines", "clusterScope.LinodeMachines", clusterScope.LinodeMachines)
-
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
@@ -174,6 +161,35 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	clusterScope.LinodeCluster.Status.Ready = true
 	conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
+
+	labels := map[string]string{clusterv1.ClusterNameLabel: clusterScope.LinodeCluster.Name}
+	if err := r.TracedClient().List(ctx, &clusterScope.LinodeMachines, client.InNamespace(clusterScope.LinodeCluster.Namespace), client.MatchingLabels(labels)); err != nil {
+		return res, err
+	}
+
+	controlPlaneObjKey := client.ObjectKey{
+		Namespace: clusterScope.LinodeCluster.Namespace,
+		Name:      clusterScope.LinodeCluster.Name + "-control-plane",
+	}
+	var controlPlane controlplanev1.KubeadmControlPlane
+	if err := r.Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
+		if err = client.IgnoreNotFound(err); err != nil {
+			return ctrl.Result{}, fmt.Errorf("get controlplane %q: %w", controlPlaneObjKey, err)
+		}
+	}
+	if len(clusterScope.LinodeMachines.Items) != int(*controlPlane.Spec.Replicas) {
+		logger.Info("current machine count and total replicas", "machineCount", len(clusterScope.LinodeMachines.Items), "totalReplicas", int(*controlPlane.Spec.Replicas))
+		logger.Info("List of all current machine", "clusterScope.LinodeMachines", clusterScope.LinodeMachines)
+		for _, eachMachine := range clusterScope.LinodeMachines.Items {
+			logger.Info("List of current IPs", "clusterScope.LinodeMachines", eachMachine.Status.Addresses)
+		}
+		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+	}
+	logger.Info("current machine count and total replicas", "machineCount", len(clusterScope.LinodeMachines.Items), "totalReplicas", int(*controlPlane.Spec.Replicas))
+	for _, eachMachine := range clusterScope.LinodeMachines.Items {
+		logger.Info("List of all IPs", "clusterScope.LinodeMachines", eachMachine.Status.Addresses)
+	}
+	logger.Info("List of all machines", "clusterScope.LinodeMachines", clusterScope.LinodeMachines)
 
 	return res, nil
 }
@@ -329,7 +345,7 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
 		).
 		Watches(
-			&clusterv1.Cluster{},
+			&infrav1alpha2.LinodeMachine{},
 			handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
