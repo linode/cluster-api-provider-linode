@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: PersistentVolume
+metadata:
+  labels:
+    etcd-volume: "true"
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: linode-block-storage

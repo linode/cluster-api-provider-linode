@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  namespace: kube-system
+  labels:
+    component: etcd
+spec:
+  volumes:
+    - name: etcd-data
+      hostPath:
+        path: /var/lib/etcd_data/etcd
+        type: DirectoryOrCreate
+  containers:
+    - name: etcd
+      volumeMounts:
+        - name: etcd-data
+          mountPath: /var/lib/etcd_data/etcd
+status:
+  phase: Running

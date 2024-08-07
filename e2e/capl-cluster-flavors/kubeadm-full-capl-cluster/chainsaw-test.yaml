@@ -24,6 +24,7 @@ spec:
       try:
         - assert:
             file: assert-capi-resources.yaml
+
     # Test for generating cluster using clusterctl
     - name: Generate cluster using clusterctl
       try:
@@ -71,7 +72,32 @@ spec:
             apiVersion: cluster.x-k8s.io/v1beta1
             kind: MachineSet
 
-    # Test for child cluster items: konnectivity
+    # Test to check if linodes are created
+    - name: Check if the linodes are created
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 2
+
+    # Get the KUBECONFIG of the child cluster for later use
     - name: Get child cluster kubeconfig
       try:
         - script:
@@ -87,6 +113,8 @@ spec:
               clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > kubeadm-full-cluster-kubeconfig.yaml
             check:
               ($error == null): true
+
+    # Test for child cluster items: konnectivity
     - clusters:
         kubeadm-full-cluster:
           kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
@@ -110,6 +138,32 @@ spec:
             kind: DaemonSet
             namespace: kube-system
 
+    # Test to check if ETCD disk is added to the specc
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Check ETCD resources in child cluster
+      try:
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-etcd-pod.yaml
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-etcd-volume.yaml
+      catch:
+        - get:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: Pod
+            namespace: kube-system
+
+        - get:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: PersistentVolume
+            namespace: kube-system
+
+
     # Test to check if child cluster is deleted
     - name: Delete child cluster
       try:
@@ -125,6 +179,31 @@ spec:
               name: ($cluster)
         - error:
             file: check-child-cluster-and-vpc-deleted.yaml
+
+    # Test to check if linodes are deleted
+    - name: Check if the linodes are deleted
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
 
     # Delete generated manifests
     - name: Delete generated child cluster manifest yaml
