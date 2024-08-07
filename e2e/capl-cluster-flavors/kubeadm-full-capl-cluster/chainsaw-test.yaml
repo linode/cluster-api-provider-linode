@@ -45,6 +45,7 @@ spec:
               --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > kubeadm-full-cluster.yaml
             check:
               ($error == null): true
+
     # Test for applying created yaml
     - name: Apply generated cluster yaml
       try:
@@ -114,7 +115,7 @@ spec:
             check:
               ($error == null): true
 
-    # Test for child cluster items: konnectivity
+    # Test for child cluster resources
     - clusters:
         kubeadm-full-cluster:
           kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
@@ -138,7 +139,39 @@ spec:
             kind: DaemonSet
             namespace: kube-system
 
-    # Test to check if ETCD disk is added to the specc
+    # Test available StatefulSets
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Check the available StatefulSets
+      try:
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-child-cluster-statefulsets.yaml
+      catch:
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: StatefulSet
+            namespace: kube-system
+
+    # Test for Konnectivity
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Check konnectivity resources
+      try:
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-konnectivity-resources.yaml
+      catch:
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
+
+    # Test to check if ETCD disk is added to the spec
     - clusters:
         kubeadm-full-cluster:
           kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
@@ -162,7 +195,6 @@ spec:
             apiVersion: apps/v1
             kind: PersistentVolume
             namespace: kube-system
-
 
     # Test to check if child cluster is deleted
     - name: Delete child cluster

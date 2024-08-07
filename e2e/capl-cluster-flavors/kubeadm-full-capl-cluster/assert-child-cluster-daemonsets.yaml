@@ -33,15 +33,3 @@ status:
   numberAvailable: 2
   numberMisscheduled: 0
   numberReady: 2
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: konnectivity-server
-  namespace: kube-system
-status:
-  currentNumberScheduled: 1
-  desiredNumberScheduled: 1
-  numberAvailable: 1
-  numberMisscheduled: 0
-  numberReady: 1

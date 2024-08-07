@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: csi-linode-controller
+  namespace: kube-system
+status:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: etcd-backup
+  namespace: kube-system
+status:
+  replicas: 1
