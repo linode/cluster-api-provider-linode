@@ -32,9 +32,10 @@ import (
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	Client        K8sClient
-	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1alpha2.LinodeCluster
+	Client            K8sClient
+	Cluster           *clusterv1.Cluster
+	LinodeCluster     *infrav1alpha2.LinodeCluster
+	LinodeMachineList infrav1alpha2.LinodeMachineList
 }
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
@@ -75,21 +76,23 @@ func NewClusterScope(ctx context.Context, linodeClientConfig ClientConfig, param
 	}
 
 	return &ClusterScope{
-		Client:        params.Client,
-		Cluster:       params.Cluster,
-		LinodeClient:  linodeClient,
-		LinodeCluster: params.LinodeCluster,
-		PatchHelper:   helper,
+		Client:         params.Client,
+		Cluster:        params.Cluster,
+		LinodeClient:   linodeClient,
+		LinodeCluster:  params.LinodeCluster,
+		LinodeMachines: params.LinodeMachineList,
+		PatchHelper:    helper,
 	}, nil
 }
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	Client        K8sClient
-	PatchHelper   *patch.Helper
-	LinodeClient  LinodeClient
-	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1alpha2.LinodeCluster
+	Client         K8sClient
+	PatchHelper    *patch.Helper
+	LinodeClient   LinodeClient
+	Cluster        *clusterv1.Cluster
+	LinodeCluster  *infrav1alpha2.LinodeCluster
+	LinodeMachines infrav1alpha2.LinodeMachineList
 }
 
 // PatchObject persists the cluster configuration and status.

@@ -93,9 +93,10 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		ctx,
 		r.LinodeClientConfig,
 		scope.ClusterScopeParams{
-			Client:        r.TracedClient(),
-			Cluster:       cluster,
-			LinodeCluster: linodeCluster,
+			Client:            r.TracedClient(),
+			Cluster:           cluster,
+			LinodeCluster:     linodeCluster,
+			LinodeMachineList: infrav1alpha2.LinodeMachineList{},
 		},
 	)
 
@@ -143,6 +144,21 @@ func (r *LinodeClusterReconciler) reconcile(
 		logger.Error(err, "failed to update cluster finalizer")
 		return res, err
 	}
+
+	linodeMachineKey := client.ObjectKey{
+		Namespace: clusterScope.LinodeCluster.Namespace,
+		Name:      clusterScope.LinodeCluster.Name,
+	}
+
+	for _, linodeMachine := range clusterScope.LinodeMachines.Items {
+		if err := r.Get(ctx, linodeMachineKey, &linodeMachine); err != nil {
+			if err = client.IgnoreNotFound(err); err != nil {
+				return ctrl.Result{}, fmt.Errorf("get linodemachines %q: %w", linodeMachineKey, err)
+			}
+		}
+	}
+
+	logger.Info("List of all machines", "clusterScope.LinodeMachines", clusterScope.LinodeMachines)
 
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
@@ -292,7 +308,16 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	err := ctrl.NewControllerManagedBy(mgr).
+	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(
+		r.TracedClient(),
+		&infrav1alpha2.LinodeMachineList{},
+		mgr.GetScheme(),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create mapper for LinodeMachines: %w", err)
+	}
+
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha2.LinodeCluster{}).
 		WithOptions(options).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
@@ -301,6 +326,11 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 			handler.EnqueueRequestsFromMapFunc(
 				kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha2.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha2.LinodeCluster{}),
 			),
+			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+		).
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
