@@ -167,7 +167,9 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
-		logger.Info("List of all IPs", "clusterScope.LinodeMachines", eachMachine.Status.Addresses)
+		if len(eachMachine.Status.Addresses) == 0 {
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		}
 	}
 
 	return res, nil
