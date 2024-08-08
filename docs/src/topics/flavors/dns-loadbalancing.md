@@ -4,6 +4,8 @@ This flavor configures DNS records that resolve to the public (ipv4 and/or IPv6)
 The following need to be set in the `LinodeCluster` spec under `network`
 ```bash
 kind: LinodeCluster
+metadata:
+    name: test-cluster
 spec:
     network:
         loadBalancerType: dns
@@ -14,6 +16,8 @@ We support DNS management with both, [Linode Cloud Manager](https://cloud.linode
 We default to the linode provider but to use akamai, you'll need
 ```bash
 kind: LinodeCluster
+metadata:
+    name: test-cluster
 spec:
     network:
         loadBalancerType: dns
@@ -22,10 +26,12 @@ spec:
         dnsProvider: akamai
 ```
 Along with this, the `test.net` domain needs to be registered and also be pre-configured as a domain on Linode or zone on Akamai.
-With these changes, the controlPlaneEndpoint is set to `<domain-name>-<uniqueid>.<root-domain>`. This will set as the server in the KUBECONFIG as well.
+With these changes, the controlPlaneEndpoint is set to `test-cluster-abc123.test.net`. This will be set as the server in the KUBECONFIG as well.
 If users wish to override the subdomain format with something custom, they can pass in the override using the env var `DNS_SUBDOMAIN_OVERRIDE`.
 ```bash
 kind: LinodeCluster
+metadata:
+    name: test-cluster
 spec:
     network:
         loadBalancerType: dns
@@ -33,10 +39,11 @@ spec:
         dnsProvider: akamai
         dnsSubDomainOverride: my-special-overide
 ```
-This will replace the subdomain creation from `<domain-name>-<uniqueid>` to `<override>` making the url `<override>.<root-domain>`. In the above example, it would be `my-special-overide.test.net`
+This will replace the subdomain creation from `test-cluster-abc123.test.net` to make the url `my-special-overide.test.net`.
+
 The controller will create A/AAAA and TXT records under [the Domains tab in the Linode Cloud Manager.](https://cloud.linode.com/domains) or Akamai Edge DNS depending on the provider.
 
- ### Linode Domains:
+### Linode Domains:
 Using the `LINODE_DNS_TOKEN` env var, you can pass the [API token of a different account](https://cloud.linode.com/profile/tokens) if the Domain has been created in another acount under Linode CM:
 
 ```bash
