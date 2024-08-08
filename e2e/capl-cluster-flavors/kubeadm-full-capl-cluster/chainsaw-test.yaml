@@ -36,15 +36,23 @@ spec:
                 value: ($namespace)
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
+              - name: SSE_KEY
+                value: (env('SSE_KEY'))
             content: |
               set -e
-              clusterctl generate cluster $CLUSTER -n $NAMESPACE \
-              --flavor kubeadm-full --kubernetes-version v1.29.1 \
-              --infrastructure local-linode:v0.0.0 \
-              --control-plane-machine-count 1 --worker-machine-count 1 \
-              --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > kubeadm-full-cluster.yaml
+              if [ -z "$SSE_KEY" ]; then
+                echo "SSE_KEY not set" >&2 
+                exit 1
+              else
+                clusterctl generate cluster $CLUSTER -n $NAMESPACE \
+                --flavor kubeadm-full --kubernetes-version v1.29.1 \
+                --infrastructure local-linode:v0.0.0 \
+                --control-plane-machine-count 1 --worker-machine-count 1 \
+                --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > kubeadm-full-cluster.yaml
+              fi
             check:
               ($error == null): true
+
 
     # Test for applying created yaml
     - name: Apply generated cluster yaml
@@ -163,8 +171,16 @@ spec:
       try:
         - assert:
             cluster: kubeadm-full-cluster
-            file: assert-konnectivity-resources.yaml
+            file: assert-konnectivity-agents.yaml
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-konnectivity-server.yaml
       catch:
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
         - describe:
             cluster: kubeadm-full-cluster
             apiVersion: apps/v1
@@ -186,15 +202,28 @@ spec:
       catch:
         - get:
             cluster: kubeadm-full-cluster
-            apiVersion: apps/v1
+            apiVersion: v1
             kind: Pod
             namespace: kube-system
 
         - get:
             cluster: kubeadm-full-cluster
-            apiVersion: apps/v1
+            apiVersion: v1
             kind: PersistentVolume
             namespace: kube-system
+
+    # Test to check if the ETCD disk is healthy
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Validate ETCD health
+
+    # Test to check if the ETCD disk is attached to the linode by querying the linode API
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Check ETCD is correctly attached using Linode API
+
 
     # Test to check if child cluster is deleted
     - name: Delete child cluster
