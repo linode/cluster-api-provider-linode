@@ -107,7 +107,7 @@ jobs:
         include:
           - flavor: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
     uses: ./.github/workflows/e2e-test.yaml
-    if: ${{ github.event.pull_request.draft == false &&  contains(fromJSON(needs.changes.outputs.paths), 'src') }}
+    if: ${{contains(fromJSON(needs.changes.outputs.paths), 'src')}}
     secrets: inherit
     with:
       e2e-selector: ${{ matrix.flavor }}
