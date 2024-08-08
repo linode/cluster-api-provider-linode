@@ -264,6 +264,11 @@ clean-release-git: ## Restores the git files usually modified during a release
 clean-release: clean-release-git
 	rm -rf $(RELEASE_DIR)
 
+.PHONY: clean-child-clusters
+clean-child-clusters: kubectl
+	$(KUBECTL) delete clusters -A --all --timeout=180s
+	$(KUBECTL) delete linodevpc -A --all --timeout=60s
+
 ## --------------------------------------
 ## Build Dependencies
 ## --------------------------------------
@@ -316,6 +321,7 @@ GOWRAP         ?= $(CACHE_BIN)/gowrap
 KUSTOMIZE_VERSION        ?= v5.4.1
 CTLPTL_VERSION           ?= v0.8.29
 CLUSTERCTL_VERSION       ?= v1.7.2
+KUBECTL_VERSION          ?= v1.28.0
 KUBEBUILDER_VERSION      ?= v3.15.1
 CONTROLLER_TOOLS_VERSION ?= v0.14.0
 TILT_VERSION             ?= 0.33.10
@@ -328,7 +334,7 @@ MOCKGEN_VERSION          ?= v0.4.0
 GOWRAP_VERSION           ?= latest
 
 .PHONY: tools
-tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
+tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
 
 
 .PHONY: kustomize
@@ -346,6 +352,12 @@ clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary.
 $(CLUSTERCTL): $(LOCALBIN)
 	curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(OS)-$(ARCH_SHORT) -o $(CLUSTERCTL)
 	chmod +x $(CLUSTERCTL)
+
+.PHONY: kubectl
+kubectl: $(KUBECTL) ## Download kubectl locally if necessary.
+$(KUBECTL): $(LOCALBIN)
+	curl -fsSL https://dl.k8s.io/release/$(KUBECTL_VERSION)/bin/$(OS)/$(ARCH_SHORT)/kubectl -o $(KUBECTL)
+	chmod +x $(KUBECTL)
 
 .PHONY: kubebuilder
 kubebuilder: $(KUBEBUILDER) ## Download kubebuilder locally if necessary.

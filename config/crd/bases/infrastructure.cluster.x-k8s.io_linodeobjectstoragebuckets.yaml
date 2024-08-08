@@ -222,6 +222,21 @@ spec:
             description: LinodeObjectStorageBucketSpec defines the desired state of
               LinodeObjectStorageBucket
             properties:
+              acl:
+                default: private
+                description: ACL sets The Access Control Level of the bucket using
+                  a canned ACL string
+                enum:
+                - private
+                - public-read
+                - authenticated-read
+                - public-read-write
+                type: string
+              corsEnabled:
+                default: true
+                description: corsEnabled enables for all origins in the bucket .If
+                  set to false, CORS is disabled for all origins in the bucket
+                type: boolean
               credentialsRef:
                 description: |-
                   CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
@@ -237,11 +252,6 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
-              keyGeneration:
-                default: 0
-                description: KeyGeneration may be modified to trigger rotations of
-                  access keys created for the bucket.
-                type: integer
               region:
                 description: Region is the ID of the Object Storage region for the
                   bucket.
@@ -261,12 +271,6 @@ spec:
             description: LinodeObjectStorageBucketStatus defines the observed state
               of LinodeObjectStorageBucket
             properties:
-              accessKeyRefs:
-                description: AccessKeyRefs stores IDs for Object Storage keys provisioned
-                  along with the bucket.
-                items:
-                  type: integer
-                type: array
               conditions:
                 description: Conditions specify the service state of the LinodeObjectStorageBucket.
                 items:
@@ -326,13 +330,6 @@ spec:
               hostname:
                 description: Hostname is the address assigned to the bucket.
                 type: string
-              keySecretName:
-                description: KeySecretName specifies the name of the Secret containing
-                  access keys for the bucket.
-                type: string
-              lastKeyGeneration:
-                description: LastKeyGeneration tracks the last known value of .spec.keyGeneration.
-                type: integer
               ready:
                 default: false
                 description: Ready denotes that the bucket has been provisioned along

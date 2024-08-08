@@ -66,6 +66,7 @@ const (
 	ConditionPreflightConfigured             clusterv1.ConditionType = "PreflightConfigured"
 	ConditionPreflightBootTriggered          clusterv1.ConditionType = "PreflightBootTriggered"
 	ConditionPreflightNetworking             clusterv1.ConditionType = "PreflightNetworking"
+	ConditionPreflightLoadBalancing          clusterv1.ConditionType = "PreflightLoadbalancing"
 	ConditionPreflightReady                  clusterv1.ConditionType = "PreflightReady"
 )
 
@@ -101,6 +102,7 @@ type LinodeMachineReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines/finalizers,verbs=update
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
 
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;watch;list
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list
@@ -182,10 +184,10 @@ func (r *LinodeMachineReconciler) reconcile(
 			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
-		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
+		// Always close the scope when exiting this function so we can persist any LinodeMachine and LinodeCluster changes.
 		// This ignores any resource not found errors when reconciling deletions.
-		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
-			logger.Error(patchErr, "failed to patch LinodeMachine")
+		if patchErr := machineScope.CloseAll(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
+			logger.Error(patchErr, "failed to patch LinodeMachine and LinodeCluster")
 
 			err = errors.Join(err, patchErr)
 		}
@@ -426,6 +428,21 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
+	}
+
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLoadBalancing) {
+		// Add the finalizer if not already there
+		if err := machineScope.AddLinodeClusterFinalizer(ctx); err != nil {
+			logger.Error(err, "Failed to add linodecluster finalizer")
+
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightLoadBalancing, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+		}
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLoadBalancing)
 	}
 
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
@@ -723,6 +740,11 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
 		return ctrl.Result{}, fmt.Errorf("remove machine from loadbalancer: %w", err)
+	}
+
+	// Add the finalizer if not already there
+	if err := machineScope.RemoveLinodeClusterFinalizer(ctx); err != nil {
+		return ctrl.Result{}, fmt.Errorf("Failed to remove linodecluster finalizer %w", err)
 	}
 
 	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {

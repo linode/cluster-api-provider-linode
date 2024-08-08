@@ -19,3 +19,4 @@ patches:
           dnsRootDomain: ${DNS_ROOT_DOMAIN}
           dnsUniqueIdentifier: ${DNS_UNIQUE_ID}
           dnsProvider: ${DNS_PROVIDER:-"linode"}
+          dnsSubDomainOverride: ${DNS_SUBDOMAIN_OVERRIDE:-""}
