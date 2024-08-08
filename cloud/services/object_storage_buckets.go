@@ -27,9 +27,10 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 	}
 
 	opts := linodego.ObjectStorageBucketCreateOptions{
-		Region: bScope.Bucket.Spec.Region,
-		Label:  bScope.Bucket.Name,
-		ACL:    linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL),
+		Region:      bScope.Bucket.Spec.Region,
+		Label:       bScope.Bucket.Name,
+		ACL:         linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL),
+		CorsEnabled: bScope.Bucket.Spec.CorsEnabled,
 	}
 
 	if bucket, err = bScope.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {

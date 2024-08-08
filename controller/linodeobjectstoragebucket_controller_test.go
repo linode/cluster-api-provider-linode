@@ -267,7 +267,7 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 		Result("error", func(ctx context.Context, mck Mock) {
 			bScope.LinodeClient = mck.LinodeClient
 			bScope.Client = mck.K8sClient
-			err := reconciler.reconcileDelete(ctx, &bScope)
+			err := reconciler.reconcileDelete(&bScope)
 			Expect(err.Error()).To(ContainSubstring("failed to remove finalizer from bucket"))
 			Expect(mck.Events()).To(ContainSubstring("failed to remove finalizer from bucket"))
 		}),

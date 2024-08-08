@@ -53,7 +53,7 @@ type LinodeObjectStorageBucketSpec struct {
 	// corsEnabled enables for all origins in the bucket .If set to false, CORS is disabled for all origins in the bucket
 	// +optional
 	// +kubebuilder:default=true
-	CorsEnabled bool `json:"corsEnabled,omitempty"`
+	CorsEnabled *bool `json:"corsEnabled,omitempty"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
 	// If not supplied then the credentials of the controller will be used.

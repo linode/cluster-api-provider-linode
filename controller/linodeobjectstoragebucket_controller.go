@@ -108,7 +108,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 	return r.reconcile(ctx, bScope)
 }
 
-//nolint:dupl // This follows the pattern used for the LinodeObjectStorageKey controller.
+
 func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (res ctrl.Result, reterr error) {
 	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageBucket changes.
 	defer func() {
@@ -120,7 +120,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 	}()
 
 	if !bScope.Bucket.DeletionTimestamp.IsZero() {
-		return res, r.reconcileDelete(ctx, bScope)
+		return res, r.reconcileDelete(bScope)
 	}
 
 	if err := bScope.AddFinalizer(ctx); err != nil {
@@ -163,7 +163,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	return nil
 }
 
-func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
+func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(bScope *scope.ObjectStorageBucketScope) error {
 	bScope.Logger.Info("Reconciling delete")
 
 	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha2.ObjectStorageBucketFinalizer) {

@@ -113,7 +113,7 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 	return r.reconcile(ctx, keyScope)
 }
 
-//nolint:dupl // This follows the pattern used for the LinodeObjectStorageBucket controller.
+
 func (r *LinodeObjectStorageKeyReconciler) reconcile(ctx context.Context, keyScope *scope.ObjectStorageKeyScope) (res ctrl.Result, reterr error) {
 	// Always close the scope when exiting this function so we can persist any LinodeObjectStorageKey changes.
 	defer func() {
