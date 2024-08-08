@@ -23,6 +23,17 @@ spec:
 ```
 Along with this, the `test.net` domain needs to be registered and also be pre-configured as a domain on Linode or zone on Akamai.
 With these changes, the controlPlaneEndpoint is set to `<domain-name>-<uniqueid>.<root-domain>`. This will set as the server in the KUBECONFIG as well.
+If users wish to override the subdomain format with something custom, they can pass in the override using the env var `DNS_SUBDOMAIN_OVERRIDE`.
+```bash
+kind: LinodeCluster
+spec:
+    network:
+        loadBalancerType: dns
+        dnsRootDomain: test.net
+        dnsProvider: akamai
+        dnsSubDomainOverride: my-special-overide
+```
+This will replace the subdomain creation from `<domain-name>-<uniqueid>` to `<override>` making the url `<override>.<root-domain>`. In the above example, it would be `my-special-overide.test.net`
 The controller will create A/AAAA and TXT records under [the Domains tab in the Linode Cloud Manager.](https://cloud.linode.com/domains) or Akamai Edge DNS depending on the provider.
 
  ### Linode Domains:
