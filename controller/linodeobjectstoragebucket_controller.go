@@ -162,7 +162,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	return nil
 }
 
-// ctx has been removed from the param list
 func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(bScope *scope.ObjectStorageBucketScope) error {
 	bScope.Logger.Info("Reconciling delete")
 

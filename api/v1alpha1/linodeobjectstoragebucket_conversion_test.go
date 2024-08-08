@@ -112,7 +112,7 @@ func TestLinodeObjectStorageBucketFrom(t *testing.T) {
 				Namespace: "default",
 				Name:      "cred-secret",
 			},
-			KeyGeneration: ptr.To(1),
+			KeyGeneration: ptr.To(0),
 			SecretType:    "Opaque",
 		},
 		Status: LinodeObjectStorageBucketStatus{},

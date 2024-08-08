@@ -70,7 +70,7 @@ func Convert_v1alpha2_LinodeObjectStorageBucketSpec_To_v1alpha1_LinodeObjectStor
 	// WARNING: in.Region requires manual conversion: does not exist in peer-type
 	out.Cluster = in.Region
 	out.CredentialsRef = in.CredentialsRef
-	out.KeyGeneration = ptr.To(1)
+	out.KeyGeneration = ptr.To(0)
 	out.SecretType = in.SecretType
 	return nil
 }
