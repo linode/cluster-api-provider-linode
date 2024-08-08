@@ -55,6 +55,11 @@ const (
 	// DefaultPGControllerReconcileTimeout is the default timeout when reconcile operations fail.
 	DefaultPGControllerReconcileTimeout = 20 * time.Minute
 
+	// DefaultFWControllerReconcilerDelay is the default requeue delay when a reconcile operation fails.
+	DefaultFWControllerReconcilerDelay = 5 * time.Second
+	// DefaultFWControllerReconcileTimeout is the default timeout when reconcile operations fail.
+	DefaultFWControllerReconcileTimeout = 20 * time.Minute
+
 	// DefaultClusterControllerReconcileDelay is the default requeue delay when a reconcile operation fails.
 	DefaultClusterControllerReconcileDelay = 5 * time.Second
 	// DefaultClusterControllerReconcileTimeout is the default timeout when reconcile operations fail.
