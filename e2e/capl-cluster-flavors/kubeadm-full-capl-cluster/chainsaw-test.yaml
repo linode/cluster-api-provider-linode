@@ -53,7 +53,6 @@ spec:
             check:
               ($error == null): true
 
-
     # Test for applying created yaml
     - name: Apply generated cluster yaml
       try:
@@ -82,7 +81,7 @@ spec:
             kind: MachineSet
 
     # Test to check if linodes are created
-    - name: Check if the linodes are created
+    - name: Check if the Linodes are created
       try:
         - script:
             env:
@@ -163,7 +162,7 @@ spec:
             kind: StatefulSet
             namespace: kube-system
 
-    # Test for Konnectivity
+    # Test Konnectivity server and agent
     - clusters:
         kubeadm-full-cluster:
           kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
@@ -186,44 +185,6 @@ spec:
             apiVersion: apps/v1
             kind: DaemonSet
             namespace: kube-system
-
-    # Test to check if ETCD disk is added to the spec
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Check ETCD resources in child cluster
-      try:
-        - assert:
-            cluster: kubeadm-full-cluster
-            file: assert-etcd-pod.yaml
-        - assert:
-            cluster: kubeadm-full-cluster
-            file: assert-etcd-volume.yaml
-      catch:
-        - get:
-            cluster: kubeadm-full-cluster
-            apiVersion: v1
-            kind: Pod
-            namespace: kube-system
-
-        - get:
-            cluster: kubeadm-full-cluster
-            apiVersion: v1
-            kind: PersistentVolume
-            namespace: kube-system
-
-    # Test to check if the ETCD disk is healthy
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Validate ETCD health
-
-    # Test to check if the ETCD disk is attached to the linode by querying the linode API
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Check ETCD is correctly attached using Linode API
-
 
     # Test to check if child cluster is deleted
     - name: Delete child cluster

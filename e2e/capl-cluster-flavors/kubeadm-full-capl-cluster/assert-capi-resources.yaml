@@ -77,5 +77,3 @@ metadata:
   namespace: kubeadm-control-plane-system
 status:
   availableReplicas: 1
----
-
