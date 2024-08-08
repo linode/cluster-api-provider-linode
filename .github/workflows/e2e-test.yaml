@@ -109,6 +109,10 @@ jobs:
           CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/gha-clusterctl-config.yaml
         run: make e2etest
 
+      - name: cleanup stale clusters
+        if: ${{ always() }}
+        run: make clean-child-clusters
+
       - name: Copy logs
         if: ${{ always() }}
         run: docker cp tilt-control-plane:/var/log .logs
