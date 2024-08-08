@@ -28,16 +28,14 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client              K8sClient
-	MachinePatchHelper  *patch.Helper
-	ClusterPatchHelper  *patch.Helper
-	Cluster             *clusterv1.Cluster
-	Machine             *clusterv1.Machine
-	LinodeClient        LinodeClient
-	LinodeDomainsClient LinodeClient
-	AkamaiDomainsClient AkamClient
-	LinodeCluster       *infrav1alpha2.LinodeCluster
-	LinodeMachine       *infrav1alpha2.LinodeMachine
+	Client             K8sClient
+	MachinePatchHelper *patch.Helper
+	ClusterPatchHelper *patch.Helper
+	Cluster            *clusterv1.Cluster
+	Machine            *clusterv1.Machine
+	LinodeClient       LinodeClient
+	LinodeCluster      *infrav1alpha2.LinodeCluster
+	LinodeMachine      *infrav1alpha2.LinodeMachine
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
@@ -57,7 +55,7 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(ctx context.Context, linodeClientConfig, dnsClientConfig ClientConfig, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -89,12 +87,6 @@ func NewMachineScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
 		linodeClientConfig.Token = string(apiToken)
-
-		dnsToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "dnsToken")
-		if err != nil || len(dnsToken) == 0 {
-			dnsToken = apiToken
-		}
-		dnsClientConfig.Token = string(dnsToken)
 	}
 
 	linodeClient, err := CreateLinodeClient(linodeClientConfig,
@@ -102,17 +94,6 @@ func NewMachineScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
-	}
-	linodeDomainsClient, err := CreateLinodeClient(dnsClientConfig,
-		WithRetryCount(0),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
-	}
-
-	akamDomainsClient, err := setUpEdgeDNSInterface()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create akamai dns client: %w", err)
 	}
 
 	machineHelper, err := patch.NewHelper(params.LinodeMachine, params.Client)
@@ -126,16 +107,14 @@ func NewMachineScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 	}
 
 	return &MachineScope{
-		Client:              params.Client,
-		MachinePatchHelper:  machineHelper,
-		ClusterPatchHelper:  clusterHelper,
-		Cluster:             params.Cluster,
-		Machine:             params.Machine,
-		LinodeClient:        linodeClient,
-		LinodeDomainsClient: linodeDomainsClient,
-		AkamaiDomainsClient: akamDomainsClient,
-		LinodeCluster:       params.LinodeCluster,
-		LinodeMachine:       params.LinodeMachine,
+		Client:             params.Client,
+		MachinePatchHelper: machineHelper,
+		ClusterPatchHelper: clusterHelper,
+		Cluster:            params.Cluster,
+		Machine:            params.Machine,
+		LinodeClient:       linodeClient,
+		LinodeCluster:      params.LinodeCluster,
+		LinodeMachine:      params.LinodeMachine,
 	}, nil
 }
 

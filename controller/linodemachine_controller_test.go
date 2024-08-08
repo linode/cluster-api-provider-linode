@@ -803,13 +803,12 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			}}, nil)
 
 		mScope := scope.MachineScope{
-			Client:              k8sClient,
-			LinodeClient:        mockLinodeClient,
-			LinodeDomainsClient: mockLinodeClient,
-			Cluster:             &cluster,
-			Machine:             &machine,
-			LinodeCluster:       &linodeCluster,
-			LinodeMachine:       &linodeMachine,
+			Client:        k8sClient,
+			LinodeClient:  mockLinodeClient,
+			Cluster:       &cluster,
+			Machine:       &machine,
+			LinodeCluster: &linodeCluster,
+			LinodeMachine: &linodeMachine,
 		}
 
 		machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
@@ -1411,13 +1410,12 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{
-			Client:              k8sClient,
-			LinodeClient:        mockLinodeClient,
-			LinodeDomainsClient: mockLinodeClient,
-			Cluster:             &cluster,
-			Machine:             &machine,
-			LinodeCluster:       &linodeCluster,
-			LinodeMachine:       &linodeMachine,
+			Client:        k8sClient,
+			LinodeClient:  mockLinodeClient,
+			Cluster:       &cluster,
+			Machine:       &machine,
+			LinodeCluster: &linodeCluster,
+			LinodeMachine: &linodeMachine,
 		}
 
 		machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
