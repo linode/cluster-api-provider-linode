@@ -130,7 +130,7 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 				},
 			},
 		}
-		noRootDomainCluster = LinodeCluster{
+		inValidCluster = LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
@@ -138,23 +138,7 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 			Spec: LinodeClusterSpec{
 				Region: "us-ord",
 				Network: NetworkSpec{
-					LoadBalancerType:    "dns",
-					DNSRootDomain:       "",
-					DNSUniqueIdentifier: "abc123",
-				},
-			},
-		}
-		noUniqueIDCluster = LinodeCluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example",
-				Namespace: "example",
-			},
-			Spec: LinodeClusterSpec{
-				Region: "us-ord",
-				Network: NetworkSpec{
-					LoadBalancerType:    "dns",
-					DNSRootDomain:       "test.net",
-					DNSUniqueIdentifier: "",
+					LoadBalancerType: "dns",
 				},
 			},
 		}
@@ -172,13 +156,12 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 			),
 		),
 		OneOf(
-			Path(Call("no domain and unique id set", func(ctx context.Context, mck Mock) {
+			Path(Call("no root domain set", func(ctx context.Context, mck Mock) {
 				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			require.ErrorContains(t, noRootDomainCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsRootDomain")
-			require.ErrorContains(t, noUniqueIDCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsUniqueIdentifier")
+			require.ErrorContains(t, inValidCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsRootDomain")
 		}),
 	)
 }

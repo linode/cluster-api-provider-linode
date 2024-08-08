@@ -301,6 +301,11 @@ spec:
                               DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
                               Ignored if the LoadBalancerType is set to anything other than dns
                             type: string
+                          dnsSubDomainOverride:
+                            description: |-
+                              DNSSubDomainOverride is used to override CAPL's construction of the controlplane endpoint
+                              If set, this will override the DNS subdomain from <clustername>-<uniqueid>.<rootdomain> to <overridevalue>.<rootdomain>
+                            type: string
                           dnsTTLsec:
                             description: |-
                               DNSTTLSec is the TTL for the domain record
