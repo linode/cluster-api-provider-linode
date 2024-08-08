@@ -148,6 +148,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 	keyScope.Logger.Info("Reconciling apply")
 
 	keyScope.Key.Status.Ready = false
+	keyScope.Key.Status.FailureMessage = nil
 
 	var keyForSecret *linodego.ObjectStorageKey
 
