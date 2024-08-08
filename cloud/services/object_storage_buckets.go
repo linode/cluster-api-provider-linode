@@ -2,12 +2,10 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/linode/linodego"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -29,9 +27,10 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 	}
 
 	opts := linodego.ObjectStorageBucketCreateOptions{
-		Region: bScope.Bucket.Spec.Region,
-		Label:  bScope.Bucket.Name,
-		ACL:    linodego.ACLPrivate,
+		Region:      bScope.Bucket.Spec.Region,
+		Label:       bScope.Bucket.Name,
+		ACL:         linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL),
+		CorsEnabled: bScope.Bucket.Spec.CorsEnabled,
 	}
 
 	if bucket, err = bScope.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {
@@ -41,102 +40,4 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 	bScope.Logger.Info("Created bucket")
 
 	return bucket, nil
-}
-
-func RotateObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([scope.NumAccessKeys]*linodego.ObjectStorageKey, error) {
-	var newKeys [scope.NumAccessKeys]*linodego.ObjectStorageKey
-
-	for idx, permission := range []struct {
-		name   string
-		suffix string
-	}{
-		{"read_write", "rw"},
-		{"read_only", "ro"},
-	} {
-		keyLabel := fmt.Sprintf("%s-%s", bScope.Bucket.Name, permission.suffix)
-		key, err := createObjectStorageKeyForBucket(ctx, bScope, keyLabel, permission.name)
-		if err != nil {
-			return newKeys, err
-		}
-
-		newKeys[idx] = key
-	}
-
-	// If key revocation fails here, just log the errors since new keys have been created
-	if !bScope.ShouldInitKeys() && bScope.ShouldRotateKeys() {
-		if err := RevokeObjectStorageKeys(ctx, bScope); err != nil {
-			bScope.Logger.Error(err, "Failed to revoke access keys; keys must be manually revoked")
-		}
-	}
-
-	return newKeys, nil
-}
-
-func createObjectStorageKeyForBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope, label, permission string) (*linodego.ObjectStorageKey, error) {
-	opts := linodego.ObjectStorageKeyCreateOptions{
-		Label: label,
-		BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
-			{
-				BucketName:  bScope.Bucket.Name,
-				Region:      bScope.Bucket.Spec.Region,
-				Permissions: permission,
-			},
-		},
-	}
-
-	key, err := bScope.LinodeClient.CreateObjectStorageKey(ctx, opts)
-	if err != nil {
-		bScope.Logger.Error(err, "Failed to create access key", "label", label)
-
-		return nil, fmt.Errorf("failed to create access key: %w", err)
-	}
-
-	bScope.Logger.Info("Created access key", "id", key.ID)
-
-	return key, nil
-}
-
-func RevokeObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
-	var errs []error
-	for _, keyID := range bScope.Bucket.Status.AccessKeyRefs {
-		if err := revokeObjectStorageKey(ctx, bScope, keyID); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	return utilerrors.NewAggregate(errs)
-}
-
-func revokeObjectStorageKey(ctx context.Context, bScope *scope.ObjectStorageBucketScope, keyID int) error {
-	err := bScope.LinodeClient.DeleteObjectStorageKey(ctx, keyID)
-	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-		bScope.Logger.Error(err, "Failed to revoke access key", "id", keyID)
-		return fmt.Errorf("failed to revoke access key: %w", err)
-	}
-
-	bScope.Logger.Info("Revoked access key", "id", keyID)
-
-	return nil
-}
-
-func GetObjectStorageKeys(ctx context.Context, bScope *scope.ObjectStorageBucketScope) ([2]*linodego.ObjectStorageKey, error) {
-	var keys [2]*linodego.ObjectStorageKey
-
-	if len(bScope.Bucket.Status.AccessKeyRefs) != scope.NumAccessKeys {
-		return keys, errors.New("expected two object storage key IDs in .status.accessKeyRefs")
-	}
-
-	var errs []error
-	for idx, keyID := range bScope.Bucket.Status.AccessKeyRefs {
-		key, err := bScope.LinodeClient.GetObjectStorageKey(ctx, keyID)
-		if err != nil {
-			errs = append(errs, err)
-
-			continue
-		}
-
-		keys[idx] = key
-	}
-
-	return keys, utilerrors.NewAggregate(errs)
 }
