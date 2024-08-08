@@ -13,4 +13,5 @@ resources:
 - infrastructure_v1alpha2_linodeobjectstoragebucket.yaml
 - infrastructure_v1alpha2_linodeclustertemplate.yaml
 - infrastructure_v1alpha2_linodemachinetemplate.yaml
+- infrastructure_v1alpha2_linodefirewall.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
