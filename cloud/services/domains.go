@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
-	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"golang.org/x/exp/slices"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
@@ -77,12 +76,11 @@ func EnsureLinodeDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 
 // EnsureAkamaiDNSEntries ensures the domainrecord on Akamai EDGE DNS is created, updated, or deleted based on operation passed
 func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation string, dnsEntries []DNSOptions) error {
-	logger := logr.FromContextOrDiscard(ctx)
 	linodeCluster := cscope.LinodeCluster
 	linodeClusterNetworkSpec := linodeCluster.Spec.Network
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
-	akaDNSClient := mscope.AkamaiDomainsClient
-	fqdn := getSubDomain(mscope) + "." + rootDomain
+	akaDNSClient := cscope.AkamaiDomainsClient
+	fqdn := getSubDomain(cscope) + "." + rootDomain
 
 	for _, dnsEntry := range dnsEntries {
 		recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
@@ -121,7 +119,17 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 				}
 			}
 		} else {
-			if len(recordBody.Target) == 1 && slices.Contains(recordBody.Target, dnsEntry.Target) {
+			if dnsEntry.DNSRecordType == linodego.RecordTypeAAAA {
+				dnsEntry.Target = strings.Replace(dnsEntry.Target, "::", ":0:0:", 8) //nolint:mnd // 8 for 8 octest
+			}
+			exists := false
+			for _, target := range recordBody.Target {
+				if strings.Contains(target, dnsEntry.Target) {
+					exists = true
+					continue
+				}
+			}
+			if exists {
 				continue
 			}
 			recordBody.Target = append(recordBody.Target, dnsEntry.Target)
@@ -145,7 +153,6 @@ func removeElement(stringList []string, elemToRemove string) []string {
 
 // getDNSEntriesToEnsure return DNS entries to create/delete
 func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.ClusterScope) ([]DNSOptions, error) {
-	logger := logr.FromContextOrDiscard(ctx)
 	d.mux.Lock()
 	defer d.mux.Unlock()
 	dnsTTLSec := rutil.DefaultDNSTTLSec
@@ -176,7 +183,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 		d.options = append(d.options, DNSOptions{subDomain, eachMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
 	}
 
-  return d.options, nil
+	return d.options, nil
 }
 
 // GetDomainID gets the domains linode id

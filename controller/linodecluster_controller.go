@@ -114,6 +114,10 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 
+	if clusterScope == nil {
+		return ctrl.Result{}, nil
+	}
+
 	return r.reconcile(ctx, clusterScope, logger)
 }
 
@@ -200,15 +204,10 @@ func (r *LinodeClusterReconciler) reconcile(
 	if err := r.addMachineToLB(ctx, clusterScope); err != nil {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	}
-	logger.Info("machines in linodecluster", "items", len(clusterScope.LinodeMachines.Items))
-	logger.Info("machines in linodecluster", "replicase", int(*controlPlane.Spec.Replicas))
 	if len(clusterScope.LinodeMachines.Items) < int(*controlPlane.Spec.Replicas) {
-		logger.Info("in if")
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated)
-	} else {
-		logger.Info("in else")
-		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)
 	}
+	conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)
 
 	return res, nil
 }
