@@ -181,8 +181,8 @@ func (r *LinodeMachineReconciler) reconcile(
 
 		// Always close the scope when exiting this function so we can persist any LinodeMachine and LinodeCluster changes.
 		// This ignores any resource not found errors when reconciling deletions.
-		if patchErr := machineScope.CloseAll(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
-			logger.Error(patchErr, "failed to patch LinodeMachine and LinodeCluster")
+		if patchErr := machineScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
+			logger.Error(patchErr, "failed to patch LinodeMachine")
 
 			err = errors.Join(err, patchErr)
 		}
@@ -680,6 +680,12 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "instance deleted")
 
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, clusterv1.DeletedReason, "instance has cleaned up")
+	if reconciler.ConditionTrue(machineScope.LinodeCluster, ConditionLoadBalancingInitiated) || reconciler.ConditionTrue(machineScope.LinodeCluster, ConditionLoadBalancingComplete) {
+		logger.Info("condition is true..requeuing")
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+	} else {
+		logger.Info("condition is false... will remove instance id")
+	}
 
 	machineScope.LinodeMachine.Spec.ProviderID = nil
 	machineScope.LinodeMachine.Spec.InstanceID = nil

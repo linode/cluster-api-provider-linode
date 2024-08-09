@@ -6,11 +6,8 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -28,14 +25,13 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client             K8sClient
-	MachinePatchHelper *patch.Helper
-	ClusterPatchHelper *patch.Helper
-	Cluster            *clusterv1.Cluster
-	Machine            *clusterv1.Machine
-	LinodeClient       LinodeClient
-	LinodeCluster      *infrav1alpha2.LinodeCluster
-	LinodeMachine      *infrav1alpha2.LinodeMachine
+	Client        K8sClient
+	PatchHelper   *patch.Helper
+	Cluster       *clusterv1.Cluster
+	Machine       *clusterv1.Machine
+	LinodeClient  LinodeClient
+	LinodeCluster *infrav1alpha2.LinodeCluster
+	LinodeMachine *infrav1alpha2.LinodeMachine
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
@@ -96,86 +92,38 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
-	machineHelper, err := patch.NewHelper(params.LinodeMachine, params.Client)
+	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init machine patch helper: %w", err)
-	}
-
-	clusterHelper, err := patch.NewHelper(params.LinodeCluster, params.Client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init cluster patch helper: %w", err)
+		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	return &MachineScope{
-		Client:             params.Client,
-		MachinePatchHelper: machineHelper,
-		ClusterPatchHelper: clusterHelper,
-		Cluster:            params.Cluster,
-		Machine:            params.Machine,
-		LinodeClient:       linodeClient,
-		LinodeCluster:      params.LinodeCluster,
-		LinodeMachine:      params.LinodeMachine,
+		Client:        params.Client,
+		PatchHelper:   helper,
+		Cluster:       params.Cluster,
+		Machine:       params.Machine,
+		LinodeClient:  linodeClient,
+		LinodeCluster: params.LinodeCluster,
+		LinodeMachine: params.LinodeMachine,
 	}, nil
 }
 
-// CloseAll persists the linodemachine and linodecluster configuration and status.
-func (s *MachineScope) CloseAll(ctx context.Context) error {
-	if err := s.MachineClose(ctx); err != nil {
-		return err
-	}
-	if err := s.ClusterClose(ctx); err != nil {
-		return err
-	}
-	return nil
+// PatchObject persists the machine configuration and status.
+func (s *MachineScope) PatchObject(ctx context.Context) error {
+	return s.PatchHelper.Patch(ctx, s.LinodeMachine)
 }
 
-// MachineClose persists the linodemachine configuration and status.
-func (s *MachineScope) MachineClose(ctx context.Context) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsConflict, func() error {
-		return s.MachinePatchHelper.Patch(ctx, s.LinodeMachine)
-	})
-}
-
-// ClusterClose persists the linodecluster configuration and status.
-func (s *MachineScope) ClusterClose(ctx context.Context) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsConflict, func() error {
-		return s.ClusterPatchHelper.Patch(ctx, s.LinodeCluster)
-	})
+// Close closes the current scope persisting the machine configuration and status.
+func (s *MachineScope) Close(ctx context.Context) error {
+	return s.PatchObject(ctx)
 }
 
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *MachineScope) AddFinalizer(ctx context.Context) error {
 	if controllerutil.AddFinalizer(s.LinodeMachine, infrav1alpha2.MachineFinalizer) {
-		return s.MachineClose(ctx)
+		return s.Close(ctx)
 	}
-
-	return nil
-}
-
-// AddLinodeClusterFinalizer adds a finalizer if not present and immediately patches the
-// object to avoid any race conditions.
-func (s *MachineScope) AddLinodeClusterFinalizer(ctx context.Context) error {
-	if !kutil.IsControlPlaneMachine(s.Machine) {
-		return nil
-	}
-	if controllerutil.AddFinalizer(s.LinodeCluster, s.LinodeMachine.Name) {
-		return s.ClusterClose(ctx)
-	}
-
-	return nil
-}
-
-// RemoveLinodeClusterFinalizer adds a finalizer if not present and immediately patches the
-// object to avoid any race conditions.
-func (s *MachineScope) RemoveLinodeClusterFinalizer(ctx context.Context) error {
-	if !kutil.IsControlPlaneMachine(s.Machine) {
-		return nil
-	}
-	if controllerutil.RemoveFinalizer(s.LinodeCluster, s.LinodeMachine.Name) {
-		return s.ClusterClose(ctx)
-	}
-
 	return nil
 }
 

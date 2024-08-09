@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/netip"
 	"strings"
@@ -38,6 +39,10 @@ func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation
 	dnsEntries, err := dnss.getDNSEntriesToEnsure(cscope)
 	if err != nil {
 		return err
+	}
+
+	if len(dnsEntries) == 0 {
+		return errors.New("dnsEntries are empty")
 	}
 
 	if cscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
@@ -78,18 +83,15 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
 	fqdn := linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
 	akaDNSClient := cscope.AkamaiDomainsClient
-	logger.Info("abir", "dnsEntries", dnsEntries)
 
 	for _, dnsEntry := range dnsEntries {
 		recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
-		logger.Info("abir", "recordBody", recordBody)
+		logger.Info("got record", "recordBody", recordBody)
+		logger.Info("got record", "operation", operation)
 		if err != nil {
-			logger.Error(err, "error not nil in getting recordBody")
 			if !strings.Contains(err.Error(), "Not Found") {
-				logger.Info("does not contain error not found")
 				return err
 			}
-			logger.Info("contains error not found", "operation", operation)
 			if operation == "create" {
 				if err := akaDNSClient.CreateRecord(
 					ctx,
@@ -105,6 +107,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 			continue
 		}
 		if operation == "delete" {
+			logger.Info("entered delete")
 			switch {
 			case len(recordBody.Target) > 1:
 				recordBody.Target = removeElement(
@@ -121,6 +124,9 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 				}
 			}
 		} else {
+			if len(recordBody.Target) == 1 && slices.Contains(recordBody.Target, dnsEntry.Target) {
+				continue
+			}
 			recordBody.Target = append(recordBody.Target, dnsEntry.Target)
 			if err := akaDNSClient.UpdateRecord(ctx, recordBody, rootDomain); err != nil {
 				return err
@@ -165,6 +171,9 @@ func (d *DNSEntries) getDNSEntriesToEnsure(cscope *scope.ClusterScope) ([]DNSOpt
 				recordType = linodego.RecordTypeAAAA
 			}
 			d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, recordType, dnsTTLSec})
+		}
+		if len(d.options) == 0 {
+			continue
 		}
 		d.options = append(d.options, DNSOptions{domainHostname, eachMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
 	}
