@@ -200,9 +200,13 @@ func (r *LinodeClusterReconciler) reconcile(
 	if err := r.addMachineToLB(ctx, clusterScope); err != nil {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	}
+	logger.Info("machines in linodecluster", "items", len(clusterScope.LinodeMachines.Items))
+	logger.Info("machines in linodecluster", "replicase", int(*controlPlane.Spec.Replicas))
 	if len(clusterScope.LinodeMachines.Items) < int(*controlPlane.Spec.Replicas) {
+		logger.Info("in if")
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated)
 	} else {
+		logger.Info("in else")
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)
 	}
 

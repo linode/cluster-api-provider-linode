@@ -36,7 +36,7 @@ func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation
 
 	// Get the public IP that was assigned
 	var dnss DNSEntries
-	dnsEntries, err := dnss.getDNSEntriesToEnsure(cscope)
+	dnsEntries, err := dnss.getDNSEntriesToEnsure(ctx, cscope)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,8 @@ func removeElement(stringList []string, elemToRemove string) []string {
 }
 
 // getDNSEntriesToEnsure return DNS entries to create/delete
-func (d *DNSEntries) getDNSEntriesToEnsure(cscope *scope.ClusterScope) ([]DNSOptions, error) {
+func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.ClusterScope) ([]DNSOptions, error) {
+	logger := logr.FromContextOrDiscard(ctx)
 	d.mux.Lock()
 	defer d.mux.Unlock()
 	dnsTTLSec := rutil.DefaultDNSTTLSec
@@ -156,8 +157,10 @@ func (d *DNSEntries) getDNSEntriesToEnsure(cscope *scope.ClusterScope) ([]DNSOpt
 	}
 
 	domainHostname := cscope.LinodeCluster.ObjectMeta.Name + "-" + cscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
+	logger.Info("machines", "machine items", cscope.LinodeMachines.Items)
 
 	for _, eachMachine := range cscope.LinodeMachines.Items {
+		logger.Info("machines", "machine addresses", eachMachine.Status.Addresses)
 		for _, IPs := range eachMachine.Status.Addresses {
 			recordType := linodego.RecordTypeA
 			if IPs.Type != v1beta1.MachineExternalIP {
