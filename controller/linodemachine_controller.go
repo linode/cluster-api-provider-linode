@@ -681,10 +681,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, clusterv1.DeletedReason, "instance has cleaned up")
 	if reconciler.ConditionTrue(machineScope.LinodeCluster, ConditionLoadBalancingInitiated) || reconciler.ConditionTrue(machineScope.LinodeCluster, ConditionLoadBalancingComplete) {
-		logger.Info("condition is true..requeuing")
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-	} else {
-		logger.Info("condition is false... will remove instance id")
 	}
 
 	machineScope.LinodeMachine.Spec.ProviderID = nil

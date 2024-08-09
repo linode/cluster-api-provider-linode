@@ -128,6 +128,25 @@ func (r *LinodeClusterReconciler) reconcile(
 	clusterScope.LinodeCluster.Status.FailureReason = nil
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer("")
 
+	labels := map[string]string{clusterv1.ClusterNameLabel: clusterScope.LinodeCluster.Name}
+	if err := r.TracedClient().List(ctx, &clusterScope.LinodeMachines, client.InNamespace(clusterScope.LinodeCluster.Namespace), client.MatchingLabels(labels)); err != nil {
+		return res, err
+	}
+
+	controlPlaneObjKey := client.ObjectKey{
+		Namespace: clusterScope.LinodeCluster.Namespace,
+		Name:      clusterScope.LinodeCluster.Name + "-control-plane",
+	}
+	var controlPlane controlplanev1.KubeadmControlPlane
+	if err := r.Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
+		if err = client.IgnoreNotFound(err); err != nil {
+			return ctrl.Result{}, fmt.Errorf("get controlplaneobj %q: %w", controlPlaneObjKey, err)
+		}
+	}
+	if controlPlane.Spec.Replicas == nil {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+	}
+
 	// Always close the scope when exiting this function so we can persist any LinodeCluster changes.
 	defer func() {
 		// Filter out any IsNotFound message since client.IgnoreNotFound does not handle aggregate errors
@@ -168,25 +187,6 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	clusterScope.LinodeCluster.Status.Ready = true
 	conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
-
-	labels := map[string]string{clusterv1.ClusterNameLabel: clusterScope.LinodeCluster.Name}
-	if err := r.TracedClient().List(ctx, &clusterScope.LinodeMachines, client.InNamespace(clusterScope.LinodeCluster.Namespace), client.MatchingLabels(labels)); err != nil {
-		return res, err
-	}
-
-	controlPlaneObjKey := client.ObjectKey{
-		Namespace: clusterScope.LinodeCluster.Namespace,
-		Name:      clusterScope.LinodeCluster.Name + "-control-plane",
-	}
-	var controlPlane controlplanev1.KubeadmControlPlane
-	if err := r.Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			return ctrl.Result{}, fmt.Errorf("get controlplaneobj %q: %w", controlPlaneObjKey, err)
-		}
-	}
-	if controlPlane.Spec.Replicas == nil {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
-	}
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
 		if len(eachMachine.Status.Addresses) == 0 {
@@ -296,8 +296,6 @@ func (r *LinodeClusterReconciler) handleDNS(clusterScope *scope.ClusterScope) {
 
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
-	logger.Info("clusters current state", "clusterScope.LinodeCluster.Status", clusterScope.LinodeCluster.Status)
-	logger.Info("deleting cluster", "combined", (reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated) || reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)))
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && !(reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated) || reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)) {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 
@@ -315,7 +313,6 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	if err := r.removeMachineFromLB(ctx, logger, clusterScope); err != nil {
 		return fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
-	logger.Info("removing the condtiions")
 	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated, "clear loadbalancer", clusterv1.ConditionSeverityWarning, "")
 	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancingComplete, "clear loadbalancer entries", clusterv1.ConditionSeverityWarning, "")
 

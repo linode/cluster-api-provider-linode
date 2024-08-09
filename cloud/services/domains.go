@@ -86,8 +86,6 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 
 	for _, dnsEntry := range dnsEntries {
 		recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
-		logger.Info("got record", "recordBody", recordBody)
-		logger.Info("got record", "operation", operation)
 		if err != nil {
 			if !strings.Contains(err.Error(), "Not Found") {
 				return err
@@ -107,7 +105,6 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 			continue
 		}
 		if operation == "delete" {
-			logger.Info("entered delete")
 			switch {
 			case len(recordBody.Target) > 1:
 				recordBody.Target = removeElement(
@@ -157,10 +154,8 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 	}
 
 	domainHostname := cscope.LinodeCluster.ObjectMeta.Name + "-" + cscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
-	logger.Info("machines", "machine items", cscope.LinodeMachines.Items)
 
 	for _, eachMachine := range cscope.LinodeMachines.Items {
-		logger.Info("machines", "machine addresses", eachMachine.Status.Addresses)
 		for _, IPs := range eachMachine.Status.Addresses {
 			recordType := linodego.RecordTypeA
 			if IPs.Type != v1beta1.MachineExternalIP {
