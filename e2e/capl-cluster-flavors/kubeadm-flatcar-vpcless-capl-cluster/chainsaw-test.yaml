@@ -38,14 +38,14 @@ spec:
                 value: (env('LINODE_REGION'))
             content: |
               set -e
-              # Get the latest version on Alpha channel.
-              # NOTE: This can be changed to Beta or Stable when Akamai support will come on these channels.
+              # Get the latest version on Beta channel.
+              # NOTE: This can be changed to Stable when Akamai support will come on these channels.
               curl -fsSL --remote-name \
-                https://alpha.release.flatcar-linux.net/amd64-usr/current/flatcar_production_akamai_image.bin.gz
+                https://beta.release.flatcar-linux.net/amd64-usr/current/flatcar_production_akamai_image.bin.gz
 
               res=$(curl -s --request POST \
                 --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}" \
-                --data '{"region":"'${LINODE_REGION}'","cloud_init":true,"label":"flatcar-alpha"}' \
+                --data '{"region":"'${LINODE_REGION}'","cloud_init":true,"label":"flatcar-beta"}' \
                 --header "Authorization: Bearer ${LINODE_TOKEN}" \
                 --header "accept: application/json" \
                 --header "content-type: application/json")

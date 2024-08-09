@@ -81,8 +81,8 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	linodeCluster := cscope.LinodeCluster
 	linodeClusterNetworkSpec := linodeCluster.Spec.Network
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
-	fqdn := linodeCluster.Name + "-" + linodeClusterNetworkSpec.DNSUniqueIdentifier + "." + rootDomain
-	akaDNSClient := cscope.AkamaiDomainsClient
+	akaDNSClient := mscope.AkamaiDomainsClient
+	fqdn := getSubDomain(mscope) + "." + rootDomain
 
 	for _, dnsEntry := range dnsEntries {
 		recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
@@ -153,7 +153,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 		dnsTTLSec = cscope.LinodeCluster.Spec.Network.DNSTTLSec
 	}
 
-	domainHostname := cscope.LinodeCluster.ObjectMeta.Name + "-" + cscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
+	subDomain := getSubDomain(cscope)
 
 	for _, eachMachine := range cscope.LinodeMachines.Items {
 		for _, IPs := range eachMachine.Status.Addresses {
@@ -168,15 +168,15 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 			if !addr.Is4() {
 				recordType = linodego.RecordTypeAAAA
 			}
-			d.options = append(d.options, DNSOptions{domainHostname, IPs.Address, recordType, dnsTTLSec})
+			d.options = append(d.options, DNSOptions{subDomain, IPs.Address, recordType, dnsTTLSec})
 		}
 		if len(d.options) == 0 {
 			continue
 		}
-		d.options = append(d.options, DNSOptions{domainHostname, eachMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
+		d.options = append(d.options, DNSOptions{subDomain, eachMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
 	}
 
-	return d.options, nil
+  return d.options, nil
 }
 
 // GetDomainID gets the domains linode id
@@ -280,4 +280,17 @@ func IsDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope, hostna
 	}
 
 	return true, nil
+}
+
+func getSubDomain(cscope *scope.ClusterScope) (subDomain string) {
+	if cscope.LinodeCluster.Spec.Network.DNSSubDomainOverride != "" {
+		subDomain = cscope.LinodeCluster.Spec.Network.DNSSubDomainOverride
+	} else {
+		uniqueID := ""
+		if cscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier != "" {
+			uniqueID = "-" + cscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
+		}
+		subDomain = cscope.LinodeCluster.Name + uniqueID
+	}
+	return subDomain
 }

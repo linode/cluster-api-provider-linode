@@ -283,13 +283,24 @@ func (r *LinodeClusterReconciler) handleNBCreate(ctx context.Context, logger log
 }
 
 func (r *LinodeClusterReconciler) handleDNS(clusterScope *scope.ClusterScope) {
-	domainName := clusterScope.LinodeCluster.ObjectMeta.Name + "-" + clusterScope.LinodeCluster.Spec.Network.DNSUniqueIdentifier + "." + clusterScope.LinodeCluster.Spec.Network.DNSRootDomain
+	clusterSpec := clusterScope.LinodeCluster.Spec
+	clusterMetadata := clusterScope.LinodeCluster.ObjectMeta
+	uniqueID := ""
+	if clusterSpec.Network.DNSUniqueIdentifier != "" {
+		uniqueID = "-" + clusterSpec.Network.DNSUniqueIdentifier
+	}
+	subDomain := clusterMetadata.Name + uniqueID
+
+	if clusterScope.LinodeCluster.Spec.Network.DNSSubDomainOverride != "" {
+		subDomain = clusterScope.LinodeCluster.Spec.Network.DNSSubDomainOverride
+	}
+	dnsHost := subDomain + "." + clusterSpec.Network.DNSRootDomain
 	apiLBPort := services.DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
 	}
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
-		Host: domainName,
+		Host: dnsHost,
 		Port: int32(apiLBPort),
 	}
 }

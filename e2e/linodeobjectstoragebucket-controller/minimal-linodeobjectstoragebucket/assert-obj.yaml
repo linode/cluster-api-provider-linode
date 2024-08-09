@@ -1,11 +1,9 @@
+---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeObjectStorageBucket
 metadata:
   name: ($bucket)
 spec:
   region: us-sea
-  keyGeneration: 1
 status:
   ready: true
-  keySecretName: ($access_keys_secret)
-  lastKeyGeneration: 1
