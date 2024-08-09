@@ -100,7 +100,7 @@ func (s *FirewallScope) Close(ctx context.Context) error {
 // AddFinalizer adds a finalizer if not present and immediately patches the
 // object to avoid any race conditions.
 func (s *FirewallScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.LinodeFirewall, infrav1alpha2.GroupVersion.String()) {
+	if controllerutil.AddFinalizer(s.LinodeFirewall, infrav1alpha2.FirewallFinalizer) {
 		return s.Close(ctx)
 	}
 

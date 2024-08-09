@@ -1,0 +1,268 @@
+// /*
+// Copyright 2023 Akamai Technologies, Inc.
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+
+//     http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+// */
+
+package controller
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/linode/linodego"
+	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/mock"
+	"github.com/linode/cluster-api-provider-linode/util"
+	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
+
+	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
+	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
+
+	inboundRules := []infrav1alpha2.FirewallRule{{
+		Action:      "ACCEPT",
+		Label:       "a-label-that-is-way-too-long-and-should-be-truncated",
+		Description: "allow-ssh",
+		Ports:       "22",
+		Protocol:    "TCP",
+		Addresses: &infrav1alpha2.NetworkAddresses{
+			IPv4: &[]string{"0.0.0.0/0"},
+			IPv6: &[]string{"::/0"},
+		},
+	}}
+	outboundRules := []infrav1alpha2.FirewallRule{{
+		Action:      "DROP",
+		Label:       "another-label-that-is-way-too-long-and-should-be-truncated",
+		Description: "deny-foo",
+		Ports:       "6435",
+		Protocol:    "TCP",
+		Addresses: &infrav1alpha2.NetworkAddresses{
+			IPv4: &[]string{"1.2.3.4/32"},
+			IPv6: &[]string{"::/0"},
+		},
+	}}
+	linodeFW := infrav1alpha2.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lifecycle",
+			Namespace: "default",
+		},
+		Spec: infrav1alpha2.LinodeFirewallSpec{
+			FirewallID:     nil,
+			Enabled:        true,
+			Label:          "fw1",
+			InboundRules:   inboundRules,
+			OutboundRules:  outboundRules,
+			InboundPolicy:  "DROP",
+			OutboundPolicy: "ACCEPT",
+		},
+	}
+
+	objectKey := client.ObjectKeyFromObject(&linodeFW)
+
+	var reconciler LinodeFirewallReconciler
+	var fwScope scope.FirewallScope
+
+	BeforeAll(func(ctx SpecContext) {
+		fwScope.Client = k8sClient
+		Expect(k8sClient.Create(ctx, &linodeFW)).To(Succeed())
+	})
+
+	suite.BeforeEach(func(ctx context.Context, mck Mock) {
+		fwScope.LinodeClient = mck.LinodeClient
+
+		Expect(k8sClient.Get(ctx, objectKey, &linodeFW)).To(Succeed())
+		fwScope.LinodeFirewall = &linodeFW
+
+		// Create patch helper with latest state of resource.
+		// This is only needed when relying on envtest's k8sClient.
+		patchHelper, err := patch.NewHelper(&linodeFW, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		fwScope.PatchHelper = patchHelper
+
+		// Reset reconciler for each test
+		reconciler = LinodeFirewallReconciler{
+			Recorder: mck.Recorder(),
+		}
+	})
+
+	suite.Run(
+		OneOf(
+			Path(
+				Call("unable to create", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().CreateFirewall(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+				}),
+				OneOf(
+					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall creation"))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).To(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Events()).To(ContainSubstring("server error"))
+					})),
+				),
+			),
+			Path(Result("too many rules", func(ctx context.Context, mck Mock) {
+				for idx := 0; idx < 255; idx++ {
+					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRule{
+						Action:   "ACCEPT",
+						Ports:    "22",
+						Protocol: "TCP",
+						Addresses: &infrav1alpha2.NetworkAddresses{
+							IPv4: &[]string{fmt.Sprintf("192.168.%d.%d", idx, 0)},
+						}})
+				}
+				res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(mck.Logs()).To(ContainSubstring("too many IPs in this ACL"))
+				Expect(res.Requeue).To(BeFalse())
+			})),
+			Path(
+				Call("able to create", func(ctx context.Context, mck Mock) {
+					linodeFW.Spec.InboundRules = inboundRules
+					mck.LinodeClient.EXPECT().CreateFirewall(ctx, gomock.Any()).Return(&linodego.Firewall{
+						ID: 1,
+					}, nil)
+					mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, nil)
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(k8sClient.Get(ctx, objectKey, &linodeFW)).To(Succeed())
+					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
+					Expect(mck.Logs()).NotTo(ContainSubstring("failed to create Firewall"))
+				}),
+			),
+			Path(
+				Call("unable to update", func(ctx context.Context, mck Mock) {
+					linodeFW.Spec.FirewallID = util.Pointer(1)
+					mck.LinodeClient.EXPECT().GetFirewall(ctx, 1).Return(&linodego.Firewall{
+						ID: 1,
+					}, nil)
+				}),
+				OneOf(
+					Path(Result("update requeues for update rules error", func(ctx context.Context, mck Mock) {
+						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, errors.New("server error"))
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall update"))
+					})),
+					Path(Result("update requeues for update error", func(ctx context.Context, mck Mock) {
+						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
+						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, errors.New("server error"))
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall update"))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
+						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, errors.New("server error"))
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).To(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Events()).To(ContainSubstring("server error"))
+					})),
+				),
+			),
+			Path(
+				Call("able to update", func(ctx context.Context, mck Mock) {
+					linodeFW.Spec.FirewallID = util.Pointer(1)
+					ipv4s := []string{}
+					for idx := 0; idx < 256; idx++ {
+						ipv4s = append(ipv4s, fmt.Sprintf("192.168.%d.%d", idx, 0))
+					}
+					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRule{
+						Action:   "ACCEPT",
+						Ports:    "22",
+						Protocol: "TCP",
+						Addresses: &infrav1alpha2.NetworkAddresses{
+							IPv4: &ipv4s,
+						}})
+
+					mck.LinodeClient.EXPECT().GetFirewall(ctx, 1).Return(&linodego.Firewall{
+						ID: 1,
+					}, nil)
+					mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
+					mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, nil)
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(k8sClient.Get(ctx, objectKey, &linodeFW)).To(Succeed())
+					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
+					Expect(mck.Logs()).NotTo(ContainSubstring("failed to update Firewall"))
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("unable to delete", func(ctx context.Context, mck Mock) {
+					Expect(k8sClient.Delete(ctx, &linodeFW)).To(Succeed())
+					linodeFW.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+					mck.LinodeClient.EXPECT().DeleteFirewall(ctx, 1).Return(errors.New("server error"))
+				}),
+				OneOf(
+					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
+						Expect(mck.Logs()).To(ContainSubstring("failed to delete Firewall"))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).To(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Events()).To(ContainSubstring("server error"))
+					})),
+				),
+			),
+			Path(
+				Call("able to delete", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().DeleteFirewall(ctx, 1).Return(nil)
+				}),
+				OneOf(
+					Path(Result("success", func(ctx context.Context, mck Mock) {
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+						Expect(mck.Logs()).NotTo(ContainSubstring("failed to delete Firewall"))
+					})),
+				),
+			),
+		),
+	)
+})

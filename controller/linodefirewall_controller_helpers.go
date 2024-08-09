@@ -11,6 +11,7 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 const (
@@ -37,7 +38,6 @@ func reconcileFirewall(
 
 		return err
 	}
-
 	var linodeFW *linodego.Firewall
 
 	switch fwScope.LinodeFirewall.Spec.FirewallID {
@@ -55,6 +55,7 @@ func reconcileFirewall(
 
 			return err
 		}
+		fwScope.LinodeFirewall.Spec.FirewallID = util.Pointer(linodeFW.ID)
 	default:
 		logger.Info(fmt.Sprintf("Updating firewall %s", fwScope.LinodeFirewall.Name))
 		linodeFW, err = fwScope.LinodeClient.GetFirewall(ctx, *fwScope.LinodeFirewall.Spec.FirewallID)
@@ -109,8 +110,10 @@ func updateFirewall(
 // chunkIPs takes a list of strings representing IPs and breaks them up into
 // one or more lists capped at the maxIPsPerFirewallRule for length
 func chunkIPs(ips []string) [][]string {
-	chunks := [][]string{}
 	ipCount := len(ips)
+	if ipCount == 0 {
+		return nil
+	}
 
 	// If the number of IPs is less than or equal to maxIPsPerFirewall,
 	// return a single chunk containing all IPs.
@@ -120,6 +123,7 @@ func chunkIPs(ips []string) [][]string {
 
 	// Otherwise, break the IPs into chunks with maxIPsPerFirewall IPs per chunk.
 	chunkCount := 0
+	chunks := [][]string{}
 	for ipCount > maxIPsPerFirewallRule {
 		start := chunkCount * maxIPsPerFirewallRule
 		end := (chunkCount + 1) * maxIPsPerFirewallRule
