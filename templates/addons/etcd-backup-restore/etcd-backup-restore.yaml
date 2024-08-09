@@ -46,27 +46,27 @@ data:
             - name: "AWS_REGION"
               valueFrom:
                 secretKeyRef:
-                  name: etcd-backup
+                  name: ${CLUSTER_NAME}-etcd-backup-obj-key
                   key: "bucket_region"
             - name: "BUCKET_NAME"
               valueFrom:
                 secretKeyRef:
-                  name: etcd-backup
+                  name: ${CLUSTER_NAME}-etcd-backup-obj-key
                   key: "bucket_name"
             - name: "AWS_ENDPOINT"
               valueFrom:
                 secretKeyRef:
-                  name: etcd-backup
+                  name: ${CLUSTER_NAME}-etcd-backup-obj-key
                   key: "bucket_endpoint"
             - name: "AWS_ACCESS_KEY_ID"
               valueFrom:
                 secretKeyRef:
-                  name: etcd-backup
+                  name: ${CLUSTER_NAME}-etcd-backup-obj-key
                   key: "access_key_rw"
             - name: "AWS_SECRET_ACCESS_KEY"
               valueFrom:
                 secretKeyRef:
-                  name: etcd-backup
+                  name: ${CLUSTER_NAME}-etcd-backup-obj-key
                   key: "secret_key_rw"
             - name: "AWS_SSE_CUSTOMER_KEY"
               valueFrom:
@@ -116,7 +116,7 @@ data:
             - name: STORAGE_CONTAINER
               valueFrom:
                 secretKeyRef:
-                  name: etcd-backup
+                  name: ${CLUSTER_NAME}-etcd-backup-obj-key
                   key: "bucket_name"
             volumeMounts:
             - mountPath: ${CERTPATH}

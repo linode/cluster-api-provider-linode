@@ -119,6 +119,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 					By("status")
 					Expect(k8sClient.Get(ctx, objectKey, &key)).To(Succeed())
 					Expect(key.Status.Ready).To(BeTrue())
+					Expect(key.Status.FailureMessage).To(BeNil())
 					Expect(key.Status.Conditions).To(HaveLen(1))
 					Expect(key.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
 					Expect(key.Status.CreationTime).NotTo(BeNil())

@@ -66,7 +66,7 @@ type LinodeObjectStorageKeyReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys/finalizers,verbs=update
 
-// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets;,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -148,6 +148,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 	keyScope.Logger.Info("Reconciling apply")
 
 	keyScope.Key.Status.Ready = false
+	keyScope.Key.Status.FailureMessage = nil
 
 	var keyForSecret *linodego.ObjectStorageKey
 
