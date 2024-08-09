@@ -32,6 +32,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
+	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -59,18 +60,18 @@ var (
 )
 
 const (
-	controllerName                  = "cluster-api-provider-linode.linode.com"
-	envK8sNodeName                  = "K8S_NODE_NAME"
-	envK8sPodName                   = "K8S_POD_NAME"
-	concurrencyDefault              = 10
-	linodeMachineConcurrencyDefault = 1
-	qpsDefault                      = 20
-	burstDefault                    = 30
+	controllerName     = "cluster-api-provider-linode.linode.com"
+	envK8sNodeName     = "K8S_NODE_NAME"
+	envK8sPodName      = "K8S_POD_NAME"
+	concurrencyDefault = 10
+	qpsDefault         = 20
+	burstDefault       = 30
 )
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
+	utilruntime.Must(controlplanev1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
@@ -114,7 +115,7 @@ func main() {
 		"Maximum number of queries that should be allowed in one burst from the controller client to the Kubernetes API server. Default 30")
 	flag.IntVar(&linodeClusterConcurrency, "linodecluster-concurrency", concurrencyDefault,
 		"Number of LinodeClusters to process simultaneously. Default 10")
-	flag.IntVar(&linodeMachineConcurrency, "linodemachine-concurrency", linodeMachineConcurrencyDefault,
+	flag.IntVar(&linodeMachineConcurrency, "linodemachine-concurrency", concurrencyDefault,
 		"Number of LinodeMachines to process simultaneously. Default 10")
 	flag.IntVar(&linodeObjectStorageBucketConcurrency, "linodeobjectstoragebucket-concurrency", concurrencyDefault,
 		"Number of linodeObjectStorageBuckets to process simultaneously. Default 10")
@@ -176,6 +177,7 @@ func main() {
 		Recorder:           mgr.GetEventRecorderFor("LinodeClusterReconciler"),
 		WatchFilterValue:   clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
+		DnsClientConfig:    dnsClientConfig,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeClusterConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
 		os.Exit(1)
@@ -186,7 +188,6 @@ func main() {
 		Recorder:           mgr.GetEventRecorderFor("LinodeMachineReconciler"),
 		WatchFilterValue:   machineWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
-		DnsClientConfig:    dnsClientConfig,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
