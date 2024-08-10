@@ -175,7 +175,6 @@ func DeleteNodesFromNB(ctx context.Context, logger logr.Logger, clusterScope *sc
 	}
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
-
 		err := clusterScope.LinodeClient.DeleteNodeBalancerNode(
 			ctx,
 			*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,

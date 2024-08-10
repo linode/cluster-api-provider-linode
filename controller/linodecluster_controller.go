@@ -206,8 +206,9 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 	if len(clusterScope.LinodeMachines.Items) < int(*controlPlane.Spec.Replicas) {
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated)
+	} else {
+		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)
 	}
-	conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)
 
 	return res, nil
 }

@@ -342,7 +342,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	return r.reconcileInstanceCreate(ctx, logger, machineScope, linodeInstance)
 }
 
-//nolint:cyclop,gocognit // It is ok for the moment but need larger refactor.
 func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	ctx context.Context,
 	logger logr.Logger,

@@ -32,10 +32,9 @@ type DNSOptions struct {
 
 // EnsureDNSEntries ensures the domainrecord on Linode Cloud Manager is created, updated, or deleted based on operation passed
 func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation string) error {
-
 	// Get the public IP that was assigned
 	var dnss DNSEntries
-	dnsEntries, err := dnss.getDNSEntriesToEnsure(ctx, cscope)
+	dnsEntries, err := dnss.getDNSEntriesToEnsure(cscope)
 	if err != nil {
 		return err
 	}
@@ -152,7 +151,7 @@ func removeElement(stringList []string, elemToRemove string) []string {
 }
 
 // getDNSEntriesToEnsure return DNS entries to create/delete
-func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.ClusterScope) ([]DNSOptions, error) {
+func (d *DNSEntries) getDNSEntriesToEnsure(cscope *scope.ClusterScope) ([]DNSOptions, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 	dnsTTLSec := rutil.DefaultDNSTTLSec
