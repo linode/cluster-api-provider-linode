@@ -19,7 +19,7 @@ export LINODE_CONTROL_PLANE_MACHINE_TYPE="" # g6-standard-2
 export LINODE_MACHINE_TYPE="" # g6-standard-2
 
 # To set up etcd backup and restore
-export OBJ_BUCKET_REGION="" # us-ord-1
+export OBJ_BUCKET_REGION="" # us-ord
 export ETCDBR_IMAGE="" # docker.io/amoldeodhar/etcdbrctl:a7fc188f71977deabce6e4b2284e145d78000c30
 export SSE_KEY="" # cdQdZ3PrKgm5vmqxeqwQCuAWJ7pPVyHg
 

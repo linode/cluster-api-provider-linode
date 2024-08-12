@@ -34,7 +34,7 @@ This is currently under development and will be available for use once the upstr
 For eg:
 ```sh
 export CLUSTER_NAME=test
-export OBJ_BUCKET_REGION=us-ord-1
+export OBJ_BUCKET_REGION=us-ord
 export ETCDBR_IMAGE=docker.io/username/your-custom-image:version
 export SSE_KEY=cdQdZ3PrKgm5vmqxeqwQCuAWJ7pPVyHg
 clusterctl generate cluster $CLUSTER_NAME \

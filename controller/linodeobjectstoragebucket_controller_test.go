@@ -104,6 +104,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					By("status")
 					Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 					Expect(obj.Status.Ready).To(BeTrue())
+					Expect(obj.Status.FailureMessage).To(BeNil())
 					Expect(obj.Status.Conditions).To(HaveLen(1))
 					Expect(obj.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
 					Expect(*obj.Status.Hostname).To(Equal("hostname"))
