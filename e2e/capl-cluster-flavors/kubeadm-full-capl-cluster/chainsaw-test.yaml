@@ -13,7 +13,7 @@ spec:
   bindings:
     # Identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'kubeadm-full-cluster', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'kdm-ft', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `32`)), '-'))
@@ -76,9 +76,6 @@ spec:
         - describe:
             apiVersion: addons.cluster.x-k8s.io/v1alpha1
             kind: HelmReleaseProxy
-        - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
-            kind: MachineSet
 
     # Test to check if linodes are created
     - name: Check if the Linodes are created
