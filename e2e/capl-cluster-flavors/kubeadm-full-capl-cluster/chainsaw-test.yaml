@@ -170,10 +170,7 @@ spec:
       try:
         - assert:
             cluster: kubeadm-full-cluster
-            file: assert-konnectivity-agents.yaml
-        - assert:
-            cluster: kubeadm-full-cluster
-            file: assert-konnectivity-server.yaml
+            file: assert-konnectivity-resources.yaml
       catch:
         - describe:
             cluster: kubeadm-full-cluster
