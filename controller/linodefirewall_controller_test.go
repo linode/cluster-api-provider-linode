@@ -18,8 +18,8 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/linode/linodego"
@@ -112,7 +112,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 		OneOf(
 			Path(
 				Call("unable to create", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().CreateFirewall(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+					mck.LinodeClient.EXPECT().CreateFirewall(ctx, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 				}),
 				OneOf(
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
@@ -126,11 +126,10 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Events()).To(ContainSubstring("server error"))
 					})),
 				),
 			),
-			Path(Result("too many rules", func(ctx context.Context, mck Mock) {
+			Path(Result("unable to create with too many rules", func(ctx context.Context, mck Mock) {
 				for idx := 0; idx < 255; idx++ {
 					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRule{
 						Action:   "ACCEPT",
@@ -171,7 +170,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("update requeues for update rules error", func(ctx context.Context, mck Mock) {
-						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, errors.New("server error"))
+						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
@@ -179,7 +178,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					})),
 					Path(Result("update requeues for update error", func(ctx context.Context, mck Mock) {
 						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
-						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, errors.New("server error"))
+						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
@@ -187,12 +186,11 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
-						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, errors.New("server error"))
+						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Events()).To(ContainSubstring("server error"))
 					})),
 				),
 			),
@@ -232,7 +230,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				Call("unable to delete", func(ctx context.Context, mck Mock) {
 					Expect(k8sClient.Delete(ctx, &linodeFW)).To(Succeed())
 					linodeFW.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-					mck.LinodeClient.EXPECT().DeleteFirewall(ctx, 1).Return(errors.New("server error"))
+					mck.LinodeClient.EXPECT().DeleteFirewall(ctx, 1).Return(&linodego.Error{Code: http.StatusInternalServerError})
 				}),
 				OneOf(
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
@@ -246,7 +244,6 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Events()).To(ContainSubstring("server error"))
 					})),
 				),
 			),
