@@ -13,10 +13,28 @@ metadata:
 spec:
   region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
 ---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  labels:
+    app.kubernetes.io/name: linodeobjectstoragekey
+    app.kubernetes.io/instance: ${CLUSTER_NAME}-etcd-backup
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  name: ${CLUSTER_NAME}-etcd-backup
+spec:
+  secretType: addons.cluster.x-k8s.io/resource-set
+  bucketAccess:
+    - bucketName: ${CLUSTER_NAME}-etcd-backup
+      permissions: read_write
+      region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
+---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
 metadata:
-  name: ${CLUSTER_NAME}-etcd-backup-bucket-details
+  name: ${CLUSTER_NAME}-etcd-backup-obj-key
 spec:
   clusterSelector:
     matchLabels:
@@ -24,5 +42,5 @@ spec:
       cluster: ${CLUSTER_NAME}
   resources:
     - kind: Secret
-      name: ${CLUSTER_NAME}-etcd-backup-bucket-details
+      name: ${CLUSTER_NAME}-etcd-backup-obj-key
   strategy: ApplyOnce

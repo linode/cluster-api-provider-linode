@@ -143,6 +143,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	bScope.Logger.Info("Reconciling apply")
 
 	bScope.Bucket.Status.Ready = false
+	bScope.Bucket.Status.FailureMessage = nil
 
 	bucket, err := services.EnsureObjectStorageBucket(ctx, bScope)
 	if err != nil {
