@@ -112,13 +112,6 @@ spec:
                   - protocol
                   type: object
                 type: array
-              label:
-                maxLength: 63
-                minLength: 3
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               outboundPolicy:
                 default: ACCEPT
                 enum:

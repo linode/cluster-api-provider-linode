@@ -38,12 +38,6 @@ type LinodeFirewallSpec struct {
 	// +kubebuilder:default=false
 	Enabled bool `json:"enabled,omitempty"`
 
-	// +kubebuilder:validation:MinLength=3
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	Label string `json:"label,omitempty"`
-
 	// +optional
 	InboundRules []FirewallRule `json:"inboundRules,omitempty"`
 

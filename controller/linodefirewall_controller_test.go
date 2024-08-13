@@ -72,7 +72,6 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 		Spec: infrav1alpha2.LinodeFirewallSpec{
 			FirewallID:     nil,
 			Enabled:        true,
-			Label:          "fw1",
 			InboundRules:   inboundRules,
 			OutboundRules:  outboundRules,
 			InboundPolicy:  "DROP",
@@ -119,7 +118,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall creation"))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall create"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
