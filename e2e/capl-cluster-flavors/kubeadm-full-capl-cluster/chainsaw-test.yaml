@@ -106,7 +106,7 @@ spec:
     - name: Check Load Balancer and Cluster
       try:
         - assert:
-            file: check-parent-resources.yaml
+            file: assert-parent-cluster-resources.yaml
       catch:
         - describe:
             cluster: ($cluster)
