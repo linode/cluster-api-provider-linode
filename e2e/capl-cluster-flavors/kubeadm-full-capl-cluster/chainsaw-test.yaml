@@ -102,6 +102,23 @@ spec:
               (json_parse($stdout)):
                 results: 2
 
+    # Test to check if Load Balancer and Cluster are up
+    - name: Check Load Balancer and Cluster
+      try:
+        - assert:
+            file: check-parent-resources.yaml
+      catch:
+        - describe:
+            cluster: ($cluster)
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Cluster
+            namespace: ($namespace)
+        - describe:
+            cluster: ($cluster)
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeCluster
+            namespace: ($namespace)
+
     # Get the KUBECONFIG of the child cluster for later use
     - name: Get child cluster kubeconfig
       try:
