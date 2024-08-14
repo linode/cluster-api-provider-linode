@@ -200,6 +200,18 @@ spec:
             kind: DaemonSet
             namespace: kube-system
 
+    # Test to check if konnectivity is working
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Testing to check if logs are retrievable
+      try:
+        - script:
+            content: |
+              kubectl logs csi-linode-controller-0 -n kube-system
+            check:
+              ($error == null): true
+
     # Test to check if child cluster is deleted
     - name: Testing to see if child cluster is deleted
       try:
