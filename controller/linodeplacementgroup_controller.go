@@ -39,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -307,6 +308,15 @@ func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, opti
 		WithEventFilter(predicate.And(
 			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
+			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
+				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodePlacementGroup)
+				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodePlacementGroup)
+				if okOld && okNew && oldObject.Spec.PGID != newObject.Spec.PGID {
+					// We just updated the PG ID, don't enqueue request
+					return false
+				}
+				return true
+			}},
 		)).
 		Watches(
 			&clusterv1.Cluster{},
