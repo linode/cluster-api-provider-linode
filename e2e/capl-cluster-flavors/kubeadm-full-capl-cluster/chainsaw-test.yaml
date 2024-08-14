@@ -40,6 +40,8 @@ spec:
                 value: (env('SSE_KEY'))
               - name: KONNECTIVITY_AGENT_REPLICAS
                 value: '1' # Here, 1 is set for testing purposes. Default is 3.
+              - name: CLUSTER_AUTOSCALER_VERSION
+                value: 'v1.29.4'
             content: |
               set -e
               if [ -z "$SSE_KEY" ]; then
