@@ -44,7 +44,7 @@ spec:
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "X-Filter: $FILTER" \
                 -H "Content-Type: application/json" \
-                "https://api.linode.com/v4/firewalls"
+                "https://api.linode.com/v4/networking/firewalls"
             check:
               ($error): ~
               (json_parse($stdout)):
@@ -70,7 +70,7 @@ spec:
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "X-Filter: $FILTER" \
                 -H "Content-Type: application/json" \
-                "https://api.linode.com/v4/firewalls"
+                "https://api.linode.com/v4/networking/firewalls"
             check:
               ($error): ~
               (json_parse($stdout)):
