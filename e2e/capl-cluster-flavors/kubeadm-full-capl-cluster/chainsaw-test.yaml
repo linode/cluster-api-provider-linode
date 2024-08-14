@@ -20,7 +20,7 @@ spec:
   template: true
   steps:
     # Test for initial resources allocation
-    - name: Check if CAPI provider resources exist
+    - name: Testing all CAPI provider resources
       try:
         - assert:
             file: assert-capi-resources.yaml
@@ -38,6 +38,8 @@ spec:
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: SSE_KEY
                 value: (env('SSE_KEY'))
+              - name: KONNECTIVITY_AGENT_REPLICAS
+                value: '1' # Here, 1 is set for testing purposes. Default is 3.
             content: |
               set -e
               if [ -z "$SSE_KEY" ]; then
@@ -54,7 +56,7 @@ spec:
               ($error == null): true
 
     # Test for applying created yaml
-    - name: Apply generated cluster yaml
+    - name: Testing all available resources
       try:
         - apply:
             file: kubeadm-full-cluster.yaml
@@ -76,9 +78,19 @@ spec:
         - describe:
             apiVersion: addons.cluster.x-k8s.io/v1alpha1
             kind: HelmReleaseProxy
+        - describe:
+            cluster: ($cluster)
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Cluster
+            namespace: ($namespace)
+        - describe:
+            cluster: ($cluster)
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeCluster
+            namespace: ($namespace)
 
     # Test to check if linodes are created
-    - name: Check if the Linodes are created
+    - name: Testing to see if the Linodes are created
       try:
         - script:
             env:
@@ -102,23 +114,6 @@ spec:
               (json_parse($stdout)):
                 results: 2
 
-    # Test to check if Load Balancer and Cluster are up
-    - name: Check Load Balancer and Cluster
-      try:
-        - assert:
-            file: assert-parent-cluster-resources.yaml
-      catch:
-        - describe:
-            cluster: ($cluster)
-            apiVersion: cluster.x-k8s.io/v1beta1
-            kind: Cluster
-            namespace: ($namespace)
-        - describe:
-            cluster: ($cluster)
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-            kind: LinodeCluster
-            namespace: ($namespace)
-
     # Get the KUBECONFIG of the child cluster for later use
     - name: Get child cluster kubeconfig
       try:
@@ -136,15 +131,28 @@ spec:
             check:
               ($error == null): true
 
-    # Test for child cluster resources
+    # Test child cluster deployments
     - clusters:
         kubeadm-full-cluster:
           kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Check child cluster resources
+      name: Testing child cluster deployments
       try:
         - assert:
             cluster: kubeadm-full-cluster
             file: assert-child-cluster-deployments.yaml
+      catch:
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+
+    # Test for child cluster DaemonSets
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Testing child cluster DaemonSets
+      try:
         - assert:
             cluster: kubeadm-full-cluster
             file: assert-child-cluster-daemonsets.yaml
@@ -152,19 +160,14 @@ spec:
         - describe:
             cluster: kubeadm-full-cluster
             apiVersion: apps/v1
-            kind: Deployment
-            namespace: kube-system
-        - describe:
-            cluster: kubeadm-full-cluster
-            apiVersion: apps/v1
             kind: DaemonSet
             namespace: kube-system
 
-    # Test available StatefulSets
+    # Test for child cluster StatefulSets
     - clusters:
         kubeadm-full-cluster:
           kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Check the available StatefulSets
+      name: Testing child cluster StatefulSets
       try:
         - assert:
             cluster: kubeadm-full-cluster
@@ -180,7 +183,7 @@ spec:
     - clusters:
         kubeadm-full-cluster:
           kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Check konnectivity resources
+      name: Testing konnectivity resources
       try:
         - assert:
             cluster: kubeadm-full-cluster
@@ -198,7 +201,7 @@ spec:
             namespace: kube-system
 
     # Test to check if child cluster is deleted
-    - name: Delete child cluster
+    - name: Testing to see if child cluster is deleted
       try:
         - delete:
             ref:
@@ -214,7 +217,7 @@ spec:
             file: check-child-cluster-and-vpc-deleted.yaml
 
     # Test to check if linodes are deleted
-    - name: Check if the linodes are deleted
+    - name: Testing to check if the linodes are deleted
       try:
         - script:
             env:

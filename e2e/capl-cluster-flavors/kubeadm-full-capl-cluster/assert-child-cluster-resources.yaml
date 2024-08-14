@@ -59,3 +59,18 @@ status:
     - type: HelmReleaseReady
       status: "True"
   status: deployed
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeCluster
+metadata:
+  name: ($cluster)
+status:
+  ready: true
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: ($cluster)
+status:
+  infrastructureReady: true
+  phase: Provisioned
