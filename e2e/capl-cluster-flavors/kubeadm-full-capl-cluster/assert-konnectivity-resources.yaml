@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: konnectivity-agent
+  namespace: kube-system
+status:
+  availableReplicas: 1
+  readyReplicas: 1
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: konnectivity-server
+  namespace: kube-system
+status:
+  currentNumberScheduled: 1
+  desiredNumberScheduled: 1
+  numberAvailable: 1
+  numberMisscheduled: 0
+  numberReady: 1
