@@ -208,7 +208,7 @@ spec:
       try:
         - script:
             content: |
-              kubectl logs csi-linode-controller-0 -n kube-system
+              KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
             check:
               ($error == null): true
 
