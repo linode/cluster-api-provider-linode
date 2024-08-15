@@ -87,4 +87,23 @@ be defined and provisioned via `LinodeFirewall` resources in CAPL. The created C
 a `LinodeMachine` or a `LinodeMachineTemplate`'s `firewallID` field. Note that the `firewallID` field is currently
 immutable, so it must be set at creation time).
 
+Example `LinodeFirewall`:
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeFirewall
+metadata:
+  name: sample-fw
+spec:
+  enabled: true
+  inboundPolicy: DROP
+  inboundRules:
+    - action: ACCEPT
+      label: k8s-api
+      ports: "6443"
+      protocol: "TCP"
+      addresses:
+        ipv4:
+          - "172.232.1.1/16"
+```
+
 Cloud Firewalls are not automatically created for any CAPL flavor at this time.
