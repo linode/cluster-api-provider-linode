@@ -161,6 +161,26 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("failed to update the bucket access options"),
 		},
+		{
+			name: "Error - unable to fetch the OBJ bucket Access",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-bucket",
+					},
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
+					Label: "test-bucket",
+				}, nil)
+				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in fetching object storage bucket access details"))
+			},
+			expectedError: fmt.Errorf("failed to get bucket access details"),
+		},
 	}
 	for _, tt := range tests {
 		testcase := tt
