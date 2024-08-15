@@ -329,11 +329,13 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancingComplete, "clear loadbalancer entries", clusterv1.ConditionSeverityWarning, "")
 
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
-		err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
-		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-			logger.Error(err, "failed to delete NodeBalancer")
-			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
-			return err
+		if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
+			err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
+			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+				logger.Error(err, "failed to delete NodeBalancer")
+				setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+				return err
+			}
 		}
 	}
 
