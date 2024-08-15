@@ -1,0 +1,266 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  creationTimestamp: null
+  name: kubeadm-full-capl-cluster
+  # Labels to allow the test to be triggered based on selector flag
+  labels:
+    all:
+    kubeadm-full:
+    flavors:
+spec:
+  bindings:
+    # Identifier for the E2E test run
+    - name: run
+      value: (join('-', ['e2e', 'kdm-ft', env('GIT_REF')]))
+    - name: cluster
+      # Format the cluster name
+      value: (trim((truncate(($run), `32`)), '-'))
+  template: true
+  steps:
+    # Test for initial resources allocation
+    - name: Testing all CAPI provider resources
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+
+    # Test for generating cluster using clusterctl
+    - name: Generate cluster using clusterctl
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+              - name: SSE_KEY
+                value: (env('SSE_KEY'))
+              - name: KONNECTIVITY_AGENT_REPLICAS
+                value: '1' # Here, 1 is set for testing purposes. Default is 3.
+              - name: CLUSTER_AUTOSCALER_VERSION
+                value: 'v1.29.4'
+            content: |
+              set -e
+              if [ -z "$SSE_KEY" ]; then
+                echo "SSE_KEY not set" >&2 
+                exit 1
+              else
+                clusterctl generate cluster $CLUSTER -n $NAMESPACE \
+                --flavor kubeadm-full --kubernetes-version v1.29.1 \
+                --infrastructure local-linode:v0.0.0 \
+                --control-plane-machine-count 1 --worker-machine-count 1 \
+                --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > kubeadm-full-cluster.yaml
+              fi
+            check:
+              ($error == null): true
+
+    # Test for applying created yaml
+    - name: Testing all available resources
+      try:
+        - apply:
+            file: kubeadm-full-cluster.yaml
+        - assert:
+            file: assert-child-cluster-resources.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Machine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: MachineDeployment
+        - describe:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlane
+        - describe:
+            apiVersion: addons.cluster.x-k8s.io/v1alpha1
+            kind: HelmReleaseProxy
+        - describe:
+            cluster: ($cluster)
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Cluster
+            namespace: ($namespace)
+        - describe:
+            cluster: ($cluster)
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeCluster
+            namespace: ($namespace)
+
+    # Test to check if linodes are created
+    - name: Testing to see if the Linodes are created
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 2
+
+    # Get the KUBECONFIG of the child cluster for later use
+    - name: Get child cluster kubeconfig
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+            content: |
+              set -e
+              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > kubeadm-full-cluster-kubeconfig.yaml
+            check:
+              ($error == null): true
+
+    # Test child cluster deployments
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Testing child cluster deployments
+      try:
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-child-cluster-deployments.yaml
+      catch:
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+
+    # Test for child cluster DaemonSets
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Testing child cluster DaemonSets
+      try:
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-child-cluster-daemonsets.yaml
+      catch:
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
+
+    # Test for child cluster StatefulSets
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Testing child cluster StatefulSets
+      try:
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-child-cluster-statefulsets.yaml
+      catch:
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: StatefulSet
+            namespace: kube-system
+
+    # Test Konnectivity server and agent
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Testing konnectivity resources
+      try:
+        - assert:
+            cluster: kubeadm-full-cluster
+            file: assert-konnectivity-resources.yaml
+      catch:
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+        - describe:
+            cluster: kubeadm-full-cluster
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
+
+    # Test to check if konnectivity is working
+    - clusters:
+        kubeadm-full-cluster:
+          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+      name: Testing to check if logs are retrievable
+      try:
+        - script:
+            content: |
+              KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
+            check:
+              ($error == null): true
+
+    # Test to check if child cluster is deleted
+    - name: Testing to see if child cluster is deleted
+      try:
+        - delete:
+            ref:
+              apiVersion: cluster.x-k8s.io/v1beta1
+              kind: Cluster
+              name: ($cluster)
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ($cluster)
+        - error:
+            file: check-child-cluster-and-vpc-deleted.yaml
+
+    # Test to check if linodes are deleted
+    - name: Testing to check if the linodes are deleted
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
+
+    # Delete generated manifests
+    - name: Delete generated child cluster manifest yaml
+      try:
+        - script:
+            content: |
+              rm -f kubeadm-full-cluster.yaml
+              rm -f kubeadm-full-cluster-kubeconfig.yaml
+            check:
+              ($error == null): true

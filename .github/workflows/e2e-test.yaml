@@ -24,11 +24,13 @@ on:
           - k3s
           - rke2
           - default-cluster
+          - kubeadm-full
           - linodecluster
           - linodemachine
           - linodeobj
           - linodevpc
           - linodeplacementgroup
+          - linodefirewall
           - all
       e2e-flags:
         type: string

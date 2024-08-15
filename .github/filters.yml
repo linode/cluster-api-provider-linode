@@ -4,59 +4,60 @@ src:
 kubeadm:
   - templates/flavors/kubeadm/default/*
   - e2e/capl-cluster-flavors/kubeadm-capl-cluster/*
-kubeadm_cluster-autoscaler:
+kubeadm-cluster-autoscaler:
   - templates/flavors/kubeadm/cluster-autoscaler/*
-kubeadm_dual-stack:
+kubeadm-dual-stack:
   - templates/flavors/kubeadm/dual-stack/*
-kubeadm_etcd-backup-restore:
+kubeadm-etcd-backup-restore:
   - templates/flavors/kubeadm/etcd-backup-restore/*
-kubeadm_etcd-disk:
+kubeadm-etcd-disk:
   - templates/flavors/kubeadm/etcd-disk/*
-kubeadm_full:
+kubeadm-full:
   - templates/flavors/kubeadm/full/*
-kubeadm_full-vpcless:
+  - e2e/capl-cluster-flavors/kubeadm-full-capl-cluster/*
+kubeadm-full-vpcless:
   - templates/flavors/kubeadm/full-vpcless/*
-kubeadm_self-healing:
+kubeadm-self-healing:
   - templates/flavors/kubeadm/self-healing/*
-kubeadm_vpcless:
+kubeadm-vpcless:
   - templates/flavors/kubeadm/vpcless/*
-kubeadm_cilium_bgp_lb:
+kubeadm-cilium-bgp-lb:
   - templates/flavors/kubeadm/cilium-bgp-lb/*
-kubeadm_konnectivity:
+kubeadm-konnectivity:
   - templates/flavors/kubeadm/konnectivity/*
 
 k3s:
   - templates/flavors/k3s/default/*
   - e2e/capl-cluster-flavors/k3s-capl-cluster/*
-k3s_cluster-autoscaler:
+k3s-cluster-autoscaler:
   - templates/flavors/k3s/cluster-autoscaler/*
-k3s_dual-stack:
+k3s-dual-stack:
   - templates/flavors/k3s/dual-stack/*
-k3s_etcd-backup-restore:
+k3s-etcd-backup-restore:
   - templates/flavors/k3s/etcd-backup-restore/*
-k3s_full:
+k3s-full:
   - templates/flavors/k3s/full/*
-k3s_full-vpcless:
+k3s-full-vpcless:
   - templates/flavors/k3s/full-vpcless/*
-k3s_self-healing:
+k3s-self-healing:
   - templates/flavors/k3s/self-healing/*
-k3s_vpcless:
+k3s-vpcless:
   - templates/flavors/k3s/vpcless/*
 
 rke2:
   - templates/flavors/rke2/default/*
   - e2e/capl-cluster-flavors/rke2-capl-cluster/*
-rke2_cluster-autoscaler:
+rke2-cluster-autoscaler:
   - templates/flavors/rke2/cluster-autoscaler/*
-rke2_etcd-backup-restore:
+rke2-etcd-backup-restore:
   - templates/flavors/rke2/etcd-backup-restore/*
-rke2_etcd-disk:
+rke2-etcd-disk:
   - templates/flavors/rke2/etcd-disk/*
-rke2_full:
+rke2-full:
   - templates/flavors/rke2/full/*
-rke2_full-vpcless:
+rke2-full-vpcless:
   - templates/flavors/rke2/full-vpcless/*
-rke2_self-healing:
+rke2-self-healing:
   - templates/flavors/rke2/self-healing/*
-rke2_vpcless:
+rke2-vpcless:
   - templates/flavors/rke2/vpcless/*

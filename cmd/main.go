@@ -77,6 +77,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
+//nolint:gocyclo,cyclop // As simple as possible.
 func main() {
 	var (
 		// Environment variables
@@ -100,6 +101,7 @@ func main() {
 		linodeObjectStorageBucketConcurrency int
 		linodeVPCConcurrency                 int
 		linodePlacementGroupConcurrency      int
+		linodeFirewallConcurrency            int
 	)
 	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
 	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
@@ -123,6 +125,8 @@ func main() {
 		"Number of LinodeVPCs to process simultaneously. Default 10")
 	flag.IntVar(&linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault,
 		"Number of Linode Placement Groups to process simultaneously. Default 10")
+	flag.IntVar(&linodeFirewallConcurrency, "linodefirewall-concurrency", concurrencyDefault,
+		"Number of Linode Firewall to process simultaneously. Default 10")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -240,6 +244,15 @@ func main() {
 		setupWebhooks(mgr)
 	}
 
+	if err = (&controller.LinodeFirewallReconciler{
+		Client:             mgr.GetClient(),
+		Recorder:           mgr.GetEventRecorderFor("LinodeFirewallReconciler"),
+		WatchFilterValue:   clusterWatchFilter,
+		LinodeClientConfig: linodeClientConfig,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeFirewallConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeFirewall")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
