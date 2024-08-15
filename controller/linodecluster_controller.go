@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -193,20 +194,15 @@ func (r *LinodeClusterReconciler) reconcile(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 		}
 	}
-
 	if reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete) {
 		return res, nil
 	}
 	if err := r.addMachineToLB(ctx, clusterScope); err != nil {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	}
-	logger.Info("machines in linodecluster", "items", len(clusterScope.LinodeMachines.Items))
-	logger.Info("machines in linodecluster", "replicase", int(*controlPlane.Spec.Replicas))
 	if len(clusterScope.LinodeMachines.Items) < int(*controlPlane.Spec.Replicas) {
-		logger.Info("in if")
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated)
 	} else {
-		logger.Info("in else")
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)
 	}
 
@@ -349,16 +345,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
-	linodeMachineMapper, err := kutil.ClusterToTypedObjectsMapper(
-		r.TracedClient(),
-		&infrav1alpha2.LinodeMachineList{},
-		mgr.GetScheme(),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create mapper for LinodeCluster: %w", err)
-	}
-
-	err = ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha2.LinodeCluster{}).
 		WithOptions(options).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
@@ -371,7 +358,7 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 		).
 		Watches(
 			&infrav1alpha2.LinodeMachine{},
-			handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
+			handler.EnqueueRequestsFromMapFunc(r.linodeMachineToLinodeCluster(mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
@@ -412,4 +399,38 @@ func (r *LinodeClusterReconciler) removeMachineFromLB(ctx context.Context, logge
 		}
 	}
 	return nil
+}
+
+func (r *LinodeClusterReconciler) linodeMachineToLinodeCluster(logger logr.Logger) handler.MapFunc {
+	logger = logger.WithName("LinodeClusterReconciler").WithName("linodeMachineToLinodeCluster")
+
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
+		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
+		defer cancel()
+
+		linodeMachine, ok := o.(*infrav1alpha2.LinodeMachine)
+		if !ok {
+			logger.Info("Failed to cast object to LinodeMachine")
+			return nil
+		}
+
+		linodeClusterName := linodeMachine.ObjectMeta.Labels[clusterv1.ClusterNameLabel]
+		logger.Info("name of linodecluster", "linodeClusterName", linodeClusterName)
+
+		linodeCluster := infrav1alpha2.LinodeCluster{}
+		if err := r.TracedClient().Get(ctx, types.NamespacedName{Name: linodeClusterName, Namespace: linodeMachine.Namespace}, &linodeCluster); err != nil {
+			logger.Error(err, "Failed to get LinodeCluster")
+			return nil
+		}
+
+		result := make([]ctrl.Request, 0, 1)
+		result = append(result, ctrl.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: linodeCluster.Namespace,
+				Name:      linodeCluster.Name,
+			},
+		})
+
+		return result
+	}
 }

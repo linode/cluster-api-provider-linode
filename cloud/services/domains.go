@@ -119,7 +119,17 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 				}
 			}
 		} else {
-			if len(recordBody.Target) == 1 && slices.Contains(recordBody.Target, dnsEntry.Target) {
+			if dnsEntry.DNSRecordType == linodego.RecordTypeAAAA {
+				dnsEntry.Target = strings.Replace(dnsEntry.Target, "::", ":0:0:", 8) //nolint:mnd // 8 for 8 octest
+			}
+			exists := false
+			for _, target := range recordBody.Target {
+				if strings.Contains(target, dnsEntry.Target) {
+					exists = true
+					continue
+				}
+			}
+			if exists {
 				continue
 			}
 			recordBody.Target = append(recordBody.Target, dnsEntry.Target)
