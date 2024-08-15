@@ -246,7 +246,6 @@ func (r *LinodeFirewallReconciler) SetupWithManager(mgr ctrl.Manager, options cr
 			predicate.And(
 				predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
 				predicate.GenerationChangedPredicate{},
-				predicate.Funcs{DeleteFunc: func(e event.DeleteEvent) bool { return false }},
 				predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 					oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeFirewall)
 					newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodeFirewall)
