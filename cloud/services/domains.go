@@ -104,6 +104,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 		if err := createAkamaiEntry(ctx, akaDNSClient, dnsEntry, fqdn, rootDomain); err != nil {
 			return err
 		}
+		return nil
 	}
 	if recordBody == nil {
 		return fmt.Errorf("akamai dns returned empty dns record")

@@ -24,8 +24,6 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
-const isControlPlane = "true"
-
 func TestValidateMachineScopeParams(t *testing.T) {
 	t.Parallel()
 	type args struct {

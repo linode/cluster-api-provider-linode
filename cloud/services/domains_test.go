@@ -163,10 +163,12 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			testcase.clusterScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			EnsureDNSEntries(context.Background(), testcase.clusterScope, "create")
-			// if err != nil || testcase.expectedError != nil {
-			// 	require.ErrorContains(t, err, testcase.expectedError.Error())
-			// }
+			err := EnsureDNSEntries(context.Background(), testcase.clusterScope, "create")
+			if testcase.expectedError != nil {
+				require.ErrorContains(t, err, testcase.expectedError.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
