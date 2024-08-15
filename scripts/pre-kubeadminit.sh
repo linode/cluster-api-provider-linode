@@ -73,7 +73,7 @@ EOF
 sed -i '/swap/d' /etc/fstab
 swapoff -a
 # check for required tools and only install missing tools
-REQUIRED_TOOLS=(containerd socat conntrack iptables)
+REQUIRED_TOOLS=(containerd socat conntrack ethtool iptables)
 INSTALL_TOOLS=()
 for tool in ${REQUIRED_TOOLS[*]}; do
     echo "checking for ${tool}"
@@ -85,7 +85,7 @@ done
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 # use containerd files we write instead of package defaults
-apt-get install -o Dpkg::Options::="--force-confold" -y "${INSTALL_TOOLS[*]}"
+apt-get install -o Dpkg::Options::="--force-confold" -y ${INSTALL_TOOLS[*]}
 
 PATCH_VERSION=${1#[v]}
 VERSION=${PATCH_VERSION%.*}

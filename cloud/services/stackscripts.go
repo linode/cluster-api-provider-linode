@@ -32,7 +32,7 @@ func EnsureStackscript(ctx context.Context, machineScope *scope.MachineScope) (i
 	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 		return 0, fmt.Errorf("failed to get stackscript with label %s: %w", stackscriptName, err)
 	}
-	if stackscripts != nil {
+	if len(stackscripts) != 0 {
 		return stackscripts[0].ID, nil
 	}
 	stackscriptCreateOptions := linodego.StackscriptCreateOptions{
