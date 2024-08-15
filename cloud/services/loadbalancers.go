@@ -126,10 +126,12 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 	}
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
+		internalIPFound := false
 		for _, IPs := range eachMachine.Status.Addresses {
 			if IPs.Type != v1beta1.MachineInternalIP {
 				continue
 			}
+			internalIPFound = true
 			_, err := clusterScope.LinodeClient.CreateNodeBalancerNode(
 				ctx,
 				*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
@@ -161,6 +163,9 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 					return err
 				}
 			}
+		}
+		if !internalIPFound {
+			return errors.New("no private IP address")
 		}
 	}
 
