@@ -715,6 +715,32 @@ func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, re
 	return _d.LinodeClient.GetObjectStorageBucket(ctx, regionID, label)
 }
 
+// GetObjectStorageBucketAccess implements clients.LinodeClient
+func (_d LinodeClientWithTracing) GetObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID string, label string) (op1 *linodego.ObjectStorageBucketAccess, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageBucketAccess")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":               ctx,
+				"clusterOrRegionID": clusterOrRegionID,
+				"label":             label}, map[string]interface{}{
+				"op1": op1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetObjectStorageBucketAccess(ctx, clusterOrRegionID, label)
+}
+
 // GetObjectStorageKey implements clients.LinodeClient
 func (_d LinodeClientWithTracing) GetObjectStorageKey(ctx context.Context, keyID int) (op1 *linodego.ObjectStorageKey, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageKey")
@@ -1121,6 +1147,32 @@ func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, lino
 		_span.End()
 	}()
 	return _d.LinodeClient.UpdateInstanceConfig(ctx, linodeID, configID, opts)
+}
+
+// UpdateObjectStorageBucketAccess implements clients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID string, label string, opts linodego.ObjectStorageBucketUpdateAccessOptions) (err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateObjectStorageBucketAccess")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":               ctx,
+				"clusterOrRegionID": clusterOrRegionID,
+				"label":             label,
+				"opts":              opts}, map[string]interface{}{
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateObjectStorageBucketAccess(ctx, clusterOrRegionID, label, opts)
 }
 
 // UpdatePlacementGroup implements clients.LinodeClient

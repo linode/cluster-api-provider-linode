@@ -33,7 +33,9 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 						Name: "test-bucket",
 					},
 					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
-						Region: "test-region",
+						Region:      "test-region",
+						ACL:         infrav1alpha2.ACLPrivate,
+						CorsEnabled: true,
 					},
 				},
 			},
@@ -43,6 +45,10 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
 					Label: "test-bucket",
+				}, nil)
+				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
+					ACL:         linodego.ACLPrivate,
+					CorsEnabled: true,
 				}, nil)
 			},
 		},
@@ -118,7 +124,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 
 			testcase.expects(mockClient)
 
-			got, err := EnsureObjectStorageBucket(context.Background(), testcase.bScope)
+			got, err := EnsureAndUpdateObjectStorageBucket(context.Background(), testcase.bScope)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {

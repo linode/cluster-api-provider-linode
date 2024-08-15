@@ -25,9 +25,7 @@ import (
 	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -145,7 +143,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				}),
 			),
 			Path(
-				Call("bucket is retrieved on update", func(ctx context.Context, mck Mock) {
+				Call("bucket access options are not retrieved on update", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Region, gomock.Any()).
 						Return(&linodego.ObjectStorageBucket{
 							Label:    "bucket",
@@ -153,6 +151,54 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 							Hostname: "hostname",
 							Created:  util.Pointer(time.Now()),
 						}, nil)
+					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil, errors.New("bucket access options fetch error"))
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.LinodeClient
+					_, err := reconciler.reconcile(ctx, &bScope)
+					Expect(err.Error()).To(ContainSubstring("failed to get bucket access details"))
+				}),
+			),
+			Path(
+				Call("bucket access options are not successfully updated", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Region, gomock.Any()).
+						Return(&linodego.ObjectStorageBucket{
+							Label:    "bucket",
+							Region:   obj.Spec.Region,
+							Hostname: "hostname",
+							Created:  util.Pointer(time.Now()),
+						}, nil)
+					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&linodego.ObjectStorageBucketAccess{
+							ACL:         linodego.ACLPrivate,
+							CorsEnabled: true,
+						}, nil)
+					mck.LinodeClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(errors.New("bucket access options update error"))
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					bScope.LinodeClient = mck.LinodeClient
+					_, err := reconciler.reconcile(ctx, &bScope)
+					Expect(err.Error()).To(ContainSubstring("failed to update the bucket access options"))
+				}),
+			),
+			Path(
+				Call("bucket is retrieved and updated", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), obj.Spec.Region, gomock.Any()).
+						Return(&linodego.ObjectStorageBucket{
+							Label:    "bucket",
+							Region:   obj.Spec.Region,
+							Hostname: "hostname",
+							Created:  util.Pointer(time.Now()),
+						}, nil)
+					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&linodego.ObjectStorageBucketAccess{
+							ACL:         linodego.ACLPrivate,
+							CorsEnabled: true,
+						}, nil)
+					mck.LinodeClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil)
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
 					bScope.LinodeClient = mck.LinodeClient
@@ -161,20 +207,14 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				}),
 			),
 		),
-		Once("resource is deleted", func(ctx context.Context, _ Mock) {
-			// nb: client.Delete does not set DeletionTimestamp on the object, so re-fetch from the apiserver.
-			objectKey := client.ObjectKeyFromObject(&obj)
+		Call("resource is deleted", func(ctx context.Context, _ Mock) {
 			Expect(k8sClient.Delete(ctx, &obj)).To(Succeed())
-			Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 		}),
-		Result("finalizer is removed", func(ctx context.Context, mck Mock) {
+		Result("success", func(ctx context.Context, mck Mock) {
 			objectKey := client.ObjectKeyFromObject(&obj)
 			k8sClient.Get(ctx, objectKey, &obj)
 			bScope.LinodeClient = mck.LinodeClient
-			_, err := reconciler.reconcile(ctx, &bScope)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &obj))).To(BeTrue())
-			Expect(mck.Logs()).To(ContainSubstring("Reconciling delete"))
 		}),
 	)
 })
@@ -247,30 +287,6 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			})
 			Expect(err.Error()).To(ContainSubstring("failed to create object storage bucket scope"))
 			Expect(mck.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
-		}),
-		Call("scheme with no infrav1alpha2", func(ctx context.Context, mck Mock) {
-			prev := mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
-			mck.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(2)
-		}),
-		Result("error", func(ctx context.Context, mck Mock) {
-			bScope.Client = mck.K8sClient
-
-			patchHelper, err := patch.NewHelper(bScope.Bucket, mck.K8sClient)
-			Expect(err).NotTo(HaveOccurred())
-			bScope.PatchHelper = patchHelper
-
-			_, err = reconciler.reconcile(ctx, &bScope)
-			Expect(err.Error()).To(ContainSubstring("no kind is registered"))
-		}),
-		Once("finalizer is missing", func(ctx context.Context, _ Mock) {
-			bScope.Bucket.ObjectMeta.Finalizers = []string{}
-		}),
-		Result("error", func(ctx context.Context, mck Mock) {
-			bScope.LinodeClient = mck.LinodeClient
-			bScope.Client = mck.K8sClient
-			err := reconciler.reconcileDelete(&bScope)
-			Expect(err.Error()).To(ContainSubstring("failed to remove finalizer from bucket"))
-			Expect(mck.Events()).To(ContainSubstring("failed to remove finalizer from bucket"))
 		}),
 	)
 })

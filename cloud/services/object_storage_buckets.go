@@ -11,7 +11,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util"
 )
 
-func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
+func EnsureAndUpdateObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
 	bucket, err := bScope.LinodeClient.GetObjectStorageBucket(
 		ctx,
 		bScope.Bucket.Spec.Region,
@@ -21,7 +21,23 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 		return nil, fmt.Errorf("failed to get bucket from region %s: %w", bScope.Bucket.Spec.Region, err)
 	}
 	if bucket != nil {
-		bScope.Logger.Info("Bucket exists")
+		bucketAccess, err := bScope.LinodeClient.GetObjectStorageBucketAccess(
+			ctx,
+			bucket.Region,
+			bucket.Label,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get bucket access details for %s: %w", bScope.Bucket.Name, err)
+		}
+		if (bucketAccess.ACL != linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL)) || bucketAccess.CorsEnabled != bScope.Bucket.Spec.CorsEnabled {
+			opts := linodego.ObjectStorageBucketUpdateAccessOptions{
+				ACL:         linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL),
+				CorsEnabled: util.Pointer(bScope.Bucket.Spec.CorsEnabled),
+			}
+			if err = bScope.LinodeClient.UpdateObjectStorageBucketAccess(ctx, bucket.Region, bucket.Label, opts); err != nil {
+				return nil, fmt.Errorf("failed to update the bucket access options for %s: %w", bScope.Bucket.Name, err)
+			}
+		}
 
 		return bucket, nil
 	}
@@ -30,7 +46,7 @@ func EnsureObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageB
 		Region:      bScope.Bucket.Spec.Region,
 		Label:       bScope.Bucket.Name,
 		ACL:         linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL),
-		CorsEnabled: bScope.Bucket.Spec.CorsEnabled,
+		CorsEnabled: util.Pointer(bScope.Bucket.Spec.CorsEnabled),
 	}
 
 	if bucket, err = bScope.LinodeClient.CreateObjectStorageBucket(ctx, opts); err != nil {
