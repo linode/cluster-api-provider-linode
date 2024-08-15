@@ -30,6 +30,7 @@ on:
           - linodeobj
           - linodevpc
           - linodeplacementgroup
+          - linodefirewall
           - all
       e2e-flags:
         type: string

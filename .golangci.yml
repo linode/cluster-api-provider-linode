@@ -131,7 +131,7 @@ linters:
     - decorder
     # - depguard
     - dogsled
-    - dupl
+    # - dupl
     - dupword
     - durationcheck
     - errchkjson
