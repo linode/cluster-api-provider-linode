@@ -46,7 +46,7 @@ func EnsureAndUpdateObjectStorageBucket(ctx context.Context, bScope *scope.Objec
 		return nil, fmt.Errorf("failed to get bucket access details for %s: %w", bScope.Bucket.Name, err)
 	}
 
-	if (bucketAccess.ACL == linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL)) && bucketAccess.CorsEnabled == bScope.Bucket.Spec.CorsEnabled {
+	if bucketAccess.ACL == linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL) && bucketAccess.CorsEnabled == bScope.Bucket.Spec.CorsEnabled {
 		return bucket, nil
 	}
 
