@@ -268,7 +268,7 @@ func TestNewMachineScope(t *testing.T) {
 						LinodeCluster: &infrav1alpha2.LinodeCluster{},
 						LinodeMachine: &infrav1alpha2.LinodeMachine{},
 					})
-					require.ErrorContains(t, err, "failed to init machine patch helper")
+					require.ErrorContains(t, err, "failed to init patch helper")
 					assert.Nil(t, mScope)
 				}),
 			),
