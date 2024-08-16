@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -139,8 +140,8 @@ func (r *LinodeClusterReconciler) reconcile(
 	}()
 
 	labels := map[string]string{
-		clusterv1.ClusterNameLabel: clusterScope.LinodeCluster.Name,
-		clusterv1.MachineControlPlaneNameLabel: clusterScope.LinodeCluster.Name + "-control-plane"
+		clusterv1.ClusterNameLabel:             clusterScope.LinodeCluster.Name,
+		clusterv1.MachineControlPlaneNameLabel: clusterScope.LinodeCluster.Name + "-control-plane",
 	}
 	if err := r.TracedClient().List(ctx, &clusterScope.LinodeMachines, client.InNamespace(clusterScope.LinodeCluster.Namespace), client.MatchingLabels(labels)); err != nil {
 		return res, err
