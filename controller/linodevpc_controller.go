@@ -341,8 +341,8 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeVPC)
 				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodeVPC)
-				if okOld && okNew && oldObject.Spec.VPCID != newObject.Spec.VPCID {
-					// We just updated the VPC ID, don't enqueue request
+				if okOld && okNew && oldObject.Spec.VPCID == nil && newObject.Spec.VPCID != nil {
+					// We just created the VPC, don't enqueue and update
 					return false
 				}
 				return true

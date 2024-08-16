@@ -311,8 +311,8 @@ func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, opti
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodePlacementGroup)
 				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodePlacementGroup)
-				if okOld && okNew && oldObject.Spec.PGID != newObject.Spec.PGID {
-					// We just updated the PG ID, don't enqueue request
+				if okOld && okNew && oldObject.Spec.PGID == nil && newObject.Spec.PGID != nil {
+					// We just created the PG, don't enqueue and update
 					return false
 				}
 				return true
