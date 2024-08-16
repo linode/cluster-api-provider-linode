@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
-
+CONTAINERD_VERSION='1.7.20'
+CNI_PLUGIN_VERSIONS='1.5.1'
+# setup containerd config
 mkdir -p -m 755 /etc/containerd
 cat > /etc/containerd/config.toml << EOF
 version = 2
@@ -38,6 +40,38 @@ modprobe overlay
 modprobe br_netfilter
 sysctl --system
 
+# containerd service
+cat > /usr/lib/systemd/system/containerd.service << EOF
+[Unit]
+Description=containerd container runtime
+Documentation=https://containerd.io
+After=network.target local-fs.target
+
+[Service]
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/local/bin/containerd
+
+Type=notify
+Delegate=yes
+KillMode=process
+Restart=always
+RestartSec=5
+
+# Having non-zero Limit*s causes performance problems due to accounting overhead
+# in the kernel. We recommend using cgroups to do container-local accounting.
+LimitNPROC=infinity
+LimitCORE=infinity
+
+# Comment TasksMax if your systemd version does not supports it.
+# Only systemd 226 and above support this version.
+TasksMax=infinity
+OOMScoreAdjust=-999
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# kubelet service
 cat > /usr/lib/systemd/system/kubelet.service << EOF
 [Unit]
 Description=kubelet: The Kubernetes Node Agent
@@ -73,7 +107,7 @@ EOF
 sed -i '/swap/d' /etc/fstab
 swapoff -a
 # check for required tools and only install missing tools
-REQUIRED_TOOLS=(containerd socat conntrack ethtool iptables)
+REQUIRED_TOOLS=(runc socat conntrack ethtool iptables)
 INSTALL_TOOLS=()
 for tool in ${REQUIRED_TOOLS[*]}; do
     echo "checking for ${tool}"
@@ -84,13 +118,27 @@ for tool in ${REQUIRED_TOOLS[*]}; do
 done
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-# use containerd files we write instead of package defaults
-apt-get install -o Dpkg::Options::="--force-confold" -y ${INSTALL_TOOLS[*]}
+apt-get install -y ${INSTALL_TOOLS[*]}
+
+# install containerd
+curl -L "https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz" | tar -C /usr/local -xz
+
+# install cni plugins
+mkdir -p /opt/cni/bin
+curl -L "https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGIN_VERSIONS}/cni-plugins-linux-amd64-v${CNI_PLUGIN_VERSIONS}.tgz" | tar -C /opt/cni/bin -xz
+chown -R root:root /opt/cni
 
 PATCH_VERSION=${1#[v]}
 VERSION=${PATCH_VERSION%.*}
+
+# install crictl
 curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${VERSION}.0/crictl-v${VERSION}.0-linux-amd64.tar.gz" | tar -C /usr/local/bin -xz
+
+# install kubeadm,kubelet,kubectl
 cd /usr/local/bin
 curl -L --remote-name-all https://dl.k8s.io/release/$1/bin/linux/amd64/{kubeadm,kubelet}
 curl -LO "https://dl.k8s.io/release/v${VERSION}.0/bin/linux/amd64/kubectl"
 chmod +x {kubeadm,kubelet,kubectl}
+# reload systemd to pick up containerd & kubelet settings
+systemctl daemon-reload
+systemctl enable --now containerd kubelet
