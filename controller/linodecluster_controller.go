@@ -138,7 +138,10 @@ func (r *LinodeClusterReconciler) reconcile(
 		}
 	}()
 
-	labels := map[string]string{clusterv1.ClusterNameLabel: clusterScope.LinodeCluster.Name}
+	labels := map[string]string{
+		clusterv1.ClusterNameLabel: clusterScope.LinodeCluster.Name,
+		clusterv1.MachineControlPlaneNameLabel: clusterScope.LinodeCluster.Name + "-control-plane"
+	}
 	if err := r.TracedClient().List(ctx, &clusterScope.LinodeMachines, client.InNamespace(clusterScope.LinodeCluster.Namespace), client.MatchingLabels(labels)); err != nil {
 		return res, err
 	}
@@ -431,6 +434,11 @@ func (r *LinodeClusterReconciler) linodeMachineToLinodeCluster(logger logr.Logge
 		linodeMachine, ok := o.(*infrav1alpha2.LinodeMachine)
 		if !ok {
 			logger.Info("Failed to cast object to LinodeMachine")
+			return nil
+		}
+
+		// We only need control plane machines to trigger reconciliation
+		if !strings.Contains(linodeMachine.Name, "control-plane") {
 			return nil
 		}
 
