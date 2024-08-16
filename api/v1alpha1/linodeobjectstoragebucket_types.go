@@ -25,7 +25,8 @@ import (
 const (
 	// ObjectStorageBucketFinalizer allows ReconcileLinodeObjectStorageBucket to clean up Linode resources associated
 	// with LinodeObjectStorageBucket before removing it from the apiserver.
-	ObjectStorageBucketFinalizer = "linodeobjectstoragebucket.infrastructure.cluster.x-k8s.io"
+	ObjectStorageBucketFinalizer         = "linodeobjectstoragebucket.infrastructure.cluster.x-k8s.io"
+	DefaultSecretTypeObjectStorageBucket = "addons.cluster.x-k8s.io/resource-set"
 )
 
 // LinodeObjectStorageBucketSpec defines the desired state of LinodeObjectStorageBucket

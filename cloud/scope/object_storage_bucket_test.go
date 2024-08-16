@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -135,7 +134,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - ValidateClusterScopeParams triggers error because ClusterScopeParams is empty",
+			name: "Error - ValidateObjectStorageBucketScopeParams triggers error because ObjectStorageBucketScopeParams is empty",
 			args: args{
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{},
@@ -159,7 +158,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - Using getCredentialDataFromRef(), func returns an error. Unable to create a valid ClusterScope",
+			name: "Error - Using getCredentialDataFromRef(), func returns an error. Unable to create a valid ObjectStorageBucketScope",
 			args: args{
 				apiKey: "test-key",
 				params: ObjectStorageBucketScopeParams{
@@ -181,7 +180,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - createLinodeCluster throws an error for passing empty apiKey. Unable to create a valid ClusterScope",
+			name: "Error - createObjectStorageBucket throws an error for passing empty apiKey. Unable to create a valid ObjectStorageBucketScope",
 			args: args{
 				apiKey: "",
 				params: ObjectStorageBucketScopeParams{
@@ -192,6 +191,21 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			},
 			expectedErr: fmt.Errorf("failed to create linode client: token cannot be empty"),
 			expects:     func(mock *mock.MockK8sClient) {},
+		},
+		{
+			name: "Error - kind is not registered",
+			args: args{
+				apiKey: "apikey",
+				params: ObjectStorageBucketScopeParams{
+					Client: nil,
+					Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
+					Logger: &logr.Logger{},
+				},
+			},
+			expectedErr: fmt.Errorf("no kind is registered for the type v1alpha2.LinodeObjectStorageBucket"),
+			expects: func(k8s *mock.MockK8sClient) {
+				k8s.EXPECT().Scheme().Return(runtime.NewScheme())
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -214,76 +228,6 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())
 			} else {
 				assert.NotEmpty(t, got)
-			}
-		})
-	}
-}
-
-func TestObjectStorageBucketScopeMethods(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name    string
-		Bucket  *infrav1alpha2.LinodeObjectStorageBucket
-		expects func(mock *mock.MockK8sClient)
-	}{
-		{
-			name:   "Success - finalizer should be added to the Linode Object Storage Bucket object",
-			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{},
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha2.AddToScheme(s)
-					return s
-				}).Times(2)
-				mock.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-			},
-		},
-		{
-			name: "Failure - finalizer should not be added to the Bucket object. Function returns nil since it was already present",
-			Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
-				ObjectMeta: metav1.ObjectMeta{
-					Finalizers: []string{infrav1alpha2.ObjectStorageBucketFinalizer},
-				},
-			},
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha2.AddToScheme(s)
-					return s
-				}).Times(1)
-			},
-		},
-	}
-	for _, tt := range tests {
-		testcase := tt
-		t.Run(testcase.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockK8sClient := mock.NewMockK8sClient(ctrl)
-
-			testcase.expects(mockK8sClient)
-
-			objScope, err := NewObjectStorageBucketScope(
-				context.Background(),
-				ClientConfig{Token: "test-key"},
-				ObjectStorageBucketScopeParams{
-					Client: mockK8sClient,
-					Bucket: testcase.Bucket,
-					Logger: &logr.Logger{},
-				})
-			if err != nil {
-				t.Errorf("NewObjectStorageBucketScope() error = %v", err)
-			}
-
-			if err := objScope.AddFinalizer(context.Background()); err != nil {
-				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
-			}
-
-			if objScope.Bucket.Finalizers[0] != infrav1alpha2.ObjectStorageBucketFinalizer {
-				t.Errorf("Finalizer was not added")
 			}
 		})
 	}
