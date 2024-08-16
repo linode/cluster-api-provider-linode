@@ -26,13 +26,15 @@ import (
 	"sync"
 	"time"
 
+	kthreescontrolplane "github.com/k3s-io/cluster-api-k3s/controlplane/api/v1beta2"
+	rke2controlplane "github.com/rancher/cluster-api-provider-rke2/controlplane/api/v1alpha1"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	capi "sigs.k8s.io/cluster-api/api/v1beta1"
-	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
+	kubeadmcontrolplane "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -71,7 +73,9 @@ const (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
-	utilruntime.Must(controlplanev1.AddToScheme(scheme))
+	utilruntime.Must(kubeadmcontrolplane.AddToScheme(scheme))
+	utilruntime.Must(kthreescontrolplane.AddToScheme(scheme))
+	utilruntime.Must(rke2controlplane.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme

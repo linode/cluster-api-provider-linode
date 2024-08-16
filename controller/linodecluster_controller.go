@@ -24,13 +24,15 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	kthreesontrolplane "github.com/k3s-io/cluster-api-k3s/controlplane/api/v1beta2"
+	rke2controlplane "github.com/rancher/cluster-api-provider-rke2/controlplane/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
+	kubeadmcontrolplane "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -68,6 +70,8 @@ type LinodeClusterReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=kubeadmcontrolplanes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=kthreescontrolplanes,verbs=get;list;watch
+// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=rke2controlplanes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
@@ -140,8 +144,8 @@ func (r *LinodeClusterReconciler) reconcile(
 	}()
 
 	labels := map[string]string{
-		clusterv1.ClusterNameLabel:             clusterScope.LinodeCluster.Name,
-		clusterv1.MachineControlPlaneNameLabel: clusterScope.LinodeCluster.Name + "-control-plane",
+		clusterv1.ClusterNameLabel:         clusterScope.LinodeCluster.Name,
+		clusterv1.MachineControlPlaneLabel: "",
 	}
 	if err := r.TracedClient().List(ctx, &clusterScope.LinodeMachines, client.InNamespace(clusterScope.LinodeCluster.Namespace), client.MatchingLabels(labels)); err != nil {
 		return res, err
@@ -187,21 +191,43 @@ func (r *LinodeClusterReconciler) reconcile(
 }
 
 func (r *LinodeClusterReconciler) setUpLoadBalancing(ctx context.Context, clusterScope *scope.ClusterScope) error {
-	controlPlaneObjKey := client.ObjectKey{
-		Namespace: clusterScope.LinodeCluster.Namespace,
-		Name:      clusterScope.LinodeCluster.Name + "-control-plane",
-	}
-	var controlPlane controlplanev1.KubeadmControlPlane
-	if err := r.Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
-		if err := client.IgnoreNotFound(err); err != nil {
-			return err
-		}
-	}
-
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
 		if len(eachMachine.Status.Addresses) == 0 {
 			return fmt.Errorf("no addresses found on LinodeMachine resource")
 		}
+	}
+
+	controlPlaneObjKey := client.ObjectKey{
+		Namespace: clusterScope.LinodeCluster.Namespace,
+		Name:      clusterScope.LinodeCluster.Name + "-control-plane",
+	}
+	provider := clusterScope.Cluster.Spec.ControlPlaneRef.Kind
+	var allMachinesAdded bool
+	switch {
+	case provider == "KubeadmControlPlane":
+		var controlPlane kubeadmcontrolplane.KubeadmControlPlane
+		if err := r.TracedClient().Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
+			if err := client.IgnoreNotFound(err); err != nil {
+				return err
+			}
+		}
+		allMachinesAdded = len(clusterScope.LinodeMachines.Items) >= int(*controlPlane.Spec.Replicas)
+	case provider == "KThreesControlPlane":
+		var controlPlane kthreesontrolplane.KThreesControlPlane
+		if err := r.TracedClient().Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
+			if err := client.IgnoreNotFound(err); err != nil {
+				return err
+			}
+		}
+		allMachinesAdded = len(clusterScope.LinodeMachines.Items) >= int(*controlPlane.Spec.Replicas)
+	case provider == "RKE2ControlPlane":
+		var controlPlane rke2controlplane.RKE2ControlPlane
+		if err := r.TracedClient().Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
+			if err := client.IgnoreNotFound(err); err != nil {
+				return err
+			}
+		}
+		allMachinesAdded = len(clusterScope.LinodeMachines.Items) >= int(*controlPlane.Spec.Replicas)
 	}
 
 	if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete) {
@@ -210,7 +236,7 @@ func (r *LinodeClusterReconciler) setUpLoadBalancing(ctx context.Context, cluste
 		}
 	}
 
-	if len(clusterScope.LinodeMachines.Items) >= int(*controlPlane.Spec.Replicas) {
+	if allMachinesAdded {
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)
 		return nil
 	}

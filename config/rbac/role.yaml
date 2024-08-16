@@ -47,7 +47,23 @@ rules:
 - apiGroups:
   - controlplane.cluster.x-k8s.io
   resources:
+  - kthreescontrolplanes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - controlplane.cluster.x-k8s.io
+  resources:
   - kubeadmcontrolplanes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - controlplane.cluster.x-k8s.io
+  resources:
+  - rke2controlplanes
   verbs:
   - get
   - list
