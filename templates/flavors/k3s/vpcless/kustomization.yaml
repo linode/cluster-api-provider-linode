@@ -34,7 +34,7 @@ patches:
         path: /spec/vpcRef
   - target:
       group: bootstrap.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KThreesConfigTemplate
     patch: |-
       - op: replace
@@ -48,7 +48,7 @@ patches:
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KThreesControlPlane
     patch: |-
       - op: replace
@@ -62,7 +62,7 @@ patches:
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KThreesControlPlane
     patch: |-
       - op: replace
