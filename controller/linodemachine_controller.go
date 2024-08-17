@@ -679,7 +679,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "instance deleted")
 
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, clusterv1.DeletedReason, "instance has cleaned up")
-	if reconciler.ConditionTrue(machineScope.LinodeCluster, ConditionLoadBalancingInitiated) || reconciler.ConditionTrue(machineScope.LinodeCluster, ConditionLoadBalancingComplete) {
+	if reconciler.ConditionTrue(machineScope.LinodeCluster, ConditionLoadBalancing) {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
 

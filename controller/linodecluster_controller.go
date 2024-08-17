@@ -24,15 +24,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	kthreesontrolplane "github.com/k3s-io/cluster-api-k3s/controlplane/api/v1beta2"
-	rke2controlplane "github.com/rancher/cluster-api-provider-rke2/controlplane/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	kubeadmcontrolplane "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -55,8 +52,7 @@ import (
 )
 
 const (
-	ConditionLoadBalancingInitiated clusterv1.ConditionType = "ConditionLoadBalancingInitiated"
-	ConditionLoadBalancingComplete  clusterv1.ConditionType = "ConditionLoadBalancingComplete"
+	ConditionLoadBalancing clusterv1.ConditionType = "ConditionLoadBalancing"
 )
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
@@ -69,9 +65,6 @@ type LinodeClusterReconciler struct {
 	ReconcileTimeout   time.Duration
 }
 
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=kubeadmcontrolplanes,verbs=get;list;watch
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=kthreescontrolplanes,verbs=get;list;watch
-// +kubebuilder:rbac:groups=controlplane.cluster.x-k8s.io,resources=rke2controlplanes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
@@ -183,65 +176,18 @@ func (r *LinodeClusterReconciler) reconcile(
 	clusterScope.LinodeCluster.Status.Ready = true
 	conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
 
-	if err := r.setUpLoadBalancing(ctx, clusterScope); err != nil {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
-	}
-
-	return res, nil
-}
-
-func (r *LinodeClusterReconciler) setUpLoadBalancing(ctx context.Context, clusterScope *scope.ClusterScope) error {
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
 		if len(eachMachine.Status.Addresses) == 0 {
-			return fmt.Errorf("no addresses found on LinodeMachine resource")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 		}
 	}
 
-	controlPlaneObjKey := client.ObjectKey{
-		Namespace: clusterScope.LinodeCluster.Namespace,
-		Name:      clusterScope.LinodeCluster.Name + "-control-plane",
+	if err := r.addMachineToLB(ctx, clusterScope); err != nil {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	}
-	provider := clusterScope.Cluster.Spec.ControlPlaneRef.Kind
-	var allMachinesAdded bool
-	switch {
-	case provider == "KubeadmControlPlane":
-		var controlPlane kubeadmcontrolplane.KubeadmControlPlane
-		if err := r.TracedClient().Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
-			if err := client.IgnoreNotFound(err); err != nil {
-				return err
-			}
-		}
-		allMachinesAdded = len(clusterScope.LinodeMachines.Items) >= int(*controlPlane.Spec.Replicas)
-	case provider == "KThreesControlPlane":
-		var controlPlane kthreesontrolplane.KThreesControlPlane
-		if err := r.TracedClient().Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
-			if err := client.IgnoreNotFound(err); err != nil {
-				return err
-			}
-		}
-		allMachinesAdded = len(clusterScope.LinodeMachines.Items) >= int(*controlPlane.Spec.Replicas)
-	case provider == "RKE2ControlPlane":
-		var controlPlane rke2controlplane.RKE2ControlPlane
-		if err := r.TracedClient().Get(ctx, controlPlaneObjKey, &controlPlane); err != nil {
-			if err := client.IgnoreNotFound(err); err != nil {
-				return err
-			}
-		}
-		allMachinesAdded = len(clusterScope.LinodeMachines.Items) >= int(*controlPlane.Spec.Replicas)
-	}
+	conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancing)
 
-	if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete) {
-		if err := r.addMachineToLB(ctx, clusterScope); err != nil {
-			return err
-		}
-	}
-
-	if allMachinesAdded {
-		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)
-		return nil
-	}
-	conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated)
-	return nil
+	return res, nil
 }
 
 func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.ClusterStatusError, err error, lcr *LinodeClusterReconciler) {
@@ -338,7 +284,7 @@ func (r *LinodeClusterReconciler) handleDNS(clusterScope *scope.ClusterScope) {
 
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && !(reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated) || reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancingComplete)) {
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancing) {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 
 		if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
@@ -355,8 +301,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	if err := r.removeMachineFromLB(ctx, logger, clusterScope); err != nil {
 		return fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
-	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancingInitiated, "clear loadbalancer", clusterv1.ConditionSeverityWarning, "")
-	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancingComplete, "clear loadbalancer entries", clusterv1.ConditionSeverityWarning, "")
+	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancing, "cleared loadbalancer", clusterv1.ConditionSeverityWarning, "")
 
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
 		if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
