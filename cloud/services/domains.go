@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 	"strings"
 	"sync"
@@ -109,24 +110,25 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	if recordBody == nil {
 		return fmt.Errorf("akamai dns returned empty dns record")
 	}
+
 	// if operation is delete and we got the record, delete it
 	if operation == "delete" {
 		if err := deleteAkamaiEntry(ctx, akaDNSClient, recordBody, dnsEntry, rootDomain); err != nil {
 			return err
 		}
+		return nil
 	}
 	// if operation is create and we got the record, update it
-
-	// Linode DNS API formats the IPv6 IPs using :: for :0:0: while the address from the LinodeMachine status keeps it as is
-	// So we need to match that
-	if dnsEntry.DNSRecordType == linodego.RecordTypeAAAA {
-		dnsEntry.Target = strings.Replace(dnsEntry.Target, "::", ":0:0:", 8) //nolint:mnd // 8 for 8 octest
-	}
-
 	// Check if the target already exists in the target list
 	for _, target := range recordBody.Target {
-		if strings.Contains(target, dnsEntry.Target) {
-			return nil
+		if recordBody.RecordType == "TXT" {
+			if strings.Contains(target, dnsEntry.Target) {
+				return nil
+			}
+		} else {
+			if slices.Equal(net.ParseIP(target), net.ParseIP(dnsEntry.Target)) {
+				return nil
+			}
 		}
 	}
 	// Target doesn't exist so lets append it to the existing list and update it
