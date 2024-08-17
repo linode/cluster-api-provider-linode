@@ -398,6 +398,7 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&infrav1alpha2.LinodeCluster{}).
 		WithOptions(options).
+		// we care about reconciling on metadata updates for LinodeClusters because the OwnerRef for the Cluster is needed
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
 		Watches(
 			&clusterv1.Cluster{},

@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/cluster-api/util/patch"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
@@ -87,14 +86,4 @@ func (s *ObjectStorageBucketScope) PatchObject(ctx context.Context) error {
 // Close closes the current scope persisting the object storage bucket configuration and status.
 func (s *ObjectStorageBucketScope) Close(ctx context.Context) error {
 	return s.PatchObject(ctx)
-}
-
-// AddFinalizer adds a finalizer if not present and immediately patches the
-// object to avoid any race conditions.
-func (s *ObjectStorageBucketScope) AddFinalizer(ctx context.Context) error {
-	if controllerutil.AddFinalizer(s.Bucket, infrav1alpha2.ObjectStorageBucketFinalizer) {
-		return s.Close(ctx)
-	}
-
-	return nil
 }

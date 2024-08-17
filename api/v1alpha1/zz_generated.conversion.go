@@ -1014,7 +1014,7 @@ func autoConvert_v1alpha1_LinodeObjectStorageBucketSpec_To_v1alpha2_LinodeObject
 	// WARNING: in.Cluster requires manual conversion: does not exist in peer-type
 	out.CredentialsRef = (*v1.SecretReference)(unsafe.Pointer(in.CredentialsRef))
 	// WARNING: in.KeyGeneration requires manual conversion: does not exist in peer-type
-	out.SecretType = in.SecretType
+	// WARNING: in.SecretType requires manual conversion: does not exist in peer-type
 	return nil
 }
 
@@ -1023,7 +1023,6 @@ func autoConvert_v1alpha2_LinodeObjectStorageBucketSpec_To_v1alpha1_LinodeObject
 	// WARNING: in.ACL requires manual conversion: does not exist in peer-type
 	// WARNING: in.CorsEnabled requires manual conversion: does not exist in peer-type
 	out.CredentialsRef = (*v1.SecretReference)(unsafe.Pointer(in.CredentialsRef))
-	out.SecretType = in.SecretType
 	return nil
 }
 

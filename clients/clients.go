@@ -75,6 +75,8 @@ type LinodeNodeBalancerClient interface {
 type LinodeObjectStorageClient interface {
 	GetObjectStorageBucket(ctx context.Context, regionID, label string) (*linodego.ObjectStorageBucket, error)
 	CreateObjectStorageBucket(ctx context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error)
+	GetObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID, label string) (*linodego.ObjectStorageBucketAccess, error)
+	UpdateObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID, label string, opts linodego.ObjectStorageBucketUpdateAccessOptions) error
 	GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error)
 	CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)
 	DeleteObjectStorageKey(ctx context.Context, keyID int) error
