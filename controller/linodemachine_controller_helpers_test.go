@@ -58,7 +58,6 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		BackupsEnabled: true,
 		PrivateIP:      util.Pointer(true),
 		Tags:           []string{"tag"},
-		FirewallID:     1,
 	}
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineSpec)

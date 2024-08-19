@@ -67,6 +67,7 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:deprecatedversion:warning="Firewalls should be referenced via FirewallRef"
 	FirewallID int `json:"firewallID,omitempty"`
 	// OSDisk is configuration for the root disk that includes the OS,
 	// if not specified this defaults to whatever space is not taken up by the DataDisks
@@ -96,6 +97,10 @@ type LinodeMachineSpec struct {
 	// +optional
 	// PlacementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group.
 	PlacementGroupRef *corev1.ObjectReference `json:"placementGroupRef,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	// FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall.
+	FirewallRef *corev1.ObjectReference `json:"firewallRef,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance

@@ -1275,6 +1275,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 	var reconciler *LinodeMachineReconciler
 	var lpgReconciler *LinodePlacementGroupReconciler
 	var linodePlacementGroup infrav1alpha2.LinodePlacementGroup
+	var linodeFirewall infrav1alpha2.LinodeFirewall
 
 	var mockCtrl *gomock.Controller
 	var testLogs *bytes.Buffer
@@ -1343,6 +1344,22 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		}
 		Expect(k8sClient.Create(ctx, &linodePlacementGroup)).To(Succeed())
 
+		linodeFirewall = infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-fw",
+				Namespace: defaultNamespace,
+				UID:       "5123123",
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{
+				FirewallID: ptr.To(2),
+				Enabled:    true,
+			},
+			Status: infrav1alpha2.LinodeFirewallStatus{
+				Ready: true,
+			},
+		}
+		Expect(k8sClient.Create(ctx, &linodeFirewall)).To(Succeed())
+
 		linodeMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
@@ -1356,6 +1373,10 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 				PlacementGroupRef: &corev1.ObjectReference{
 					Namespace: defaultNamespace,
 					Name:      "test-pg",
+				},
+				FirewallRef: &corev1.ObjectReference{
+					Namespace: defaultNamespace,
+					Name:      "test-fw",
 				},
 			},
 		}
@@ -1388,7 +1409,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		}
 	})
 
-	It("creates a instance in a PlacementGroup", func(ctx SpecContext) {
+	It("creates a instance in a PlacementGroup with a firewall", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
@@ -1431,6 +1452,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
 		Expect(createOpts.PlacementGroup.ID).To(Equal(1))
+		Expect(createOpts.FirewallID).To(Equal(2))
 	})
-
 })
