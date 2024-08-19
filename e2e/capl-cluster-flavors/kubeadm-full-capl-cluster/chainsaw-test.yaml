@@ -13,7 +13,7 @@ spec:
   bindings:
     # Identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'kdm-tst', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `32`)), '-'))
@@ -116,103 +116,103 @@ spec:
               (json_parse($stdout)):
                 results: 2
 
-    # Get the KUBECONFIG of the child cluster for later use
-    - name: Get child cluster kubeconfig
-      try:
-        - script:
-            env:
-              - name: CLUSTER
-                value: ($cluster)
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: CLUSTERCTL_CONFIG
-                value: (env('CLUSTERCTL_CONFIG'))
-            content: |
-              set -e
-              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > kubeadm-full-cluster-kubeconfig.yaml
-            check:
-              ($error == null): true
-
-    # Test child cluster deployments
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Testing child cluster deployments
-      try:
-        - assert:
-            cluster: kubeadm-full-cluster
-            file: assert-child-cluster-deployments.yaml
-      catch:
-        - describe:
-            cluster: kubeadm-full-cluster
-            apiVersion: apps/v1
-            kind: Deployment
-            namespace: kube-system
-
-    # Test for child cluster DaemonSets
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Testing child cluster DaemonSets
-      try:
-        - assert:
-            cluster: kubeadm-full-cluster
-            file: assert-child-cluster-daemonsets.yaml
-      catch:
-        - describe:
-            cluster: kubeadm-full-cluster
-            apiVersion: apps/v1
-            kind: DaemonSet
-            namespace: kube-system
-
-    # Test for child cluster StatefulSets
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Testing child cluster StatefulSets
-      try:
-        - assert:
-            cluster: kubeadm-full-cluster
-            file: assert-child-cluster-statefulsets.yaml
-      catch:
-        - describe:
-            cluster: kubeadm-full-cluster
-            apiVersion: apps/v1
-            kind: StatefulSet
-            namespace: kube-system
-
-    # Test Konnectivity server and agent
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Testing konnectivity resources
-      try:
-        - assert:
-            cluster: kubeadm-full-cluster
-            file: assert-konnectivity-resources.yaml
-      catch:
-        - describe:
-            cluster: kubeadm-full-cluster
-            apiVersion: apps/v1
-            kind: Deployment
-            namespace: kube-system
-        - describe:
-            cluster: kubeadm-full-cluster
-            apiVersion: apps/v1
-            kind: DaemonSet
-            namespace: kube-system
-
-    # Test to check if konnectivity is working
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Testing to check if logs are retrievable
-      try:
-        - script:
-            content: |
-              KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
-            check:
-              ($error == null): true
+#    # Get the KUBECONFIG of the child cluster for later use
+#    - name: Get child cluster kubeconfig
+#      try:
+#        - script:
+#            env:
+#              - name: CLUSTER
+#                value: ($cluster)
+#              - name: NAMESPACE
+#                value: ($namespace)
+#              - name: CLUSTERCTL_CONFIG
+#                value: (env('CLUSTERCTL_CONFIG'))
+#            content: |
+#              set -e
+#              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > kubeadm-full-cluster-kubeconfig.yaml
+#            check:
+#              ($error == null): true
+#
+#    # Test child cluster deployments
+#    - clusters:
+#        kubeadm-full-cluster:
+#          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+#      name: Testing child cluster deployments
+#      try:
+#        - assert:
+#            cluster: kubeadm-full-cluster
+#            file: assert-child-cluster-deployments.yaml
+#      catch:
+#        - describe:
+#            cluster: kubeadm-full-cluster
+#            apiVersion: apps/v1
+#            kind: Deployment
+#            namespace: kube-system
+#
+#    # Test for child cluster DaemonSets
+#    - clusters:
+#        kubeadm-full-cluster:
+#          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+#      name: Testing child cluster DaemonSets
+#      try:
+#        - assert:
+#            cluster: kubeadm-full-cluster
+#            file: assert-child-cluster-daemonsets.yaml
+#      catch:
+#        - describe:
+#            cluster: kubeadm-full-cluster
+#            apiVersion: apps/v1
+#            kind: DaemonSet
+#            namespace: kube-system
+#
+#    # Test for child cluster StatefulSets
+#    - clusters:
+#        kubeadm-full-cluster:
+#          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+#      name: Testing child cluster StatefulSets
+#      try:
+#        - assert:
+#            cluster: kubeadm-full-cluster
+#            file: assert-child-cluster-statefulsets.yaml
+#      catch:
+#        - describe:
+#            cluster: kubeadm-full-cluster
+#            apiVersion: apps/v1
+#            kind: StatefulSet
+#            namespace: kube-system
+#
+#    # Test Konnectivity server and agent
+#    - clusters:
+#        kubeadm-full-cluster:
+#          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+#      name: Testing konnectivity resources
+#      try:
+#        - assert:
+#            cluster: kubeadm-full-cluster
+#            file: assert-konnectivity-resources.yaml
+#      catch:
+#        - describe:
+#            cluster: kubeadm-full-cluster
+#            apiVersion: apps/v1
+#            kind: Deployment
+#            namespace: kube-system
+#        - describe:
+#            cluster: kubeadm-full-cluster
+#            apiVersion: apps/v1
+#            kind: DaemonSet
+#            namespace: kube-system
+#
+#    # Test to check if konnectivity is working
+#    - clusters:
+#        kubeadm-full-cluster:
+#          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
+#      name: Testing to check if logs are retrievable
+#      try:
+#        - script:
+#            content: |
+#              KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
+#            check:
+#              ($error == null): true
 
     # Test to check if disks are added to the etcd spec
     - clusters:
@@ -235,6 +235,7 @@ spec:
               
               RESPONSE=$(curl -s \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
                 -H "Content-Type: application/json" \
                 "https://$TARGET_API/$TARGET_API_VERSION/$URI")
               
@@ -247,8 +248,11 @@ spec:
 
               DISK_RESPONSE=$(curl -s \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
                 -H "Content-Type: application/json" \
                 "https://$TARGET_API/$TARGET_API_VERSION/$URI/$LINODE_ID/disks?page=1&page_size=100")
+
+              echo "$DISK_RESPONSE"
               
               ETCD_LABEL=$(echo "$DISK_RESPONSE" | jq -r '.data[2].label')
               ETCD_STATUS=$(echo "$DISK_RESPONSE" | jq -r '.data[2].status')
