@@ -13,7 +13,7 @@ spec:
   bindings:
     # Identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'kdm-tst', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `32`)), '-'))
@@ -252,8 +252,6 @@ spec:
                 -H "Content-Type: application/json" \
                 "https://$TARGET_API/$TARGET_API_VERSION/$URI/$LINODE_ID/disks?page=1&page_size=100")
 
-              echo "$DISK_RESPONSE"
-              
               ETCD_LABEL=$(echo "$DISK_RESPONSE" | jq -r '.data[2].label')
               ETCD_STATUS=$(echo "$DISK_RESPONSE" | jq -r '.data[2].status')
               
