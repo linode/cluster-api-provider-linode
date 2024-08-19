@@ -255,10 +255,11 @@ spec:
               ETCD_LABEL=$(echo "$DISK_RESPONSE" | jq -r '.data[2].label')
               ETCD_STATUS=$(echo "$DISK_RESPONSE" | jq -r '.data[2].status')
               
-              echo "{
-                \"label\": \"$ETCD_LABEL\",
-                \"status\": \"$ETCD_STATUS\"
-              }"
+#              echo "{
+#                \"label\": \"$ETCD_LABEL\",
+#                \"status\": \"$ETCD_STATUS\"
+#              }"
+              echo "$DISK_RESPONSE"
 
             check:
               ($error): ~
