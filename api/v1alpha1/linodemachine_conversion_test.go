@@ -53,7 +53,6 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 			BackupsEnabled:  false,
 			PrivateIP:       ptr.To(true),
 			Tags:            []string{"test instance"},
-			FirewallID:      123,
 			OSDisk: ptr.To(InstanceDisk{
 				DiskID:     0,
 				Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -96,7 +95,6 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 			BackupsEnabled:  false,
 			PrivateIP:       ptr.To(true),
 			Tags:            []string{"test instance"},
-			FirewallID:      123,
 			OSDisk: ptr.To(infrav1alpha2.InstanceDisk{
 				DiskID:     0,
 				Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -183,7 +181,6 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 			BackupsEnabled:  false,
 			PrivateIP:       ptr.To(true),
 			Tags:            []string{"test instance"},
-			FirewallID:      123,
 			OSDisk: ptr.To(infrav1alpha2.InstanceDisk{
 				DiskID:     0,
 				Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -231,7 +228,6 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 			BackupsEnabled:  false,
 			PrivateIP:       ptr.To(true),
 			Tags:            []string{"test instance"},
-			FirewallID:      123,
 			OSDisk: ptr.To(InstanceDisk{
 				DiskID:     0,
 				Size:       *resource.NewQuantity(12, resource.DecimalSI),
