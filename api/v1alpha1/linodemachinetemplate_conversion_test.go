@@ -42,7 +42,6 @@ func TestLinodeMachineTemplateConvertTo(t *testing.T) {
 			Template: LinodeMachineTemplateResource{
 				Spec: LinodeMachineSpec{
 					ProviderID:      ptr.To("linode://1234"),
-					InstanceID:      ptr.To(1234),
 					Region:          "us-mia",
 					Type:            "g6-standard-2",
 					Group:           "",
@@ -87,7 +86,6 @@ func TestLinodeMachineTemplateConvertTo(t *testing.T) {
 			Template: infrav1alpha2.LinodeMachineTemplateResource{
 				Spec: infrav1alpha2.LinodeMachineSpec{
 					ProviderID:      ptr.To("linode://1234"),
-					InstanceID:      ptr.To(1234),
 					Region:          "us-mia",
 					Type:            "g6-standard-2",
 					Group:           "",
@@ -176,7 +174,6 @@ func TestLinodeMachineTemplateConvertFrom(t *testing.T) {
 			Template: infrav1alpha2.LinodeMachineTemplateResource{
 				Spec: infrav1alpha2.LinodeMachineSpec{
 					ProviderID:      ptr.To("linode://1234"),
-					InstanceID:      ptr.To(1234),
 					Region:          "us-mia",
 					Type:            "g6-standard-2",
 					Group:           "",
@@ -221,7 +218,6 @@ func TestLinodeMachineTemplateConvertFrom(t *testing.T) {
 			Template: LinodeMachineTemplateResource{
 				Spec: LinodeMachineSpec{
 					ProviderID:      ptr.To("linode://1234"),
-					InstanceID:      ptr.To(1234),
 					Region:          "us-mia",
 					Type:            "g6-standard-2",
 					Group:           "",

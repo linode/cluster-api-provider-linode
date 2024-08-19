@@ -38,6 +38,7 @@ type LinodeMachineSpec struct {
 	ProviderID *string `json:"providerID,omitempty"`
 	// InstanceID is the Linode instance ID for this machine.
 	// +optional
+	// +kubebuilder:deprecatedversion:warning="ProviderID deprecates InstanceID"
 	InstanceID *int `json:"instanceID,omitempty"`
 
 	// +kubebuilder:validation:Required
@@ -215,7 +216,7 @@ type LinodeMachineStatus struct {
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this LinodeMachine belongs"
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.instanceState",description="Linode instance state"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Machine ready status"
-// +kubebuilder:printcolumn:name="InstanceID",type="string",JSONPath=".spec.providerID",description="Linode instance ID"
+// +kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="Provider ID"
 // +kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this LinodeMachine"
 
 // LinodeMachine is the Schema for the linodemachines API
