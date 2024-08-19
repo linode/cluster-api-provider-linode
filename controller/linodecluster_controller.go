@@ -42,6 +42,7 @@ import (
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
 	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -171,7 +172,8 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 }
 
 func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
-	if err := clusterScope.AddCredentialsRefFinalizer(ctx); err != nil {
+	var err error
+	if err = clusterScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to update credentials finalizer")
 		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		return err
@@ -179,14 +181,14 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 
 	// handle creation for the loadbalancer for the control plane
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
-		r.handleDNS(clusterScope)
+		services.HandleDNS(clusterScope)
 	} else if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" || clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "" {
-		if err := r.handleNBCreate(ctx, logger, clusterScope); err != nil {
-			return err
+		if err = services.HandleNBCreate(ctx, logger, clusterScope); err != nil {
+			setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
 		}
 	}
 
-	return nil
+	return err
 }
 
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {

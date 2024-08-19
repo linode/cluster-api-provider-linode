@@ -136,7 +136,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 
 			testcase.expects(MockLinodeClient)
 
-			got, err := EnsureNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := ensureNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
@@ -398,7 +398,7 @@ func TestEnsureNodeBalancerConfigs(t *testing.T) {
 
 			testcase.expects(MockLinodeClient)
 
-			got, err := EnsureNodeBalancerConfigs(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := ensureNodeBalancerConfigs(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
