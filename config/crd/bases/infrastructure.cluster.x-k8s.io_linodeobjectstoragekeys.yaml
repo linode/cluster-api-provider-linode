@@ -105,6 +105,9 @@ spec:
                 - Opaque
                 - addons.cluster.x-k8s.io/resource-set
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
             required:
             - bucketAccess
             - keyGeneration

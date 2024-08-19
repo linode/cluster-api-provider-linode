@@ -8,11 +8,9 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusteraddonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -115,11 +113,6 @@ stringData:
   secret_key: %s`
 )
 
-var secretTypeExpectedKey = map[corev1.SecretType]string{
-	corev1.SecretTypeOpaque:                      "access_key",
-	clusteraddonsv1.ClusterResourceSetSecretType: ClusterResourceSetSecretFilename,
-}
-
 // GenerateKeySecret returns a secret suitable for submission to the Kubernetes API.
 // The secret is expected to contain keys for accessing the bucket, as well as owner and controller references.
 func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *linodego.ObjectStorageKey) (*corev1.Secret, error) {
@@ -190,36 +183,4 @@ func (s *ObjectStorageKeyScope) ShouldInitKey() bool {
 func (s *ObjectStorageKeyScope) ShouldRotateKey() bool {
 	return s.Key.Status.LastKeyGeneration != nil &&
 		s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
-}
-
-func (s *ObjectStorageKeyScope) ShouldReconcileKeySecret(ctx context.Context) (bool, error) {
-	if s.Key.Status.SecretName == nil {
-		return false, nil
-	}
-
-	secret := &corev1.Secret{}
-	key := client.ObjectKey{Namespace: s.Key.Namespace, Name: *s.Key.Status.SecretName}
-	err := s.Client.Get(ctx, key, secret)
-	if apierrors.IsNotFound(err) {
-		return true, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	// Identify an expected key in secret.Data for the desired secret type.
-	// If it is missing, we must recreate the secret since the secret.type field is immutable.
-	expectedKey, ok := secretTypeExpectedKey[s.Key.Spec.SecretType]
-	if !ok {
-		return false, errors.New("unsupported secret type configured in LinodeObjectStorageKey")
-	}
-	if _, ok := secret.Data[expectedKey]; !ok {
-		if err := s.Client.Delete(ctx, secret); err != nil {
-			return false, err
-		}
-
-		return true, nil
-	}
-
-	return false, nil
 }

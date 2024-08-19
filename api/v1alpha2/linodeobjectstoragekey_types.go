@@ -52,6 +52,7 @@ type LinodeObjectStorageKeySpec struct {
 	// SecretType instructs the controller what type of secret to generate containing access key details.
 	// +kubebuilder:validation:Enum=Opaque;addons.cluster.x-k8s.io/resource-set
 	// +kubebuilder:default=Opaque
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	SecretType corev1.SecretType `json:"secretType,omitempty"`
 }

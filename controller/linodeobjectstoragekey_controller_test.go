@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
@@ -252,78 +251,8 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 		),
 		Once("secretType set to cluster resource set", func(ctx context.Context, _ Mock) {
 			key.Spec.SecretType = clusteraddonsv1.ClusterResourceSetSecretType
-			Expect(k8sClient.Update(ctx, &key)).To(Succeed())
+			Expect(k8sClient.Update(ctx, &key)).NotTo(Succeed())
 		}),
-		OneOf(
-			Path(
-				Call("(secretType set to cluster resource set) > key is not retrieved", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().GetObjectStorageKey(gomock.Any(), 2).Return(nil, errors.New("get key error"))
-				}),
-				Result("error", func(ctx context.Context, mck Mock) {
-					keyScope.LinodeClient = mck.LinodeClient
-					_, err := reconciler.reconcile(ctx, &keyScope)
-					Expect(err.Error()).To(ContainSubstring("get key error"))
-				}),
-			),
-			Path(
-				Call("(secretType set to cluster resource set) > key is retrieved", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().GetObjectStorageKey(gomock.Any(), 2).
-						Return(&linodego.ObjectStorageKey{
-							ID:        2,
-							AccessKey: "access-key-2",
-							SecretKey: "secret-key-2",
-						}, nil)
-				}),
-				OneOf(
-					Path(
-						Call("bucket is not retrieved", func(ctx context.Context, mck Mock) {
-							mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), "us-ord", "mybucket").Return(nil, errors.New("get bucket error"))
-						}),
-						Result("error", func(ctx context.Context, mck Mock) {
-							keyScope.LinodeClient = mck.LinodeClient
-							_, err := reconciler.reconcile(ctx, &keyScope)
-							Expect(err.Error()).To(ContainSubstring("get bucket error"))
-						}),
-					),
-					Path(
-						Call("bucket is retrieved", func(ctx context.Context, mck Mock) {
-							mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), "us-ord", "mybucket").Return(&linodego.ObjectStorageBucket{
-								Label:    "mybucket",
-								Region:   "us-ord",
-								Hostname: "mybucket.us-ord-1.linodeobjects.com",
-							}, nil)
-						}),
-						Result("secret is recreated as cluster resource set type", func(ctx context.Context, mck Mock) {
-							keyScope.LinodeClient = mck.LinodeClient
-							_, err := reconciler.reconcile(ctx, &keyScope)
-							Expect(err).NotTo(HaveOccurred())
-
-							var secret corev1.Secret
-							secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
-							Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
-							Expect(secret.Data).To(HaveLen(1))
-							Expect(string(secret.Data[scope.ClusterResourceSetSecretFilename])).To(Equal(fmt.Sprintf(scope.BucketKeySecret,
-								*key.Status.SecretName,
-								"mybucket",
-								"us-ord",
-								"mybucket.us-ord-1.linodeobjects.com",
-								"access-key-2",
-								"secret-key-2",
-							)))
-
-							events := mck.Events()
-							Expect(events).To(ContainSubstring("Object storage key retrieved"))
-							Expect(events).To(ContainSubstring("Object storage key stored in secret"))
-							Expect(events).To(ContainSubstring("Object storage key synced"))
-
-							logOutput := mck.Logs()
-							Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-							Expect(logOutput).To(ContainSubstring("Secret %s was created with access key", *key.Status.SecretName))
-						}),
-					),
-				),
-			),
-		),
 		Once("resource is deleted", func(ctx context.Context, _ Mock) {
 			// nb: client.Delete does not set DeletionTimestamp on the object, so re-fetch from the apiserver.
 			objectKey := client.ObjectKeyFromObject(&key)
