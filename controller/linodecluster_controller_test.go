@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -36,6 +35,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
+	"github.com/linode/linodego"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -288,7 +288,6 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 			UID:       "12345",
 		},
 		Spec: infrav1alpha2.LinodeMachineSpec{
-			InstanceID:     ptr.To(0),
 			Type:           "g6-nanode-1",
 			Image:          rec.DefaultMachineControllerLinodeImage,
 			DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
@@ -479,36 +478,13 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 			},
 		},
 	}
-	linodeMachineWithAddress := infrav1alpha2.LinodeMachine{
+	linodeMachine := infrav1alpha2.LinodeMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-machine",
 			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeMachineSpec{
 			ProviderID: ptr.To("linode://123"),
-			InstanceID: ptr.To(123),
-		},
-		Status: infrav1alpha2.LinodeMachineStatus{
-			Addresses: []clusterv1.MachineAddress{
-				{
-					Type:    "ExternalIP",
-					Address: "10.10.10.10",
-				},
-				{
-					Type:    "ExternalIP",
-					Address: "fd00::",
-				},
-			},
-		},
-	}
-	linodeMachineWithNoAddress := infrav1alpha2.LinodeMachine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-machine",
-			Namespace: defaultNamespace,
-		},
-		Spec: infrav1alpha2.LinodeMachineSpec{
-			ProviderID: ptr.To("linode://123"),
-			InstanceID: ptr.To(123),
 		},
 		Status: infrav1alpha2.LinodeMachineStatus{
 			Addresses: []clusterv1.MachineAddress{},
@@ -548,9 +524,9 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					cScope.LinodeDomainsClient = mck.LinodeClient
 					cScope.AkamaiDomainsClient = mck.AkamEdgeDNSClient
 					linodeMachines := infrav1alpha2.LinodeMachineList{
-						Items: []infrav1alpha2.LinodeMachine{linodeMachineWithAddress},
+						Items: []infrav1alpha2.LinodeMachine{linodeMachine},
 					}
-					Expect(k8sClient.Create(ctx, &linodeMachineWithAddress)).To(Succeed())
+					Expect(k8sClient.Create(ctx, &linodeMachine)).To(Succeed())
 					cScope.LinodeMachines = linodeMachines
 				}),
 				Result("cluster created", func(ctx context.Context, mck Mock) {
@@ -568,38 +544,6 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(controlPlaneEndpointPort)))
-					Expect(k8sClient.Delete(ctx, &linodeMachineWithAddress)).To(Succeed())
-					cScope.LinodeMachines = infrav1alpha2.LinodeMachineList{}
-				}),
-			),
-			Path(
-				Call("no linodemachines available", func(ctx context.Context, mck Mock) {
-					cScope.LinodeClient = mck.LinodeClient
-					cScope.LinodeDomainsClient = mck.LinodeClient
-					cScope.AkamaiDomainsClient = mck.AkamEdgeDNSClient
-					linodeMachines := infrav1alpha2.LinodeMachineList{
-						Items: []infrav1alpha2.LinodeMachine{linodeMachineWithNoAddress},
-					}
-					Expect(k8sClient.Create(ctx, &linodeMachineWithNoAddress)).To(Succeed())
-					cScope.LinodeMachines = linodeMachines
-				}),
-				Result("cluster not created", func(ctx context.Context, mck Mock) {
-					reconciler.Client = k8sClient
-					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
-					Expect(err).NotTo(HaveOccurred())
-
-					By("checking ready conditions")
-					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
-					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
-					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
-					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
-
-					By("checking controlPlaneEndpoint/NB host and port")
-					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
-					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Port).To(Equal(int32(controlPlaneEndpointPort)))
-					Expect(k8sClient.Delete(ctx, &linodeMachineWithNoAddress)).To(Succeed())
-					cScope.LinodeMachines = infrav1alpha2.LinodeMachineList{}
 				}),
 			),
 		),
