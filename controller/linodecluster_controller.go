@@ -178,7 +178,7 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
 		if len(eachMachine.Status.Addresses) == 0 {
-			return res, nil
+			return res, fmt.Errorf("no public ips set for the linodemachine %s", eachMachine.Name)
 		}
 	}
 

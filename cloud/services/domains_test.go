@@ -732,7 +732,7 @@ func TestAddIPToDNS(t *testing.T) {
 					},
 				}, nil).AnyTimes()
 			},
-			expectedError: fmt.Errorf("dnsEntries are empty"),
+			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
 				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
 			},
@@ -981,7 +981,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - failed to get machine ip",
+			name: "Error - failed to get machine",
 			clusterScope: &scope.ClusterScope{
 				Cluster: &clusterv1.Cluster{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1002,23 +1002,9 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						},
 					},
 				},
-				LinodeMachines: infrav1alpha2.LinodeMachineList{
-					Items: []infrav1alpha2.LinodeMachine{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "test-machine",
-								UID:  "test-uid",
-							},
-							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
-							},
-						},
-					},
-				},
 			},
 			expects:       func(mockClient *mock.MockLinodeClient) {},
-			expectedError: fmt.Errorf("dnsEntries are empty"),
+			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
 				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
 			},

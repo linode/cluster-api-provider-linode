@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -42,7 +41,7 @@ func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation
 	}
 
 	if len(dnsEntries) == 0 {
-		return errors.New("dnsEntries are empty")
+		return nil
 	}
 
 	if cscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
