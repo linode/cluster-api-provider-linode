@@ -481,10 +481,11 @@ func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha2.Insta
 func (r *LinodeMachineReconciler) addMachineToLB(
 	ctx context.Context,
 	machineScope *scope.MachineScope,
+	linodeInstanceID int,
 ) error {
 	logger := logr.FromContextOrDiscard(ctx)
 	if machineScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
-		if err := services.AddNodeToNB(ctx, logger, machineScope); err != nil {
+		if err := services.AddNodeToNB(ctx, logger, machineScope, linodeInstanceID); err != nil {
 			return err
 		}
 	} else {

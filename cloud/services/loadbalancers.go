@@ -179,17 +179,13 @@ func AddNodeToNB(
 	ctx context.Context,
 	logger logr.Logger,
 	machineScope *scope.MachineScope,
+	instanceID int,
 ) error {
 	// Update the NB backend with the new instance if it's a control plane node
 	if !kutil.IsControlPlaneMachine(machineScope.Machine) {
 		return nil
 	}
 
-	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
-	if err != nil {
-		logger.Error(err, "Failed to parse instance ID from provider ID")
-		return err
-	}
 	// Get the private IP that was assigned
 	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, instanceID)
 	if err != nil {

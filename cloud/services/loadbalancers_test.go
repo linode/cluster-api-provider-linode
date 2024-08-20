@@ -550,7 +550,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 			testcase.machineScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := AddNodeToNB(context.Background(), logr.Discard(), testcase.machineScope)
+			err := AddNodeToNB(context.Background(), logr.Discard(), testcase.machineScope, 123)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
@@ -724,7 +724,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 			testcase.machineScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := AddNodeToNB(context.Background(), logr.Discard(), testcase.machineScope)
+			err := AddNodeToNB(context.Background(), logr.Discard(), testcase.machineScope, 123)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}

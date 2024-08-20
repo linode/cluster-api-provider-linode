@@ -41,7 +41,6 @@ import (
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -140,10 +139,22 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), machine.ObjectMeta)
 	if err != nil {
 		log.Info("Failed to fetch cluster by label")
-		return reconcile.Result{}, nil
+		return ctrl.Result{}, nil
 	}
 
-	log = log.WithValues("cluster", cluster.Name)
+	// Fetch linode cluster
+	linodeClusterKey := client.ObjectKey{
+		Namespace: linodeMachine.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}
+	linodeCluster := &infrav1alpha2.LinodeCluster{}
+	if err := r.Client.Get(ctx, linodeClusterKey, linodeCluster); err != nil {
+		if err = client.IgnoreNotFound(err); err != nil {
+			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
+		}
+	}
+
+	log = log.WithValues("LinodeCluster", linodeCluster.Name)
 
 	machineScope, err := scope.NewMachineScope(
 		ctx,
@@ -153,7 +164,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Client:        r.TracedClient(),
 			Cluster:       cluster,
 			Machine:       machine,
-			LinodeCluster: &infrav1alpha2.LinodeCluster{},
+			LinodeCluster: linodeCluster,
 			LinodeMachine: linodeMachine,
 		},
 	)
@@ -366,7 +377,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
-		if err := r.addMachineToLB(ctx, machineScope); err != nil {
+		if err := r.addMachineToLB(ctx, machineScope, linodeInstance.ID); err != nil {
 			logger.Error(err, "Failed to add machine to LB")
 
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
