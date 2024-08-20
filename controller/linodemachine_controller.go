@@ -66,13 +66,10 @@ const (
 	ConditionPreflightNetworking             clusterv1.ConditionType = "PreflightNetworking"
 	ConditionPreflightLoadBalancing          clusterv1.ConditionType = "PreflightLoadbalancing"
 	ConditionPreflightReady                  clusterv1.ConditionType = "PreflightReady"
-)
 
-var skippedMachinePhases = map[string]bool{
-	string(clusterv1.MachinePhasePending): true,
-	string(clusterv1.MachinePhaseFailed):  true,
-	string(clusterv1.MachinePhaseUnknown): true,
-}
+	// WaitingForBootstrapDataReason used when machine is waiting for bootstrap data to be ready before proceeding.
+	WaitingForBootstrapDataReason = "WaitingForBootstrapData"
+)
 
 // statuses to keep requeueing on while an instance is booting
 var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
@@ -127,16 +124,26 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	machine, err := r.getOwnerMachine(ctx, *linodeMachine, log)
-	if err != nil || machine == nil {
+	// Fetch owner machine
+	machine, err := kutil.GetOwnerMachine(ctx, r.TracedClient(), linodeMachine.ObjectMeta)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
+	if machine == nil {
+		log.Info("Machine Controller has not yet set OwnerRef, skipping reconciliation")
+		return ctrl.Result{}, nil
+	}
+
 	log = log.WithValues("LinodeMachine", machine.Name)
 
-	cluster, err := r.getClusterFromMetadata(ctx, *machine, log)
-	if err != nil || cluster == nil {
-		return ctrl.Result{}, err
+	// Fetch the cluster
+	cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), machine.ObjectMeta)
+	if err != nil {
+		log.Info("Failed to fetch cluster by label")
+		return reconcile.Result{}, nil
 	}
+
+	log = log.WithValues("cluster", cluster.Name)
 
 	machineScope, err := scope.NewMachineScope(
 		ctx,
@@ -159,26 +166,14 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, log, machineScope)
 }
 
-func (r *LinodeMachineReconciler) reconcile(
-	ctx context.Context,
-	logger logr.Logger,
-	machineScope *scope.MachineScope,
-) (res ctrl.Result, err error) {
-	res = ctrl.Result{}
-
-	machineScope.LinodeMachine.Status.Ready = false
-	machineScope.LinodeMachine.Status.FailureReason = nil
-	machineScope.LinodeMachine.Status.FailureMessage = util.Pointer("")
-
+func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res ctrl.Result, err error) {
 	failureReason := cerrs.MachineStatusError("UnknownError")
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
 			machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
 			machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
-
 			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, err.Error())
-
 			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
@@ -186,79 +181,38 @@ func (r *LinodeMachineReconciler) reconcile(
 		// This ignores any resource not found errors when reconciling deletions.
 		if patchErr := machineScope.CloseAll(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch LinodeMachine and LinodeCluster")
-
 			err = errors.Join(err, patchErr)
 		}
 	}()
 
 	// Add the finalizer if not already there
-	err = machineScope.AddFinalizer(ctx)
-	if err != nil {
+	if err = machineScope.AddFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to add finalizer")
-
-		return
+		return ctrl.Result{}, err
 	}
 
 	// Delete
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = cerrs.DeleteMachineError
-
-		linodeClusterKey := client.ObjectKey{
-			Namespace: machineScope.LinodeMachine.Namespace,
-			Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
-		}
-
-		if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
-			if err = client.IgnoreNotFound(err); err != nil {
-				return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
-			}
-		}
-
 		return r.reconcileDelete(ctx, logger, machineScope)
 	}
 
-	linodeClusterKey := client.ObjectKey{
-		Namespace: machineScope.LinodeMachine.Namespace,
-		Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
-	}
-
-	if err := r.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
-		}
+	// Make sure bootstrap data is available and populated.
+	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
+		logger.Info("Bootstrap data secret is not yet available")
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightCreated, WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
+		return ctrl.Result{}, nil
 	}
 
 	// Update
-	if machineScope.LinodeMachine.Status.InstanceState != nil {
-		var linodeInstance *linodego.Instance
-		defer func() {
-			if linodeInstance != nil {
-				machineScope.LinodeMachine.Status.InstanceState = &linodeInstance.Status
-			}
-		}()
-
+	if machineScope.LinodeMachine.Spec.ProviderID != nil {
 		failureReason = cerrs.UpdateMachineError
-
-		res, linodeInstance, err = r.reconcileUpdate(ctx, logger, machineScope)
-		// If an instance exists, then we dont need to continue to create
-		// If there were no errors in updating, we dont need to continue to create
-		if linodeInstance != nil || err == nil {
-			return
-		}
+		return r.reconcileUpdate(ctx, logger, machineScope)
 	}
 
 	// Create
 	failureReason = cerrs.CreateMachineError
-	// Make sure bootstrap data is available and populated.
-	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
-		logger.Info("Bootstrap data secret is not yet available")
-		res = ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForBootstrapDelay}
-
-		return
-	}
-	res, err = r.reconcileCreate(ctx, logger, machineScope)
-
-	return
+	return r.reconcileCreate(ctx, logger, machineScope)
 }
 
 func (r *LinodeMachineReconciler) reconcileCreate(
@@ -339,7 +293,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
-	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 
 	return r.reconcileInstanceCreate(ctx, logger, machineScope, linodeInstance)
 }
@@ -444,70 +397,39 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 
 	return ctrl.Result{}, nil
 }
 
-func (r *LinodeMachineReconciler) reconcileUpdate(
-	ctx context.Context,
-	logger logr.Logger,
-	machineScope *scope.MachineScope,
-) (res reconcile.Result, linodeInstance *linodego.Instance, err error) {
+func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	logger.Info("updating machine")
-
-	res = ctrl.Result{}
-
 	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
 	if err != nil {
 		logger.Error(err, "Failed to parse instance ID from provider ID")
-		return ctrl.Result{}, nil, err
+		return ctrl.Result{}, err
 	}
 
+	var linodeInstance *linodego.Instance
 	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, instanceID); err != nil {
-		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-			logger.Error(err, "Failed to get Linode machine instance")
-
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil, err
-		} else {
-			logger.Info("Instance not found, let's create a new one")
-
-			// Create new machine
-			machineScope.LinodeMachine.Spec.ProviderID = nil
-			machineScope.LinodeMachine.Status.InstanceState = nil
-			machineScope.LinodeMachine.Status.Conditions = nil
-
-			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, "missing", clusterv1.ConditionSeverityWarning, "instance not found")
-		}
-		if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
-			return res, nil, fmt.Errorf("remove machine from loadbalancer: %w", err)
-		}
-		return res, nil, err
+		return retryIfTransient(err)
 	}
 	if _, ok := requeueInstanceStatuses[linodeInstance.Status]; ok {
 		if linodeInstance.Updated.Add(reconciler.DefaultMachineControllerWaitForRunningTimeout).After(time.Now()) {
 			logger.Info("Instance has one operation running, re-queuing reconciliation", "status", linodeInstance.Status)
-
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, linodeInstance, nil
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
-
 		logger.Info("Instance has one operation long running, skipping reconciliation", "status", linodeInstance.Status)
-
 		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "skipped due to long running operation")
-
-		return res, linodeInstance, nil
+		return ctrl.Result{}, nil
 	} else if linodeInstance.Status != linodego.InstanceRunning {
 		logger.Info("Instance has incompatible status, skipping reconciliation", "status", linodeInstance.Status)
-
 		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "incompatible status")
-
-		return res, linodeInstance, nil
+		return ctrl.Result{}, nil
 	}
-
 	machineScope.LinodeMachine.Status.Ready = true
-
 	conditions.MarkTrue(machineScope.LinodeMachine, clusterv1.ReadyCondition)
-
-	return res, linodeInstance, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *LinodeMachineReconciler) reconcileDelete(

@@ -856,7 +856,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
-			ProviderID:    ptr.To("linode://0"),
 			Type:          "g6-nanode-1",
 			Image:         rutil.DefaultMachineControllerLinodeImage,
 			Configuration: &infrav1alpha2.InstanceConfiguration{Kernel: "test"},
@@ -947,56 +946,26 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 		OneOf(
 			Path(
 				Call("machine is not created because there was an error creating instance", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().
+						ListInstances(ctx, gomock.Any()).
+						Return([]linodego.Instance{}, nil)
 				}),
 				OneOf(
-					Path(Result("create error", func(ctx context.Context, mck Mock) {
-						linodeMachine.Spec.ProviderID = util.Pointer("linode://foo")
-						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
-						Expect(err).To(HaveOccurred())
-						Expect(mck.Logs()).To(ContainSubstring("Failed to parse instance ID from provider ID"))
-					})),
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
-						linodeMachine.Spec.ProviderID = util.Pointer("linode://123")
-						listInst := mck.LinodeClient.EXPECT().
-							ListInstances(ctx, gomock.Any()).
-							Return([]linodego.Instance{}, nil)
 						getRegion := mck.LinodeClient.EXPECT().
 							GetRegion(ctx, gomock.Any()).
-							After(listInst).
 							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
 						getImage := mck.LinodeClient.EXPECT().
 							GetImage(ctx, gomock.Any()).
 							After(getRegion).
 							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
+						mck.LinodeClient.EXPECT().CreateInstance(ctx, gomock.Any()).
 							After(getImage).
-							Return(nil, errors.New("failed to ensure instance"))
+							Return(nil, &linodego.Error{Code: http.StatusServiceUnavailable})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
-						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode machine instance"))
-					})),
-					Path(Result("create machine error - timeout error", func(ctx context.Context, mck Mock) {
-						tempTimeout := reconciler.ReconcileTimeout
-						reconciler.ReconcileTimeout = time.Nanosecond
-						listInst := mck.LinodeClient.EXPECT().
-							ListInstances(ctx, gomock.Any()).
-							Return([]linodego.Instance{}, nil)
-						getRegion := mck.LinodeClient.EXPECT().
-							GetRegion(ctx, gomock.Any()).
-							After(listInst).
-							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-						getImage := mck.LinodeClient.EXPECT().
-							GetImage(ctx, gomock.Any()).
-							After(getRegion).
-							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
-							After(getImage).
-							Return(nil, errors.New("failed to ensure instance"))
-						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
-						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("failed to ensure instance"))
-						reconciler.ReconcileTimeout = tempTimeout
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode instance"))
 					})),
 				),
 			),
@@ -1024,7 +993,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						getImage := mck.LinodeClient.EXPECT().
 							GetImage(ctx, gomock.Any()).
 							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
+						mck.LinodeClient.EXPECT().CreateInstance(ctx, gomock.Any()).
 							After(getImage).
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
@@ -1265,21 +1234,11 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 					})),
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
-							Return(errors.New("failed to delete instance"))
+							Return(&linodego.Error{Code: http.StatusInternalServerError})
 						res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Linode instance deletion"))
-					})),
-					Path(Result("create machine error - timeout error", func(ctx context.Context, mck Mock) {
-						tempTimeout := reconciler.ReconcileTimeout
-						reconciler.ReconcileTimeout = time.Nanosecond
-						mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
-							Return(errors.New("failed to delete instance"))
-						_, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
-						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("failed to delete instance"))
-						reconciler.ReconcileTimeout = tempTimeout
 					})),
 				),
 			),

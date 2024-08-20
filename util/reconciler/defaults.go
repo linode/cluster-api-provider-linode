@@ -26,8 +26,6 @@ const (
 	// DefaultMappingTimeout is the default timeout for a controller request mapping func.
 	DefaultMappingTimeout = 60 * time.Second
 
-	// DefaultMachineControllerWaitForBootstrapDelay is the default requeue delay if bootstrap data is not ready.
-	DefaultMachineControllerWaitForBootstrapDelay = 5 * time.Second
 	// DefaultMachineControllerLinodeImage default image.
 	DefaultMachineControllerLinodeImage = "linode/ubuntu22.04"
 	// DefaultMachineControllerWaitForRunningDelay is the default requeue delay if instance is not running.

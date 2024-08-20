@@ -192,61 +192,6 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 	return ips, nil
 }
 
-func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
-	machine, err := kutil.GetOwnerMachine(ctx, r.TracedClient(), linodeMachine.ObjectMeta)
-	if err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			log.Error(err, "Failed to fetch owner machine")
-		}
-
-		return nil, err
-	}
-	if machine == nil {
-		log.Info("Machine Controller has not yet set OwnerRef, skipping reconciliation")
-
-		return nil, err
-	}
-	if skippedMachinePhases[machine.Status.Phase] {
-		return nil, err
-	}
-	match := false
-	for i := range linodeMachine.OwnerReferences {
-		if match = linodeMachine.OwnerReferences[i].UID == machine.UID; match {
-			break
-		}
-	}
-	if !match {
-		log.Info("Failed to find the referenced owner machine, skipping reconciliation", "references", linodeMachine.OwnerReferences, "machine", machine.ObjectMeta)
-
-		return nil, err
-	}
-
-	return machine, nil
-}
-
-func (r *LinodeMachineReconciler) getClusterFromMetadata(ctx context.Context, machine clusterv1.Machine, log logr.Logger) (*clusterv1.Cluster, error) {
-	cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), machine.ObjectMeta)
-	if err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			log.Error(err, "Failed to fetch cluster by label")
-		}
-
-		return nil, err
-	}
-	if cluster == nil {
-		log.Error(nil, "Missing cluster")
-
-		return nil, errors.New("missing cluster")
-	}
-	if cluster.Spec.InfrastructureRef == nil {
-		log.Error(nil, "Missing infrastructure reference")
-
-		return nil, errors.New("missing infrastructure reference")
-	}
-
-	return cluster, nil
-}
-
 func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logger) handler.MapFunc {
 	logger = logger.WithName("LinodeMachineReconciler").WithName("linodeClusterToLinodeMachines")
 
