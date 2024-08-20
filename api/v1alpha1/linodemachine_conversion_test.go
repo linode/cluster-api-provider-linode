@@ -40,7 +40,6 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "test-machine"},
 		Spec: LinodeMachineSpec{
 			ProviderID:      ptr.To("linode://1234"),
-			InstanceID:      ptr.To(1234),
 			Region:          "us-mia",
 			Type:            "g6-standard-2",
 			Group:           "",
@@ -53,7 +52,6 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 			BackupsEnabled:  false,
 			PrivateIP:       ptr.To(true),
 			Tags:            []string{"test instance"},
-			FirewallID:      123,
 			OSDisk: ptr.To(InstanceDisk{
 				DiskID:     0,
 				Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -83,7 +81,6 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "test-machine"},
 		Spec: infrav1alpha2.LinodeMachineSpec{
 			ProviderID:      ptr.To("linode://1234"),
-			InstanceID:      ptr.To(1234),
 			Region:          "us-mia",
 			Type:            "g6-standard-2",
 			Group:           "",
@@ -96,7 +93,6 @@ func TestLinodeMachineConvertTo(t *testing.T) {
 			BackupsEnabled:  false,
 			PrivateIP:       ptr.To(true),
 			Tags:            []string{"test instance"},
-			FirewallID:      123,
 			OSDisk: ptr.To(infrav1alpha2.InstanceDisk{
 				DiskID:     0,
 				Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -170,7 +166,6 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "test-machine"},
 		Spec: infrav1alpha2.LinodeMachineSpec{
 			ProviderID:      ptr.To("linode://1234"),
-			InstanceID:      ptr.To(1234),
 			Region:          "us-mia",
 			Type:            "g6-standard-2",
 			Group:           "",
@@ -183,7 +178,6 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 			BackupsEnabled:  false,
 			PrivateIP:       ptr.To(true),
 			Tags:            []string{"test instance"},
-			FirewallID:      123,
 			OSDisk: ptr.To(infrav1alpha2.InstanceDisk{
 				DiskID:     0,
 				Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -218,7 +212,6 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "test-machine"},
 		Spec: LinodeMachineSpec{
 			ProviderID:      ptr.To("linode://1234"),
-			InstanceID:      ptr.To(1234),
 			Region:          "us-mia",
 			Type:            "g6-standard-2",
 			Group:           "",
@@ -231,7 +224,6 @@ func TestLinodeMachineConvertFrom(t *testing.T) {
 			BackupsEnabled:  false,
 			PrivateIP:       ptr.To(true),
 			Tags:            []string{"test instance"},
-			FirewallID:      123,
 			OSDisk: ptr.To(InstanceDisk{
 				DiskID:     0,
 				Size:       *resource.NewQuantity(12, resource.DecimalSI),

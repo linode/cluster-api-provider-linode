@@ -111,7 +111,7 @@ func EnsureNodeBalancerConfigs(
 	return nbConfigs, nil
 }
 
-// AddNodeToNB adds backend Nodes on the Node Balancer configuration
+// AddNodesToNB adds backend Nodes on the Node Balancer configuration
 func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	apiserverLBPort := DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
