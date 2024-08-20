@@ -81,8 +81,7 @@ spec:
         - error:
             file: check-linodecluster-deleted.yaml
       catch:
-        - podLogs:
-            namespace: capl-system
+        - podLogs: {}
     - name: Check if the nodebalancer is deleted
       try:
         - script:
@@ -107,5 +106,4 @@ spec:
               (json_parse($stdout)):
                 results: 0
       catch:
-        - podLogs:
-            namespace: capl-system
+        - podLogs: {}
