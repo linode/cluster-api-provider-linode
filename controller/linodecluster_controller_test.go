@@ -585,8 +585,6 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 				}),
 				Result("cluster not created", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
-					// machineKey := client.ObjectKeyFromObject(&linodeMachine)
-					// Expect(k8sClient.Get(ctx, machineKey, &linodeMachine)).To(Succeed())
 					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
 					Expect(err).NotTo(HaveOccurred())
 
