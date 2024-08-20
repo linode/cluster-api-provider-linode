@@ -178,12 +178,14 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
 		if len(eachMachine.Status.Addresses) == 0 {
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			return res, nil
 		}
 	}
 
-	if err := r.addMachineToLB(ctx, clusterScope); err != nil {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+	err := r.addMachineToLB(ctx, clusterScope)
+	if err != nil {
+		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
+		return retryIfTransient(err)
 	}
 	conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancing)
 
