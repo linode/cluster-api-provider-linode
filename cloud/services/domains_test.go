@@ -66,7 +66,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -129,7 +129,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -228,7 +228,7 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -298,7 +298,7 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -398,7 +398,7 @@ func TestAddIPToDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -472,7 +472,7 @@ func TestAddIPToDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -545,7 +545,7 @@ func TestAddIPToDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -613,7 +613,7 @@ func TestAddIPToDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -687,7 +687,7 @@ func TestAddIPToDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -754,7 +754,7 @@ func TestAddIPToDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: nil,
@@ -811,7 +811,7 @@ func TestAddIPToDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -916,7 +916,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -991,7 +991,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -1066,7 +1066,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 			},
@@ -1113,7 +1113,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -1174,7 +1174,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{
@@ -1240,7 +1240,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 					Status: infrav1alpha2.LinodeMachineStatus{
 						Addresses: []clusterv1.MachineAddress{

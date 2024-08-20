@@ -399,9 +399,9 @@ spec:
       jsonPath: .status.ready
       name: Ready
       type: string
-    - description: Linode instance ID
+    - description: Provider ID
       jsonPath: .spec.providerID
-      name: InstanceID
+      name: ProviderID
       type: string
     - description: Machine object which owns with this LinodeMachine
       jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
