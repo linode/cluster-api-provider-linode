@@ -21,6 +21,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -29,14 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/go-logr/logr"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
-	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
-	"github.com/linode/linodego"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -291,7 +290,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 		Spec: infrav1alpha2.LinodeMachineSpec{
 			InstanceID:     ptr.To(0),
 			Type:           "g6-nanode-1",
-			Image:          rutil.DefaultMachineControllerLinodeImage,
+			Image:          rec.DefaultMachineControllerLinodeImage,
 			DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
 		},
 	}
