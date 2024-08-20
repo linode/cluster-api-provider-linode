@@ -418,36 +418,6 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightReady)
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightNetworking) {
-		if err := r.addMachineToLB(ctx, machineScope); err != nil {
-			logger.Error(err, "Failed to add machine to LB")
-
-			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-				ConditionPreflightNetworking, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
-		}
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightNetworking)
-	}
-
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLoadBalancing) {
-		// Add the finalizer if not already there
-		if err := machineScope.AddLinodeClusterFinalizer(ctx); err != nil {
-			logger.Error(err, "Failed to add linodecluster finalizer")
-
-			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-				ConditionPreflightLoadBalancing, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-		}
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLoadBalancing)
-	}
-
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
 
@@ -698,15 +668,6 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha2.MachineFinalizer)
 
 		return ctrl.Result{}, nil
-	}
-
-	if err := r.removeMachineFromLB(ctx, logger, machineScope); err != nil {
-		return ctrl.Result{}, fmt.Errorf("remove machine from loadbalancer: %w", err)
-	}
-
-	// Add the finalizer if not already there
-	if err := machineScope.RemoveLinodeClusterFinalizer(ctx); err != nil {
-		return ctrl.Result{}, fmt.Errorf("Failed to remove linodecluster finalizer %w", err)
 	}
 
 	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)

@@ -301,16 +301,14 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	if err := r.removeMachineFromLB(ctx, logger, clusterScope); err != nil {
 		return fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
-	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancing, "cleared loadbalancer", clusterv1.ConditionSeverityWarning, "")
+	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancing, "cleared loadbalancer", clusterv1.ConditionSeverityInfo, "")
 
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
-		if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
-			err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
-			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-				logger.Error(err, "failed to delete NodeBalancer")
-				setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
-				return err
-			}
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
+		err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
+		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+			logger.Error(err, "failed to delete NodeBalancer")
+			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+			return err
 		}
 	}
 
@@ -365,36 +363,6 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 
 func (r *LinodeClusterReconciler) TracedClient() client.Client {
 	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimereconciler.DefaultDecorator())
-}
-
-func (r *LinodeClusterReconciler) addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error {
-	logger := logr.FromContextOrDiscard(ctx)
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" {
-		if err := services.AddNodesToNB(ctx, logger, clusterScope); err != nil {
-			return err
-		}
-	} else {
-		if err := services.EnsureDNSEntries(ctx, clusterScope, "create"); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *LinodeClusterReconciler) removeMachineFromLB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
-		if err := services.DeleteNodesFromNB(ctx, logger, clusterScope); err != nil {
-			logger.Error(err, "Failed to remove node from Node Balancer backend")
-			return err
-		}
-	} else if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
-		if err := services.EnsureDNSEntries(ctx, clusterScope, "delete"); err != nil {
-			logger.Error(err, "Failed to remove IP from DNS")
-			return err
-		}
-	}
-	return nil
 }
 
 func (r *LinodeClusterReconciler) linodeMachineToLinodeCluster(logger logr.Logger) handler.MapFunc {
