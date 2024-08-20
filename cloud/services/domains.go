@@ -71,15 +71,9 @@ func EnsureLinodeDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	}
 
 	if operation == "delete" {
-		if err := DeleteDomainRecord(ctx, cscope, domainID, dnsEntry); err != nil {
-			return err
-		}
+		return DeleteDomainRecord(ctx, cscope, domainID, dnsEntry)
 	}
-	if err := CreateDomainRecord(ctx, cscope, domainID, dnsEntry); err != nil {
-		return err
-	}
-
-	return nil
+	return CreateDomainRecord(ctx, cscope, domainID, dnsEntry)
 }
 
 // EnsureAkamaiDNSEntries ensures the domainrecord on Akamai EDGE DNS is created, updated, or deleted based on operation passed
@@ -102,10 +96,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 			return nil
 		}
 		// Create record
-		if err := createAkamaiEntry(ctx, akaDNSClient, dnsEntry, fqdn, rootDomain); err != nil {
-			return err
-		}
-		return nil
+		return createAkamaiEntry(ctx, akaDNSClient, dnsEntry, fqdn, rootDomain)
 	}
 	if recordBody == nil {
 		return fmt.Errorf("akamai dns returned empty dns record")
@@ -113,10 +104,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 
 	// if operation is delete and we got the record, delete it
 	if operation == "delete" {
-		if err := deleteAkamaiEntry(ctx, akaDNSClient, recordBody, dnsEntry, rootDomain); err != nil {
-			return err
-		}
-		return nil
+		return deleteAkamaiEntry(ctx, akaDNSClient, recordBody, dnsEntry, rootDomain)
 	}
 	// if operation is create and we got the record, update it
 	// Check if the target already exists in the target list
@@ -133,11 +121,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	}
 	// Target doesn't exist so lets append it to the existing list and update it
 	recordBody.Target = append(recordBody.Target, dnsEntry.Target)
-	if err := akaDNSClient.UpdateRecord(ctx, recordBody, rootDomain); err != nil {
-		return err
-	}
-
-	return nil
+	return akaDNSClient.UpdateRecord(ctx, recordBody, rootDomain)
 }
 
 func createAkamaiEntry(ctx context.Context, client clients.AkamClient, dnsEntry DNSOptions, fqdn, rootDomain string) error {
@@ -162,16 +146,10 @@ func deleteAkamaiEntry(ctx context.Context, client clients.AkamClient, recordBod
 			// So we need to match that
 			strings.Replace(dnsEntry.Target, "::", ":0:0:", 8), //nolint:mnd // 8 for 8 octest
 		)
-		if err := client.UpdateRecord(ctx, recordBody, rootDomain); err != nil {
-			return err
-		}
-		return nil
+		return client.UpdateRecord(ctx, recordBody, rootDomain)
 	default:
-		if err := client.DeleteRecord(ctx, recordBody, rootDomain); err != nil {
-			return err
-		}
+		return client.DeleteRecord(ctx, recordBody, rootDomain)
 	}
-	return nil
 }
 
 func removeElement(stringList []string, elemToRemove string) []string {
@@ -296,10 +274,7 @@ func DeleteDomainRecord(ctx context.Context, cscope *scope.ClusterScope, domainI
 	}
 
 	// Delete record
-	if deleteErr := cscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID); deleteErr != nil {
-		return deleteErr
-	}
-	return nil
+	return cscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID)
 }
 
 func IsDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope, hostname string, domainID int) (bool, error) {
