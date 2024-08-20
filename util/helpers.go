@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/linode/linodego"
 )
@@ -45,4 +47,17 @@ func IsRetryableError(err error) bool {
 		http.StatusGatewayTimeout,
 		http.StatusServiceUnavailable,
 		linodego.ErrorFromError) || errors.Is(err, http.ErrHandlerTimeout) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF)
+}
+
+// GetInstanceID determines the instance ID from the ProviderID
+func GetInstanceID(providerID *string) (int, error) {
+	if providerID == nil {
+		err := errors.New("nil ProviderID")
+		return -1, err
+	}
+	instanceID, err := strconv.Atoi(strings.TrimPrefix(*providerID, "linode://"))
+	if err != nil {
+		return -1, err
+	}
+	return instanceID, nil
 }

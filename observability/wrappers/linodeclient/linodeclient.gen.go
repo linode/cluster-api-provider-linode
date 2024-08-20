@@ -112,6 +112,31 @@ func (_d LinodeClientWithTracing) CreateDomainRecord(ctx context.Context, domain
 	return _d.LinodeClient.CreateDomainRecord(ctx, domainID, recordReq)
 }
 
+// CreateFirewall implements clients.LinodeClient
+func (_d LinodeClientWithTracing) CreateFirewall(ctx context.Context, opts linodego.FirewallCreateOptions) (fp1 *linodego.Firewall, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateFirewall")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":  ctx,
+				"opts": opts}, map[string]interface{}{
+				"fp1": fp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.CreateFirewall(ctx, opts)
+}
+
 // CreateInstance implements clients.LinodeClient
 func (_d LinodeClientWithTracing) CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (ip1 *linodego.Instance, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateInstance")
@@ -391,6 +416,55 @@ func (_d LinodeClientWithTracing) DeleteDomainRecord(ctx context.Context, domain
 	return _d.LinodeClient.DeleteDomainRecord(ctx, domainID, domainRecordID)
 }
 
+// DeleteFirewall implements clients.LinodeClient
+func (_d LinodeClientWithTracing) DeleteFirewall(ctx context.Context, firewallID int) (err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteFirewall")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID}, map[string]interface{}{
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.DeleteFirewall(ctx, firewallID)
+}
+
+// DeleteFirewallDevice implements clients.LinodeClient
+func (_d LinodeClientWithTracing) DeleteFirewallDevice(ctx context.Context, firewallID int, deviceID int) (err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteFirewallDevice")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID,
+				"deviceID":   deviceID}, map[string]interface{}{
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.DeleteFirewallDevice(ctx, firewallID, deviceID)
+}
+
 // DeleteInstance implements clients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteInstance(ctx context.Context, linodeID int) (err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteInstance")
@@ -535,6 +609,82 @@ func (_d LinodeClientWithTracing) DeleteVPC(ctx context.Context, vpcID int) (err
 		_span.End()
 	}()
 	return _d.LinodeClient.DeleteVPC(ctx, vpcID)
+}
+
+// GetFirewall implements clients.LinodeClient
+func (_d LinodeClientWithTracing) GetFirewall(ctx context.Context, firewallID int) (fp1 *linodego.Firewall, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetFirewall")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID}, map[string]interface{}{
+				"fp1": fp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetFirewall(ctx, firewallID)
+}
+
+// GetFirewallDevice implements clients.LinodeClient
+func (_d LinodeClientWithTracing) GetFirewallDevice(ctx context.Context, firewallID int, deviceID int) (fp1 *linodego.FirewallDevice, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetFirewallDevice")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID,
+				"deviceID":   deviceID}, map[string]interface{}{
+				"fp1": fp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetFirewallDevice(ctx, firewallID, deviceID)
+}
+
+// GetFirewallRules implements clients.LinodeClient
+func (_d LinodeClientWithTracing) GetFirewallRules(ctx context.Context, firewallID int) (fp1 *linodego.FirewallRuleSet, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetFirewallRules")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID}, map[string]interface{}{
+				"fp1": fp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetFirewallRules(ctx, firewallID)
 }
 
 // GetImage implements clients.LinodeClient
@@ -713,6 +863,32 @@ func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, re
 		_span.End()
 	}()
 	return _d.LinodeClient.GetObjectStorageBucket(ctx, regionID, label)
+}
+
+// GetObjectStorageBucketAccess implements clients.LinodeClient
+func (_d LinodeClientWithTracing) GetObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID string, label string) (op1 *linodego.ObjectStorageBucketAccess, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageBucketAccess")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":               ctx,
+				"clusterOrRegionID": clusterOrRegionID,
+				"label":             label}, map[string]interface{}{
+				"op1": op1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetObjectStorageBucketAccess(ctx, clusterOrRegionID, label)
 }
 
 // GetObjectStorageKey implements clients.LinodeClient
@@ -1096,6 +1272,58 @@ func (_d LinodeClientWithTracing) UpdateDomainRecord(ctx context.Context, domain
 	return _d.LinodeClient.UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq)
 }
 
+// UpdateFirewall implements clients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateFirewall(ctx context.Context, firewallID int, opts linodego.FirewallUpdateOptions) (fp1 *linodego.Firewall, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateFirewall")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID,
+				"opts":       opts}, map[string]interface{}{
+				"fp1": fp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateFirewall(ctx, firewallID, opts)
+}
+
+// UpdateFirewallRules implements clients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRuleSet) (fp1 *linodego.FirewallRuleSet, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateFirewallRules")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID,
+				"rules":      rules}, map[string]interface{}{
+				"fp1": fp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateFirewallRules(ctx, firewallID, rules)
+}
+
 // UpdateInstanceConfig implements clients.LinodeClient
 func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, linodeID int, configID int, opts linodego.InstanceConfigUpdateOptions) (ip1 *linodego.InstanceConfig, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateInstanceConfig")
@@ -1121,6 +1349,32 @@ func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, lino
 		_span.End()
 	}()
 	return _d.LinodeClient.UpdateInstanceConfig(ctx, linodeID, configID, opts)
+}
+
+// UpdateObjectStorageBucketAccess implements clients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID string, label string, opts linodego.ObjectStorageBucketUpdateAccessOptions) (err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateObjectStorageBucketAccess")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":               ctx,
+				"clusterOrRegionID": clusterOrRegionID,
+				"label":             label,
+				"opts":              opts}, map[string]interface{}{
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateObjectStorageBucketAccess(ctx, clusterOrRegionID, label, opts)
 }
 
 // UpdatePlacementGroup implements clients.LinodeClient

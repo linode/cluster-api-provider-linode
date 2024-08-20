@@ -18,6 +18,7 @@ type LinodeClient interface {
 	LinodeObjectStorageClient
 	LinodeDNSClient
 	LinodePlacementGroupClient
+	LinodeFirewallClient
 }
 
 type AkamClient interface {
@@ -74,6 +75,8 @@ type LinodeNodeBalancerClient interface {
 type LinodeObjectStorageClient interface {
 	GetObjectStorageBucket(ctx context.Context, regionID, label string) (*linodego.ObjectStorageBucket, error)
 	CreateObjectStorageBucket(ctx context.Context, opts linodego.ObjectStorageBucketCreateOptions) (*linodego.ObjectStorageBucket, error)
+	GetObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID, label string) (*linodego.ObjectStorageBucketAccess, error)
+	UpdateObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID, label string, opts linodego.ObjectStorageBucketUpdateAccessOptions) error
 	GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error)
 	CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)
 	DeleteObjectStorageKey(ctx context.Context, keyID int) error
@@ -97,6 +100,18 @@ type LinodePlacementGroupClient interface {
 	UpdatePlacementGroup(ctx context.Context, id int, options linodego.PlacementGroupUpdateOptions) (*linodego.PlacementGroup, error)
 	AssignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupAssignOptions) (*linodego.PlacementGroup, error)
 	UnassignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupUnAssignOptions) (*linodego.PlacementGroup, error)
+}
+
+// LinodeFirewallClient defines the methods that interact with Linode's Firewall service.
+type LinodeFirewallClient interface {
+	CreateFirewall(ctx context.Context, opts linodego.FirewallCreateOptions) (*linodego.Firewall, error)
+	GetFirewall(ctx context.Context, firewallID int) (*linodego.Firewall, error)
+	GetFirewallDevice(ctx context.Context, firewallID, deviceID int) (*linodego.FirewallDevice, error)
+	GetFirewallRules(ctx context.Context, firewallID int) (*linodego.FirewallRuleSet, error)
+	UpdateFirewall(ctx context.Context, firewallID int, opts linodego.FirewallUpdateOptions) (*linodego.Firewall, error)
+	UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRuleSet) (*linodego.FirewallRuleSet, error)
+	DeleteFirewall(ctx context.Context, firewallID int) error
+	DeleteFirewallDevice(ctx context.Context, firewallID, deviceID int) error
 }
 
 type K8sClient interface {

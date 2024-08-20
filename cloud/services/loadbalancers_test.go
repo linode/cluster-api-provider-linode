@@ -450,7 +450,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 			},
@@ -488,7 +488,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 			},
@@ -522,7 +522,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 			},
@@ -631,7 +631,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 			},
@@ -687,7 +687,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 			},
@@ -782,7 +782,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
@@ -818,7 +818,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
@@ -867,7 +867,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
@@ -910,7 +910,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 						UID:  "test-uid",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						InstanceID: ptr.To(123),
+						ProviderID: ptr.To("linode://123"),
 					},
 				},
 				LinodeCluster: &infrav1alpha2.LinodeCluster{

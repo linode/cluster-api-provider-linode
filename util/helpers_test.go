@@ -89,3 +89,41 @@ func TestIsRetryableError(t *testing.T) {
 		})
 	}
 }
+
+func TestGetInstanceID(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		providerID *string
+		wantErr    bool
+		wantID     int
+	}{{
+		name:       "nil",
+		providerID: nil,
+		wantErr:    true,
+		wantID:     -1,
+	}, {
+		name:       "invalid provider ID",
+		providerID: Pointer("linode://foobar"),
+		wantErr:    true,
+		wantID:     -1,
+	}, {
+		name:       "valid",
+		providerID: Pointer("linode://12345"),
+		wantErr:    false,
+		wantID:     12345,
+	}}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			gotID, err := GetInstanceID(testcase.providerID)
+			if testcase.wantErr && err == nil {
+				t.Errorf("wanted %v, got %v", testcase.wantErr, err)
+			}
+			if gotID != testcase.wantID {
+				t.Errorf("wanted %v, got %v", testcase.wantID, gotID)
+			}
+		})
+	}
+}

@@ -286,9 +286,18 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	tags := []string{machineScope.LinodeCluster.Name}
+	var instanceID *int
+	if machineScope.LinodeMachine.Spec.ProviderID != nil {
+		instID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
+		if err != nil {
+			logger.Error(err, "Failed to parse instance ID from provider ID")
+			return ctrl.Result{}, err
+		}
+		instanceID = util.Pointer(instID)
+	}
 
 	listFilter := util.Filter{
-		ID:    machineScope.LinodeMachine.Spec.InstanceID,
+		ID:    instanceID,
 		Label: machineScope.LinodeMachine.Name,
 		Tags:  tags,
 	}
@@ -342,7 +351,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
-	machineScope.LinodeMachine.Spec.InstanceID = &linodeInstance.ID
+	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 
 	return r.reconcileInstanceCreate(ctx, logger, machineScope, linodeInstance)
 }
@@ -444,8 +453,6 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 		}
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLoadBalancing)
 	}
-
-	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
@@ -667,11 +674,13 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 
 	res = ctrl.Result{}
 
-	if machineScope.LinodeMachine.Spec.InstanceID == nil {
-		return res, nil, errors.New("missing instance ID")
+	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
+	if err != nil {
+		logger.Error(err, "Failed to parse instance ID from provider ID")
+		return ctrl.Result{}, nil, err
 	}
 
-	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
+	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, instanceID); err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to get Linode machine instance")
 
@@ -681,7 +690,6 @@ func (r *LinodeMachineReconciler) reconcileUpdate(
 
 			// Create new machine
 			machineScope.LinodeMachine.Spec.ProviderID = nil
-			machineScope.LinodeMachine.Spec.InstanceID = nil
 			machineScope.LinodeMachine.Status.InstanceState = nil
 			machineScope.LinodeMachine.Status.Conditions = nil
 
@@ -726,7 +734,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 ) (ctrl.Result, error) {
 	logger.Info("deleting machine")
 
-	if machineScope.LinodeMachine.Spec.InstanceID == nil {
+	if machineScope.LinodeMachine.Spec.ProviderID == nil {
 		logger.Info("Machine ID is missing, nothing to do")
 
 		if err := machineScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
@@ -747,7 +755,13 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		return ctrl.Result{}, fmt.Errorf("Failed to remove linodecluster finalizer %w", err)
 	}
 
-	if err := machineScope.LinodeClient.DeleteInstance(ctx, *machineScope.LinodeMachine.Spec.InstanceID); err != nil {
+	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
+	if err != nil {
+		logger.Error(err, "Failed to parse instance ID from provider ID")
+		return ctrl.Result{}, err
+	}
+
+	if err := machineScope.LinodeClient.DeleteInstance(ctx, instanceID); err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to delete Linode instance")
 
@@ -766,7 +780,6 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, clusterv1.DeletedReason, "instance has cleaned up")
 
 	machineScope.LinodeMachine.Spec.ProviderID = nil
-	machineScope.LinodeMachine.Spec.InstanceID = nil
 	machineScope.LinodeMachine.Status.InstanceState = nil
 
 	if err := machineScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
@@ -809,6 +822,7 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 			handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
 		).
+		// we care about reconciling on metadata updates for LinodeMachines because the OwnerRef for the Machine is needed
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
 		Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
