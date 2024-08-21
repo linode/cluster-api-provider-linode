@@ -44,7 +44,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
+var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
 	key := infrav1.LinodeObjectStorageKey{
@@ -249,7 +249,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 				}),
 			),
 		),
-		Once("secretType set to cluster resource set", func(ctx context.Context, _ Mock) {
+		Once("secretType set to cluster resource set fails", func(ctx context.Context, _ Mock) {
 			key.Spec.SecretType = clusteraddonsv1.ClusterResourceSetSecretType
 			Expect(k8sClient.Update(ctx, &key)).NotTo(Succeed())
 		}),
@@ -293,7 +293,108 @@ var _ = Describe("lifecycle", Ordered, Label("key", "lifecycle"), func() {
 	)
 })
 
-var _ = Describe("errors", Label("key", "errors"), func() {
+var _ = Describe("secret-template", Label("key", "key-secret-template"), func() {
+	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
+
+	reconciler := LinodeObjectStorageKeyReconciler{}
+	keyScope := scope.ObjectStorageKeyScope{}
+
+	suite.BeforeEach(func(_ context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+		keyScope.Logger = mck.Logger()
+
+		keyScope.Client = k8sClient
+		keyScope.Key = &infrav1.LinodeObjectStorageKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+			},
+			Spec: infrav1.LinodeObjectStorageKeySpec{
+				BucketAccess: []infrav1.BucketAccessRef{
+					{
+						BucketName:  "mybucket",
+						Permissions: "read_only",
+						Region:      "us-ord",
+					},
+				},
+			},
+		}
+	})
+
+	suite.Run(
+		Call("key created", func(ctx context.Context, mck Mock) {
+			mck.LinodeClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
+				ID:        1,
+				AccessKey: "access-key",
+				SecretKey: "secret-key",
+				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+					{
+						BucketName:  "mybucket",
+						Permissions: "read_only",
+						Region:      "us-ord",
+					},
+				},
+			}, nil)
+		}),
+		OneOf(
+			Path(
+				Call("with opaque secret", func(ctx context.Context, mck Mock) {
+					keyScope.LinodeClient = mck.LinodeClient
+					keyScope.Key.ObjectMeta.Name = "opaque"
+					keyScope.Key.Spec.SecretType = corev1.SecretTypeOpaque
+					keyScope.Key.Spec.SecretDataFormat = map[string]string{
+						"data": "{{ .AccessKey }}-{{ .SecretKey }}",
+					}
+
+					Expect(k8sClient.Create(ctx, keyScope.Key)).To(Succeed())
+					patchHelper, err := patch.NewHelper(keyScope.Key, k8sClient)
+					Expect(err).NotTo(HaveOccurred())
+					keyScope.PatchHelper = patchHelper
+				}),
+				Result("generates opaque secret with templated data", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, &keyScope)
+					Expect(err).NotTo(HaveOccurred())
+
+					var secret corev1.Secret
+					secretKey := client.ObjectKey{Namespace: "default", Name: "opaque-obj-key"}
+					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
+					Expect(secret.Data).To(HaveLen(1))
+					Expect(string(secret.Data["data"])).To(Equal("access-key-secret-key"))
+				}),
+			),
+			Path(
+				Call("with cluster-resource-set secret", func(ctx context.Context, mck Mock) {
+					keyScope.LinodeClient = mck.LinodeClient
+					keyScope.Key.ObjectMeta.Name = "cluster-resource-set"
+					keyScope.Key.Spec.SecretType = clusteraddonsv1.ClusterResourceSetSecretType
+					keyScope.Key.Spec.SecretDataFormat = map[string]string{
+						"data": "{{ .AccessKey }}-{{ .SecretKey }}-{{ .BucketEndpoint }}",
+					}
+
+					Expect(k8sClient.Create(ctx, keyScope.Key)).To(Succeed())
+					patchHelper, err := patch.NewHelper(keyScope.Key, k8sClient)
+					Expect(err).NotTo(HaveOccurred())
+					keyScope.PatchHelper = patchHelper
+
+					mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), "us-ord", "mybucket").Return(&linodego.ObjectStorageBucket{
+						Hostname: "hostname",
+					}, nil)
+				}),
+				Result("generates cluster-resource-set secret with templated data", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, &keyScope)
+					Expect(err).NotTo(HaveOccurred())
+
+					var secret corev1.Secret
+					secretKey := client.ObjectKey{Namespace: "default", Name: "cluster-resource-set-obj-key"}
+					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
+					Expect(secret.Data).To(HaveLen(1))
+					Expect(string(secret.Data["data"])).To(Equal("access-key-secret-key-hostname"))
+				}),
+			),
+		),
+	)
+})
+
+var _ = Describe("errors", Label("key", "key-errors"), func() {
 	suite := NewControllerSuite(
 		GinkgoT(),
 		mock.MockLinodeClient{},

@@ -302,31 +302,28 @@ func TestGenerateKeySecret(t *testing.T) {
 		name         string
 		Key          *infrav1alpha2.LinodeObjectStorageKey
 		key          *linodego.ObjectStorageKey
-		expectedErr  error
 		expectK8s    func(*mock.MockK8sClient)
 		expectLinode func(*mock.MockLinodeClient)
+		expectedData map[string]string
+		expectedErr  error
 	}{
 		{
 			name: "opaque secret",
 			Key: &infrav1alpha2.LinodeObjectStorageKey{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
+					Name:      "test-key",
 					Namespace: "test-namespace",
-				},
-				Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-					SecretName: ptr.To("test-bucket-obj-key"),
 				},
 			},
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
-				Label:     "read_write",
-				SecretKey: "read_write_key",
-				AccessKey: "read_write_access_key",
-				Limited:   false,
+				Label:     "test-key",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
-						Region:      "test-bucket",
+						Region:      "region",
 						Permissions: "read_write",
 					},
 				},
@@ -338,39 +335,70 @@ func TestGenerateKeySecret(t *testing.T) {
 					return s
 				}).Times(1)
 			},
+			expectedData: map[string]string{
+				"AccessKey": "access_key",
+				"SecretKey": "secret_key",
+			},
 			expectedErr: nil,
+		},
+		{
+			name: "invalid template",
+			Key: &infrav1alpha2.LinodeObjectStorageKey{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-key",
+					Namespace: "test-namespace",
+				},
+				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+					SecretDataFormat: map[string]string{
+						"key": "{{ .AccessKey",
+					},
+				},
+			},
+			key: &linodego.ObjectStorageKey{
+				ID:        1,
+				Label:     "test-key",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
+				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+					{
+						BucketName:  "bucket",
+						Region:      "region",
+						Permissions: "read_write",
+					},
+				},
+			},
+			expectedErr: errors.New("unable to generate secret; failed to parse template in secret data format for key"),
 		},
 		{
 			name: "cluster resource-set",
 			Key: &infrav1alpha2.LinodeObjectStorageKey{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
+					Name:      "test-key",
 					Namespace: "test-namespace",
 				},
 				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
 					BucketAccess: []infrav1alpha2.BucketAccessRef{
 						{
 							BucketName:  "bucket",
-							Region:      "test-bucket",
+							Region:      "region",
 							Permissions: "read_write",
 						},
 					},
 					SecretType: clusteraddonsv1.ClusterResourceSetSecretType,
-				},
-				Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-					SecretName: ptr.To("test-bucket-obj-key"),
+					SecretDataFormat: map[string]string{
+						"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+					},
 				},
 			},
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
-				Label:     "read_write",
-				SecretKey: "read_write_key",
-				AccessKey: "read_write_access_key",
-				Limited:   false,
+				Label:     "test-key",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
-						Region:      "test-bucket",
+						Region:      "region",
 						Permissions: "read_write",
 					},
 				},
@@ -383,38 +411,105 @@ func TestGenerateKeySecret(t *testing.T) {
 				}).Times(1)
 			},
 			expectLinode: func(mck *mock.MockLinodeClient) {
-				mck.EXPECT().GetObjectStorageBucket(gomock.Any(), "test-bucket", "bucket").Return(&linodego.ObjectStorageBucket{
+				mck.EXPECT().GetObjectStorageBucket(gomock.Any(), "region", "bucket").Return(&linodego.ObjectStorageBucket{
 					Label:    "bucket",
-					Region:   "us-ord",
+					Region:   "region",
 					Hostname: "hostname",
 				}, nil)
+			},
+			expectedData: map[string]string{
+				"key": "access_key,secret_key,hostname",
 			},
 			expectedErr: nil,
 		},
 		{
-			name: "cluster resource-set with empty buckets",
+			name: "cluster resource-set get bucket fail",
 			Key: &infrav1alpha2.LinodeObjectStorageKey{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
+					Name:      "test-key",
+					Namespace: "test-namespace",
+				},
+				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+					BucketAccess: []infrav1alpha2.BucketAccessRef{
+						{
+							BucketName:  "bucket",
+							Region:      "region",
+							Permissions: "read_write",
+						},
+					},
+					SecretType: clusteraddonsv1.ClusterResourceSetSecretType,
+					SecretDataFormat: map[string]string{
+						"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+					},
+				},
+			},
+			key: &linodego.ObjectStorageKey{
+				ID:        1,
+				Label:     "test-key",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
+				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+					{
+						BucketName:  "bucket",
+						Region:      "region",
+						Permissions: "read_write",
+					},
+				},
+			},
+			expectLinode: func(mck *mock.MockLinodeClient) {
+				mck.EXPECT().GetObjectStorageBucket(gomock.Any(), "region", "bucket").Return(nil, errors.New("api err"))
+			},
+			expectedErr: errors.New("unable to generate addons.cluster.x-k8s.io/resource-set; failed to get bucket: api err"),
+		},
+		{
+			name: "cluster resource-set with empty data format",
+			Key: &infrav1alpha2.LinodeObjectStorageKey{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-key",
 					Namespace: "test-namespace",
 				},
 				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
 					SecretType: clusteraddonsv1.ClusterResourceSetSecretType,
 				},
-				Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-					SecretName: ptr.To("test-bucket-obj-key"),
+			},
+			key: &linodego.ObjectStorageKey{
+				ID:        1,
+				Label:     "test-key",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
+				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
+					{
+						BucketName:  "bucket",
+						Region:      "region",
+						Permissions: "read_write",
+					},
+				},
+			},
+			expectedErr: errors.New("unable to generate addons.cluster.x-k8s.io/resource-set; spec.secretDataFormat must specify resources"),
+		},
+		{
+			name: "cluster resource-set with empty buckets",
+			Key: &infrav1alpha2.LinodeObjectStorageKey{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-key",
+					Namespace: "test-namespace",
+				},
+				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+					SecretType: clusteraddonsv1.ClusterResourceSetSecretType,
+					SecretDataFormat: map[string]string{
+						"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+					},
 				},
 			},
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
-				Label:     "read_write",
-				SecretKey: "read_write_key",
-				AccessKey: "read_write_access_key",
-				Limited:   false,
+				Label:     "test-key",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
-						Region:      "test-bucket",
+						Region:      "region",
 						Permissions: "read_write",
 					},
 				},
@@ -425,11 +520,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			name: "missing key",
 			Key: &infrav1alpha2.LinodeObjectStorageKey{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
+					Name:      "test-key",
 					Namespace: "test-namespace",
-				},
-				Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-					SecretName: ptr.To("test-bucket-obj-key"),
 				},
 			},
 			expectedErr: errors.New("expected non-nil object storage key"),
@@ -438,23 +530,19 @@ func TestGenerateKeySecret(t *testing.T) {
 			name: "client scheme does not have infrav1alpha2",
 			Key: &infrav1alpha2.LinodeObjectStorageKey{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-bucket",
+					Name:      "test-key",
 					Namespace: "test-namespace",
-				},
-				Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-					SecretName: ptr.To("test-bucket-obj-key"),
 				},
 			},
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
-				Label:     "read_write",
-				SecretKey: "read_write_key",
-				AccessKey: "read_write_access_key",
-				Limited:   false,
+				Label:     "test-key",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
-						Region:      "test-bucket",
+						Region:      "region",
 						Permissions: "read_write",
 					},
 				},
@@ -497,6 +585,7 @@ func TestGenerateKeySecret(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			assert.Equal(t, testcase.expectedData, secret.StringData)
 			assert.Equal(t, "LinodeObjectStorageKey", secret.OwnerReferences[0].Kind)
 			assert.True(t, *secret.OwnerReferences[0].Controller)
 		})

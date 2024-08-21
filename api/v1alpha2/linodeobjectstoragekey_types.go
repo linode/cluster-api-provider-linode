@@ -55,6 +55,14 @@ type LinodeObjectStorageKeySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	SecretType corev1.SecretType `json:"secretType,omitempty"`
+
+	// SecretDataFormat instructs the controller how to format the data stored in the secret containing access key details.
+	// It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey.
+	// If no format is supplied then a generic one is used containing the values specified.
+	// When SecretType is set to addons.cluster.x-k8s.io/resource-set, a .BucketEndpoint value is also available pointing to the location of the first bucket specified in BucketAccess.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	SecretDataFormat map[string]string `json:"secretDataFormat,omitempty"`
 }
 
 // LinodeObjectStorageKeyStatus defines the observed state of LinodeObjectStorageKey

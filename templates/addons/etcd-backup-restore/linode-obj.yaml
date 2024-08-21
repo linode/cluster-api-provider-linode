@@ -25,11 +25,23 @@ metadata:
     cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
   name: ${CLUSTER_NAME}-etcd-backup
 spec:
-  secretType: addons.cluster.x-k8s.io/resource-set
   bucketAccess:
     - bucketName: ${CLUSTER_NAME}-etcd-backup
       permissions: read_write
       region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
+  secretType: addons.cluster.x-k8s.io/resource-set
+  secretDataFormat:
+    etcd-backup.yaml: |
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: ${CLUSTER_NAME}-etcd-backup-obj-key
+      stringData:
+        bucket_name: ${CLUSTER_NAME}-etcd-backup
+        bucket_region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
+        bucket_endpoint: {{ .BucketEndpoint }}
+        access_key: {{ .AccessKey }}
+        secret_key: {{ .SecretKey }}
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet
