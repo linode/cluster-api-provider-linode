@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -49,11 +50,16 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
+const (
+	ConditionLoadBalancing clusterv1.ConditionType = "ConditionLoadBalancing"
+)
+
 // LinodeClusterReconciler reconciles a LinodeCluster object
 type LinodeClusterReconciler struct {
 	client.Client
 	Recorder           record.EventRecorder
 	LinodeClientConfig scope.ClientConfig
+	DnsClientConfig    scope.ClientConfig
 	WatchFilterValue   string
 	ReconcileTimeout   time.Duration
 }
@@ -92,10 +98,12 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	clusterScope, err := scope.NewClusterScope(
 		ctx,
 		r.LinodeClientConfig,
+		r.DnsClientConfig,
 		scope.ClusterScopeParams{
-			Client:        r.TracedClient(),
-			Cluster:       cluster,
-			LinodeCluster: linodeCluster,
+			Client:            r.TracedClient(),
+			Cluster:           cluster,
+			LinodeCluster:     linodeCluster,
+			LinodeMachineList: infrav1alpha2.LinodeMachineList{},
 		},
 	)
 
@@ -126,6 +134,14 @@ func (r *LinodeClusterReconciler) reconcile(
 			reterr = err
 		}
 	}()
+
+	labels := map[string]string{
+		clusterv1.ClusterNameLabel:         clusterScope.LinodeCluster.Name,
+		clusterv1.MachineControlPlaneLabel: "",
+	}
+	if err := r.TracedClient().List(ctx, &clusterScope.LinodeMachines, client.InNamespace(clusterScope.LinodeCluster.Namespace), client.MatchingLabels(labels)); err != nil {
+		return res, err
+	}
 
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
@@ -159,6 +175,19 @@ func (r *LinodeClusterReconciler) reconcile(
 	clusterScope.LinodeCluster.Status.Ready = true
 	conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
 
+	for _, eachMachine := range clusterScope.LinodeMachines.Items {
+		if len(eachMachine.Status.Addresses) == 0 {
+			return res, nil
+		}
+	}
+
+	err := r.addMachineToLB(ctx, clusterScope)
+	if err != nil {
+		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
+		return retryIfTransient(err)
+	}
+	conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancing)
+
 	return res, nil
 }
 
@@ -181,7 +210,7 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 	// handle creation for the loadbalancer for the control plane
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
 		r.handleDNS(clusterScope)
-	} else if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" || clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "" {
+	} else {
 		if err := r.handleNBCreate(ctx, logger, clusterScope); err != nil {
 			return err
 		}
@@ -256,7 +285,7 @@ func (r *LinodeClusterReconciler) handleDNS(clusterScope *scope.ClusterScope) {
 
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil {
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancing) {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 
 		if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
@@ -270,11 +299,18 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		return nil
 	}
 
-	err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
-	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-		logger.Error(err, "failed to delete NodeBalancer")
-		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
-		return err
+	if err := r.removeMachineFromLB(ctx, logger, clusterScope); err != nil {
+		return fmt.Errorf("remove machine from loadbalancer: %w", err)
+	}
+	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancing, "cleared loadbalancer", clusterv1.ConditionSeverityInfo, "")
+
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
+		err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
+		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+			logger.Error(err, "failed to delete NodeBalancer")
+			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+			return err
+		}
 	}
 
 	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
@@ -314,6 +350,10 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 				kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha2.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha2.LinodeCluster{}),
 			),
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+		).
+		Watches(
+			&infrav1alpha2.LinodeMachine{},
+			handler.EnqueueRequestsFromMapFunc(r.linodeMachineToLinodeCluster(mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
@@ -324,4 +364,50 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 
 func (r *LinodeClusterReconciler) TracedClient() client.Client {
 	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimereconciler.DefaultDecorator())
+}
+
+func (r *LinodeClusterReconciler) linodeMachineToLinodeCluster(logger logr.Logger) handler.MapFunc {
+	logger = logger.WithName("LinodeClusterReconciler").WithName("linodeMachineToLinodeCluster")
+
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
+		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
+		defer cancel()
+
+		linodeMachine, ok := o.(*infrav1alpha2.LinodeMachine)
+		if !ok {
+			logger.Info("Failed to cast object to LinodeMachine")
+			return nil
+		}
+
+		// We only need control plane machines to trigger reconciliation
+		machine, err := getOwnerMachine(ctx, r.TracedClient(), *linodeMachine, logger)
+		if err != nil || machine == nil {
+			return nil
+		}
+		if !kutil.IsControlPlaneMachine(machine) {
+			return nil
+		}
+
+		linodeCluster := infrav1alpha2.LinodeCluster{}
+		if err := r.TracedClient().Get(
+			ctx,
+			types.NamespacedName{
+				Name:      linodeMachine.ObjectMeta.Labels[clusterv1.ClusterNameLabel],
+				Namespace: linodeMachine.Namespace,
+			},
+			&linodeCluster); err != nil {
+			logger.Info("Failed to get LinodeCluster")
+			return nil
+		}
+
+		result := make([]ctrl.Request, 0, 1)
+		result = append(result, ctrl.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: linodeCluster.Namespace,
+				Name:      linodeCluster.Name,
+			},
+		})
+
+		return result
+	}
 }

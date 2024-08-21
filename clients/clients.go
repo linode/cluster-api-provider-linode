@@ -64,6 +64,7 @@ type LinodeVPCClient interface {
 type LinodeNodeBalancerClient interface {
 	CreateNodeBalancer(ctx context.Context, opts linodego.NodeBalancerCreateOptions) (*linodego.NodeBalancer, error)
 	GetNodeBalancer(ctx context.Context, nodebalancerID int) (*linodego.NodeBalancer, error)
+	ListNodeBalancerNodes(ctx context.Context, nodebalancerID int, configID int, opts *linodego.ListOptions) ([]linodego.NodeBalancerNode, error)
 	GetNodeBalancerConfig(ctx context.Context, nodebalancerID int, configID int) (*linodego.NodeBalancerConfig, error)
 	CreateNodeBalancerConfig(ctx context.Context, nodebalancerID int, opts linodego.NodeBalancerConfigCreateOptions) (*linodego.NodeBalancerConfig, error)
 	DeleteNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, nodeID int) error

@@ -32,9 +32,10 @@ import (
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	Client        K8sClient
-	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1alpha2.LinodeCluster
+	Client            K8sClient
+	Cluster           *clusterv1.Cluster
+	LinodeCluster     *infrav1alpha2.LinodeCluster
+	LinodeMachineList infrav1alpha2.LinodeMachineList
 }
 
 func validateClusterScopeParams(params ClusterScopeParams) error {
@@ -50,7 +51,7 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 
 // NewClusterScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewClusterScope(ctx context.Context, linodeClientConfig ClientConfig, params ClusterScopeParams) (*ClusterScope, error) {
+func NewClusterScope(ctx context.Context, linodeClientConfig, dnsClientConfig ClientConfig, params ClusterScopeParams) (*ClusterScope, error) {
 	if err := validateClusterScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -63,6 +64,11 @@ func NewClusterScope(ctx context.Context, linodeClientConfig ClientConfig, param
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}
 		linodeClientConfig.Token = string(apiToken)
+		dnsToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeCluster.Spec.CredentialsRef, params.LinodeCluster.GetNamespace(), "dnsToken")
+		if err != nil || len(dnsToken) == 0 {
+			dnsToken = apiToken
+		}
+		dnsClientConfig.Token = string(dnsToken)
 	}
 	linodeClient, err := CreateLinodeClient(linodeClientConfig)
 	if err != nil {
@@ -74,22 +80,37 @@ func NewClusterScope(ctx context.Context, linodeClientConfig ClientConfig, param
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
+	akamDomainsClient, err := setUpEdgeDNSInterface()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create akamai dns client: %w", err)
+	}
+	linodeDomainsClient, err := CreateLinodeClient(dnsClientConfig, WithRetryCount(0))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
+
 	return &ClusterScope{
-		Client:        params.Client,
-		Cluster:       params.Cluster,
-		LinodeClient:  linodeClient,
-		LinodeCluster: params.LinodeCluster,
-		PatchHelper:   helper,
+		Client:              params.Client,
+		Cluster:             params.Cluster,
+		LinodeClient:        linodeClient,
+		LinodeDomainsClient: linodeDomainsClient,
+		AkamaiDomainsClient: akamDomainsClient,
+		LinodeCluster:       params.LinodeCluster,
+		LinodeMachines:      params.LinodeMachineList,
+		PatchHelper:         helper,
 	}, nil
 }
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	Client        K8sClient
-	PatchHelper   *patch.Helper
-	LinodeClient  LinodeClient
-	Cluster       *clusterv1.Cluster
-	LinodeCluster *infrav1alpha2.LinodeCluster
+	Client              K8sClient
+	PatchHelper         *patch.Helper
+	LinodeClient        LinodeClient
+	Cluster             *clusterv1.Cluster
+	LinodeCluster       *infrav1alpha2.LinodeCluster
+	LinodeMachines      infrav1alpha2.LinodeMachineList
+	AkamaiDomainsClient AkamClient
+	LinodeDomainsClient LinodeClient
 }
 
 // PatchObject persists the cluster configuration and status.
