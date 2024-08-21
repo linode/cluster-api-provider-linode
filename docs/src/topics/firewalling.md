@@ -103,7 +103,9 @@ spec:
       protocol: "TCP"
       addresses:
         ipv4:
-          - "172.232.1.1/16"
+          - "10.0.0.0/24"
+  # outboundPolicy: ACCEPT
+  # outboundRules: []
 ```
 
 Cloud Firewalls are not automatically created for any CAPL flavor at this time.
