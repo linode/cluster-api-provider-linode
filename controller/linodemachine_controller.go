@@ -205,30 +205,7 @@ func (r *LinodeMachineReconciler) reconcile(
 	// Delete
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = cerrs.DeleteMachineError
-
-		linodeClusterKey := client.ObjectKey{
-			Namespace: machineScope.LinodeMachine.Namespace,
-			Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
-		}
-
-		if err := r.Client.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
-			if err = client.IgnoreNotFound(err); err != nil {
-				return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
-			}
-		}
-
 		return r.reconcileDelete(ctx, logger, machineScope)
-	}
-
-	linodeClusterKey := client.ObjectKey{
-		Namespace: machineScope.LinodeMachine.Namespace,
-		Name:      machineScope.Cluster.Spec.InfrastructureRef.Name,
-	}
-
-	if err := r.Get(ctx, linodeClusterKey, machineScope.LinodeCluster); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
-		}
 	}
 
 	// Update
