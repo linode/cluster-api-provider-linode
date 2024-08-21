@@ -59,7 +59,7 @@ var (
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
 )
 
-func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
+func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
@@ -86,7 +86,7 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 	if createConfig.Tags == nil {
 		createConfig.Tags = []string{}
 	}
-	createConfig.Tags = append(createConfig.Tags, tags...)
+	createConfig.Tags = append(createConfig.Tags, machineScope.LinodeCluster.Name)
 
 	if createConfig.Label == "" {
 		createConfig.Label = machineScope.LinodeMachine.Name

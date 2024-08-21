@@ -234,74 +234,24 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		return ctrl.Result{}, err
 	}
 
-	tags := []string{machineScope.LinodeCluster.Name}
-	var instanceID *int
-	if machineScope.LinodeMachine.Spec.ProviderID != nil {
-		instID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
-		if err != nil {
-			logger.Error(err, "Failed to parse instance ID from provider ID")
+	// get the bootstrap data for the Linode instance and set it for create config
+	createOpts, err := r.newCreateConfig(ctx, machineScope, logger)
+	if err != nil {
+		logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
+		return retryIfTransient(err)
+	}
+
+	linodeInstance, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
+	if err != nil {
+		logger.Error(err, "Failed to create Linode machine instance")
+		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+			ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
+			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 			return ctrl.Result{}, err
 		}
-		instanceID = util.Pointer(instID)
+		return retryIfTransient(err)
 	}
-
-	// TODO: switch this to a get or just list all machines by tag (cluster name) if using caching
-	listFilter := util.Filter{
-		ID:    instanceID,
-		Label: machineScope.LinodeMachine.Name,
-		Tags:  tags,
-	}
-	filter, err := listFilter.String()
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	linodeInstances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
-	if err != nil {
-		logger.Error(err, "Failed to list Linode machine instances")
-
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
-	}
-
-	var linodeInstance *linodego.Instance
-	switch len(linodeInstances) {
-	case 1:
-		logger.Info("Linode instance already exists")
-		linodeInstance = &linodeInstances[0]
-	case 0:
-		// get the bootstrap data for the Linode instance and set it for create config
-		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
-		if err != nil {
-			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
-			return retryIfTransient(err)
-		}
-		linodeInstance, err = machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-		if err != nil {
-			if util.IsRetryableError(err) {
-				logger.Error(err, "Failed to create Linode instance due to API error, requeing")
-				if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
-					return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
-				}
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-			}
-			logger.Error(err, "Failed to create Linode machine instance")
-
-			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-				ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-				return ctrl.Result{}, err
-			}
-
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
-		}
-	default:
-		err = errors.New("multiple instances")
-		logger.Error(err, "multiple instances found", "tags", tags)
-
-		return ctrl.Result{}, err
-	}
-
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
-
 	return r.reconcileInstanceCreate(ctx, logger, machineScope, linodeInstance)
 }
 
