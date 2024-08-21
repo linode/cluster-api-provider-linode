@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -381,7 +380,11 @@ func (r *LinodeClusterReconciler) linodeMachineToLinodeCluster(logger logr.Logge
 		}
 
 		// We only need control plane machines to trigger reconciliation
-		if !strings.Contains(linodeMachine.Name, "control-plane") {
+		machine, err := GetOwnerMachine(ctx, r.TracedClient(), *linodeMachine, logger)
+		if err != nil || machine == nil {
+			return nil
+		}
+		if !kutil.IsControlPlaneMachine(machine) {
 			return nil
 		}
 

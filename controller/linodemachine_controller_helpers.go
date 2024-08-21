@@ -188,8 +188,8 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 	return ips, nil
 }
 
-func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
-	machine, err := kutil.GetOwnerMachine(ctx, r.TracedClient(), linodeMachine.ObjectMeta)
+func GetOwnerMachine(ctx context.Context, tracedClient client.Client, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
+	machine, err := kutil.GetOwnerMachine(ctx, tracedClient, linodeMachine.ObjectMeta)
 	if err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch owner machine")
