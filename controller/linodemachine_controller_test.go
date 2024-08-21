@@ -41,6 +41,7 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
+	"github.com/linode/cluster-api-provider-linode/util"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -112,7 +113,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				InstanceID:     ptr.To(0),
+				ProviderID:     ptr.To("linode://123"),
 				Type:           "g6-nanode-1",
 				Image:          rutil.DefaultMachineControllerLinodeImage,
 				DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
@@ -197,12 +198,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			LinodeMachine: &linodeMachine,
 		}
 
-		machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		mScope.MachinePatchHelper = machinePatchHelper
-		clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		mScope.ClusterPatchHelper = clusterPatchHelper
+		mScope.PatchHelper = patchHelper
 
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
@@ -213,7 +211,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
 		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
-		Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 		Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
 			{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
@@ -262,12 +259,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeMachine: &linodeMachine,
 			}
 
-			machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 			Expect(err).NotTo(HaveOccurred())
-			mScope.MachinePatchHelper = machinePatchHelper
-			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
-			Expect(err).NotTo(HaveOccurred())
-			mScope.ClusterPatchHelper = clusterPatchHelper
+			mScope.PatchHelper = patchHelper
 
 			reconciler.ReconcileTimeout = time.Nanosecond
 
@@ -311,12 +305,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeMachine: &linodeMachine,
 			}
 
-			machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 			Expect(err).NotTo(HaveOccurred())
-			mScope.MachinePatchHelper = machinePatchHelper
-			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
-			Expect(err).NotTo(HaveOccurred())
-			mScope.ClusterPatchHelper = clusterPatchHelper
+			mScope.PatchHelper = patchHelper
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
@@ -413,7 +404,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					Address: "192.168.0.2:6443",
 					Mode:    linodego.ModeAccept,
 				}).
-				After(getAddrs).
+				After(getAddrs).AnyTimes().
 				Return(nil, nil)
 			getAddrs = mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
@@ -447,12 +438,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeMachine: &linodeMachine,
 			}
 
-			machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 			Expect(err).NotTo(HaveOccurred())
-			mScope.MachinePatchHelper = machinePatchHelper
-			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
-			Expect(err).NotTo(HaveOccurred())
-			mScope.ClusterPatchHelper = clusterPatchHelper
+			mScope.PatchHelper = patchHelper
 			Expect(k8sClient.Create(ctx, &linodeCluster)).To(Succeed())
 			Expect(k8sClient.Create(ctx, &linodeMachine)).To(Succeed())
 
@@ -464,7 +452,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
-			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
 				{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
@@ -544,12 +531,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				LinodeMachine: &linodeMachine,
 			}
 
-			machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 			Expect(err).NotTo(HaveOccurred())
-			mScope.MachinePatchHelper = machinePatchHelper
-			clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
-			Expect(err).NotTo(HaveOccurred())
-			mScope.ClusterPatchHelper = clusterPatchHelper
+			mScope.PatchHelper = patchHelper
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
@@ -614,7 +598,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					Address: "192.168.0.2:6443",
 					Mode:    linodego.ModeAccept,
 				}).
-				After(getAddrs).
+				After(getAddrs).AnyTimes().
 				Return(nil, nil)
 			getAddrs = mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
@@ -652,7 +636,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
-			Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
 				{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
@@ -727,7 +710,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				InstanceID: ptr.To(0),
+				ProviderID: ptr.To("linode://0"),
 				Type:       "g6-nanode-1",
 				Image:      rutil.DefaultMachineControllerLinodeImage,
 			},
@@ -803,21 +786,17 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			}}, nil)
 
 		mScope := scope.MachineScope{
-			Client:              k8sClient,
-			LinodeClient:        mockLinodeClient,
-			LinodeDomainsClient: mockLinodeClient,
-			Cluster:             &cluster,
-			Machine:             &machine,
-			LinodeCluster:       &linodeCluster,
-			LinodeMachine:       &linodeMachine,
+			Client:        k8sClient,
+			LinodeClient:  mockLinodeClient,
+			Cluster:       &cluster,
+			Machine:       &machine,
+			LinodeCluster: &linodeCluster,
+			LinodeMachine: &linodeMachine,
 		}
 
-		machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		mScope.MachinePatchHelper = machinePatchHelper
-		clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		mScope.ClusterPatchHelper = clusterPatchHelper
+		mScope.PatchHelper = patchHelper
 
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
@@ -828,7 +807,6 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
 		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
-		Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 		Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
 			{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
@@ -859,7 +837,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
-			InstanceID:    ptr.To(0),
+			ProviderID:    ptr.To("linode://0"),
 			Type:          "g6-nanode-1",
 			Image:         rutil.DefaultMachineControllerLinodeImage,
 			Configuration: &infrav1alpha2.InstanceConfiguration{Kernel: "test"},
@@ -933,13 +911,9 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 		Expect(k8sClient.Get(ctx, machineKey, linodeMachine)).To(Succeed())
 		mScope.LinodeMachine = linodeMachine
 
-		machinePatchHelper, err := patch.NewHelper(linodeMachine, k8sClient)
+		patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		mScope.MachinePatchHelper = machinePatchHelper
-		clusterPatchHelper, err := patch.NewHelper(linodeCluster, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		mScope.ClusterPatchHelper = clusterPatchHelper
-
+		mScope.PatchHelper = patchHelper
 		Expect(k8sClient.Get(ctx, clusterKey, linodeCluster)).To(Succeed())
 		mScope.LinodeCluster = linodeCluster
 
@@ -950,23 +924,30 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 		OneOf(
 			Path(
 				Call("machine is not created because there was an error creating instance", func(ctx context.Context, mck Mock) {
-					listInst := mck.LinodeClient.EXPECT().
-						ListInstances(ctx, gomock.Any()).
-						Return([]linodego.Instance{}, nil)
-					getRegion := mck.LinodeClient.EXPECT().
-						GetRegion(ctx, gomock.Any()).
-						After(listInst).
-						Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-					getImage := mck.LinodeClient.EXPECT().
-						GetImage(ctx, gomock.Any()).
-						After(getRegion).
-						Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-					mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
-						After(getImage).
-						Return(nil, errors.New("failed to ensure instance"))
 				}),
 				OneOf(
+					Path(Result("create error", func(ctx context.Context, mck Mock) {
+						linodeMachine.Spec.ProviderID = util.Pointer("linode://foo")
+						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).To(HaveOccurred())
+						Expect(mck.Logs()).To(ContainSubstring("Failed to parse instance ID from provider ID"))
+					})),
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+						linodeMachine.Spec.ProviderID = util.Pointer("linode://123")
+						listInst := mck.LinodeClient.EXPECT().
+							ListInstances(ctx, gomock.Any()).
+							Return([]linodego.Instance{}, nil)
+						getRegion := mck.LinodeClient.EXPECT().
+							GetRegion(ctx, gomock.Any()).
+							After(listInst).
+							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+						getImage := mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							After(getRegion).
+							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
+							After(getImage).
+							Return(nil, errors.New("failed to ensure instance"))
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
@@ -975,6 +956,20 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 					Path(Result("create machine error - timeout error", func(ctx context.Context, mck Mock) {
 						tempTimeout := reconciler.ReconcileTimeout
 						reconciler.ReconcileTimeout = time.Nanosecond
+						listInst := mck.LinodeClient.EXPECT().
+							ListInstances(ctx, gomock.Any()).
+							Return([]linodego.Instance{}, nil)
+						getRegion := mck.LinodeClient.EXPECT().
+							GetRegion(ctx, gomock.Any()).
+							After(listInst).
+							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+						getImage := mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							After(getRegion).
+							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
+							After(getImage).
+							Return(nil, errors.New("failed to ensure instance"))
 						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("failed to ensure instance"))
@@ -1147,7 +1142,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightReady)).To(BeTrue())
 
 						Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
-						Expect(*linodeMachine.Spec.InstanceID).To(Equal(123))
 						Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 						Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
 							{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
@@ -1185,11 +1179,11 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 			Network: infrav1alpha2.NetworkSpec{},
 		},
 	}
-	instanceID := 12345
+	providerID := "linode://12345"
 	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
-			InstanceID: &instanceID,
+			ProviderID: &providerID,
 		},
 	}
 	machine := &clusterv1.Machine{
@@ -1220,13 +1214,10 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
 		reconciler.Recorder = mck.Recorder()
 		mScope.LinodeMachine = linodeMachine
-		machinePatchHelper, err := patch.NewHelper(linodeMachine, k8sClient)
+		patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		mScope.MachinePatchHelper = machinePatchHelper
+		mScope.PatchHelper = patchHelper
 		mScope.LinodeCluster = linodeCluster
-		clusterPatchHelper, err := patch.NewHelper(linodeCluster, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		mScope.ClusterPatchHelper = clusterPatchHelper
 		mScope.LinodeClient = mck.LinodeClient
 		reconciler.Client = mck.K8sClient
 	})
@@ -1235,11 +1226,20 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 		OneOf(
 			Path(
 				Call("machine is not deleted because there was an error deleting instance", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
-						Return(errors.New("failed to delete instance"))
 				}),
 				OneOf(
+					Path(Result("delete error", func(ctx context.Context, mck Mock) {
+						tmpProviderID := linodeMachine.Spec.ProviderID
+						linodeMachine.Spec.ProviderID = util.Pointer("linode://foo")
+						_, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+						Expect(err).To(HaveOccurred())
+						Expect(mck.Logs()).To(ContainSubstring("Failed to parse instance ID from provider ID"))
+						linodeMachine.Spec.ProviderID = tmpProviderID
+
+					})),
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
+						mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
+							Return(errors.New("failed to delete instance"))
 						res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
@@ -1248,6 +1248,8 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 					Path(Result("create machine error - timeout error", func(ctx context.Context, mck Mock) {
 						tempTimeout := reconciler.ReconcileTimeout
 						reconciler.ReconcileTimeout = time.Nanosecond
+						mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
+							Return(errors.New("failed to delete instance"))
 						_, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
 						Expect(err).To(HaveOccurred())
 						Expect(err.Error()).To(ContainSubstring("failed to delete instance"))
@@ -1275,6 +1277,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 	var reconciler *LinodeMachineReconciler
 	var lpgReconciler *LinodePlacementGroupReconciler
 	var linodePlacementGroup infrav1alpha2.LinodePlacementGroup
+	var linodeFirewall infrav1alpha2.LinodeFirewall
 
 	var mockCtrl *gomock.Controller
 	var testLogs *bytes.Buffer
@@ -1343,6 +1346,22 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		}
 		Expect(k8sClient.Create(ctx, &linodePlacementGroup)).To(Succeed())
 
+		linodeFirewall = infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-fw",
+				Namespace: defaultNamespace,
+				UID:       "5123123",
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{
+				FirewallID: ptr.To(2),
+				Enabled:    true,
+			},
+			Status: infrav1alpha2.LinodeFirewallStatus{
+				Ready: true,
+			},
+		}
+		Expect(k8sClient.Create(ctx, &linodeFirewall)).To(Succeed())
+
 		linodeMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
@@ -1350,12 +1369,16 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				InstanceID: ptr.To(0),
+				ProviderID: ptr.To("linode://0"),
 				Type:       "g6-nanode-1",
 				Image:      rutil.DefaultMachineControllerLinodeImage,
 				PlacementGroupRef: &corev1.ObjectReference{
 					Namespace: defaultNamespace,
 					Name:      "test-pg",
+				},
+				FirewallRef: &corev1.ObjectReference{
+					Namespace: defaultNamespace,
+					Name:      "test-fw",
 				},
 			},
 		}
@@ -1388,7 +1411,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		}
 	})
 
-	It("creates a instance in a PlacementGroup", func(ctx SpecContext) {
+	It("creates a instance in a PlacementGroup with a firewall", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
@@ -1411,26 +1434,22 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{
-			Client:              k8sClient,
-			LinodeClient:        mockLinodeClient,
-			LinodeDomainsClient: mockLinodeClient,
-			Cluster:             &cluster,
-			Machine:             &machine,
-			LinodeCluster:       &linodeCluster,
-			LinodeMachine:       &linodeMachine,
+			Client:        k8sClient,
+			LinodeClient:  mockLinodeClient,
+			Cluster:       &cluster,
+			Machine:       &machine,
+			LinodeCluster: &linodeCluster,
+			LinodeMachine: &linodeMachine,
 		}
 
-		machinePatchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
-		mScope.MachinePatchHelper = machinePatchHelper
-		clusterPatchHelper, err := patch.NewHelper(mScope.LinodeCluster, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		mScope.ClusterPatchHelper = clusterPatchHelper
+		mScope.PatchHelper = patchHelper
 
 		createOpts, err := reconciler.newCreateConfig(ctx, &mScope, []string{}, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
 		Expect(createOpts.PlacementGroup.ID).To(Equal(1))
+		Expect(createOpts.FirewallID).To(Equal(2))
 	})
-
 })

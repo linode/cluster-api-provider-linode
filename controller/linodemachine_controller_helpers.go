@@ -119,6 +119,15 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 		}
 	}
 
+	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
+		fwID, err := r.getFirewallID(ctx, machineScope, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get Firewall config")
+			return nil, err
+		}
+		createConfig.FirewallID = fwID
+	}
+
 	return createConfig, nil
 }
 
@@ -179,8 +188,8 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 	return ips, nil
 }
 
-func (r *LinodeMachineReconciler) getOwnerMachine(ctx context.Context, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
-	machine, err := kutil.GetOwnerMachine(ctx, r.TracedClient(), linodeMachine.ObjectMeta)
+func getOwnerMachine(ctx context.Context, tracedClient client.Client, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
+	machine, err := kutil.GetOwnerMachine(ctx, tracedClient, linodeMachine.ObjectMeta)
 	if err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch owner machine")
@@ -333,6 +342,31 @@ func (r *LinodeMachineReconciler) getPlacementGroupID(ctx context.Context, machi
 	}
 
 	return *linodePlacementGroup.Spec.PGID, nil
+}
+
+func (r *LinodeMachineReconciler) getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (int, error) {
+	name := machineScope.LinodeMachine.Spec.FirewallRef.Name
+	namespace := machineScope.LinodeMachine.Spec.FirewallRef.Namespace
+	if namespace == "" {
+		namespace = machineScope.LinodeMachine.Namespace
+	}
+
+	logger = logger.WithValues("firewallName", name, "firewallNamespace", namespace)
+
+	linodeFirewall := infrav1alpha2.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	objectKey := client.ObjectKeyFromObject(&linodeFirewall)
+	err := r.Get(ctx, objectKey, &linodeFirewall)
+	if err != nil {
+		logger.Error(err, "Failed to fetch LinodeFirewall")
+		return -1, err
+	}
+
+	return *linodeFirewall.Spec.FirewallID, nil
 }
 
 func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {

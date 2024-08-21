@@ -1118,6 +1118,33 @@ func (_d LinodeClientWithTracing) ListInstances(ctx context.Context, opts *linod
 	return _d.LinodeClient.ListInstances(ctx, opts)
 }
 
+// ListNodeBalancerNodes implements clients.LinodeClient
+func (_d LinodeClientWithTracing) ListNodeBalancerNodes(ctx context.Context, nodebalancerID int, configID int, opts *linodego.ListOptions) (na1 []linodego.NodeBalancerNode, err error) {
+	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListNodeBalancerNodes")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":            ctx,
+				"nodebalancerID": nodebalancerID,
+				"configID":       configID,
+				"opts":           opts}, map[string]interface{}{
+				"na1": na1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListNodeBalancerNodes(ctx, nodebalancerID, configID, opts)
+}
+
 // ListPlacementGroups implements clients.LinodeClient
 func (_d LinodeClientWithTracing) ListPlacementGroups(ctx context.Context, options *linodego.ListOptions) (pa1 []linodego.PlacementGroup, err error) {
 	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListPlacementGroups")

@@ -57,10 +57,10 @@ patches:
               - fd03::/108
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KThreesControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KThreesControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
@@ -73,7 +73,7 @@ patches:
             serviceCidr: "10.96.0.0/12,fd03::/108"
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KThreesControlPlane
     patch: |-
       - op: replace
@@ -137,7 +137,7 @@ patches:
           etcd-backup: "true"
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KThreesControlPlane
     patch: |-
       - op: replace
@@ -151,7 +151,7 @@ patches:
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
   - target:
       group: bootstrap.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KThreesConfigTemplate
     patch: |-
       - op: replace

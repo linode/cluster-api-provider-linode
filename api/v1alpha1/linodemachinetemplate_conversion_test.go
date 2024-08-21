@@ -42,7 +42,6 @@ func TestLinodeMachineTemplateConvertTo(t *testing.T) {
 			Template: LinodeMachineTemplateResource{
 				Spec: LinodeMachineSpec{
 					ProviderID:      ptr.To("linode://1234"),
-					InstanceID:      ptr.To(1234),
 					Region:          "us-mia",
 					Type:            "g6-standard-2",
 					Group:           "",
@@ -55,7 +54,6 @@ func TestLinodeMachineTemplateConvertTo(t *testing.T) {
 					BackupsEnabled:  false,
 					PrivateIP:       ptr.To(true),
 					Tags:            []string{"test instance"},
-					FirewallID:      123,
 					OSDisk: ptr.To(InstanceDisk{
 						DiskID:     0,
 						Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -88,7 +86,6 @@ func TestLinodeMachineTemplateConvertTo(t *testing.T) {
 			Template: infrav1alpha2.LinodeMachineTemplateResource{
 				Spec: infrav1alpha2.LinodeMachineSpec{
 					ProviderID:      ptr.To("linode://1234"),
-					InstanceID:      ptr.To(1234),
 					Region:          "us-mia",
 					Type:            "g6-standard-2",
 					Group:           "",
@@ -101,7 +98,6 @@ func TestLinodeMachineTemplateConvertTo(t *testing.T) {
 					BackupsEnabled:  false,
 					PrivateIP:       ptr.To(true),
 					Tags:            []string{"test instance"},
-					FirewallID:      123,
 					OSDisk: ptr.To(infrav1alpha2.InstanceDisk{
 						DiskID:     0,
 						Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -178,7 +174,6 @@ func TestLinodeMachineTemplateConvertFrom(t *testing.T) {
 			Template: infrav1alpha2.LinodeMachineTemplateResource{
 				Spec: infrav1alpha2.LinodeMachineSpec{
 					ProviderID:      ptr.To("linode://1234"),
-					InstanceID:      ptr.To(1234),
 					Region:          "us-mia",
 					Type:            "g6-standard-2",
 					Group:           "",
@@ -191,7 +186,6 @@ func TestLinodeMachineTemplateConvertFrom(t *testing.T) {
 					BackupsEnabled:  false,
 					PrivateIP:       ptr.To(true),
 					Tags:            []string{"test instance"},
-					FirewallID:      123,
 					OSDisk: ptr.To(infrav1alpha2.InstanceDisk{
 						DiskID:     0,
 						Size:       *resource.NewQuantity(12, resource.DecimalSI),
@@ -224,7 +218,6 @@ func TestLinodeMachineTemplateConvertFrom(t *testing.T) {
 			Template: LinodeMachineTemplateResource{
 				Spec: LinodeMachineSpec{
 					ProviderID:      ptr.To("linode://1234"),
-					InstanceID:      ptr.To(1234),
 					Region:          "us-mia",
 					Type:            "g6-standard-2",
 					Group:           "",
@@ -237,7 +230,6 @@ func TestLinodeMachineTemplateConvertFrom(t *testing.T) {
 					BackupsEnabled:  false,
 					PrivateIP:       ptr.To(true),
 					Tags:            []string{"test instance"},
-					FirewallID:      123,
 					OSDisk: ptr.To(InstanceDisk{
 						DiskID:     0,
 						Size:       *resource.NewQuantity(12, resource.DecimalSI),
