@@ -36,6 +36,7 @@ spec:
       kind: Secret
       metadata:
         name: ${CLUSTER_NAME}-etcd-backup-obj-key
+        namespace: kube-system
       stringData:
         bucket_name: ${CLUSTER_NAME}-etcd-backup
         bucket_region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
