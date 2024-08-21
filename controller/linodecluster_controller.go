@@ -380,7 +380,7 @@ func (r *LinodeClusterReconciler) linodeMachineToLinodeCluster(logger logr.Logge
 		}
 
 		// We only need control plane machines to trigger reconciliation
-		machine, err := GetOwnerMachine(ctx, r.TracedClient(), *linodeMachine, logger)
+		machine, err := getOwnerMachine(ctx, r.TracedClient(), *linodeMachine, logger)
 		if err != nil || machine == nil {
 			return nil
 		}

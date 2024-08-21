@@ -188,7 +188,7 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 	return ips, nil
 }
 
-func GetOwnerMachine(ctx context.Context, tracedClient client.Client, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
+func getOwnerMachine(ctx context.Context, tracedClient client.Client, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
 	machine, err := kutil.GetOwnerMachine(ctx, tracedClient, linodeMachine.ObjectMeta)
 	if err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {

@@ -125,7 +125,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	machine, err := GetOwnerMachine(ctx, r.TracedClient(), *linodeMachine, log)
+	machine, err := getOwnerMachine(ctx, r.TracedClient(), *linodeMachine, log)
 	if err != nil || machine == nil {
 		return ctrl.Result{}, err
 	}
