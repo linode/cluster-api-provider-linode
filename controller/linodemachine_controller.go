@@ -310,7 +310,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		linodeInstance = &linodeInstances[0]
 	case 0:
 		// get the bootstrap data for the Linode instance and set it for create config
-		createOpts, err := r.newCreateConfig(ctx, machineScope, tags, logger)
+		createOpts, err := newCreateConfig(ctx, machineScope, tags, logger)
 		if err != nil {
 			logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
 			return retryIfTransient(err)
@@ -354,7 +354,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	linodeInstance *linodego.Instance,
 ) (ctrl.Result, error) {
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
-		if err := r.configureDisks(ctx, logger, machineScope, linodeInstance.ID); err != nil {
+		if err := configureDisks(ctx, logger, machineScope, linodeInstance.ID); err != nil {
 			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 				ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
 				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
@@ -368,7 +368,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
-		instanceConfig, err := r.getDefaultInstanceConfig(ctx, machineScope, linodeInstance.ID)
+		instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, linodeInstance.ID)
 		if err != nil {
 			logger.Error(err, "Failed to get default instance configuration")
 			return retryIfTransient(err)
@@ -397,7 +397,7 @@ func (r *LinodeMachineReconciler) reconcileInstanceCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
-		addrs, err := r.buildInstanceAddrs(ctx, machineScope, linodeInstance.ID)
+		addrs, err := buildInstanceAddrs(ctx, machineScope, linodeInstance.ID)
 		if err != nil {
 			logger.Error(err, "Failed to get instance ip addresses")
 
@@ -561,7 +561,7 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 		).
 		Watches(
 			&infrav1alpha2.LinodeCluster{},
-			handler.EnqueueRequestsFromMapFunc(r.linodeClusterToLinodeMachines(mgr.GetLogger())),
+			handler.EnqueueRequestsFromMapFunc(linodeClusterToLinodeMachines(mgr.GetLogger(), r.TracedClient())),
 		).
 		Watches(
 			&clusterv1.Cluster{},
@@ -580,17 +580,4 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 
 func (r *LinodeMachineReconciler) TracedClient() client.Client {
 	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
-}
-
-func (r *LinodeMachineReconciler) getDefaultInstanceConfig(
-	ctx context.Context,
-	machineScope *scope.MachineScope,
-	linodeInstanceID int,
-) (linodego.InstanceConfig, error) {
-	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
-	if err != nil || len(configs) == 0 {
-		return linodego.InstanceConfig{}, fmt.Errorf("failing to list instance configurations: %w", err)
-	}
-
-	return configs[0], nil
 }

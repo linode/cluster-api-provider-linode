@@ -287,7 +287,7 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 		).
 		Watches(
 			&infrav1alpha2.LinodeMachine{},
-			handler.EnqueueRequestsFromMapFunc(r.linodeMachineToLinodeCluster(mgr.GetLogger())),
+			handler.EnqueueRequestsFromMapFunc(linodeMachineToLinodeCluster(r.TracedClient(), mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)

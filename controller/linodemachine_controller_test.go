@@ -1274,7 +1274,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 	var machine clusterv1.Machine
 	var linodeMachine infrav1alpha2.LinodeMachine
 	var secret corev1.Secret
-	var reconciler *LinodeMachineReconciler
 	var lpgReconciler *LinodePlacementGroupReconciler
 	var linodePlacementGroup infrav1alpha2.LinodePlacementGroup
 	var linodeFirewall infrav1alpha2.LinodeFirewall
@@ -1388,11 +1387,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 			Client:   k8sClient,
 		}
 
-		reconciler = &LinodeMachineReconciler{
-			Recorder: recorder,
-			Client:   k8sClient,
-		}
-
 		mockCtrl = gomock.NewController(GinkgoT())
 		testLogs = &bytes.Buffer{}
 		logger = zap.New(
@@ -1446,7 +1440,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		Expect(err).NotTo(HaveOccurred())
 		mScope.PatchHelper = patchHelper
 
-		createOpts, err := reconciler.newCreateConfig(ctx, &mScope, []string{}, logger)
+		createOpts, err := newCreateConfig(ctx, &mScope, []string{}, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
 		Expect(createOpts.PlacementGroup.ID).To(Equal(1))

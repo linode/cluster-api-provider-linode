@@ -203,7 +203,7 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 		return err
 	}
 
-	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
+	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
 
 		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
@@ -224,7 +224,7 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
 	logger.Info("updating vpc")
 
-	if err := r.reconcileVPC(ctx, vpcScope, logger); err != nil {
+	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
 
 		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.UpdateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
