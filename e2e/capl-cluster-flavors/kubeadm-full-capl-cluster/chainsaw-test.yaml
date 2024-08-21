@@ -13,7 +13,7 @@ spec:
   bindings:
     # Identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'kdmt-tst', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `32`)), '-'))
@@ -42,6 +42,8 @@ spec:
                 value: '1' # Here, 1 is set for testing purposes. Default is 3.
               - name: CLUSTER_AUTOSCALER_VERSION
                 value: 'v1.29.4'
+              - name: ETCD_BACKUP_SCHEDULE
+                value: '* * * * *'
             content: |
               set -e
               if [ -z "$SSE_KEY" ]; then
@@ -235,9 +237,9 @@ spec:
                 -H "X-Filter: $FILTER" \
                 -H "Content-Type: application/json" \
                 "https://$TARGET_API/$TARGET_API_VERSION/$URI")
-              
+
               LINODE_ID=$(echo "$RESPONSE" | jq -r '.data[0].id')
-              
+
               if [ -z "$LINODE_ID" ]; then
                 echo "Error: LINODE_ID is empty. Response was: $RESPONSE"
                 exit 1
@@ -250,7 +252,7 @@ spec:
 
               ETCD_LABEL=$(echo "$DISK_RESPONSE" | jq -r '.data[2].label')
               ETCD_STATUS=$(echo "$DISK_RESPONSE" | jq -r '.data[2].status')
-              
+
               echo "{
                 \"label\": \"$ETCD_LABEL\",
                 \"status\": \"$ETCD_STATUS\"
@@ -261,6 +263,42 @@ spec:
               (json_parse($stdout)):
                 label: etcd_disk
                 status: ready
+
+    # Test to query the object storage bucket and check for data
+    - name: Testing the object storage buckets
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: object-storage/buckets
+              - name: FILTER
+                value: (to_string({"tags":("e2e-kdmf-tst")}))
+            content: |
+              set -e
+
+              RESPONSE=$(curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI")
+              
+              echo "$RESPONSE"
+              
+              buckets=$(echo "$RESPONSE" | jq -r '.data[] | select(.hostname | startswith("e2e-kdmf-tst")) | .hostname')
+
+              if [ -n "$buckets" ]; then
+                # Loop through each bucket and print
+                echo "Buckets starting with 'e2e-kdmf-tst':"
+                while IFS= read -r bucket; do
+                  echo "$bucket"
+                done <<< "$buckets"
+              else
+                echo "No buckets found starting with 'e2e-kdmf-tst'."
+              fi
 
     # Test to check if child cluster is deleted
     - name: Testing to see if child cluster is deleted
