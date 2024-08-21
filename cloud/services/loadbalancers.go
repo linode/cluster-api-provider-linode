@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 
+	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 )
@@ -112,61 +114,73 @@ func EnsureNodeBalancerConfigs(
 }
 
 // AddNodesToNB adds backend Nodes on the Node Balancer configuration
-func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope, eachMachine v1alpha2.LinodeMachine) error {
 	apiserverLBPort := DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiserverLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
 	}
 
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
-		err := errors.New("nil NodeBalancer Config ID")
-		logger.Error(err, "config ID for NodeBalancer is nil")
-
-		return err
+		return errors.New("nil NodeBalancer Config ID")
 	}
 
-	for _, eachMachine := range clusterScope.LinodeMachines.Items {
-		internalIPFound := false
-		for _, IPs := range eachMachine.Status.Addresses {
-			if IPs.Type != v1beta1.MachineInternalIP {
-				continue
-			}
-			internalIPFound = true
-			_, err := clusterScope.LinodeClient.CreateNodeBalancerNode(
-				ctx,
-				*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
-				*clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID,
-				linodego.NodeBalancerNodeCreateOptions{
-					Label:   clusterScope.Cluster.Name,
-					Address: fmt.Sprintf("%s:%d", IPs.Address, apiserverLBPort),
-					Mode:    linodego.ModeAccept,
-				},
-			)
-			if err != nil {
-				logger.Error(err, "Failed to update Node Balancer")
-				return err
-			}
+	nodeBalancerNodes, err := clusterScope.LinodeClient.ListNodeBalancerNodes(
+		ctx,
+		*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+		*clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID,
+		&linodego.ListOptions{},
+	)
+	if err != nil {
+		return err
+	}
+	internalIPFound := false
+	for _, IPs := range eachMachine.Status.Addresses {
+		if IPs.Type != v1beta1.MachineInternalIP || !strings.Contains(IPs.Address, "192.168") {
+			continue
+		}
+		internalIPFound = true
 
-			for _, portConfig := range clusterScope.LinodeCluster.Spec.Network.AdditionalPorts {
-				_, err = clusterScope.LinodeClient.CreateNodeBalancerNode(
+		// Set the port number and NB config ID for standard ports
+		portsToBeAdded := make([]map[string]int, 0)
+		standardPort := map[string]int{"configID": *clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID, "port": apiserverLBPort}
+		portsToBeAdded = append(portsToBeAdded, standardPort)
+
+		// Set the port number and NB config ID for any additional ports
+		for _, portConfig := range clusterScope.LinodeCluster.Spec.Network.AdditionalPorts {
+			portsToBeAdded = append(portsToBeAdded, map[string]int{"configID": *portConfig.NodeBalancerConfigID, "port": portConfig.Port})
+		}
+
+		logger.Info("abir", "portsToBeAdded", portsToBeAdded)
+
+		// Cycle through all ports to be added
+		for _, ports := range portsToBeAdded {
+			ipPortComboExists := false
+			for _, nodes := range nodeBalancerNodes {
+				// Create the node if the IP:Port combination does not exist
+				if nodes.Address == fmt.Sprintf("%s:%d", IPs.Address, ports["port"]) {
+					ipPortComboExists = true
+					break
+				}
+			}
+			if !ipPortComboExists {
+				_, err := clusterScope.LinodeClient.CreateNodeBalancerNode(
 					ctx,
 					*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
-					*portConfig.NodeBalancerConfigID,
+					ports["configID"],
 					linodego.NodeBalancerNodeCreateOptions{
 						Label:   clusterScope.Cluster.Name,
-						Address: fmt.Sprintf("%s:%d", IPs.Address, portConfig.Port),
+						Address: fmt.Sprintf("%s:%d", IPs.Address, ports["port"]),
 						Mode:    linodego.ModeAccept,
 					},
 				)
 				if err != nil {
-					logger.Error(err, "Failed to update Node Balancer")
 					return err
 				}
 			}
 		}
-		if !internalIPFound {
-			return errors.New("no private IP address")
-		}
+	}
+	if !internalIPFound {
+		return errors.New("no private IP address")
 	}
 
 	return nil

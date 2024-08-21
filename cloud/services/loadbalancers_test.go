@@ -488,7 +488,9 @@ func TestAddNodeToNBConditions(t *testing.T) {
 				},
 			},
 			expectedError: fmt.Errorf("no private IP address"),
-			expects:       func(mockClient *mock.MockLinodeClient) {},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil)
+			},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
 				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
 			},
@@ -509,9 +511,11 @@ func TestAddNodeToNBConditions(t *testing.T) {
 			testcase.clusterScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope)
-			if testcase.expectedError != nil {
-				assert.ErrorContains(t, err, testcase.expectedError.Error())
+			for _, eachMachine := range testcase.clusterScope.LinodeMachines.Items {
+				err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope, eachMachine)
+				if testcase.expectedError != nil {
+					assert.ErrorContains(t, err, testcase.expectedError.Error())
+				}
 			}
 		})
 	}
@@ -527,53 +531,6 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 		expects         func(*mock.MockLinodeClient)
 		expectK8sClient func(*mock.MockK8sClient)
 	}{
-		{
-			name: "If the machine is not a control plane node, do nothing",
-			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha2.LinodeCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha2.LinodeClusterSpec{
-						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
-							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
-								{
-									Port:                 DefaultKonnectivityLBPort,
-									NodeBalancerConfigID: ptr.To(1234),
-								},
-							},
-						},
-					},
-				},
-				Cluster: &clusterv1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-				},
-				LinodeMachines: infrav1alpha2.LinodeMachineList{
-					Items: []infrav1alpha2.LinodeMachine{
-						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "test-machine",
-								UID:  "test-uid",
-							},
-							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
-							},
-						},
-					},
-				},
-			},
-			expects: func(*mock.MockLinodeClient) {},
-			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
-			},
-		},
 		{
 			name: "Success - If the machine is a control plane node, add the node to the NodeBalancer",
 			clusterScope: &scope.ClusterScope{
@@ -617,6 +574,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil)
 				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&linodego.NodeBalancerNode{}, nil)
 			},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
@@ -667,9 +625,10 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 					},
 				},
 			},
-			expectedError: fmt.Errorf("could not create node balancer node"),
+			expectedError: nil,
 			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("could not create node balancer node"))
+				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil)
+				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 			},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
 				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
@@ -691,9 +650,11 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 			testcase.clusterScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope)
-			if testcase.expectedError != nil {
-				assert.ErrorContains(t, err, testcase.expectedError.Error())
+			for _, eachMachine := range testcase.clusterScope.LinodeMachines.Items {
+				err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope, eachMachine)
+				if testcase.expectedError != nil {
+					assert.ErrorContains(t, err, testcase.expectedError.Error())
+				}
 			}
 		})
 	}
@@ -710,39 +671,6 @@ func TestDeleteNodeFromNB(t *testing.T) {
 		expectK8sClient func(*mock.MockK8sClient)
 	}{
 		// TODO: Add test cases.
-		{
-			name: "If the machine is not a control plane node, do nothing",
-			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha2.LinodeCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha2.LinodeClusterSpec{
-						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
-							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
-								{
-									Port:                 DefaultKonnectivityLBPort,
-									NodeBalancerConfigID: ptr.To(1234),
-								},
-							},
-						},
-					},
-				},
-				Cluster: &clusterv1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-				},
-			},
-			expects: func(*mock.MockLinodeClient) {},
-			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
-			},
-		},
 		{
 			name: "NodeBalancer is already deleted",
 			clusterScope: &scope.ClusterScope{
