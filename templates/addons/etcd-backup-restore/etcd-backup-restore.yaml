@@ -62,12 +62,12 @@ data:
               valueFrom:
                 secretKeyRef:
                   name: ${CLUSTER_NAME}-etcd-backup-obj-key
-                  key: "access_key_rw"
+                  key: "access_key"
             - name: "AWS_SECRET_ACCESS_KEY"
               valueFrom:
                 secretKeyRef:
                   name: ${CLUSTER_NAME}-etcd-backup-obj-key
-                  key: "secret_key_rw"
+                  key: "secret_key"
             - name: "AWS_SSE_CUSTOMER_KEY"
               valueFrom:
                 secretKeyRef:
@@ -94,7 +94,7 @@ data:
             - --cacert=${CERTPATH}/etcd/${CACERTFILE}
             - --cert=${CERTPATH}/etcd/${CERTFILE}
             - --key=${CERTPATH}/etcd/${KEYFILE}
-            image: ${ETCDBR_IMAGE:-europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl:v0.28.0}
+            image: ${ETCDBR_IMAGE:-europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl:v0.29.0}
             securityContext:
               allowPrivilegeEscalation: false
               runAsUser: 0
