@@ -116,10 +116,10 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	linodeMachine := &infrav1alpha2.LinodeMachine{}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeMachine); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			log.Error(err, "Failed to fetch LinodeMachine")
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
 		}
-
+		log.Error(err, "Failed to fetch LinodeMachine")
 		return ctrl.Result{}, err
 	}
 
@@ -132,7 +132,6 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		log.Info("Machine Controller has not yet set OwnerRef, skipping reconciliation")
 		return ctrl.Result{}, nil
 	}
-
 	log = log.WithValues("LinodeMachine", machine.Name)
 
 	// Fetch the cluster
@@ -149,11 +148,9 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 	linodeCluster := &infrav1alpha2.LinodeCluster{}
 	if err := r.Client.Get(ctx, linodeClusterKey, linodeCluster); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
-		}
+		log.Info("LinodeCluster is not available yet")
+		return ctrl.Result{}, nil
 	}
-
 	log = log.WithValues("LinodeCluster", linodeCluster.Name)
 
 	machineScope, err := scope.NewMachineScope(
@@ -170,7 +167,6 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	)
 	if err != nil {
 		log.Error(err, "Failed to create machine scope")
-
 		return ctrl.Result{}, fmt.Errorf("failed to create machine scope: %w", err)
 	}
 
@@ -249,6 +245,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		instanceID = util.Pointer(instID)
 	}
 
+	// TODO: switch this to a get or just list all machines by tag (cluster name) if using caching
 	listFilter := util.Filter{
 		ID:    instanceID,
 		Label: machineScope.LinodeMachine.Name,
@@ -427,19 +424,19 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	}
 	if _, ok := requeueInstanceStatuses[linodeInstance.Status]; ok {
 		if linodeInstance.Updated.Add(reconciler.DefaultMachineControllerWaitForRunningTimeout).After(time.Now()) {
-			logger.Info("Instance has one operation running, re-queuing reconciliation", "status", linodeInstance.Status)
+			logger.Info("Instance not yet ready", "status", linodeInstance.Status)
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		} else {
+			logger.Info("Instance not ready in time, skipping reconciliation", "status", linodeInstance.Status)
+			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "skipped due to long running operation")
 		}
-		logger.Info("Instance has one operation long running, skipping reconciliation", "status", linodeInstance.Status)
-		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "skipped due to long running operation")
-		return ctrl.Result{}, nil
 	} else if linodeInstance.Status != linodego.InstanceRunning {
 		logger.Info("Instance has incompatible status, skipping reconciliation", "status", linodeInstance.Status)
 		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), clusterv1.ConditionSeverityInfo, "incompatible status")
-		return ctrl.Result{}, nil
+	} else {
+		machineScope.LinodeMachine.Status.Ready = true
+		conditions.MarkTrue(machineScope.LinodeMachine, clusterv1.ReadyCondition)
 	}
-	machineScope.LinodeMachine.Status.Ready = true
-	conditions.MarkTrue(machineScope.LinodeMachine, clusterv1.ReadyCondition)
 	return ctrl.Result{}, nil
 }
 
