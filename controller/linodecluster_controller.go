@@ -211,7 +211,7 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 	// handle creation for the loadbalancer for the control plane
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
 		r.handleDNS(clusterScope)
-	} else if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" || clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "" {
+	} else {
 		if err := r.handleNBCreate(ctx, logger, clusterScope); err != nil {
 			return err
 		}
@@ -305,7 +305,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	}
 	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancing, "cleared loadbalancer", clusterv1.ConditionSeverityInfo, "")
 
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
 		err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "failed to delete NodeBalancer")
