@@ -150,8 +150,6 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 			portsToBeAdded = append(portsToBeAdded, map[string]int{"configID": *portConfig.NodeBalancerConfigID, "port": portConfig.Port})
 		}
 
-		logger.Info("abir", "portsToBeAdded", portsToBeAdded)
-
 		// Cycle through all ports to be added
 		for _, ports := range portsToBeAdded {
 			ipPortComboExists := false
