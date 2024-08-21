@@ -55,7 +55,7 @@ CAPL will also create `read_write` and `read_only` access keys for the bucket an
 apiVersion: v1
 kind: Secret
 metadata:
-  name: <unique-bucket-label>-bucket-details
+  name: <unique-bucket-label>-obj-key
   namespace: <same-namespace-as-object-storage-bucket>
   ownerReferences:
     - apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
@@ -67,13 +67,11 @@ data:
   bucket_name: <unique-bucket-label>
   bucket_region: <linode-obj-bucket-region>
   bucket_endpoint: <hostname-to-access-bucket>
-  access_key_rw: <base64-encoded-access-key>
-  secret_key_rw: <base64-encoded-secret-key>
-  access_key_ro: <base64-encoded-access-key>
-  secret_key_ro: <base64-encoded-secret-key>
+  access_key: <base64-encoded-access-key>
+  secret_key: <base64-encoded-secret-key>
 ```
 
-The bucket-details secret is owned and managed by CAPL during the life of the `LinodeObjectStorageBucket`.
+The<unique-bucket-label>-obj-key secret is owned and managed by CAPL during the life of the `LinodeObjectStorageBucket`.
 
 ### Access Keys Rotation
 
