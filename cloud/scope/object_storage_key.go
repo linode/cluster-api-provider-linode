@@ -107,6 +107,7 @@ const (
 apiVersion: v1
 metadata:
   name: %s
+  namespace: kube-system
 stringData:
   bucket_name: %s
   bucket_region: %s

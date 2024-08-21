@@ -47,11 +47,14 @@ func Convert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in *infras
 	return autoConvert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in, out, s)
 }
 
+func Convert_v1alpha1_LinodeMachineSpec_To_v1alpha2_LinodeMachineSpec(in *LinodeMachineSpec, out *infrastructurev1alpha2.LinodeMachineSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_LinodeMachineSpec_To_v1alpha2_LinodeMachineSpec(in, out, s)
+}
+
 func Convert_v1alpha1_LinodeObjectStorageBucketSpec_To_v1alpha2_LinodeObjectStorageBucketSpec(in *LinodeObjectStorageBucketSpec, out *infrastructurev1alpha2.LinodeObjectStorageBucketSpec, s conversion.Scope) error {
 	// WARNING: in.Cluster requires manual conversion: does not exist in peer-type
 	out.Region = in.Cluster
 	out.CredentialsRef = in.CredentialsRef
-	out.SecretType = in.SecretType
 	return nil
 }
 func Convert_v1alpha1_LinodeObjectStorageBucketStatus_To_v1alpha2_LinodeObjectStorageBucketStatus(in *LinodeObjectStorageBucketStatus, out *infrastructurev1alpha2.LinodeObjectStorageBucketStatus, s conversion.Scope) error {
@@ -71,7 +74,7 @@ func Convert_v1alpha2_LinodeObjectStorageBucketSpec_To_v1alpha1_LinodeObjectStor
 	out.Cluster = in.Region
 	out.CredentialsRef = in.CredentialsRef
 	out.KeyGeneration = ptr.To(0)
-	out.SecretType = in.SecretType
+	out.SecretType = DefaultSecretTypeObjectStorageBucket
 	return nil
 }
 

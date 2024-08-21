@@ -122,8 +122,13 @@ func AddNodeToNB(
 		return nil
 	}
 
+	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
+	if err != nil {
+		logger.Error(err, "Failed to parse instance ID from provider ID")
+		return err
+	}
 	// Get the private IP that was assigned
-	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, *machineScope.LinodeMachine.Spec.InstanceID)
+	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, instanceID)
 	if err != nil {
 		logger.Error(err, "Failed get instance IP addresses")
 
@@ -200,11 +205,16 @@ func DeleteNodeFromNB(
 		return nil
 	}
 
-	err := machineScope.LinodeClient.DeleteNodeBalancerNode(
+	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
+	if err != nil {
+		logger.Error(err, "Failed to parse instance ID from provider ID")
+		return err
+	}
+	err = machineScope.LinodeClient.DeleteNodeBalancerNode(
 		ctx,
 		*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
 		*machineScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID,
-		*machineScope.LinodeMachine.Spec.InstanceID,
+		instanceID,
 	)
 	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 		logger.Error(err, "Failed to update Node Balancer")
@@ -217,7 +227,7 @@ func DeleteNodeFromNB(
 			ctx,
 			*machineScope.LinodeCluster.Spec.Network.NodeBalancerID,
 			*portConfig.NodeBalancerConfigID,
-			*machineScope.LinodeMachine.Spec.InstanceID,
+			instanceID,
 		)
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to update Node Balancer")

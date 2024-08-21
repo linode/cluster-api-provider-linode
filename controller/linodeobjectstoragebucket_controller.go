@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -36,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -117,15 +115,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 			reterr = err
 		}
 	}()
-
-	if !bScope.Bucket.DeletionTimestamp.IsZero() {
-		return res, r.reconcileDelete(bScope)
-	}
-
-	if err := bScope.AddFinalizer(ctx); err != nil {
-		return res, err
-	}
-
 	if err := r.reconcileApply(ctx, bScope); err != nil {
 		return res, err
 	}
@@ -145,9 +134,9 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	bScope.Bucket.Status.Ready = false
 	bScope.Bucket.Status.FailureMessage = nil
 
-	bucket, err := services.EnsureObjectStorageBucket(ctx, bScope)
+	bucket, err := services.EnsureAndUpdateObjectStorageBucket(ctx, bScope)
 	if err != nil {
-		bScope.Logger.Error(err, "Failed to ensure bucket exists")
+		bScope.Logger.Error(err, "Failed to ensure bucket or update bucket")
 		r.setFailure(bScope, err)
 
 		return err
@@ -159,24 +148,6 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 
 	bScope.Bucket.Status.Ready = true
 	conditions.MarkTrue(bScope.Bucket, clusterv1.ReadyCondition)
-
-	return nil
-}
-
-func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(bScope *scope.ObjectStorageBucketScope) error {
-	bScope.Logger.Info("Reconciling delete")
-
-	if !controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha2.ObjectStorageBucketFinalizer) {
-		err := errors.New("failed to remove finalizer from bucket; unable to delete")
-		bScope.Logger.Error(err, "controllerutil.RemoveFinalizer")
-		r.setFailure(bScope, err)
-
-		return err
-	}
-	// TODO: remove this check and removal later
-	if controllerutil.ContainsFinalizer(bScope.Bucket, infrav1alpha2.GroupVersion.String()) {
-		controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha2.GroupVersion.String())
-	}
 
 	return nil
 }

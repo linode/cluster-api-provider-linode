@@ -530,6 +530,21 @@ func (mr *MockLinodeClientMockRecorder) GetObjectStorageBucket(ctx, regionID, la
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucket", reflect.TypeOf((*MockLinodeClient)(nil).GetObjectStorageBucket), ctx, regionID, label)
 }
 
+// GetObjectStorageBucketAccess mocks base method.
+func (m *MockLinodeClient) GetObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID, label string) (*linodego.ObjectStorageBucketAccess, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetObjectStorageBucketAccess", ctx, clusterOrRegionID, label)
+	ret0, _ := ret[0].(*linodego.ObjectStorageBucketAccess)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetObjectStorageBucketAccess indicates an expected call of GetObjectStorageBucketAccess.
+func (mr *MockLinodeClientMockRecorder) GetObjectStorageBucketAccess(ctx, clusterOrRegionID, label any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucketAccess", reflect.TypeOf((*MockLinodeClient)(nil).GetObjectStorageBucketAccess), ctx, clusterOrRegionID, label)
+}
+
 // GetObjectStorageKey mocks base method.
 func (m *MockLinodeClient) GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error) {
 	m.ctrl.T.Helper()
@@ -797,6 +812,20 @@ func (m *MockLinodeClient) UpdateInstanceConfig(ctx context.Context, linodeID, c
 func (mr *MockLinodeClientMockRecorder) UpdateInstanceConfig(ctx, linodeID, configID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstanceConfig", reflect.TypeOf((*MockLinodeClient)(nil).UpdateInstanceConfig), ctx, linodeID, configID, opts)
+}
+
+// UpdateObjectStorageBucketAccess mocks base method.
+func (m *MockLinodeClient) UpdateObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID, label string, opts linodego.ObjectStorageBucketUpdateAccessOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateObjectStorageBucketAccess", ctx, clusterOrRegionID, label, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateObjectStorageBucketAccess indicates an expected call of UpdateObjectStorageBucketAccess.
+func (mr *MockLinodeClientMockRecorder) UpdateObjectStorageBucketAccess(ctx, clusterOrRegionID, label, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateObjectStorageBucketAccess", reflect.TypeOf((*MockLinodeClient)(nil).UpdateObjectStorageBucketAccess), ctx, clusterOrRegionID, label, opts)
 }
 
 // UpdatePlacementGroup mocks base method.
@@ -1554,6 +1583,21 @@ func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageBucket(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucket", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageBucket), ctx, regionID, label)
 }
 
+// GetObjectStorageBucketAccess mocks base method.
+func (m *MockLinodeObjectStorageClient) GetObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID, label string) (*linodego.ObjectStorageBucketAccess, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetObjectStorageBucketAccess", ctx, clusterOrRegionID, label)
+	ret0, _ := ret[0].(*linodego.ObjectStorageBucketAccess)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetObjectStorageBucketAccess indicates an expected call of GetObjectStorageBucketAccess.
+func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageBucketAccess(ctx, clusterOrRegionID, label any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageBucketAccess", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageBucketAccess), ctx, clusterOrRegionID, label)
+}
+
 // GetObjectStorageKey mocks base method.
 func (m *MockLinodeObjectStorageClient) GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error) {
 	m.ctrl.T.Helper()
@@ -1567,6 +1611,20 @@ func (m *MockLinodeObjectStorageClient) GetObjectStorageKey(ctx context.Context,
 func (mr *MockLinodeObjectStorageClientMockRecorder) GetObjectStorageKey(ctx, keyID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectStorageKey", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).GetObjectStorageKey), ctx, keyID)
+}
+
+// UpdateObjectStorageBucketAccess mocks base method.
+func (m *MockLinodeObjectStorageClient) UpdateObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID, label string, opts linodego.ObjectStorageBucketUpdateAccessOptions) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateObjectStorageBucketAccess", ctx, clusterOrRegionID, label, opts)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateObjectStorageBucketAccess indicates an expected call of UpdateObjectStorageBucketAccess.
+func (mr *MockLinodeObjectStorageClientMockRecorder) UpdateObjectStorageBucketAccess(ctx, clusterOrRegionID, label, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateObjectStorageBucketAccess", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).UpdateObjectStorageBucketAccess), ctx, clusterOrRegionID, label, opts)
 }
 
 // MockLinodeDNSClient is a mock of LinodeDNSClient interface.

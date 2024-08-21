@@ -31,7 +31,7 @@ const (
 	// DefaultMachineControllerLinodeImage default image.
 	DefaultMachineControllerLinodeImage = "linode/ubuntu22.04"
 	// DefaultMachineControllerWaitForRunningDelay is the default requeue delay if instance is not running.
-	DefaultMachineControllerWaitForRunningDelay = 5 * time.Second
+	DefaultMachineControllerWaitForRunningDelay = 15 * time.Second
 	// DefaultMachineControllerWaitForPreflightTimeout is the default timeout during the preflight phase.
 	DefaultMachineControllerWaitForPreflightTimeout = 5 * time.Minute
 	// DefaultMachineControllerWaitForRunningTimeout is the default timeout if instance is not running.

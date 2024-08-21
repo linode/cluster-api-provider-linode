@@ -33,7 +33,9 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 						Name: "test-bucket",
 					},
 					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
-						Region: "test-region",
+						Region:      "test-region",
+						ACL:         infrav1alpha2.ACLPrivate,
+						CorsEnabled: true,
 					},
 				},
 			},
@@ -43,6 +45,10 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
 					Label: "test-bucket",
+				}, nil)
+				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
+					ACL:         linodego.ACLPrivate,
+					CorsEnabled: true,
 				}, nil)
 			},
 		},
@@ -103,6 +109,78 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("failed to create bucket:"),
 		},
+		{
+			name: "Success - Successfully update the OBJ bucket",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-bucket",
+					},
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region:      "test-region",
+						ACL:         infrav1alpha2.ACLPublicRead,
+						CorsEnabled: true,
+					},
+				},
+			},
+			want: &linodego.ObjectStorageBucket{
+				Label: "test-bucket",
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
+					Label: "test-bucket",
+				}, nil)
+				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
+					ACL:         linodego.ACLPrivate,
+					CorsEnabled: true,
+				}, nil)
+				mockClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "Error - unable to update the OBJ bucket",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-bucket",
+					},
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
+					Label: "test-bucket",
+				}, nil)
+				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
+					ACL:         linodego.ACLPrivate,
+					CorsEnabled: true,
+				}, nil)
+				mockClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error in updating object storage bucket"))
+			},
+			expectedError: fmt.Errorf("failed to update the bucket access options"),
+		},
+		{
+			name: "Error - unable to fetch the OBJ bucket Access",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-bucket",
+					},
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetObjectStorageBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucket{
+					Label: "test-bucket",
+				}, nil)
+				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("error in fetching object storage bucket access details"))
+			},
+			expectedError: fmt.Errorf("failed to get bucket access details"),
+		},
 	}
 	for _, tt := range tests {
 		testcase := tt
@@ -118,7 +196,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 
 			testcase.expects(mockClient)
 
-			got, err := EnsureObjectStorageBucket(context.Background(), testcase.bScope)
+			got, err := EnsureAndUpdateObjectStorageBucket(context.Background(), testcase.bScope)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
