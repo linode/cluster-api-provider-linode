@@ -336,8 +336,8 @@ func TestGenerateKeySecret(t *testing.T) {
 				}).Times(1)
 			},
 			expectedData: map[string]string{
-				"AccessKey": "access_key",
-				"SecretKey": "secret_key",
+				"access_key": "access_key",
+				"secret_key": "secret_key",
 			},
 			expectedErr: nil,
 		},
