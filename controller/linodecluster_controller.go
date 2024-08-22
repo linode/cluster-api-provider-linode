@@ -179,7 +179,7 @@ func (r *LinodeClusterReconciler) reconcile(
 		}
 	}
 
-	err := r.addMachineToLB(ctx, clusterScope)
+	err := addMachineToLB(ctx, clusterScope)
 	if err != nil {
 		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
 		return retryIfTransient(err)
@@ -207,9 +207,9 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 
 	// handle creation for the loadbalancer for the control plane
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
-		r.handleDNS(clusterScope)
+		handleDNS(clusterScope)
 	} else {
-		if err := r.handleNBCreate(ctx, logger, clusterScope); err != nil {
+		if err := handleNBCreate(ctx, logger, clusterScope); err != nil {
 			return err
 		}
 	}
@@ -233,7 +233,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		return nil
 	}
 
-	if err := r.removeMachineFromLB(ctx, logger, clusterScope); err != nil {
+	if err := removeMachineFromLB(ctx, logger, clusterScope); err != nil {
 		return fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
 	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancing, "cleared loadbalancer", clusterv1.ConditionSeverityInfo, "")
