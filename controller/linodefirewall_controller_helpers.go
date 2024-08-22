@@ -199,7 +199,11 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 			})
 		}
 	}
-	createOpts.Rules.InboundPolicy = firewall.Spec.InboundPolicy
+	if firewall.Spec.InboundPolicy == "" {
+		createOpts.Rules.InboundPolicy = "ACCEPT"
+	} else {
+		createOpts.Rules.InboundPolicy = firewall.Spec.InboundPolicy
+	}
 
 	// process outbound rules
 	for _, rule := range firewall.Spec.OutboundRules {
@@ -250,7 +254,11 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 		}
 	}
 
-	createOpts.Rules.OutboundPolicy = firewall.Spec.OutboundPolicy
+	if firewall.Spec.OutboundPolicy == "" {
+		createOpts.Rules.OutboundPolicy = "ACCEPT"
+	} else {
+		createOpts.Rules.OutboundPolicy = firewall.Spec.OutboundPolicy
+	}
 
 	// need to check if we ended up needing to make too many rules
 	// with IP chunking

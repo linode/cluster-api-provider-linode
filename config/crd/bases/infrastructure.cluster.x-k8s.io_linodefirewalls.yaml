@@ -72,6 +72,8 @@ spec:
                 type: integer
               inboundPolicy:
                 default: ACCEPT
+                description: InboundPolicy determines if traffic by default should
+                  be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
                 enum:
                 - ACCEPT
                 - DROP
@@ -114,6 +116,8 @@ spec:
                 type: array
               outboundPolicy:
                 default: ACCEPT
+                description: OutboundPolicy determines if traffic by default should
+                  be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
                 enum:
                 - ACCEPT
                 - DROP
