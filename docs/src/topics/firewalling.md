@@ -83,9 +83,15 @@ spec:
 ## Cloud Firewalls
 
 For controlling firewalls via Linode resources, a [Cloud Firewall](https://www.linode.com/products/cloud-firewall/) can
-be defined and provisioned via `LinodeFirewall` resources in CAPL. The created Cloud Firewall's ID can then be used in
-a `LinodeMachine` or a `LinodeMachineTemplate`'s `firewallID` field. Note that the `firewallID` field is currently
-immutable, so it must be set at creation time).
+be defined and provisioned via the `LinodeFirewall` resource in CAPL.
+
+The created Cloud Firewall can be used on a `LinodeMachine` or a `LinodeMachineTemplate` by setting the `firewallRef` field.
+Alternatively, the provisioned Cloud Firewall's ID can be used in the `firewallID` field.
+
+```admonish note
+The `firewallRef` and `firewallID` fields are currently immutable for `LinodeMachines` and `LinodeMachineTemplates`. This will
+be addressed in a later release. 
+```
 
 Example `LinodeFirewall`:
 ```yaml
