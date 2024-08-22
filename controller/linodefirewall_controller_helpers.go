@@ -199,13 +199,7 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 			})
 		}
 	}
-	if firewall.Spec.InboundPolicy == "ACCEPT" {
-		// if an allow list is present, we drop everything else.
-		createOpts.Rules.InboundPolicy = "DROP"
-	} else {
-		// if a deny list is present, we accept everything else.
-		createOpts.Rules.InboundPolicy = "ACCEPT"
-	}
+	createOpts.Rules.InboundPolicy = firewall.Spec.InboundPolicy
 
 	// process outbound rules
 	for _, rule := range firewall.Spec.OutboundRules {
@@ -255,13 +249,8 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 			})
 		}
 	}
-	if firewall.Spec.OutboundPolicy == "ACCEPT" {
-		// if an allow list is present, we drop everything else.
-		createOpts.Rules.OutboundPolicy = "DROP"
-	} else {
-		// if a deny list is present, we accept everything else.
-		createOpts.Rules.OutboundPolicy = "ACCEPT"
-	}
+
+	createOpts.Rules.OutboundPolicy = firewall.Spec.OutboundPolicy
 
 	// need to check if we ended up needing to make too many rules
 	// with IP chunking
