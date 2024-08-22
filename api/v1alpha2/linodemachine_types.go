@@ -68,7 +68,6 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +kubebuilder:deprecatedversion:warning="Firewalls should be referenced via FirewallRef"
 	FirewallID int `json:"firewallID,omitempty"`
 	// OSDisk is configuration for the root disk that includes the OS,
 	// if not specified this defaults to whatever space is not taken up by the DataDisks
