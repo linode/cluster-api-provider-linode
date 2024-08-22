@@ -37,7 +37,7 @@ spec:
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: SSE_KEY
-                value: (env('SSE_KEY'))
+                value: 'jU$n@AXXf3xseNd&U9ko4J#3B84D6YR6' # 32char random key
               - name: KONNECTIVITY_AGENT_REPLICAS
                 value: '1' # Here, 1 is set for testing purposes. Default is 3.
               - name: CLUSTER_AUTOSCALER_VERSION
@@ -273,32 +273,35 @@ spec:
                 value: api.linode.com
               - name: TARGET_API_VERSION
                 value: v4beta
+              - name: BUCKET_NAME
+                value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF'), 'etcd-backup']))
               - name: URI
-                value: object-storage/buckets
-              - name: FILTER
-                value: (to_string({"tags":("e2e-kdmf-tst")}))
+                value: object-storage/buckets/us-ord
             content: |
               set -e
 
               RESPONSE=$(curl -s \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
                 -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI")
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI/$BUCKET_NAME")
               
-              echo "$RESPONSE"
+              BUCKET_SIZE=$(echo "$RESPONSE" | jq -r '.size')
+              BUCKET_OBJECTS=$(echo "$RESPONSE" | jq -r '.objects')
               
-              buckets=$(echo "$RESPONSE" | jq -r '.data[] | select(.hostname | startswith("e2e-kdmf-tst")) | .hostname')
-
-              if [ -n "$buckets" ]; then
-                # Loop through each bucket and print
-                echo "Buckets starting with 'e2e-kdmf-tst':"
-                while IFS= read -r bucket; do
-                  echo "$bucket"
-                done <<< "$buckets"
+              if [ "$BUCKET_SIZE" -gt 0 ] && [ "$BUCKET_OBJECTS" -gt 0 ]; then
+                VALID_BUCKET=true
               else
-                echo "No buckets found starting with 'e2e-kdmf-tst'."
+                VALID_BUCKET=false
               fi
+              
+              echo "{
+                \"status\": \"$VALID_BUCKET\"
+              }"
+
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                status: "true"
 
     # Test to check if child cluster is deleted
     - name: Testing to see if child cluster is deleted
