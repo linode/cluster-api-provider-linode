@@ -103,7 +103,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 
 	// if operation is delete and we got the record, delete it
 	if operation == "delete" {
-		return deleteAkamaiEntry(ctx, akaDNSClient, recordBody, dnsEntry, rootDomain)
+		return deleteAkamaiEntry(ctx, cscope, recordBody, dnsEntry)
 	}
 	// if operation is create and we got the record, update it
 	// Check if the target already exists in the target list
@@ -136,7 +136,20 @@ func createAkamaiEntry(ctx context.Context, client clients.AkamClient, dnsEntry 
 	)
 }
 
-func deleteAkamaiEntry(ctx context.Context, client clients.AkamClient, recordBody *dns.RecordBody, dnsEntry DNSOptions, rootDomain string) error {
+func deleteAkamaiEntry(ctx context.Context, cscope *scope.ClusterScope, recordBody *dns.RecordBody, dnsEntry DNSOptions) error {
+	linodeCluster := cscope.LinodeCluster
+	linodeClusterNetworkSpec := linodeCluster.Spec.Network
+	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
+	// If record is A/AAAA type, verify ownership
+	if dnsEntry.DNSRecordType != linodego.RecordTypeTXT {
+		isOwner, err := IsAkamaiDomainRecordOwner(ctx, cscope)
+		if err != nil {
+			return err
+		}
+		if !isOwner {
+			return fmt.Errorf("the domain record is not owned by this entity. wont delete")
+		}
+	}
 	switch {
 	case len(recordBody.Target) > 1:
 		recordBody.Target = removeElement(
@@ -145,9 +158,9 @@ func deleteAkamaiEntry(ctx context.Context, client clients.AkamClient, recordBod
 			// So we need to match that
 			strings.Replace(dnsEntry.Target, "::", ":0:0:", 8), //nolint:mnd // 8 for 8 octest
 		)
-		return client.UpdateRecord(ctx, recordBody, rootDomain)
+		return cscope.AkamaiDomainsClient.UpdateRecord(ctx, recordBody, rootDomain)
 	default:
-		return client.DeleteRecord(ctx, recordBody, rootDomain)
+		return cscope.AkamaiDomainsClient.DeleteRecord(ctx, recordBody, rootDomain)
 	}
 }
 
@@ -190,8 +203,8 @@ func (d *DNSEntries) getDNSEntriesToEnsure(cscope *scope.ClusterScope) ([]DNSOpt
 		if len(d.options) == 0 {
 			continue
 		}
-		d.options = append(d.options, DNSOptions{subDomain, eachMachine.Name, linodego.RecordTypeTXT, dnsTTLSec})
 	}
+	d.options = append(d.options, DNSOptions{subDomain, cscope.LinodeCluster.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
 	return d.options, nil
 }
@@ -263,7 +276,7 @@ func DeleteDomainRecord(ctx context.Context, cscope *scope.ClusterScope, domainI
 
 	// If record is A/AAAA type, verify ownership
 	if dnsEntry.DNSRecordType != linodego.RecordTypeTXT {
-		isOwner, err := IsDomainRecordOwner(ctx, cscope, dnsEntry.Hostname, domainID)
+		isOwner, err := IsLinodeDomainRecordOwner(ctx, cscope, dnsEntry.Hostname, domainID)
 		if err != nil {
 			return err
 		}
@@ -276,9 +289,9 @@ func DeleteDomainRecord(ctx context.Context, cscope *scope.ClusterScope, domainI
 	return cscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, domainRecords[0].ID)
 }
 
-func IsDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope, hostname string, domainID int) (bool, error) {
+func IsLinodeDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope, hostname string, domainID int) (bool, error) {
 	// Check if domain record exists
-	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "target": cscope.LinodeCluster.Name, "type": linodego.RecordTypeTXT})
+	filter, err := json.Marshal(map[string]interface{}{"name": hostname, "type": linodego.RecordTypeTXT})
 	if err != nil {
 		return false, err
 	}
@@ -290,7 +303,21 @@ func IsDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope, hostna
 
 	// If record exists, update it
 	if len(domainRecords) == 0 {
-		return false, fmt.Errorf("no txt record %s found with value %s for machine %s", hostname, cscope.LinodeCluster.Name, cscope.LinodeCluster.Name)
+		return false, fmt.Errorf("no txt record %s found", hostname)
+	}
+
+	return true, nil
+}
+
+func IsAkamaiDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope) (bool, error) {
+	linodeCluster := cscope.LinodeCluster
+	linodeClusterNetworkSpec := linodeCluster.Spec.Network
+	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
+	akaDNSClient := cscope.AkamaiDomainsClient
+	fqdn := getSubDomain(cscope) + "." + rootDomain
+	recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(linodego.RecordTypeTXT))
+	if err != nil || recordBody == nil {
+		return false, fmt.Errorf("no txt record %s found", fqdn)
 	}
 
 	return true, nil
