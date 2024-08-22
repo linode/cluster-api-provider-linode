@@ -212,7 +212,22 @@ spec:
       try:
         - script:
             content: |
-              KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
+              
+              MAX_RETRIES=5
+              RETRY_DELAY=30 # 20 seconds delay before retrying
+              ATTEMPT=0
+              
+              while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+                KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
+                
+                if [ -z "$error" ]; then
+                  break
+                else
+                  ATTEMPT=$((ATTEMPT + 1))
+                  sleep $RETRY_DELAY
+                fi
+              done
+
             check:
               ($error == null): true
 
@@ -231,27 +246,43 @@ spec:
                 value: (to_string({"tags":($cluster)}))
             content: |
               set -e
-
-              RESPONSE=$(curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI")
-
-              LINODE_ID=$(echo "$RESPONSE" | jq -r '.data[0].id')
-
-              if [ -z "$LINODE_ID" ]; then
-                echo "Error: LINODE_ID is empty. Response was: $RESPONSE"
-                exit 1
-              fi
-
-              DISK_RESPONSE=$(curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI/$LINODE_ID/disks?page=1&page_size=100")
-
-              ETCD_LABEL=$(echo "$DISK_RESPONSE" | jq -r '.data[2].label')
-              ETCD_STATUS=$(echo "$DISK_RESPONSE" | jq -r '.data[2].status')
+              
+              MAX_RETRIES=5
+              RETRY_DELAY=30 # 20 second delay before retrying
+              ATTEMPT=0
+              ETCD_LABEL=""
+              ETCD_STATUS=""
+              
+              while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+              
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "X-Filter: $FILTER" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI")
+  
+                LINODE_ID=$(echo "$RESPONSE" | jq -r '.data[0].id')
+  
+                if [ -z "$LINODE_ID" ]; then
+                  echo "Error: LINODE_ID is empty. Response was: $RESPONSE"
+                  exit 1
+                fi
+  
+                DISK_RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI/$LINODE_ID/disks?page=1&page_size=100")
+  
+                ETCD_LABEL=$(echo "$DISK_RESPONSE" | jq -r '.data[2].label')
+                ETCD_STATUS=$(echo "$DISK_RESPONSE" | jq -r '.data[2].status')
+              
+                if [ "$ETCD_LABEL" == "etcd_disk" ] && [ "$ETCD_STATUS" == "ready" ]; then
+                  break
+                else
+                  ATTEMPT=$((ATTEMPT + 1))
+                  sleep $RETRY_DELAY
+                fi
+              done
 
               echo "{
                 \"label\": \"$ETCD_LABEL\",
@@ -263,6 +294,9 @@ spec:
               (json_parse($stdout)):
                 label: etcd_disk
                 status: ready
+
+    # Test if pod container is working by using exec
+    - name: Testing etcd-pod is available
 
     # Test to query the object storage bucket and check for data
     - name: Testing the object storage buckets
@@ -279,20 +313,29 @@ spec:
                 value: object-storage/buckets/us-ord
             content: |
               set -e
-
-              RESPONSE=$(curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI/$BUCKET_NAME")
+  
+              MAX_RETRIES=5
+              RETRY_DELAY=30 # 20 second delay before retrying
+              ATTEMPT=0
+              VALID_BUCKET=false
               
-              BUCKET_SIZE=$(echo "$RESPONSE" | jq -r '.size')
-              BUCKET_OBJECTS=$(echo "$RESPONSE" | jq -r '.objects')
-              
-              if [ "$BUCKET_SIZE" -gt 0 ] && [ "$BUCKET_OBJECTS" -gt 0 ]; then
-                VALID_BUCKET=true
-              else
-                VALID_BUCKET=false
-              fi
+              while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI/$BUCKET_NAME")
+                
+                BUCKET_SIZE=$(echo "$RESPONSE" | jq -r '.size')
+                BUCKET_OBJECTS=$(echo "$RESPONSE" | jq -r '.objects')
+                
+                if [ "$BUCKET_SIZE" -gt 0 ] && [ "$BUCKET_OBJECTS" -gt 0 ]; then
+                  VALID_BUCKET=true
+                  break
+                else
+                  ATTEMPT=$((ATTEMPT + 1))
+                  sleep $RETRY_DELAY
+                fi
+              done
               
               echo "{
                 \"status\": \"$VALID_BUCKET\"
