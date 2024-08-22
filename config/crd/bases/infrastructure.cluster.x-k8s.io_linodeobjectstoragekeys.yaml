@@ -92,36 +92,46 @@ spec:
                     type: string
                 type: object
                 x-kubernetes-map-type: atomic
+              generatedSecret:
+                description: GeneratedSecret configures the Secret to generate containing
+                  access key details.
+                properties:
+                  format:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      How to format the data stored in the generated Secret.
+                      It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey.
+                      If no format is supplied then a generic one is used containing the values specified.
+                      When SecretType is set to addons.cluster.x-k8s.io/resource-set, a .BucketEndpoint value is also available pointing to the location of the first bucket specified in BucketAccess.
+                    type: object
+                  name:
+                    description: The name of the generated Secret. If not set, defaults
+                      to the name of the LinodeObjectStorageKey.
+                    type: string
+                  namespace:
+                    description: The namespace for the generated Secret. If not set,
+                      defaults to the namespace of the LinodeObjectStorageKey.
+                    type: string
+                  type:
+                    default: Opaque
+                    description: The type of the generated Secret.
+                    enum:
+                    - Opaque
+                    - addons.cluster.x-k8s.io/resource-set
+                    type: string
+                type: object
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               keyGeneration:
                 default: 0
                 description: KeyGeneration may be modified to trigger a rotation of
                   the access key.
                 type: integer
-              secretDataFormat:
-                additionalProperties:
-                  type: string
-                description: |-
-                  SecretDataFormat instructs the controller how to format the data stored in the secret containing access key details.
-                  It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey.
-                  If no format is supplied then a generic one is used containing the values specified.
-                  When SecretType is set to addons.cluster.x-k8s.io/resource-set, a .BucketEndpoint value is also available pointing to the location of the first bucket specified in BucketAccess.
-                type: object
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
-              secretType:
-                default: Opaque
-                description: SecretType instructs the controller what type of secret
-                  to generate containing access key details.
-                enum:
-                - Opaque
-                - addons.cluster.x-k8s.io/resource-set
-                type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
             required:
             - bucketAccess
+            - generatedSecret
             - keyGeneration
             type: object
           status:

@@ -249,8 +249,8 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 				}),
 			),
 		),
-		Once("secretType set to cluster resource set fails", func(ctx context.Context, _ Mock) {
-			key.Spec.SecretType = clusteraddonsv1.ClusterResourceSetSecretType
+		Once("secret type set to cluster resource set fails", func(ctx context.Context, _ Mock) {
+			key.Spec.GeneratedSecret.Type = clusteraddonsv1.ClusterResourceSetSecretType
 			Expect(k8sClient.Update(ctx, &key)).NotTo(Succeed())
 		}),
 		Once("resource is deleted", func(ctx context.Context, _ Mock) {
@@ -340,8 +340,8 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 				Call("with opaque secret", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Key.ObjectMeta.Name = "opaque"
-					keyScope.Key.Spec.SecretType = corev1.SecretTypeOpaque
-					keyScope.Key.Spec.SecretDataFormat = map[string]string{
+					keyScope.Key.Spec.GeneratedSecret.Type = corev1.SecretTypeOpaque
+					keyScope.Key.Spec.GeneratedSecret.Format = map[string]string{
 						"data": "{{ .AccessKey }}-{{ .SecretKey }}",
 					}
 
@@ -365,8 +365,8 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 				Call("with cluster-resource-set secret", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Key.ObjectMeta.Name = "cluster-resource-set"
-					keyScope.Key.Spec.SecretType = clusteraddonsv1.ClusterResourceSetSecretType
-					keyScope.Key.Spec.SecretDataFormat = map[string]string{
+					keyScope.Key.Spec.GeneratedSecret.Type = clusteraddonsv1.ClusterResourceSetSecretType
+					keyScope.Key.Spec.GeneratedSecret.Format = map[string]string{
 						"data": "{{ .AccessKey }}-{{ .SecretKey }}-{{ .BucketEndpoint }}",
 					}
 

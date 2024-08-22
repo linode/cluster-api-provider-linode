@@ -34,6 +34,26 @@ type BucketAccessRef struct {
 	Region      string `json:"region"`
 }
 
+type GeneratedSecret struct {
+	// The name of the generated Secret. If not set, defaults to the name of the LinodeObjectStorageKey.
+	// +optional
+	Name string `json:"name,omitempty"`
+	// The namespace for the generated Secret. If not set, defaults to the namespace of the LinodeObjectStorageKey.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+	// The type of the generated Secret.
+	// +kubebuilder:validation:Enum=Opaque;addons.cluster.x-k8s.io/resource-set
+	// +kubebuilder:default=Opaque
+	// +optional
+	Type corev1.SecretType `json:"type,omitempty"`
+	// How to format the data stored in the generated Secret.
+	// It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey.
+	// If no format is supplied then a generic one is used containing the values specified.
+	// When SecretType is set to addons.cluster.x-k8s.io/resource-set, a .BucketEndpoint value is also available pointing to the location of the first bucket specified in BucketAccess.
+	// +optional
+	Format map[string]string `json:"format"`
+}
+
 // LinodeObjectStorageKeySpec defines the desired state of LinodeObjectStorageKey
 type LinodeObjectStorageKeySpec struct {
 	// BucketAccess is the list of object storage bucket labels which can be accessed using the key
@@ -49,20 +69,9 @@ type LinodeObjectStorageKeySpec struct {
 	// +kubebuilder:default=0
 	KeyGeneration int `json:"keyGeneration"`
 
-	// SecretType instructs the controller what type of secret to generate containing access key details.
-	// +kubebuilder:validation:Enum=Opaque;addons.cluster.x-k8s.io/resource-set
-	// +kubebuilder:default=Opaque
+	// GeneratedSecret configures the Secret to generate containing access key details.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	SecretType corev1.SecretType `json:"secretType,omitempty"`
-
-	// SecretDataFormat instructs the controller how to format the data stored in the secret containing access key details.
-	// It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey.
-	// If no format is supplied then a generic one is used containing the values specified.
-	// When SecretType is set to addons.cluster.x-k8s.io/resource-set, a .BucketEndpoint value is also available pointing to the location of the first bucket specified in BucketAccess.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	SecretDataFormat map[string]string `json:"secretDataFormat,omitempty"`
+	GeneratedSecret `json:"generatedSecret"`
 }
 
 // LinodeObjectStorageKeyStatus defines the observed state of LinodeObjectStorageKey

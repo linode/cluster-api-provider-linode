@@ -118,7 +118,7 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 
 	// If the desired secret is of ClusterResourceSet type, encapsulate the secret.
 	// Bucket details are retrieved from the first referenced LinodeObjectStorageBucket in the access key.
-	if s.Key.Spec.SecretType == clusteraddonsv1.ClusterResourceSetSecretType {
+	if s.Key.Spec.GeneratedSecret.Type == clusteraddonsv1.ClusterResourceSetSecretType {
 		// This should never run since the CRD has a validation marker to ensure bucketAccess has at least one item.
 		if len(s.Key.Spec.BucketAccess) == 0 {
 			return nil, fmt.Errorf("unable to generate %s; spec.bucketAccess must not be empty", clusteraddonsv1.ClusterResourceSetSecretType)
@@ -131,14 +131,14 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 		}
 
 		tmplData["BucketEndpoint"] = bucket.Hostname
-	} else if len(s.Key.Spec.SecretDataFormat) == 0 {
+	} else if len(s.Key.Spec.GeneratedSecret.Format) == 0 {
 		secretStringData = map[string]string{
 			"access_key": key.AccessKey,
 			"secret_key": key.SecretKey,
 		}
 	}
 
-	for key, tmpl := range s.Key.Spec.SecretDataFormat {
+	for key, tmpl := range s.Key.Spec.GeneratedSecret.Format {
 		goTmpl, err := template.New(key).Parse(tmpl)
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate secret; failed to parse template in secret data format for key %s: %w", key, err)
@@ -157,7 +157,7 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 			Name:      secretName,
 			Namespace: s.Key.Namespace,
 		},
-		Type:       s.Key.Spec.SecretType,
+		Type:       s.Key.Spec.GeneratedSecret.Type,
 		StringData: secretStringData,
 	}
 

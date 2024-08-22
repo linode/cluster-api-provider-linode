@@ -349,8 +349,10 @@ func TestGenerateKeySecret(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-					SecretDataFormat: map[string]string{
-						"key": "{{ .AccessKey",
+					GeneratedSecret: infrav1alpha2.GeneratedSecret{
+						Format: map[string]string{
+							"key": "{{ .AccessKey",
+						},
 					},
 				},
 			},
@@ -384,9 +386,11 @@ func TestGenerateKeySecret(t *testing.T) {
 							Permissions: "read_write",
 						},
 					},
-					SecretType: clusteraddonsv1.ClusterResourceSetSecretType,
-					SecretDataFormat: map[string]string{
-						"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+					GeneratedSecret: infrav1alpha2.GeneratedSecret{
+						Type: clusteraddonsv1.ClusterResourceSetSecretType,
+						Format: map[string]string{
+							"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+						},
 					},
 				},
 			},
@@ -437,9 +441,11 @@ func TestGenerateKeySecret(t *testing.T) {
 							Permissions: "read_write",
 						},
 					},
-					SecretType: clusteraddonsv1.ClusterResourceSetSecretType,
-					SecretDataFormat: map[string]string{
-						"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+					GeneratedSecret: infrav1alpha2.GeneratedSecret{
+						Type: clusteraddonsv1.ClusterResourceSetSecretType,
+						Format: map[string]string{
+							"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+						},
 					},
 				},
 			},
@@ -469,9 +475,11 @@ func TestGenerateKeySecret(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-					SecretType: clusteraddonsv1.ClusterResourceSetSecretType,
-					SecretDataFormat: map[string]string{
-						"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+					GeneratedSecret: infrav1alpha2.GeneratedSecret{
+						Type: clusteraddonsv1.ClusterResourceSetSecretType,
+						Format: map[string]string{
+							"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
+						},
 					},
 				},
 			},

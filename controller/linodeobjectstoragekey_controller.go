@@ -213,7 +213,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 
 		emptySecret := &corev1.Secret{ObjectMeta: secret.ObjectMeta}
 		operation, err := controllerutil.CreateOrUpdate(ctx, keyScope.Client, emptySecret, func() error {
-			emptySecret.Type = keyScope.Key.Spec.SecretType
+			emptySecret.Type = keyScope.Key.Spec.GeneratedSecret.Type
 			emptySecret.StringData = secret.StringData
 			emptySecret.Data = nil
 
