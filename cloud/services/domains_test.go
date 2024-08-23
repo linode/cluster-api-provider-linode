@@ -615,6 +615,7 @@ func TestAddIPToDNS(t *testing.T) {
 						TTLSec: 30,
 					},
 				}, nil).AnyTimes()
+				mockClient.EXPECT().DeleteDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
@@ -739,6 +740,7 @@ func TestAddIPToDNS(t *testing.T) {
 						TTLSec: 30,
 					},
 				}, nil).AnyTimes()
+				mockClient.EXPECT().DeleteDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
