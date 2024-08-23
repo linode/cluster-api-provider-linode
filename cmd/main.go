@@ -325,6 +325,10 @@ func setupWebhooks(mgr manager.Manager) {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodePlacementGroup")
 		os.Exit(1)
 	}
+	if err = (&infrastructurev1alpha2.LinodeObjectStorageKey{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageKey")
+		os.Exit(1)
+	}
 }
 
 func setupObservabillity(ctx context.Context) func() {
