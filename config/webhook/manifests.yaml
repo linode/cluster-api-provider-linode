@@ -69,6 +69,26 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey
+  failurePolicy: Fail
+  name: validation.linodeobjectstoragekey.infrastructure.cluster.x-k8s.io
+  rules:
+  - apiGroups:
+    - infrastructure.cluster.x-k8s.io
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - linodeobjectstoragekeys
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
   - v1alpha2
   clientConfig:
     service:
@@ -107,26 +127,6 @@ webhooks:
     - CREATE
     resources:
     - linodevpcs
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey
-  failurePolicy: Fail
-  name: validation.linodeobjectstoragekey.infrastructure.cluster.x-k8s.io
-  rules:
-  - apiGroups:
-    - infrastructure.cluster.x-k8s.io
-    apiVersions:
-    - v1alpha2
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - linodeobjectstoragekeys
   sideEffects: None
 - admissionReviewVersions:
   - v1

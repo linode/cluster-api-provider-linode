@@ -41,7 +41,7 @@ func (r *LinodeObjectStorageKey) SetupWebhookWithManager(mgr ctrl.Manager) error
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys,verbs=create;update,versions=v1alpha2,name=vlinodeobjectstoragekey.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys,verbs=create;update,versions=v1alpha2,name=validation.linodeobjectstoragekey.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &LinodeObjectStorageKey{}
 
