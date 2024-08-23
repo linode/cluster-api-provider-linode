@@ -295,9 +295,6 @@ spec:
                 label: etcd_disk
                 status: ready
 
-    # Test if pod container is working by using exec
-    - name: Testing etcd-pod is available
-
     # Test to query the object storage bucket and check for data
     - name: Testing the object storage buckets
       try:
