@@ -489,7 +489,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("no private IP address"),
 			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil)
+				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil).AnyTimes()
 			},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
 				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
@@ -512,7 +512,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 			testcase.expectK8sClient(MockK8sClient)
 
 			for _, eachMachine := range testcase.clusterScope.LinodeMachines.Items {
-				err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope, eachMachine)
+				err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope, eachMachine, []linodego.NodeBalancerNode{})
 				if testcase.expectedError != nil {
 					assert.ErrorContains(t, err, testcase.expectedError.Error())
 				}
@@ -574,7 +574,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil)
+				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil).AnyTimes()
 				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&linodego.NodeBalancerNode{}, nil)
 			},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
@@ -627,7 +627,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 			},
 			expectedError: nil,
 			expects: func(mockClient *mock.MockLinodeClient) {
-				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil)
+				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil).AnyTimes()
 				mockClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 			},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
@@ -651,7 +651,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 			testcase.expectK8sClient(MockK8sClient)
 
 			for _, eachMachine := range testcase.clusterScope.LinodeMachines.Items {
-				err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope, eachMachine)
+				err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope, eachMachine, []linodego.NodeBalancerNode{})
 				if testcase.expectedError != nil {
 					assert.ErrorContains(t, err, testcase.expectedError.Error())
 				}
