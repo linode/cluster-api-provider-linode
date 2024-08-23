@@ -37,7 +37,7 @@ spec:
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: SSE_KEY
-                value: 'jU$n@AXXf3xseNd&U9ko4J#3B84D6YR6' # 32char random key
+                value: env('SSE_KEY')
               - name: KONNECTIVITY_AGENT_REPLICAS
                 value: '1' # Here, 1 is set for testing purposes. Default is 3.
               - name: CLUSTER_AUTOSCALER_VERSION
@@ -214,7 +214,7 @@ spec:
             content: |
               
               MAX_RETRIES=5
-              RETRY_DELAY=30 # 20 seconds delay before retrying
+              RETRY_DELAY=30 # 30 seconds delay before retrying
               ATTEMPT=0
               
               while [ $ATTEMPT -lt $MAX_RETRIES ]; do
@@ -248,7 +248,7 @@ spec:
               set -e
               
               MAX_RETRIES=5
-              RETRY_DELAY=30 # 20 second delay before retrying
+              RETRY_DELAY=30 # 30 second delay before retrying
               ATTEMPT=0
               ETCD_LABEL=""
               ETCD_STATUS=""
@@ -312,9 +312,10 @@ spec:
               set -e
   
               MAX_RETRIES=5
-              RETRY_DELAY=30 # 20 second delay before retrying
+              RETRY_DELAY=60 # 60 second delay before retrying
               ATTEMPT=0
               VALID_BUCKET=false
+              LOGS=""
               
               while [ $ATTEMPT -lt $MAX_RETRIES ]; do
                 RESPONSE=$(curl -s \
@@ -329,6 +330,7 @@ spec:
                   VALID_BUCKET=true
                   break
                 else
+                  LOGS=$RESPONSE
                   ATTEMPT=$((ATTEMPT + 1))
                   sleep $RETRY_DELAY
                 fi
@@ -337,6 +339,9 @@ spec:
               echo "{
                 \"status\": \"$VALID_BUCKET\"
               }"
+              
+              if [ "$VALID_BUCKET" == "false" ]; then
+                echo "$LOGS"
 
             check:
               ($error): ~
