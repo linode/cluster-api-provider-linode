@@ -338,6 +338,21 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 			Path(
 				Call("cluster with dns loadbalancing is created", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
+					cScope.LinodeDomainsClient = mck.LinodeClient
+					mck.LinodeClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{
+						{
+							ID:     1,
+							Domain: "lkedevs.net",
+						},
+					}, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.DomainRecord{
+						{
+							ID:     1234,
+							Type:   "A",
+							Name:   "test-cluster",
+							TTLSec: 30,
+						},
+					}, nil).AnyTimes()
 				}),
 				Result("cluster created", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
@@ -529,6 +544,20 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					}
 					Expect(k8sClient.Create(ctx, &linodeMachine)).To(Succeed())
 					cScope.LinodeMachines = linodeMachines
+					mck.LinodeClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{
+						{
+							ID:     1,
+							Domain: "lkedevs.net",
+						},
+					}, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.DomainRecord{
+						{
+							ID:     1234,
+							Type:   "A",
+							Name:   "test-cluster",
+							TTLSec: 30,
+						},
+					}, nil).AnyTimes()
 				}),
 				Result("cluster created", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient

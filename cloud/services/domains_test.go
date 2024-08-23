@@ -731,6 +731,14 @@ func TestAddIPToDNS(t *testing.T) {
 						Domain: "lkedevs.net",
 					},
 				}, nil).AnyTimes()
+				mockClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.DomainRecord{
+					{
+						ID:     1234,
+						Type:   "A",
+						Name:   "test-cluster",
+						TTLSec: 30,
+					},
+				}, nil).AnyTimes()
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
@@ -1003,7 +1011,23 @@ func TestDeleteIPFromDNS(t *testing.T) {
 					},
 				},
 			},
-			expects:       func(mockClient *mock.MockLinodeClient) {},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{
+					{
+						ID:     1,
+						Domain: "lkedevs.net",
+					},
+				}, nil).AnyTimes()
+				mockClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.DomainRecord{
+					{
+						ID:     1234,
+						Type:   "A",
+						Name:   "test-cluster",
+						TTLSec: 30,
+					},
+				}, nil).AnyTimes()
+				mockClient.EXPECT().DeleteDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
 				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
