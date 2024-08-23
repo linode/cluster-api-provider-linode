@@ -6,8 +6,7 @@ metadata:
 webhooks:
 - admissionReviewVersions:
   - v1
-  - v1alpha1
-  - v1alpha2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
@@ -27,8 +26,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1alpha1
-  - v1alpha2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
@@ -48,8 +46,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1alpha1
-  - v1alpha2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
@@ -69,7 +66,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1alpha2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
@@ -89,8 +86,7 @@ webhooks:
   sideEffects: None
 - admissionReviewVersions:
   - v1
-  - v1alpha1
-  - v1alpha2
+  - v1beta1
   clientConfig:
     service:
       name: webhook-service
@@ -103,86 +99,6 @@ webhooks:
     - infrastructure.cluster.x-k8s.io
     apiVersions:
     - v1alpha2
-    operations:
-    - CREATE
-    resources:
-    - linodevpcs
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1alpha1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodecluster
-  failurePolicy: Fail
-  name: validation.linodecluster.infrastructure.cluster.x-k8s.io
-  rules:
-  - apiGroups:
-    - infrastructure.cluster.x-k8s.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    resources:
-    - linodeclusters
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1alpha1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodemachine
-  failurePolicy: Fail
-  name: validation.linodemachine.infrastructure.cluster.x-k8s.io
-  rules:
-  - apiGroups:
-    - infrastructure.cluster.x-k8s.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    resources:
-    - linodemachines
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1alpha1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodeobjectstoragebucket
-  failurePolicy: Fail
-  name: validation.linodeobjectstoragebucket.infrastructure.cluster.x-k8s.io
-  rules:
-  - apiGroups:
-    - infrastructure.cluster.x-k8s.io
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    resources:
-    - linodeobjectstoragebuckets
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  - v1alpha1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-infrastructure-cluster-x-k8s-io-v1alpha1-linodevpc
-  failurePolicy: Fail
-  name: validation.linodevpc.infrastructure.cluster.x-k8s.io
-  rules:
-  - apiGroups:
-    - infrastructure.cluster.x-k8s.io
-    apiVersions:
-    - v1alpha1
     operations:
     - CREATE
     resources:

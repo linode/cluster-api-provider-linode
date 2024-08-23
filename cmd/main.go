@@ -281,20 +281,12 @@ func main() {
 
 func setupWebhooks(mgr manager.Manager) {
 	var err error
-	if err = (&infrastructurev1alpha1.LinodeCluster{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
-		os.Exit(1)
-	}
 	if err = (&infrastructurev1alpha2.LinodeCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
 		os.Exit(1)
 	}
 	if err = (&infrastructurev1alpha2.LinodeClusterTemplate{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha1.LinodeMachine{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachine")
+		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeClusterTemplate")
 		os.Exit(1)
 	}
 	if err = (&infrastructurev1alpha2.LinodeMachine{}).SetupWebhookWithManager(mgr); err != nil {
@@ -302,11 +294,7 @@ func setupWebhooks(mgr manager.Manager) {
 		os.Exit(1)
 	}
 	if err = (&infrastructurev1alpha2.LinodeMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha1.LinodeVPC{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeVPC")
+		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachineTemplate")
 		os.Exit(1)
 	}
 	if err = (&infrastructurev1alpha2.LinodeVPC{}).SetupWebhookWithManager(mgr); err != nil {
@@ -314,10 +302,6 @@ func setupWebhooks(mgr manager.Manager) {
 		os.Exit(1)
 	}
 	if err = (&infrastructurev1alpha2.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
-		os.Exit(1)
-	}
-	if err = (&infrastructurev1alpha1.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
