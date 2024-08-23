@@ -312,7 +312,7 @@ spec:
               set -e
   
               MAX_RETRIES=5
-              RETRY_DELAY=60 # 60 second delay before retrying
+              RETRY_DELAY=40 # 40 second delay before retrying
               ATTEMPT=0
               VALID_BUCKET=false
               LOGS=""
@@ -330,7 +330,6 @@ spec:
                   VALID_BUCKET=true
                   break
                 else
-                  LOGS=$RESPONSE
                   ATTEMPT=$((ATTEMPT + 1))
                   sleep $RETRY_DELAY
                 fi
