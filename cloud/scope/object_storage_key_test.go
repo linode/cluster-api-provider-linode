@@ -462,32 +462,6 @@ func TestGenerateKeySecret(t *testing.T) {
 			expectedErr: errors.New("unable to generate addons.cluster.x-k8s.io/resource-set; failed to get bucket: api err"),
 		},
 		{
-			name: "cluster resource-set with empty data format",
-			Key: &infrav1alpha2.LinodeObjectStorageKey{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-key",
-					Namespace: "test-namespace",
-				},
-				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-					SecretType: clusteraddonsv1.ClusterResourceSetSecretType,
-				},
-			},
-			key: &linodego.ObjectStorageKey{
-				ID:        1,
-				Label:     "test-key",
-				AccessKey: "access_key",
-				SecretKey: "secret_key",
-				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
-					{
-						BucketName:  "bucket",
-						Region:      "region",
-						Permissions: "read_write",
-					},
-				},
-			},
-			expectedErr: errors.New("unable to generate addons.cluster.x-k8s.io/resource-set; spec.secretDataFormat must specify resources"),
-		},
-		{
 			name: "cluster resource-set with empty buckets",
 			Key: &infrav1alpha2.LinodeObjectStorageKey{
 				ObjectMeta: metav1.ObjectMeta{

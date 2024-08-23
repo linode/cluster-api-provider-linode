@@ -180,30 +180,25 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 			Name:      *keyScope.Key.Status.SecretName,
 		}
 
-		var shouldRestoreSecret bool
 		if err := keyScope.Client.Get(ctx, key, secret); err != nil {
 			if apierrors.IsNotFound(err) {
-				shouldRestoreSecret = true
+				key, err := services.GetObjectStorageKey(ctx, keyScope)
+				if err != nil {
+					keyScope.Logger.Error(err, "Failed to restore access key for modified/deleted secret")
+					r.setFailure(keyScope, err)
+
+					return err
+				}
+
+				keyForSecret = key
+
+				r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyRetrieved", "Object storage key retrieved")
 			} else {
 				keyScope.Logger.Error(err, "Failed check for access key secret")
 				r.setFailure(keyScope, fmt.Errorf("failed check for access key secret: %w", err))
 
 				return err
 			}
-		}
-
-		if shouldRestoreSecret {
-			key, err := services.GetObjectStorageKey(ctx, keyScope)
-			if err != nil {
-				keyScope.Logger.Error(err, "Failed to restore access key for modified/deleted secret")
-				r.setFailure(keyScope, err)
-
-				return err
-			}
-
-			keyForSecret = key
-
-			r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyRetrieved", "Object storage key retrieved")
 		}
 	}
 

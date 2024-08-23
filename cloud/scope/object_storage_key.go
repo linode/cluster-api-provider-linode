@@ -119,10 +119,6 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 	// If the desired secret is of ClusterResourceSet type, encapsulate the secret.
 	// Bucket details are retrieved from the first referenced LinodeObjectStorageBucket in the access key.
 	if s.Key.Spec.SecretType == clusteraddonsv1.ClusterResourceSetSecretType {
-		if len(s.Key.Spec.SecretDataFormat) == 0 {
-			return nil, fmt.Errorf("unable to generate %s; spec.secretDataFormat must specify resources", clusteraddonsv1.ClusterResourceSetSecretType)
-		}
-
 		// This should never run since the CRD has a validation marker to ensure bucketAccess has at least one item.
 		if len(s.Key.Spec.BucketAccess) == 0 {
 			return nil, fmt.Errorf("unable to generate %s; spec.bucketAccess must not be empty", clusteraddonsv1.ClusterResourceSetSecretType)
