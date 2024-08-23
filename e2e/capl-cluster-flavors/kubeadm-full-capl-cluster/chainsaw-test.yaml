@@ -339,9 +339,6 @@ spec:
               echo "{
                 \"status\": \"$VALID_BUCKET\"
               }"
-              
-              if [ "$VALID_BUCKET" == "false" ]; then
-                echo "$LOGS"
 
             check:
               ($error): ~
