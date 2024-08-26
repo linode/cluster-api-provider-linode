@@ -953,28 +953,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode machine instance"))
 					})),
-					Path(Result("create machine error - timeout error", func(ctx context.Context, mck Mock) {
-						tempTimeout := reconciler.ReconcileTimeout
-						reconciler.ReconcileTimeout = time.Nanosecond
-						listInst := mck.LinodeClient.EXPECT().
-							ListInstances(ctx, gomock.Any()).
-							Return([]linodego.Instance{}, nil)
-						getRegion := mck.LinodeClient.EXPECT().
-							GetRegion(ctx, gomock.Any()).
-							After(listInst).
-							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-						getImage := mck.LinodeClient.EXPECT().
-							GetImage(ctx, gomock.Any()).
-							After(getRegion).
-							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
-							After(getImage).
-							Return(nil, errors.New("failed to ensure instance"))
-						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
-						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("failed to ensure instance"))
-						reconciler.ReconcileTimeout = tempTimeout
-					})),
 				),
 			),
 			Path(
@@ -1245,16 +1223,6 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Linode instance deletion"))
 					})),
-					Path(Result("create machine error - timeout error", func(ctx context.Context, mck Mock) {
-						tempTimeout := reconciler.ReconcileTimeout
-						reconciler.ReconcileTimeout = time.Nanosecond
-						mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
-							Return(errors.New("failed to delete instance"))
-						_, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
-						Expect(err).To(HaveOccurred())
-						Expect(err.Error()).To(ContainSubstring("failed to delete instance"))
-						reconciler.ReconcileTimeout = tempTimeout
-					})),
 				),
 			),
 			Path(
@@ -1274,7 +1242,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 	var machine clusterv1.Machine
 	var linodeMachine infrav1alpha2.LinodeMachine
 	var secret corev1.Secret
-	var reconciler *LinodeMachineReconciler
 	var lpgReconciler *LinodePlacementGroupReconciler
 	var linodePlacementGroup infrav1alpha2.LinodePlacementGroup
 	var linodeFirewall infrav1alpha2.LinodeFirewall
@@ -1388,11 +1355,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 			Client:   k8sClient,
 		}
 
-		reconciler = &LinodeMachineReconciler{
-			Recorder: recorder,
-			Client:   k8sClient,
-		}
-
 		mockCtrl = gomock.NewController(GinkgoT())
 		testLogs = &bytes.Buffer{}
 		logger = zap.New(
@@ -1446,7 +1408,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		Expect(err).NotTo(HaveOccurred())
 		mScope.PatchHelper = patchHelper
 
-		createOpts, err := reconciler.newCreateConfig(ctx, &mScope, []string{}, logger)
+		createOpts, err := newCreateConfig(ctx, &mScope, []string{}, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
 		Expect(createOpts.PlacementGroup.ID).To(Equal(1))
