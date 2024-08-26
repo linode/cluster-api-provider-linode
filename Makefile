@@ -153,7 +153,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-release local-deploy chainsaw
-	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32 | cut -c1-32) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
+	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
@@ -331,7 +331,7 @@ HUSKY_VERSION            ?= v0.2.16
 NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
-GOWRAP_VERSION           ?= latest
+GOWRAP_VERSION           ?= v1.3.7
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
