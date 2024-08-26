@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.2
 
 require (
-	github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.3.0
+	github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.4.0
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
