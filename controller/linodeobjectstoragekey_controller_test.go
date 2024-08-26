@@ -132,7 +132,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 
 					By("secret")
 					var secret corev1.Secret
-					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
+					secretKey := client.ObjectKey{Namespace: "default", Name: "lifecycle-obj-key"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
 					Expect(string(secret.Data["access_key"])).To(Equal("access-key-1"))
@@ -145,7 +145,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-					Expect(logOutput).To(ContainSubstring("Secret %s was created with access key", *key.Status.SecretName))
+					Expect(logOutput).To(ContainSubstring("Secret default/lifecycle-obj-key was created with access key"))
 				}),
 			),
 		),
@@ -187,7 +187,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 
 					By("secret")
 					var secret corev1.Secret
-					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
+					secretKey := client.ObjectKey{Namespace: "default", Name: "lifecycle-obj-key"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
 					Expect(string(secret.Data["access_key"])).To(Equal("access-key-2"))
@@ -200,13 +200,13 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-					Expect(logOutput).To(ContainSubstring("Secret %s was updated with access key", *key.Status.SecretName))
+					Expect(logOutput).To(ContainSubstring("Secret default/lifecycle-obj-key was updated with access key"))
 				}),
 			),
 		),
 		Once("secret is deleted", func(ctx context.Context, _ Mock) {
 			var secret corev1.Secret
-			secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
+			secretKey := client.ObjectKey{Namespace: "default", Name: "lifecycle-obj-key"}
 			Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, &secret)).To(Succeed())
 		}),
@@ -236,7 +236,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					var secret corev1.Secret
-					secretKey := client.ObjectKey{Namespace: "default", Name: *key.Status.SecretName}
+					secretKey := client.ObjectKey{Namespace: "default", Name: "lifecycle-obj-key"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
 					Expect(string(secret.Data["access_key"])).To(Equal("access-key-2"))
@@ -249,7 +249,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
-					Expect(logOutput).To(ContainSubstring("Secret %s was created with access key", *key.Status.SecretName))
+					Expect(logOutput).To(ContainSubstring("Secret default/lifecycle-obj-key was created with access key"))
 				}),
 			),
 		),
@@ -297,7 +297,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 	)
 })
 
-var _ = Describe("secret-template", Label("key", "key-secret-template"), func() {
+var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
 	reconciler := LinodeObjectStorageKeyReconciler{}
@@ -314,7 +314,7 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 			},
 			Spec: infrav1.LinodeObjectStorageKeySpec{
 				GeneratedSecret: infrav1.GeneratedSecret{
-					Namespace: "default",
+					Namespace: "other",
 				},
 				BucketAccess: []infrav1.BucketAccessRef{
 					{
@@ -328,6 +328,9 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 	})
 
 	suite.Run(
+		Once("create other namespace", func(ctx context.Context, _ Mock) {
+			Expect(k8sClient.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "other"}})).To(Succeed())
+		}),
 		Call("key created", func(ctx context.Context, mck Mock) {
 			mck.LinodeClient.EXPECT().CreateObjectStorageKey(gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageKey{
 				ID:        1,
@@ -347,7 +350,7 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 				Call("with opaque secret", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Key.ObjectMeta.Name = "opaque"
-					keyScope.Key.Spec.GeneratedSecret.Name = "opaque-obj-key"
+					keyScope.Key.Spec.GeneratedSecret.Name = "opaque-custom-secret"
 					keyScope.Key.Spec.GeneratedSecret.Type = corev1.SecretTypeOpaque
 					keyScope.Key.Spec.GeneratedSecret.Format = map[string]string{
 						"data": "{{ .AccessKey }}-{{ .SecretKey }}",
@@ -363,7 +366,7 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 					Expect(err).NotTo(HaveOccurred())
 
 					var secret corev1.Secret
-					secretKey := client.ObjectKey{Namespace: "default", Name: "opaque-obj-key"}
+					secretKey := client.ObjectKey{Namespace: "other", Name: "opaque-custom-secret"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(1))
 					Expect(string(secret.Data["data"])).To(Equal("access-key-secret-key"))
@@ -373,7 +376,7 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 				Call("with cluster-resource-set secret", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Key.ObjectMeta.Name = "cluster-resource-set"
-					keyScope.Key.Spec.GeneratedSecret.Name = "cluster-resource-set-obj-key"
+					keyScope.Key.Spec.GeneratedSecret.Name = "cluster-resource-set-custom-secret"
 					keyScope.Key.Spec.GeneratedSecret.Type = clusteraddonsv1.ClusterResourceSetSecretType
 					keyScope.Key.Spec.GeneratedSecret.Format = map[string]string{
 						"data": "{{ .AccessKey }}-{{ .SecretKey }}-{{ .BucketEndpoint }}",
@@ -393,7 +396,7 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 					Expect(err).NotTo(HaveOccurred())
 
 					var secret corev1.Secret
-					secretKey := client.ObjectKey{Namespace: "default", Name: "cluster-resource-set-obj-key"}
+					secretKey := client.ObjectKey{Namespace: "other", Name: "cluster-resource-set-custom-secret"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(1))
 					Expect(string(secret.Data["data"])).To(Equal("access-key-secret-key-hostname"))
@@ -503,7 +506,6 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.Key.Spec.KeyGeneration = 1
 					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
-					keyScope.Key.Status.SecretName = ptr.To("mock-obj-key")
 					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
 
 					keyScope.LinodeClient = mck.LinodeClient
@@ -531,7 +533,6 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 				Result("creation error", func(ctx context.Context, mck Mock) {
 					keyScope.Key.Spec.KeyGeneration = 1
 					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
-					keyScope.Key.Status.SecretName = ptr.To("mock-obj-key")
 					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
 
 					keyScope.LinodeClient = mck.LinodeClient
@@ -550,7 +551,6 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.Key.Spec.KeyGeneration = 1
 					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
-					keyScope.Key.Status.SecretName = ptr.To("mock-obj-key")
 					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
 
 					keyScope.LinodeClient = mck.LinodeClient

@@ -51,7 +51,7 @@ type GeneratedSecret struct {
 	// If no format is supplied then a generic one is used containing the values specified.
 	// When SecretType is set to addons.cluster.x-k8s.io/resource-set, a .BucketEndpoint value is also available pointing to the location of the first bucket specified in BucketAccess.
 	// +optional
-	Format map[string]string `json:"format"`
+	Format map[string]string `json:"format,omitempty"`
 }
 
 // LinodeObjectStorageKeySpec defines the desired state of LinodeObjectStorageKey
@@ -98,10 +98,6 @@ type LinodeObjectStorageKeyStatus struct {
 	// LastKeyGeneration tracks the last known value of .spec.keyGeneration.
 	// +optional
 	LastKeyGeneration *int `json:"lastKeyGeneration,omitempty"`
-
-	// SecretName specifies the name of the Secret containing access key data.
-	// +optional
-	SecretName *string `json:"secretName,omitempty"`
 
 	// AccessKeyRef stores the ID for Object Storage key provisioned.
 	// +optional

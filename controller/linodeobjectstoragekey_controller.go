@@ -173,11 +173,11 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 		r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyAssigned", "Object storage key assigned")
 
 	// Ensure the generated secret still exists
-	case keyScope.Key.Status.AccessKeyRef != nil && keyScope.Key.Status.SecretName != nil:
+	case keyScope.Key.Status.AccessKeyRef != nil:
 		secret := &corev1.Secret{}
 		key := client.ObjectKey{
-			Namespace: keyScope.Key.Namespace,
-			Name:      *keyScope.Key.Status.SecretName,
+			Namespace: keyScope.Key.Spec.GeneratedSecret.Namespace,
+			Name:      keyScope.Key.Spec.GeneratedSecret.Name,
 		}
 
 		if err := keyScope.Client.Get(ctx, key, secret); err != nil {
@@ -226,9 +226,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 			return err
 		}
 
-		keyScope.Key.Status.SecretName = util.Pointer(secret.Name)
-
-		keyScope.Logger.Info(fmt.Sprintf("Secret %s was %s with access key", secret.Name, operation))
+		keyScope.Logger.Info(fmt.Sprintf("Secret %s/%s was %s with access key", secret.Namespace, secret.Name, operation))
 		r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyStored", "Object storage key stored in secret")
 	}
 

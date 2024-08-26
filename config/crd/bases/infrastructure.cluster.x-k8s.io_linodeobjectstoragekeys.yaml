@@ -204,10 +204,6 @@ spec:
                 default: false
                 description: Ready denotes that the key has been provisioned.
                 type: boolean
-              secretName:
-                description: SecretName specifies the name of the Secret containing
-                  access key data.
-                type: string
             type: object
         type: object
     served: true
