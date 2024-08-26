@@ -23,6 +23,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"sort"
 
@@ -30,10 +31,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -55,7 +59,17 @@ var (
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
 )
 
-func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
+func retryIfTransient(err error) (ctrl.Result, error) {
+	if util.IsRetryableError(err) {
+		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
+			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
+		}
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+	}
+	return ctrl.Result{}, err
+}
+
+func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
@@ -97,7 +111,7 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 
 	// if vpc, attach additional interface as eth0 to linode
 	if machineScope.LinodeCluster.Spec.VPCRef != nil {
-		iface, err := r.getVPCInterfaceConfig(ctx, machineScope, logger)
+		iface, err := getVPCInterfaceConfig(ctx, machineScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get VPC interface config")
 
@@ -109,7 +123,7 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 	}
 
 	if machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
-		pgID, err := r.getPlacementGroupID(ctx, machineScope, logger)
+		pgID, err := getPlacementGroupID(ctx, machineScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get Placement Group config")
 			return nil, err
@@ -120,7 +134,7 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 	}
 
 	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
-		fwID, err := r.getFirewallID(ctx, machineScope, logger)
+		fwID, err := getFirewallID(ctx, machineScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get Firewall config")
 			return nil, err
@@ -131,7 +145,7 @@ func (r *LinodeMachineReconciler) newCreateConfig(ctx context.Context, machineSc
 	return createConfig, nil
 }
 
-func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, instanceID int) ([]clusterv1.MachineAddress, error) {
+func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, instanceID int) ([]clusterv1.MachineAddress, error) {
 	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, instanceID)
 	if err != nil {
 		return nil, fmt.Errorf("get instance ips: %w", err)
@@ -188,62 +202,7 @@ func (r *LinodeMachineReconciler) buildInstanceAddrs(ctx context.Context, machin
 	return ips, nil
 }
 
-func getOwnerMachine(ctx context.Context, tracedClient client.Client, linodeMachine infrav1alpha2.LinodeMachine, log logr.Logger) (*clusterv1.Machine, error) {
-	machine, err := kutil.GetOwnerMachine(ctx, tracedClient, linodeMachine.ObjectMeta)
-	if err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			log.Error(err, "Failed to fetch owner machine")
-		}
-
-		return nil, err
-	}
-	if machine == nil {
-		log.Info("Machine Controller has not yet set OwnerRef, skipping reconciliation")
-
-		return nil, err
-	}
-	if skippedMachinePhases[machine.Status.Phase] {
-		return nil, err
-	}
-	match := false
-	for i := range linodeMachine.OwnerReferences {
-		if match = linodeMachine.OwnerReferences[i].UID == machine.UID; match {
-			break
-		}
-	}
-	if !match {
-		log.Info("Failed to find the referenced owner machine, skipping reconciliation", "references", linodeMachine.OwnerReferences, "machine", machine.ObjectMeta)
-
-		return nil, err
-	}
-
-	return machine, nil
-}
-
-func (r *LinodeMachineReconciler) getClusterFromMetadata(ctx context.Context, machine clusterv1.Machine, log logr.Logger) (*clusterv1.Cluster, error) {
-	cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), machine.ObjectMeta)
-	if err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			log.Error(err, "Failed to fetch cluster by label")
-		}
-
-		return nil, err
-	}
-	if cluster == nil {
-		log.Error(nil, "Missing cluster")
-
-		return nil, errors.New("missing cluster")
-	}
-	if cluster.Spec.InfrastructureRef == nil {
-		log.Error(nil, "Missing infrastructure reference")
-
-		return nil, errors.New("missing infrastructure reference")
-	}
-
-	return cluster, nil
-}
-
-func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logger) handler.MapFunc {
+func linodeClusterToLinodeMachines(logger logr.Logger, tracedClient client.Client) handler.MapFunc {
 	logger = logger.WithName("LinodeMachineReconciler").WithName("linodeClusterToLinodeMachines")
 
 	return func(ctx context.Context, o client.Object) []ctrl.Request {
@@ -263,7 +222,7 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 			return nil
 		}
 
-		cluster, err := kutil.GetOwnerCluster(ctx, r.TracedClient(), linodeCluster.ObjectMeta)
+		cluster, err := kutil.GetOwnerCluster(ctx, tracedClient, linodeCluster.ObjectMeta)
 		switch {
 		case apierrors.IsNotFound(err) || cluster == nil:
 			logger.Info("Cluster for LinodeCluster not found, skipping mapping")
@@ -275,7 +234,7 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 			return nil
 		}
 
-		request, err := r.requestsForCluster(ctx, cluster.Namespace, cluster.Name)
+		request, err := requestsForCluster(ctx, tracedClient, cluster.Namespace, cluster.Name)
 		if err != nil {
 			logger.Error(err, "Failed to create request for cluster")
 
@@ -286,11 +245,11 @@ func (r *LinodeMachineReconciler) linodeClusterToLinodeMachines(logger logr.Logg
 	}
 }
 
-func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namespace, name string) ([]ctrl.Request, error) {
+func requestsForCluster(ctx context.Context, tracedClient client.Client, namespace, name string) ([]ctrl.Request, error) {
 	labels := map[string]string{clusterv1.ClusterNameLabel: name}
 
 	machineList := clusterv1.MachineList{}
-	if err := r.TracedClient().List(ctx, &machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+	if err := tracedClient.List(ctx, &machineList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
 		return nil, err
 	}
 
@@ -316,7 +275,7 @@ func (r *LinodeMachineReconciler) requestsForCluster(ctx context.Context, namesp
 	return result, nil
 }
 
-func (r *LinodeMachineReconciler) getPlacementGroupID(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (int, error) {
+func getPlacementGroupID(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (int, error) {
 	name := machineScope.LinodeMachine.Spec.PlacementGroupRef.Name
 	namespace := machineScope.LinodeMachine.Spec.PlacementGroupRef.Namespace
 	if namespace == "" {
@@ -332,7 +291,7 @@ func (r *LinodeMachineReconciler) getPlacementGroupID(ctx context.Context, machi
 		},
 	}
 	objectKey := client.ObjectKeyFromObject(&linodePlacementGroup)
-	err := r.Get(ctx, objectKey, &linodePlacementGroup)
+	err := machineScope.Client.Get(ctx, objectKey, &linodePlacementGroup)
 	if err != nil {
 		logger.Error(err, "Failed to fetch LinodePlacementGroup")
 		return -1, err
@@ -344,7 +303,7 @@ func (r *LinodeMachineReconciler) getPlacementGroupID(ctx context.Context, machi
 	return *linodePlacementGroup.Spec.PGID, nil
 }
 
-func (r *LinodeMachineReconciler) getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (int, error) {
+func getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (int, error) {
 	name := machineScope.LinodeMachine.Spec.FirewallRef.Name
 	namespace := machineScope.LinodeMachine.Spec.FirewallRef.Namespace
 	if namespace == "" {
@@ -360,7 +319,7 @@ func (r *LinodeMachineReconciler) getFirewallID(ctx context.Context, machineScop
 		},
 	}
 	objectKey := client.ObjectKeyFromObject(&linodeFirewall)
-	err := r.Get(ctx, objectKey, &linodeFirewall)
+	err := machineScope.Client.Get(ctx, objectKey, &linodeFirewall)
 	if err != nil {
 		logger.Error(err, "Failed to fetch LinodeFirewall")
 		return -1, err
@@ -369,7 +328,7 @@ func (r *LinodeMachineReconciler) getFirewallID(ctx context.Context, machineScop
 	return *linodeFirewall.Spec.FirewallID, nil
 }
 
-func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
 	name := machineScope.LinodeCluster.Spec.VPCRef.Name
 	namespace := machineScope.LinodeCluster.Spec.VPCRef.Namespace
 	if namespace == "" {
@@ -384,7 +343,7 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 			Name:      name,
 		},
 	}
-	if err := r.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
+	if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
 		logger.Error(err, "Failed to fetch LinodeVPC")
 
 		return nil, err
@@ -423,7 +382,7 @@ func (r *LinodeMachineReconciler) getVPCInterfaceConfig(ctx context.Context, mac
 		Primary:  true,
 		SubnetID: &subnetID,
 		IPv4: &linodego.VPCIPv4{
-			NAT1To1: ptr.To(("any")),
+			NAT1To1: ptr.To("any"),
 		},
 	}, nil
 }
@@ -527,4 +486,153 @@ func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha2.Insta
 	}
 
 	return nil
+}
+
+func configureDisks(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
+	if machineScope.LinodeMachine.Spec.DataDisks == nil && machineScope.LinodeMachine.Spec.OSDisk == nil {
+		return nil
+	}
+
+	if err := resizeRootDisk(ctx, logger, machineScope, linodeInstanceID); err != nil {
+		return err
+	}
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated) {
+		if err := createDisks(ctx, logger, machineScope, linodeInstanceID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
+	for deviceName, disk := range machineScope.LinodeMachine.Spec.DataDisks {
+		if disk.DiskID != 0 {
+			continue
+		}
+		label := disk.Label
+		if label == "" {
+			label = deviceName
+		}
+		// create the disk
+		diskFilesystem := defaultDiskFilesystem
+		if disk.Filesystem != "" {
+			diskFilesystem = disk.Filesystem
+		}
+		linodeDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
+			ctx,
+			linodeInstanceID,
+			linodego.InstanceDiskCreateOptions{
+				Label:      label,
+				Size:       int(disk.Size.ScaledValue(resource.Mega)),
+				Filesystem: diskFilesystem,
+			},
+		)
+		if err != nil {
+			if !linodego.ErrHasStatus(err, linodeBusyCode) {
+				logger.Error(err, "Failed to create disk", "DiskLabel", label)
+			}
+
+			conditions.MarkFalse(
+				machineScope.LinodeMachine,
+				ConditionPreflightAdditionalDisksCreated,
+				string(cerrs.CreateMachineError),
+				clusterv1.ConditionSeverityWarning,
+				err.Error(),
+			)
+			return err
+		}
+		disk.DiskID = linodeDisk.ID
+		machineScope.LinodeMachine.Spec.DataDisks[deviceName] = disk
+	}
+	err := updateInstanceConfigProfile(ctx, logger, machineScope, linodeInstanceID)
+	if err != nil {
+		return err
+	}
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated)
+	return nil
+}
+
+func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
+	if reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized) {
+		return nil
+	}
+
+	instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, linodeInstanceID)
+	if err != nil {
+		logger.Error(err, "Failed to get default instance configuration")
+
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+		return err
+	}
+
+	if instanceConfig.Devices.SDA == nil {
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "root disk not yet ready")
+
+		return errors.New("root disk not yet ready")
+	}
+
+	rootDiskID := instanceConfig.Devices.SDA.DiskID
+
+	// carve out space for the etcd disk
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing) {
+		rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
+		if err != nil {
+			logger.Error(err, "Failed to get root disk for instance")
+
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+
+			return err
+		}
+		// dynamically calculate root disk size unless an explicit OS disk is being set
+		additionalDiskSize := 0
+		for _, disk := range machineScope.LinodeMachine.Spec.DataDisks {
+			additionalDiskSize += int(disk.Size.ScaledValue(resource.Mega))
+		}
+		diskSize := rootDisk.Size - additionalDiskSize
+		if machineScope.LinodeMachine.Spec.OSDisk != nil {
+			diskSize = int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))
+		}
+
+		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+			return err
+		}
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
+	}
+
+	conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
+
+	return nil
+}
+
+func updateInstanceConfigProfile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
+	// get the default instance config
+	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
+	if err != nil || len(configs) == 0 {
+		logger.Error(err, "Failed to list instance configs")
+
+		return err
+	}
+	instanceConfig := configs[0]
+
+	if machineScope.LinodeMachine.Spec.DataDisks != nil {
+		if err := createInstanceConfigDeviceMap(machineScope.LinodeMachine.Spec.DataDisks, instanceConfig.Devices); err != nil {
+			return err
+		}
+	}
+	if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, linodeInstanceID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Devices: instanceConfig.Devices}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getDefaultInstanceConfig(ctx context.Context, machineScope *scope.MachineScope, linodeInstanceID int) (linodego.InstanceConfig, error) {
+	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
+	if err != nil || len(configs) == 0 {
+		return linodego.InstanceConfig{}, fmt.Errorf("failing to list instance configurations: %w", err)
+	}
+
+	return configs[0], nil
 }

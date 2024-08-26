@@ -9,13 +9,21 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
-	"sigs.k8s.io/cluster-api/api/v1beta1"
+	"k8s.io/apimachinery/pkg/types"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	kutil "sigs.k8s.io/cluster-api/util"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
+	"github.com/linode/cluster-api-provider-linode/util"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-func (r *LinodeClusterReconciler) addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error {
+func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error {
 	logger := logr.FromContextOrDiscard(ctx)
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
 		if err := services.EnsureDNSEntries(ctx, clusterScope, "create"); err != nil {
@@ -56,7 +64,7 @@ func (r *LinodeClusterReconciler) addMachineToLB(ctx context.Context, clusterSco
 	return nil
 }
 
-func (r *LinodeClusterReconciler) removeMachineFromLB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+func removeMachineFromLB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
 		if err := services.DeleteNodesFromNB(ctx, logger, clusterScope); err != nil {
 			logger.Error(err, "Failed to remove node from Node Balancer backend")
@@ -78,7 +86,7 @@ func getIPPortCombo(cscope *scope.ClusterScope) (ipPortComboList []string) {
 	}
 	for _, eachMachine := range cscope.LinodeMachines.Items {
 		for _, IPs := range eachMachine.Status.Addresses {
-			if IPs.Type != v1beta1.MachineInternalIP || !strings.Contains(IPs.Address, "192.168") {
+			if IPs.Type != clusterv1.MachineInternalIP || !strings.Contains(IPs.Address, "192.168") {
 				continue
 			}
 			ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, apiserverLBPort))
@@ -88,4 +96,108 @@ func getIPPortCombo(cscope *scope.ClusterScope) (ipPortComboList []string) {
 		}
 	}
 	return ipPortComboList
+}
+
+func linodeMachineToLinodeCluster(tracedClient client.Client, logger logr.Logger) handler.MapFunc {
+	logger = logger.WithName("LinodeClusterReconciler").WithName("linodeMachineToLinodeCluster")
+
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
+		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
+		defer cancel()
+
+		linodeMachine, ok := o.(*infrav1alpha2.LinodeMachine)
+		if !ok {
+			logger.Info("Failed to cast object to LinodeMachine")
+			return nil
+		}
+
+		// We only need control plane machines to trigger reconciliation
+		machine, err := kutil.GetOwnerMachine(ctx, tracedClient, linodeMachine.ObjectMeta)
+		if err != nil || machine == nil || !kutil.IsControlPlaneMachine(machine) {
+			return nil
+		}
+
+		linodeCluster := infrav1alpha2.LinodeCluster{}
+		if err := tracedClient.Get(
+			ctx,
+			types.NamespacedName{
+				Name:      linodeMachine.ObjectMeta.Labels[clusterv1.ClusterNameLabel],
+				Namespace: linodeMachine.Namespace,
+			},
+			&linodeCluster); err != nil {
+			logger.Info("Failed to get LinodeCluster")
+			return nil
+		}
+
+		result := make([]ctrl.Request, 0, 1)
+		result = append(result, ctrl.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: linodeCluster.Namespace,
+				Name:      linodeCluster.Name,
+			},
+		})
+
+		return result
+	}
+}
+
+func handleDNS(clusterScope *scope.ClusterScope) {
+	clusterSpec := clusterScope.LinodeCluster.Spec
+	clusterMetadata := clusterScope.LinodeCluster.ObjectMeta
+	uniqueID := ""
+	if clusterSpec.Network.DNSUniqueIdentifier != "" {
+		uniqueID = "-" + clusterSpec.Network.DNSUniqueIdentifier
+	}
+	subDomain := clusterMetadata.Name + uniqueID
+
+	if clusterScope.LinodeCluster.Spec.Network.DNSSubDomainOverride != "" {
+		subDomain = clusterScope.LinodeCluster.Spec.Network.DNSSubDomainOverride
+	}
+	dnsHost := subDomain + "." + clusterSpec.Network.DNSRootDomain
+	apiLBPort := services.DefaultApiserverLBPort
+	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
+		apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
+	}
+	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+		Host: dnsHost,
+		Port: int32(apiLBPort),
+	}
+}
+
+func handleNBCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	linodeNB, err := services.EnsureNodeBalancer(ctx, clusterScope, logger)
+	if err != nil {
+		logger.Error(err, "failed to ensure nodebalancer")
+		return err
+	}
+	if linodeNB == nil {
+		err = fmt.Errorf("nodeBalancer created was nil")
+		return err
+	}
+	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = &linodeNB.ID
+
+	// create the configs for the nodeabalancer if not already specified
+	configs, err := services.EnsureNodeBalancerConfigs(ctx, clusterScope, logger)
+	if err != nil {
+		logger.Error(err, "failed to ensure nodebalancer configs")
+		return err
+	}
+
+	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = util.Pointer(configs[0].ID)
+	additionalPorts := make([]infrav1alpha2.LinodeNBPortConfig, 0)
+	for _, config := range configs[1:] {
+		portConfig := infrav1alpha2.LinodeNBPortConfig{
+			Port:                 config.Port,
+			NodeBalancerConfigID: &config.ID,
+		}
+		additionalPorts = append(additionalPorts, portConfig)
+	}
+	clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = additionalPorts
+
+	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
+		Host: *linodeNB.IPv4,
+		Port: int32(configs[0].Port),
+	}
+
+	return nil
 }
