@@ -37,7 +37,7 @@ spec:
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: SSE_KEY
-                value: env('SSE_KEY')
+                value: "jU$n@AXXf3xseNd&U9ko4J#3B84D6YR6"
               - name: KONNECTIVITY_AGENT_REPLICAS
                 value: '1' # Here, 1 is set for testing purposes. Default is 3.
               - name: CLUSTER_AUTOSCALER_VERSION
@@ -307,7 +307,7 @@ spec:
               - name: BUCKET_NAME
                 value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF'), 'etcd-backup']))
               - name: URI
-                value: object-storage/buckets/us-ord
+                value: (join('/', ['object-storage', 'buckets', env('LINODE_REGION')]))
             content: |
               set -e
   
@@ -315,7 +315,6 @@ spec:
               RETRY_DELAY=40 # 40 second delay before retrying
               ATTEMPT=0
               VALID_BUCKET=false
-              LOGS=""
               
               while [ $ATTEMPT -lt $MAX_RETRIES ]; do
                 RESPONSE=$(curl -s \
