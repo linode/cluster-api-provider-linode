@@ -353,6 +353,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 							TTLSec: 30,
 						},
 					}, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().DeleteDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
 				Result("cluster created", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
@@ -558,6 +559,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 							TTLSec: 30,
 						},
 					}, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().DeleteDomainRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
 				Result("cluster created", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient

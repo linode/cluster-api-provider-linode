@@ -45,34 +45,152 @@ func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation
 	}
 
 	if cscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
+		if err := deleteStaleAkamaiEntries(ctx, cscope); err != nil {
+			return err
+		}
 		for _, dnsEntry := range dnsEntries {
 			if err := EnsureAkamaiDNSEntries(ctx, cscope, operation, dnsEntry); err != nil {
 				return err
 			}
 		}
 	} else {
-		for _, dnsEntry := range dnsEntries {
-			if err := EnsureLinodeDNSEntries(ctx, cscope, operation, dnsEntry); err != nil {
-				return err
-			}
+		if err := EnsureLinodeDNSEntries(ctx, cscope, operation, dnsEntries); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
+func getMachineIPs(cscope *scope.ClusterScope) (ipv4IPs, ipv6IPs []string, err error) {
+	for _, eachMachine := range cscope.LinodeMachines.Items {
+		for _, IPs := range eachMachine.Status.Addresses {
+			if IPs.Type != v1beta1.MachineExternalIP {
+				continue
+			}
+			addr, err := netip.ParseAddr(IPs.Address)
+			if err != nil {
+				return nil, nil, fmt.Errorf("not a valid IP %w", err)
+			}
+			if addr.Is4() {
+				ipv4IPs = append(ipv4IPs, IPs.Address)
+			} else {
+				ipv6IPs = append(ipv6IPs, IPs.Address)
+			}
+		}
+	}
+	return ipv4IPs, ipv6IPs, nil
+}
+
+func resetAkamaiRecord(ctx context.Context, cscope *scope.ClusterScope, recordBody *dns.RecordBody, machineIPList []string, rootDomain string) error {
+	freshEntries := make([]string, 0)
+	for _, ip := range recordBody.Target {
+		ip = strings.Replace(ip, ":0:0:", "::", 8) //nolint:mnd // 8 for 8 octet
+		if slices.Contains(machineIPList, ip) {
+			freshEntries = append(freshEntries, ip)
+		}
+	}
+	if len(freshEntries) == 0 {
+		return cscope.AkamaiDomainsClient.DeleteRecord(ctx, recordBody, rootDomain)
+	} else {
+		recordBody.Target = freshEntries
+		return cscope.AkamaiDomainsClient.UpdateRecord(ctx, recordBody, rootDomain)
+	}
+}
+
+func deleteStaleAkamaiEntries(ctx context.Context, cscope *scope.ClusterScope) error {
+	ipv4IPs, ipv6IPs, err := getMachineIPs(cscope)
+	if err != nil {
+		return err
+	}
+
+	rootDomain := cscope.LinodeCluster.Spec.Network.DNSRootDomain
+	fqdn := getSubDomain(cscope) + "." + rootDomain
+
+	// A record
+	aRecordBody, err := cscope.AkamaiDomainsClient.GetRecord(ctx, rootDomain, fqdn, "A")
+	if err != nil {
+		if !strings.Contains(err.Error(), "Not Found") {
+			return err
+		}
+	}
+	if aRecordBody != nil {
+		if err := resetAkamaiRecord(ctx, cscope, aRecordBody, ipv4IPs, rootDomain); err != nil {
+			return err
+		}
+	}
+
+	// AAAA record
+	aaaaRecordBody, err := cscope.AkamaiDomainsClient.GetRecord(ctx, rootDomain, fqdn, "AAAA")
+	if err != nil {
+		if !strings.Contains(err.Error(), "Not Found") {
+			return err
+		}
+	}
+	if aaaaRecordBody != nil {
+		if err := resetAkamaiRecord(ctx, cscope, aaaaRecordBody, ipv6IPs, rootDomain); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func deleteStaleLinodeEntries(ctx context.Context, cscope *scope.ClusterScope, domainRecords []linodego.DomainRecord, domainID int) error {
+	ipv4IPs, ipv6IPs, err := getMachineIPs(cscope)
+	if err != nil {
+		return err
+	}
+
+	if len(domainRecords) > 0 {
+		for _, record := range domainRecords {
+			if record.Type == linodego.RecordTypeTXT {
+				continue
+			}
+			if !slices.Contains(ipv4IPs, record.Target) && !slices.Contains(ipv6IPs, record.Target) {
+				if err := cscope.LinodeDomainsClient.DeleteDomainRecord(ctx, domainID, record.ID); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // EnsureLinodeDNSEntries ensures the domainrecord on Linode Cloud Manager is created, updated, or deleted based on operation passed
-func EnsureLinodeDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation string, dnsEntry DNSOptions) error {
+func EnsureLinodeDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation string, dnsEntries []DNSOptions) error {
 	// Get domainID from domain name
 	domainID, err := GetDomainID(ctx, cscope)
 	if err != nil {
 		return err
 	}
 
-	if operation == "delete" {
-		return DeleteDomainRecord(ctx, cscope, domainID, dnsEntry)
+	filter, err := json.Marshal(map[string]interface{}{"name": getSubDomain(cscope)})
+	if err != nil {
+		return err
 	}
-	return CreateDomainRecord(ctx, cscope, domainID, dnsEntry)
+
+	domainRecords, err := cscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
+	if err != nil {
+		return err
+	}
+
+	if err := deleteStaleLinodeEntries(ctx, cscope, domainRecords, domainID); err != nil {
+		return err
+	}
+
+	for _, dnsEntry := range dnsEntries {
+		if operation == "delete" {
+			if err := DeleteDomainRecord(ctx, cscope, domainID, dnsEntry); err != nil {
+				return err
+			}
+		} else {
+			if err := CreateDomainRecord(ctx, cscope, domainID, dnsEntry); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // EnsureAkamaiDNSEntries ensures the domainrecord on Akamai EDGE DNS is created, updated, or deleted based on operation passed

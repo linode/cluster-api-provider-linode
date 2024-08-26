@@ -1,9 +1,15 @@
 # Firewalling
 
-This guide covers how Cilium can be set up to act as a [host firewall](https://docs.cilium.io/en/latest/security/host-firewall/) on CAPL clusters.
+This guide covers how Cilium and Cloud Firewalls can be used for firewalling CAPL clusters.
 
-## Default Configuration
-By default, the following policies are set to audit mode(without any enforcement) on CAPL clusters
+## Cilium Firewalls
+
+Cilium provides cluster-wide firewalling via [Host Policies](https://docs.cilium.io/en/latest/security/policy/language/#hostpolicies)
+which enforce access control over connectivity to and from cluster nodes.
+Cilium's [host firewall](https://docs.cilium.io/en/latest/security/host-firewall/) is responsible for enforcing the security policies.
+
+### Default Cilium Host Firewall Configuration
+By default, the following Host Policies are set to audit mode (without any enforcement) on CAPL clusters:
 
 * [Kubeadm](./flavors/default.md) cluster allow rules
 
@@ -30,13 +36,13 @@ For kubeadm clusters running outside of VPC, ports 2379 and 2380 are also allowe
   | 6443  | API Server Traffic       | World                         |
   | *     | In Cluster Communication | Intra Cluster and VPC Traffic |
 
-## Enabling Firewall Enforcement
-In order to turn the cilium network policy from audit to enforce mode use the environment variable `FW_AUDIT_ONLY=false`
+### Enabling Cilium Host Policy Enforcement
+In order to turn the Cilium Host Policies from audit to enforce mode, use the environment variable `FW_AUDIT_ONLY=false`
 when generating the cluster. This will set the [policy-audit-mode](https://docs.cilium.io/en/latest/security/policy-creation/#creating-policies-from-verdicts)
-on the cilium deployment
+on the Cilium deployment.
 
-##  Adding Additional Rules
-Additional rules can be added to the `default-policy`
+###  Adding Additional Cilium Host Policies
+Additional rules can be added to the `default-policy`:
 ```yaml
 apiVersion: "cilium.io/v2"
 kind: CiliumClusterwideNetworkPolicy
@@ -57,7 +63,7 @@ spec:
             - port: "22" # added for SSH Access to the nodes
             - port: "${APISERVER_PORT:=6443}"
 ```
-Alternatively, additional rules can be added by creating a new policy
+Alternatively, additional rules can be added by creating a new policy:
 ```yaml
 apiVersion: "cilium.io/v2"
 kind: CiliumClusterwideNetworkPolicy
@@ -73,3 +79,39 @@ spec:
         - ports:
             - port: "22"
 ```
+
+## Cloud Firewalls
+
+For controlling firewalls via Linode resources, a [Cloud Firewall](https://www.linode.com/products/cloud-firewall/) can
+be defined and provisioned via the `LinodeFirewall` resource in CAPL.
+
+The created Cloud Firewall can be used on a `LinodeMachine` or a `LinodeMachineTemplate` by setting the `firewallRef` field.
+Alternatively, the provisioned Cloud Firewall's ID can be used in the `firewallID` field.
+
+```admonish note
+The `firewallRef` and `firewallID` fields are currently immutable for `LinodeMachines` and `LinodeMachineTemplates`. This will
+be addressed in a later release. 
+```
+
+Example `LinodeFirewall`:
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeFirewall
+metadata:
+  name: sample-fw
+spec:
+  enabled: true
+  inboundPolicy: DROP
+  inboundRules:
+    - action: ACCEPT
+      label: k8s-api
+      ports: "6443"
+      protocol: "TCP"
+      addresses:
+        ipv4:
+          - "10.0.0.0/24"
+  # outboundPolicy: ACCEPT
+  # outboundRules: []
+```
+
+Cloud Firewalls are not automatically created for any CAPL flavor at this time.

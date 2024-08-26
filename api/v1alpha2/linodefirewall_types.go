@@ -41,6 +41,7 @@ type LinodeFirewallSpec struct {
 	// +optional
 	InboundRules []FirewallRule `json:"inboundRules,omitempty"`
 
+	// InboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
 	// +kubebuilder:validation:Enum=ACCEPT;DROP
 	// +kubebuilder:default=ACCEPT
 	// +optional
@@ -49,6 +50,7 @@ type LinodeFirewallSpec struct {
 	// +optional
 	OutboundRules []FirewallRule `json:"outboundRules,omitempty"`
 
+	// OutboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
 	// +kubebuilder:validation:Enum=ACCEPT;DROP
 	// +kubebuilder:default=ACCEPT
 	// +optional
