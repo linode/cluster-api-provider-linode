@@ -53,6 +53,10 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 			Namespace: "default",
 		},
 		Spec: infrav1.LinodeObjectStorageKeySpec{
+			GeneratedSecret: infrav1.GeneratedSecret{
+				Name:      "lifecycle-obj-key",
+				Namespace: "default",
+			},
 			BucketAccess: []infrav1.BucketAccessRef{
 				{
 					BucketName:  "mybucket",
@@ -309,6 +313,9 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 				Namespace: "default",
 			},
 			Spec: infrav1.LinodeObjectStorageKeySpec{
+				GeneratedSecret: infrav1.GeneratedSecret{
+					Namespace: "default",
+				},
 				BucketAccess: []infrav1.BucketAccessRef{
 					{
 						BucketName:  "mybucket",
@@ -340,6 +347,7 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 				Call("with opaque secret", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Key.ObjectMeta.Name = "opaque"
+					keyScope.Key.Spec.GeneratedSecret.Name = "opaque-obj-key"
 					keyScope.Key.Spec.GeneratedSecret.Type = corev1.SecretTypeOpaque
 					keyScope.Key.Spec.GeneratedSecret.Format = map[string]string{
 						"data": "{{ .AccessKey }}-{{ .SecretKey }}",
@@ -365,6 +373,7 @@ var _ = Describe("secret-template", Label("key", "key-secret-template"), func() 
 				Call("with cluster-resource-set secret", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Key.ObjectMeta.Name = "cluster-resource-set"
+					keyScope.Key.Spec.GeneratedSecret.Name = "cluster-resource-set-obj-key"
 					keyScope.Key.Spec.GeneratedSecret.Type = clusteraddonsv1.ClusterResourceSetSecretType
 					keyScope.Key.Spec.GeneratedSecret.Format = map[string]string{
 						"data": "{{ .AccessKey }}-{{ .SecretKey }}-{{ .BucketEndpoint }}",
@@ -416,6 +425,10 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 				Namespace: "default",
 			},
 			Spec: infrav1.LinodeObjectStorageKeySpec{
+				GeneratedSecret: infrav1.GeneratedSecret{
+					Name:      "mock-obj-key",
+					Namespace: "default",
+				},
 				BucketAccess: []infrav1.BucketAccessRef{
 					{
 						BucketName:  "mybucket",

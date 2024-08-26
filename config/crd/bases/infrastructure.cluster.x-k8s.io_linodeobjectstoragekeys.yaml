@@ -106,8 +106,8 @@ spec:
                       When SecretType is set to addons.cluster.x-k8s.io/resource-set, a .BucketEndpoint value is also available pointing to the location of the first bucket specified in BucketAccess.
                     type: object
                   name:
-                    description: The name of the generated Secret. If not set, defaults
-                      to the name of the LinodeObjectStorageKey.
+                    description: The name of the generated Secret. If not set, the
+                      name is formatted as "{name-of-obj-key}-obj-key".
                     type: string
                   namespace:
                     description: The namespace for the generated Secret. If not set,

@@ -40,10 +40,13 @@ func (r *LinodeObjectStorageKey) SetupWebhookWithManager(mgr ctrl.Manager) error
 		Complete()
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys,verbs=create;update,versions=v1alpha2,name=validation.linodeobjectstoragekey.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys,verbs=create;update,versions=v1alpha2,name=validation.linodeobjectstoragekey.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &LinodeObjectStorageKey{}
+
+// +kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys,verbs=create;update,versions=v1alpha2,name=mutation.linodeobjectstoragekey.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+
+var _ webhook.Defaulter = &LinodeObjectStorageKey{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LinodeObjectStorageKey) ValidateCreate() (admission.Warnings, error) {
@@ -67,10 +70,10 @@ func (r *LinodeObjectStorageKey) ValidateDelete() (admission.Warnings, error) {
 func (r *LinodeObjectStorageKey) validateLinodeObjectStorageKey() (admission.Warnings, error) {
 	var errs field.ErrorList
 
-	if r.Spec.SecretType == clusteraddonsv1.ClusterResourceSetSecretType && len(r.Spec.SecretDataFormat) == 0 {
+	if r.Spec.GeneratedSecret.Type == clusteraddonsv1.ClusterResourceSetSecretType && len(r.Spec.GeneratedSecret.Format) == 0 {
 		errs = append(errs, field.Invalid(
-			field.NewPath("spec").Child("secretDataFormat"),
-			r.Spec.SecretDataFormat,
+			field.NewPath("spec").Child("generatedSecret").Child("format"),
+			r.Spec.GeneratedSecret.Format,
 			fmt.Sprintf("must not be empty with Secret type %s", clusteraddonsv1.ClusterResourceSetSecretType),
 		))
 	}
@@ -80,4 +83,18 @@ func (r *LinodeObjectStorageKey) validateLinodeObjectStorageKey() (admission.War
 	}
 
 	return nil, nil
+}
+
+const defaultKeySecretNameTemplate = "%s-obj-key"
+
+// Default implements webhook.Defaulter so a webhook will be registered for the type
+func (r *LinodeObjectStorageKey) Default() {
+	linodeobjectstoragekeylog.Info("default", "name", r.Name)
+
+	if r.Spec.GeneratedSecret.Name == "" {
+		r.Spec.GeneratedSecret.Name = fmt.Sprintf(defaultKeySecretNameTemplate, r.Name)
+	}
+	if r.Spec.GeneratedSecret.Namespace == "" {
+		r.Spec.GeneratedSecret.Namespace = r.Namespace
+	}
 }

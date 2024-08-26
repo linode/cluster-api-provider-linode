@@ -35,7 +35,7 @@ type BucketAccessRef struct {
 }
 
 type GeneratedSecret struct {
-	// The name of the generated Secret. If not set, defaults to the name of the LinodeObjectStorageKey.
+	// The name of the generated Secret. If not set, the name is formatted as "{name-of-obj-key}-obj-key".
 	// +optional
 	Name string `json:"name,omitempty"`
 	// The namespace for the generated Secret. If not set, defaults to the namespace of the LinodeObjectStorageKey.
@@ -63,7 +63,7 @@ type LinodeObjectStorageKeySpec struct {
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.
 	// If not supplied then the credentials of the controller will be used.
 	// +optional
-	CredentialsRef *corev1.SecretReference `json:"credentialsRef"`
+	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 
 	// KeyGeneration may be modified to trigger a rotation of the access key.
 	// +kubebuilder:default=0

@@ -314,6 +314,12 @@ func TestGenerateKeySecret(t *testing.T) {
 					Name:      "test-key",
 					Namespace: "test-namespace",
 				},
+				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+					GeneratedSecret: infrav1alpha2.GeneratedSecret{
+						Name:      "test-key-obj-key",
+						Namespace: "test-namespace",
+					},
+				},
 			},
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
@@ -350,6 +356,8 @@ func TestGenerateKeySecret(t *testing.T) {
 				},
 				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
 					GeneratedSecret: infrav1alpha2.GeneratedSecret{
+						Name:      "test-key-obj-key",
+						Namespace: "test-namespace",
 						Format: map[string]string{
 							"key": "{{ .AccessKey",
 						},
@@ -387,7 +395,9 @@ func TestGenerateKeySecret(t *testing.T) {
 						},
 					},
 					GeneratedSecret: infrav1alpha2.GeneratedSecret{
-						Type: clusteraddonsv1.ClusterResourceSetSecretType,
+						Name:      "test-key-obj-key",
+						Namespace: "test-namespace",
+						Type:      clusteraddonsv1.ClusterResourceSetSecretType,
 						Format: map[string]string{
 							"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
 						},
@@ -442,7 +452,9 @@ func TestGenerateKeySecret(t *testing.T) {
 						},
 					},
 					GeneratedSecret: infrav1alpha2.GeneratedSecret{
-						Type: clusteraddonsv1.ClusterResourceSetSecretType,
+						Name:      "test-key-obj-key",
+						Namespace: "test-namespace",
+						Type:      clusteraddonsv1.ClusterResourceSetSecretType,
 						Format: map[string]string{
 							"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
 						},
@@ -476,7 +488,9 @@ func TestGenerateKeySecret(t *testing.T) {
 				},
 				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
 					GeneratedSecret: infrav1alpha2.GeneratedSecret{
-						Type: clusteraddonsv1.ClusterResourceSetSecretType,
+						Name:      "test-key-obj-key",
+						Namespace: "test-namespace",
+						Type:      clusteraddonsv1.ClusterResourceSetSecretType,
 						Format: map[string]string{
 							"key": "{{ .AccessKey }},{{ .SecretKey }},{{ .BucketEndpoint }}",
 						},
@@ -515,6 +529,12 @@ func TestGenerateKeySecret(t *testing.T) {
 					Name:      "test-key",
 					Namespace: "test-namespace",
 				},
+				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+					GeneratedSecret: infrav1alpha2.GeneratedSecret{
+						Name:      "test-key-obj-key",
+						Namespace: "test-namespace",
+					},
+				},
 			},
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
@@ -532,7 +552,7 @@ func TestGenerateKeySecret(t *testing.T) {
 			expectK8s: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
-			expectedErr: fmt.Errorf("could not set owner ref on access key secret"),
+			expectedErr: fmt.Errorf("could not set controller ref on access key secret"),
 		},
 	}
 	for _, tt := range tests {

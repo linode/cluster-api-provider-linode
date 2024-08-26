@@ -253,6 +253,23 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 
 	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "KeyRevoked", "Object storage key revoked")
 
+	// If this key's Secret was generated in another namespace, manually delete it since it has no owner reference.
+	if keyScope.Key.Spec.GeneratedSecret.Namespace != keyScope.Key.Namespace {
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      keyScope.Key.Spec.GeneratedSecret.Name,
+				Namespace: keyScope.Key.Spec.GeneratedSecret.Namespace,
+			},
+		}
+		if err := keyScope.Client.Delete(ctx, &secret); err != nil {
+			err := errors.New("failed to delete generated secret; unable to delete")
+			keyScope.Logger.Error(err, "client.Delete")
+			r.setFailure(keyScope, err)
+
+			return err
+		}
+	}
+
 	if !controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha2.ObjectStorageKeyFinalizer) {
 		err := errors.New("failed to remove finalizer from key; unable to delete")
 		keyScope.Logger.Error(err, "controllerutil.RemoveFinalizer")

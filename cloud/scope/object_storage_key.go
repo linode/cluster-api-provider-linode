@@ -99,8 +99,6 @@ func (s *ObjectStorageKeyScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
-const accessKeySecretNameTemplate = "%s-obj-key"
-
 // GenerateKeySecret returns a secret suitable for submission to the Kubernetes API.
 // The secret is expected to contain keys for accessing the bucket, as well as owner and controller references.
 func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *linodego.ObjectStorageKey) (*corev1.Secret, error) {
@@ -108,7 +106,6 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 		return nil, errors.New("expected non-nil object storage key")
 	}
 
-	secretName := fmt.Sprintf(accessKeySecretNameTemplate, s.Key.Name)
 	secretStringData := make(map[string]string)
 
 	tmplData := map[string]string{
@@ -154,19 +151,19 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: s.Key.Namespace,
+			Name:      s.Key.Spec.GeneratedSecret.Name,
+			Namespace: s.Key.Spec.GeneratedSecret.Namespace,
 		},
 		Type:       s.Key.Spec.GeneratedSecret.Type,
 		StringData: secretStringData,
 	}
 
-	scheme := s.Client.Scheme()
-	if err := controllerutil.SetOwnerReference(s.Key, &secret, scheme); err != nil {
-		return nil, fmt.Errorf("could not set owner ref on access key secret %s: %w", secretName, err)
-	}
-	if err := controllerutil.SetControllerReference(s.Key, &secret, scheme); err != nil {
-		return nil, fmt.Errorf("could not set controller ref on access key secret %s: %w", secretName, err)
+	// Set an owner reference on a Secret if it will exist in the same namespace as the Key resource.
+	// Kubernetes does not allow cross-namespace ownership so modifications to a Secret in another namespace won't trigger reconciliation.
+	if s.Key.Spec.GeneratedSecret.Namespace == s.Key.Namespace {
+		if err := controllerutil.SetControllerReference(s.Key, &secret, s.Client.Scheme()); err != nil {
+			return nil, fmt.Errorf("could not set controller ref on access key secret %s/%s: %w", s.Key.Spec.GeneratedSecret.Name, s.Key.Spec.GeneratedSecret.Namespace, err)
+		}
 	}
 
 	return &secret, nil
