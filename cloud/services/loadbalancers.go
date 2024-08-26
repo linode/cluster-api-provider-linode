@@ -114,7 +114,7 @@ func EnsureNodeBalancerConfigs(
 }
 
 // AddNodesToNB adds backend Nodes on the Node Balancer configuration
-func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope, eachMachine v1alpha2.LinodeMachine) error {
+func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope, eachMachine v1alpha2.LinodeMachine, nodeBalancerNodes []linodego.NodeBalancerNode) error {
 	apiserverLBPort := DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiserverLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
@@ -124,15 +124,6 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 		return errors.New("nil NodeBalancer Config ID")
 	}
 
-	nodeBalancerNodes, err := clusterScope.LinodeClient.ListNodeBalancerNodes(
-		ctx,
-		*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
-		*clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID,
-		&linodego.ListOptions{},
-	)
-	if err != nil {
-		return err
-	}
 	internalIPFound := false
 	for _, IPs := range eachMachine.Status.Addresses {
 		if IPs.Type != v1beta1.MachineInternalIP || !strings.Contains(IPs.Address, "192.168") {
