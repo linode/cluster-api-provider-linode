@@ -6,8 +6,8 @@ github.com/Masterminds/semver/v3 v3.2.0 h1:3MEsd0SM6jqZojhjLWWeBY+Kcjy9i6MQAeY7Y
 github.com/Masterminds/semver/v3 v3.2.0/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
 github.com/Masterminds/sprig/v3 v3.2.3 h1:eL2fZNezLomi0uOLqjQoN6BfsDD+fyLtgbJMAj9n6YA=
 github.com/Masterminds/sprig/v3 v3.2.3/go.mod h1:rXcFaZ2zZbLRJv/xSysmlgIM1u11eBaRMhvYXJNkGuM=
-github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.3.0 h1:hB9ddRrmjfrxchN4NWABj3eT5PtkBAFRkxe5eqwBB7k=
-github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.3.0/go.mod h1:8hi/1Ctc9KGtPSZhpMRDRGULSvXpnce4htof1pH2wvI=
+github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.4.0 h1:zZJimNqkV3o7qZqBnprKyHCqUOTzoEaabG4qB3z0E2g=
+github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.4.0/go.mod h1:2xRRnHx8dnw0i8IZPYOI0I7xbr1gnAN1uIYo7acMIbg=
 github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129 h1:MzBOUgng9orim59UnfUTLRjMpd09C5uEVQ6RPGeCaVI=
 github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129/go.mod h1:rFgpPQZYZ8vdbc+48xibu8ALc3yeyd64IhHS+PU6Yyg=
 github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df h1:7RFfzj4SSt6nnvCPbCqijJi1nWCd+TqAT3bYCStRC18=
