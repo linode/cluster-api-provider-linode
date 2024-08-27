@@ -30,7 +30,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util"
 )
 
-func (r *LinodeVPCReconciler) reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Logger) error {
+func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Logger) error {
 	createConfig := linodeVPCSpecToVPCCreateConfig(vpcScope.LinodeVPC.Spec)
 	if createConfig == nil {
 		err := errors.New("failed to convert VPC spec to create VPC config")
