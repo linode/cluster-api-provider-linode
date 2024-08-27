@@ -48,9 +48,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-const (
-	ConditionLoadBalancing clusterv1.ConditionType = "ConditionLoadBalancing"
-)
+const lbTypeDNS string = "dns"
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
 type LinodeClusterReconciler struct {
@@ -184,7 +182,6 @@ func (r *LinodeClusterReconciler) reconcile(
 		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
 		return retryIfTransient(err)
 	}
-	conditions.MarkTrue(clusterScope.LinodeCluster, ConditionLoadBalancing)
 
 	return res, nil
 }
@@ -206,7 +203,7 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 	}
 
 	// handle creation for the loadbalancer for the control plane
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeDNS {
 		handleDNS(clusterScope)
 	} else {
 		if err := handleNBCreate(ctx, logger, clusterScope); err != nil {
@@ -219,7 +216,7 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionLoadBalancing) {
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != lbTypeDNS {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 
 		if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
@@ -236,9 +233,8 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	if err := removeMachineFromLB(ctx, logger, clusterScope); err != nil {
 		return fmt.Errorf("remove machine from loadbalancer: %w", err)
 	}
-	conditions.MarkFalse(clusterScope.LinodeCluster, ConditionLoadBalancing, "cleared loadbalancer", clusterv1.ConditionSeverityInfo, "")
 
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != "dns" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != lbTypeDNS && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
 		err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "failed to delete NodeBalancer")
