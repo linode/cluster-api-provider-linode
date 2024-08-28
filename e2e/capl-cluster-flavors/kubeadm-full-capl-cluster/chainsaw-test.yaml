@@ -213,7 +213,8 @@ spec:
               MAX_RETRIES=5
               RETRY_DELAY=30 # 30 seconds delay before retrying
               ATTEMPT=0
-
+              
+              # retry loop to check if logs are retrievable from a pod
               while [ $ATTEMPT -lt $MAX_RETRIES ]; do
                 KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
 
@@ -249,9 +250,11 @@ spec:
               ATTEMPT=0
               ETCD_LABEL=""
               ETCD_STATUS=""
-
+              
+              # retry loop to check if etcd disk is attached 
               while [ $ATTEMPT -lt $MAX_RETRIES ]; do
-
+                
+                # API call to get the linode ID
                 RESPONSE=$(curl -s \
                   -H "Authorization: Bearer $LINODE_TOKEN" \
                   -H "X-Filter: $FILTER" \
@@ -264,7 +267,8 @@ spec:
                   echo "Error: LINODE_ID is empty. Response was: $RESPONSE"
                   exit 1
                 fi
-
+                
+                # API call to check the list of disks attached 
                 DISK_RESPONSE=$(curl -s \
                   -H "Authorization: Bearer $LINODE_TOKEN" \
                   -H "Content-Type: application/json" \
@@ -272,7 +276,7 @@ spec:
 
                 ETCD_LABEL=$(echo "$DISK_RESPONSE" | jq -r '.data[2].label')
                 ETCD_STATUS=$(echo "$DISK_RESPONSE" | jq -r '.data[2].status')
-
+          
                 if [ "$ETCD_LABEL" == "etcd_disk" ] && [ "$ETCD_STATUS" == "ready" ]; then
                   break
                 else
@@ -313,7 +317,10 @@ spec:
               ATTEMPT=0
               VALID_BUCKET=false
 
+              # retry loop to check if bucket is created and objects are present
               while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+                
+                # API call to get the bucket details
                 RESPONSE=$(curl -s \
                   -H "Authorization: Bearer $LINODE_TOKEN" \
                   -H "Content-Type: application/json" \
@@ -357,13 +364,20 @@ spec:
                 value: (env('LOCALBIN'))
               - name: BUCKET_REGION
                 value: env('LINODE_REGION')
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: (join('/', ['object-storage', 'buckets', env('LINODE_REGION')]))
             content: |
               set -e
             
+              # Getting the keys from the CAPL cluster
               access_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.access_key}' | base64 -d)
               secret_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.secret_key}' | base64 -d)
 
-
+              #Storing the keys into a config file
               cat <<EOL > .s5cfg
               [default]
               aws_access_key_id=$access_key
@@ -371,7 +385,14 @@ spec:
               aws_default_region=$BUCKET_REGION-1
               EOL
               
+              # delete the objects
               $LOCAL_BIN/s5cmd --credentials-file .s5cfg --endpoint-url https://$BUCKET_ENDPOINT rm s3://$BUCKET_NAME/etcd-backup/v2/*
+              
+              # delete the bucket 
+              curl --request DELETE \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI/$BUCKET_NAME"
 
             check:
               ($error): ~
