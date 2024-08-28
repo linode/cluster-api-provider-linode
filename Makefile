@@ -153,7 +153,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-release local-deploy chainsaw
-	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(LOCALBIN) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
+	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
@@ -316,7 +316,7 @@ NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
-S5CMD 		   ?= $(LOCALBIN)/s5cmd
+S5CMD 		   ?= $(CACHE_BIN)/s5cmd
 
 ## Tool Versions
 KUSTOMIZE_VERSION        ?= v5.4.1
@@ -431,5 +431,5 @@ $(GOWRAP): $(CACHE_BIN)
 
 .PHONY: s5cmd
 s5cmd: $(S5CMD)
-$(S5CMD): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/peak/s5cmd/v2@$(S5CMD_VERSION)
+$(S5CMD): $(CACHE_BIN)
+	GOBIN=$(CACHE_BIN) go install github.com/peak/s5cmd/v2@$(S5CMD_VERSION)
