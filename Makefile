@@ -152,7 +152,7 @@ test: generate fmt vet envtest ## Run tests.
 	rm cover.out.tmp
 
 .PHONY: e2etest
-e2etest: generate local-release local-deploy chainsaw
+e2etest: generate local-release local-deploy chainsaw s5cmd
 	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
