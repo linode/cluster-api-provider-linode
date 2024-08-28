@@ -134,12 +134,12 @@ spec:
                   type: string
                 description: |-
                   SecretDataFormat instructs the controller how to format the data stored in the secret containing access key details.
-                  DEPRECATED: Use generatedSecret.format.
+                  Deprecated: Use generatedSecret.format.
                 type: object
               secretType:
                 description: |-
                   SecretType instructs the controller what type of secret to generate containing access key details.
-                  DEPCREATED: Use generatedSecret.type.
+                  Deprecated: Use generatedSecret.type.
                 enum:
                 - Opaque
                 - addons.cluster.x-k8s.io/resource-set
