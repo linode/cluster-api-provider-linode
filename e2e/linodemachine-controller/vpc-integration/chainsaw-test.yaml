@@ -108,11 +108,6 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-              kind: LinodeCluster
-              name: ($cluster)
-        - delete:
-            ref:
               apiVersion: cluster.x-k8s.io/v1beta1
               kind: Cluster
               name: ($cluster)
