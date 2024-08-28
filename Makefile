@@ -316,7 +316,7 @@ NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
-S3CMD 		   ?= $(LOCALBIN)/s3cmd
+S5CMD 		   ?= $(LOCALBIN)/s5cmd
 
 ## Tool Versions
 KUSTOMIZE_VERSION        ?= v5.4.1
@@ -333,7 +333,7 @@ NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
 GOWRAP_VERSION           ?= v1.3.7
-S3CMD_VERSION            ?= v2.2.2
+S5CMD_VERSION            ?= v2.2.2
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
@@ -432,4 +432,4 @@ $(GOWRAP): $(CACHE_BIN)
 .PHONY: s5cmd
 s5cmd: $(S5CMD)
 $(S5CMD): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/peak/s5cmd/v2@$(S3CMD_VERSION)
+	GOBIN=$(LOCALBIN) go install github.com/peak/s5cmd/v2@$(S5CMD_VERSION)
