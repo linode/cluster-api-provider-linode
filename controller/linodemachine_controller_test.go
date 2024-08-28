@@ -810,7 +810,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 		Spec: infrav1alpha2.LinodeMachineSpec{
 			Type:  "g6-nanode-1",
 			Image: rutil.DefaultMachineControllerLinodeImage,
-			//Configuration: &infrav1alpha2.InstanceConfiguration{Kernel: "test"},
 		},
 	}
 	machineKey := client.ObjectKeyFromObject(linodeMachine)
@@ -990,7 +989,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 					Path(Result("create requeues when failing to get instance config", func(ctx context.Context, mck Mock) {
 						getAddrs := mck.LinodeClient.EXPECT().
 							GetInstanceIPAddresses(ctx, 123).
-							// After(updateInstConfig).
 							Return(&linodego.InstanceIPAddressResponse{
 								IPv4: &linodego.InstanceIPv4Response{
 									Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
@@ -1085,6 +1083,169 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 					})),
 				),
 			),
+		),
+	)
+})
+
+var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), func() {
+	machineName := "machine-update"
+	namespace := defaultNamespace
+	ownerRef := metav1.OwnerReference{
+		Name:       machineName,
+		APIVersion: "cluster.x-k8s.io/v1beta1",
+		Kind:       "Machine",
+		UID:        "00000000-000-0000-0000-000000000000",
+	}
+	ownerRefs := []metav1.OwnerReference{ownerRef}
+	metadata := metav1.ObjectMeta{
+		Name:            machineName,
+		Namespace:       namespace,
+		OwnerReferences: ownerRefs,
+	}
+	linodeMachine := &infrav1alpha2.LinodeMachine{
+		ObjectMeta: metadata,
+		Spec: infrav1alpha2.LinodeMachineSpec{
+			Type:       "g6-nanode-1",
+			Image:      rutil.DefaultMachineControllerLinodeImage,
+			ProviderID: util.Pointer("linode://11111"),
+		},
+	}
+	machineKey := client.ObjectKeyFromObject(linodeMachine)
+	machine := &clusterv1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Labels:    make(map[string]string),
+		},
+		Spec: clusterv1.MachineSpec{
+			Bootstrap: clusterv1.Bootstrap{
+				DataSecretName: ptr.To("test-bootstrap-secret-2"),
+			},
+		},
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-bootstrap-secret-2",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"value": []byte("userdata"),
+		},
+	}
+
+	linodeCluster := &infrav1alpha2.LinodeCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test-cluster-2",
+			Labels:    make(map[string]string),
+		},
+		Spec: infrav1alpha2.LinodeClusterSpec{
+			Network: infrav1alpha2.NetworkSpec{
+				NodeBalancerID:                ptr.To(1),
+				ApiserverNodeBalancerConfigID: ptr.To(2),
+			},
+		},
+	}
+	clusterKey := client.ObjectKeyFromObject(linodeCluster)
+
+	ctlrSuite := NewControllerSuite(
+		GinkgoT(),
+		mock.MockLinodeClient{},
+		mock.MockK8sClient{},
+	)
+	reconciler := LinodeMachineReconciler{}
+	mScope := &scope.MachineScope{}
+
+	BeforeAll(func(ctx SpecContext) {
+		mScope.Client = k8sClient
+		reconciler.Client = k8sClient
+		mScope.Cluster = &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-2",
+				Namespace: namespace,
+			},
+			Spec: clusterv1.ClusterSpec{
+				InfrastructureRef: &corev1.ObjectReference{
+					Name:      "test-cluster-2",
+					Namespace: namespace,
+				},
+			},
+		}
+		mScope.Machine = machine
+		Expect(k8sClient.Create(ctx, linodeCluster)).To(Succeed())
+		Expect(k8sClient.Create(ctx, linodeMachine)).To(Succeed())
+		_ = k8sClient.Create(ctx, secret)
+	})
+
+	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+
+		Expect(k8sClient.Get(ctx, machineKey, linodeMachine)).To(Succeed())
+		mScope.LinodeMachine = linodeMachine
+
+		patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.PatchHelper = patchHelper
+		Expect(k8sClient.Get(ctx, clusterKey, linodeCluster)).To(Succeed())
+		mScope.LinodeCluster = linodeCluster
+
+		mScope.LinodeClient = mck.LinodeClient
+	})
+
+	ctlrSuite.Run(
+		OneOf(
+			Path(
+				Call("machine status is not updated because there was an error updating instance", func(ctx context.Context, mck Mock) {
+				}),
+				OneOf(
+					Path(Result("update error", func(ctx context.Context, mck Mock) {
+						linodeMachine.Spec.ProviderID = util.Pointer("linode://foo")
+						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).To(HaveOccurred())
+						Expect(mck.Logs()).To(ContainSubstring("Failed to parse instance ID from provider ID"))
+					})),
+					Path(Result("update requeues on get error", func(ctx context.Context, mck Mock) {
+						linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
+						linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+						mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).
+							Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
+						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+					})),
+				),
+			),
+			Path(
+				Call("machine status updated", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+						&linodego.Instance{
+							ID:      11111,
+							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv6:    "fd00::",
+							Status:  linodego.InstanceProvisioning,
+							Updated: util.Pointer(time.Now()),
+						}, nil)
+				}),
+				Result("machine status updated", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
+					linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+					res, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceProvisioning))
+					Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
+
+					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+						&linodego.Instance{
+							ID:      11111,
+							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv6:    "fd00::",
+							Status:  linodego.InstanceRunning,
+							Updated: util.Pointer(time.Now()),
+						}, nil)
+					res, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceRunning))
+					Expect(rutil.ConditionTrue(linodeMachine, clusterv1.ReadyCondition)).To(BeTrue())
+				})),
 		),
 	)
 })
