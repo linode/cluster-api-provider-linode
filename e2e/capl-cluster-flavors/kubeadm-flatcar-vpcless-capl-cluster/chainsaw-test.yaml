@@ -7,9 +7,8 @@ metadata:
   # Labels to allow the test to be triggered based on selector flag
   labels:
     all:
-    kubeadm:
-    flavors:
     flatcar:
+    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run

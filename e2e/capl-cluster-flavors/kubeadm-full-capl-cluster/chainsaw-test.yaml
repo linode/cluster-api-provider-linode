@@ -13,7 +13,7 @@ spec:
   bindings:
     # Identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'kdm-ft', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `32`)), '-'))
@@ -37,15 +37,17 @@ spec:
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: SSE_KEY
-                value: (env('SSE_KEY'))
+                value: "jU$n@AXXf3xseNd&U9ko4J#3B84D6YR6"
               - name: KONNECTIVITY_AGENT_REPLICAS
                 value: '1' # Here, 1 is set for testing purposes. Default is 3.
               - name: CLUSTER_AUTOSCALER_VERSION
                 value: 'v1.29.4'
+              - name: ETCD_BACKUP_SCHEDULE
+                value: '* * * * *'
             content: |
               set -e
               if [ -z "$SSE_KEY" ]; then
-                echo "SSE_KEY not set" >&2 
+                echo "SSE_KEY not set" >&2
                 exit 1
               else
                 clusterctl generate cluster $CLUSTER -n $NAMESPACE \
@@ -203,16 +205,197 @@ spec:
             namespace: kube-system
 
     # Test to check if konnectivity is working
-    - clusters:
-        kubeadm-full-cluster:
-          kubeconfig: ./kubeadm-full-cluster-kubeconfig.yaml
-      name: Testing to check if logs are retrievable
+    - name: Testing to check if logs are retrievable
       try:
         - script:
             content: |
-              KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
+
+              MAX_RETRIES=5
+              RETRY_DELAY=30 # 30 seconds delay before retrying
+              ATTEMPT=0
+              
+              # retry loop to check if logs are retrievable from a pod
+              while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+                KUBECONFIG=./kubeadm-full-cluster-kubeconfig.yaml kubectl logs csi-linode-controller-0 -n kube-system
+
+                if [ -z "$error" ]; then
+                  break
+                else
+                  ATTEMPT=$((ATTEMPT + 1))
+                  sleep $RETRY_DELAY
+                fi
+              done
+
             check:
               ($error == null): true
+
+    # Test to check if disks are added to the etcd spec
+    - name: Testing to check if disks are added to the spec
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name:  TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+
+              MAX_RETRIES=5
+              RETRY_DELAY=30 # 30 second delay before retrying
+              ATTEMPT=0
+              ETCD_LABEL=""
+              ETCD_STATUS=""
+              
+              # retry loop to check if etcd disk is attached 
+              while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+                
+                # API call to get the linode ID
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "X-Filter: $FILTER" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI")
+
+                LINODE_ID=$(echo "$RESPONSE" | jq -r '.data[0].id')
+
+                if [ -z "$LINODE_ID" ]; then
+                  echo "Error: LINODE_ID is empty. Response was: $RESPONSE"
+                  exit 1
+                fi
+                
+                # API call to check the list of disks attached 
+                DISK_RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI/$LINODE_ID/disks?page=1&page_size=100")
+
+                ETCD_LABEL=$(echo "$DISK_RESPONSE" | jq -r '.data[2].label')
+                ETCD_STATUS=$(echo "$DISK_RESPONSE" | jq -r '.data[2].status')
+          
+                if [ "$ETCD_LABEL" == "etcd_disk" ] && [ "$ETCD_STATUS" == "ready" ]; then
+                  break
+                else
+                  ATTEMPT=$((ATTEMPT + 1))
+                  sleep $RETRY_DELAY
+                fi
+              done
+
+              echo "{
+                \"label\": \"$ETCD_LABEL\",
+                \"status\": \"$ETCD_STATUS\"
+              }"
+
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                label: etcd_disk
+                status: ready
+
+    # Test to query the object storage bucket and check for data
+    - name: Testing the object storage buckets
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: BUCKET_NAME
+                value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF'), 'etcd-backup']))
+              - name: URI
+                value: (join('/', ['object-storage', 'buckets', env('LINODE_REGION')]))
+            content: |
+              set -e
+
+              MAX_RETRIES=5
+              RETRY_DELAY=40 # 40 second delay before retrying
+              ATTEMPT=0
+              VALID_BUCKET=false
+
+              # retry loop to check if bucket is created and objects are present
+              while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+                
+                # API call to get the bucket details
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI/$BUCKET_NAME")
+
+                BUCKET_SIZE=$(echo "$RESPONSE" | jq -r '.size')
+                BUCKET_OBJECTS=$(echo "$RESPONSE" | jq -r '.objects')
+
+                if [ "$BUCKET_SIZE" -gt 0 ] && [ "$BUCKET_OBJECTS" -gt 0 ]; then
+                  VALID_BUCKET=true
+                  break
+                else
+                  ATTEMPT=$((ATTEMPT + 1))
+                  sleep $RETRY_DELAY
+                fi
+              done
+
+              echo "{
+                \"status\": \"$VALID_BUCKET\"
+              }"
+
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                status: "true"
+
+    # Test to check object storage buckets and delete it
+    - name: Deleting object storage bucket
+      try:
+        - script:
+            env:
+              - name: CAPL_KUBECONFIG
+                value: ./kubeadm-full-cluster-kubeconfig.yaml
+              - name: BUCKET_NAME
+                value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF'), 'etcd-backup']))
+              - name: SECRET_NAME
+                value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF'), 'etcd-backup-obj-key']))
+              - name: BUCKET_ENDPOINT
+                value: (join('.', [(join('-', [env('LINODE_REGION'), '1'])), 'linodeobjects', 'com' ]))
+              - name: LOCAL_BIN
+                value: (env('LOCALBIN'))
+              - name: BUCKET_REGION
+                value: env('LINODE_REGION')
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: (join('/', ['object-storage', 'buckets', env('LINODE_REGION')]))
+            content: |
+              set -e
+            
+              # Getting the keys from the CAPL cluster
+              access_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.access_key}' | base64 -d)
+              secret_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.secret_key}' | base64 -d)
+
+              #Storing the keys into a config file
+              cat <<EOL > .s5cfg
+              [default]
+              aws_access_key_id=$access_key
+              aws_secret_access_key=$secret_key
+              aws_default_region=$BUCKET_REGION-1
+              EOL
+              
+              # delete the objects
+              $LOCAL_BIN/s5cmd --credentials-file .s5cfg --endpoint-url https://$BUCKET_ENDPOINT rm s3://$BUCKET_NAME/etcd-backup/v2/*
+              
+              # delete the bucket 
+              curl --request DELETE \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI/$BUCKET_NAME"
+
+            check:
+              ($error): ~
 
     # Test to check if child cluster is deleted
     - name: Testing to see if child cluster is deleted
@@ -262,5 +445,6 @@ spec:
             content: |
               rm -f kubeadm-full-cluster.yaml
               rm -f kubeadm-full-cluster-kubeconfig.yaml
+              rm -f .s5cfg
             check:
               ($error == null): true
