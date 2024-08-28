@@ -83,6 +83,7 @@ func validateLinodeType(ctx context.Context, client LinodeClient, id string, pat
 //
 // [Clusters List]: https://www.linode.com/docs/api/object-storage/#clusters-list
 // [Cluster View]: https://www.linode.com/docs/api/object-storage/#cluster-view
+
 func validateObjectStorageRegion(ctx context.Context, client LinodeClient, id string, path *field.Path) *field.Error {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 
@@ -91,7 +92,11 @@ func validateObjectStorageRegion(ctx context.Context, client LinodeClient, id st
 	if !cexp.MatchString(id) && !cexp1.MatchString(id) {
 		return field.Invalid(path, id, "must be in form: region_id or region_id-ordinal")
 	}
-
-	region := cexp.FindStringSubmatch(id)[1]
+	var region string
+	if cexp.FindStringSubmatch(id) != nil {
+		region = cexp.FindStringSubmatch(id)[0]
+	} else {
+		region = cexp1.FindStringSubmatch(id)[1]
+	}
 	return validateRegion(ctx, client, region, path, LinodeObjectStorageCapability)
 }

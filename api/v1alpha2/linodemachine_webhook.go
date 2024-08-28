@@ -63,7 +63,7 @@ func (r *LinodeMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 // TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable update and deletion validation.
-// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodemachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=create,versions=v1alpha2,name=validation.linodemachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1;v1alpha1;v1alpha2
+// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodemachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=create,versions=v1alpha2,name=validation.linodemachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &LinodeMachine{}
 

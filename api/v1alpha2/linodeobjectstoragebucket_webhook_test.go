@@ -18,6 +18,7 @@ package v1alpha2
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Region: "example",
 			},
 		}
-		region            = linodego.Region{ID: "test"}
+		region            = linodego.Region{ID: "mock-region"}
 		capabilities      = []string{LinodeObjectStorageCapability}
 		capabilities_zero = []string{}
 	)
@@ -58,16 +59,39 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
+					bucket := bucket
+					bucket.Spec.Region = "iad"
+					assert.NoError(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+				}),
+			),
+			Path(
+				Call("valid", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					bucket := bucket
+					bucket.Spec.Region = "us-iad"
+					assert.NoError(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+				}),
+			),
+			Path(
+				Call("valid", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					bucket := bucket
+					bucket.Spec.Region = "us-iad-1"
 					assert.NoError(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
 				}),
 			),
 		),
 		OneOf(
 			Path(
-				Call("invalid cluster format", func(ctx context.Context, mck Mock) {
-					region := region
-					region.Capabilities = slices.Clone(capabilities)
-					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				Call("invalid region format in spec", func(ctx context.Context, mck Mock) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					bucket := bucket
@@ -76,7 +100,26 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				}),
 			),
 			Path(
-				Call("region not supported", func(ctx context.Context, mck Mock) {
+				Call("invalid region format in spec", func(ctx context.Context, mck Mock) {
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					bucket := bucket
+					bucket.Spec.Region = "invalid-2-2"
+					assert.Error(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+				}),
+			),
+			Path(
+				Call("region ID not present", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					bucket := bucket
+					bucket.Spec.Region = "us-1"
+					assert.Error(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+				}),
+			),
+			Path(
+				Call("region does not support Object storage capabilities", func(ctx context.Context, mck Mock) {
 					region := region
 					region.Capabilities = slices.Clone(capabilities_zero)
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
