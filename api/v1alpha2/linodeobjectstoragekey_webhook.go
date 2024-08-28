@@ -91,10 +91,19 @@ const defaultKeySecretNameTemplate = "%s-obj-key"
 func (r *LinodeObjectStorageKey) Default() {
 	linodeobjectstoragekeylog.Info("default", "name", r.Name)
 
+	// Default name and namespace derived from object metadata.
 	if r.Spec.GeneratedSecret.Name == "" {
 		r.Spec.GeneratedSecret.Name = fmt.Sprintf(defaultKeySecretNameTemplate, r.Name)
 	}
 	if r.Spec.GeneratedSecret.Namespace == "" {
 		r.Spec.GeneratedSecret.Namespace = r.Namespace
+	}
+
+	// Support deprecated fields when specified and updated fields are empty.
+	if r.Spec.SecretType != "" && r.Spec.GeneratedSecret.Type == "" {
+		r.Spec.GeneratedSecret.Type = r.Spec.SecretType
+	}
+	if len(r.Spec.SecretDataFormat) > 0 && len(r.Spec.GeneratedSecret.Format) == 0 {
+		r.Spec.GeneratedSecret.Format = r.Spec.SecretDataFormat
 	}
 }
