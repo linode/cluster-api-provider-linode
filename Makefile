@@ -153,7 +153,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-release local-deploy chainsaw
-	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
+	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(LOCALBIN) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 local-deploy: kind ctlptl tilt kustomize clusterctl
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
@@ -316,6 +316,7 @@ NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
+S3CMD 		   ?= $(LOCALBIN)/s3cmd
 
 ## Tool Versions
 KUSTOMIZE_VERSION        ?= v5.4.1
@@ -332,6 +333,7 @@ NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
 GOWRAP_VERSION           ?= v1.3.7
+S3CMD_VERSION            ?= v2.2.2
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
@@ -427,3 +429,7 @@ gowrap: $(GOWRAP) ## Download gowrap locally if necessary.
 $(GOWRAP): $(CACHE_BIN)
 	GOBIN=$(CACHE_BIN) go install github.com/hexdigest/gowrap/cmd/gowrap@$(GOWRAP_VERSION)
 
+.PHONY: s5cmd
+s5cmd: $(S5CMD)
+$(S5CMD): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install github.com/peak/s5cmd/v2@$(S3CMD_VERSION)
