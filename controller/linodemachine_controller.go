@@ -40,7 +40,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -352,6 +354,9 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, instanceID); err != nil {
 		return retryIfTransient(err)
 	}
+	// update the status
+	machineScope.LinodeMachine.Status.InstanceState = &linodeInstance.Status
+	// decide to requeue
 	if _, ok := requeueInstanceStatuses[linodeInstance.Status]; ok {
 		if linodeInstance.Updated.Add(reconciler.DefaultMachineControllerWaitForRunningTimeout).After(time.Now()) {
 			logger.Info("Instance not yet ready", "status", linodeInstance.Status)
@@ -457,7 +462,18 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
 		).
 		// we care about reconciling on metadata updates for LinodeMachines because the OwnerRef for the Machine is needed
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
+		WithEventFilter(predicate.And(
+			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
+			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
+				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeMachine)
+				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodeMachine)
+				if okOld && okNew && oldObject.Spec.ProviderID == nil && newObject.Spec.ProviderID != nil {
+					// We just created the instance, don't enqueue and update
+					return false
+				}
+				return true
+			}},
+		)).
 		Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
