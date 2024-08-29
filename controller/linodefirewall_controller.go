@@ -115,7 +115,7 @@ func (r *LinodeFirewallReconciler) reconcile(
 		if err != nil {
 			fwScope.LinodeFirewall.Status.FailureReason = util.Pointer(failureReason)
 			fwScope.LinodeFirewall.Status.FailureMessage = util.Pointer(err.Error())
-			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, err.Error())
+			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
 			r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 

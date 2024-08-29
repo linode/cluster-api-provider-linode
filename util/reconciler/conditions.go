@@ -31,10 +31,10 @@ func HasConditionSeverity(from conditions.Getter, typ clusterv1.ConditionType, s
 }
 
 func RecordDecayingCondition(to conditions.Setter, typ clusterv1.ConditionType, reason, message string, timeout time.Duration) bool {
-	conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityWarning, message)
+	conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityWarning, "%s", message)
 
 	if HasStaleCondition(to, typ, timeout) {
-		conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityError, message)
+		conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityError, "%s", message)
 		return true
 	}
 

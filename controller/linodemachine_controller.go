@@ -180,7 +180,7 @@ func (r *LinodeMachineReconciler) reconcile(
 			machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
 			machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
 
-			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, err.Error())
+			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
 
 			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}

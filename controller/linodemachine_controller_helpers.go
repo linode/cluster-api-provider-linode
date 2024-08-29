@@ -537,6 +537,7 @@ func createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.Ma
 				ConditionPreflightAdditionalDisksCreated,
 				string(cerrs.CreateMachineError),
 				clusterv1.ConditionSeverityWarning,
+				"%s",
 				err.Error(),
 			)
 			return err
@@ -561,7 +562,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 	if err != nil {
 		logger.Error(err, "Failed to get default instance configuration")
 
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "%s", err.Error())
 		return err
 	}
 
@@ -579,7 +580,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 		if err != nil {
 			logger.Error(err, "Failed to get root disk for instance")
 
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "%s", err.Error())
 
 			return err
 		}
@@ -594,7 +595,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 		}
 
 		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, err.Error())
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "%s", err.Error())
 			return err
 		}
 		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
