@@ -20,7 +20,7 @@ For more fine-grain control and to know more about etcd backups, refer to [the b
 
 ## Object Storage
 
-Additionally, CAPL can be used to provision Object Storage buckets and access keys for general purposes by configuring a `LinodeObjectStorageBucket` resource.
+Additionally, CAPL can be used to provision Object Storage buckets and access keys for general purposes by configuring `LinodeObjectStorageBucket` and `LinodeObjectStorageKey` resources.
 
 ```admonish warning
 Using this feature requires enabling Object Storage in the account where the resources will be provisioned. Please refer to the [Pricing](https://www.linode.com/docs/products/storage/object-storage/#pricing) information in Linode's [Object Storage documentation](https://www.linode.com/docs/products/storage/object-storage/).
@@ -28,7 +28,7 @@ Using this feature requires enabling Object Storage in the account where the res
 
 ### Bucket Creation
 
-The following is the minimal required configuration needed to provision an Object Storage bucket and set of access keys.
+The following is the minimal required configuration needed to provision an Object Storage bucket.
 
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
@@ -38,7 +38,6 @@ metadata:
   namespace: <namespace>
 spec:
   region: <object-storage-region>
-  secretType: Opaque
 ```
 
 Upon creation of the resource, CAPL will provision a bucket in the region specified using the `.metadata.name` as the bucket's label.
@@ -47,9 +46,50 @@ Upon creation of the resource, CAPL will provision a bucket in the region specif
 The bucket label must be unique within the region across all accounts. Otherwise, CAPL will populate the resource status fields with errors to show that the operation failed.
 ```
 
-### Access Keys Creation
+### Bucket Status
 
-CAPL will also create `read_write` and `read_only` access keys for the bucket and store credentials in a secret in the same namespace where the `LinodeObjectStorageBucket` was created along with other details about the Linode OBJ Bucket:
+Upon successful provisioning of a bucket, the `LinodeObjectStorageBucket` resource's status will resemble the following:
+
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageBucket
+metadata:
+  name: <unique-bucket-label>
+  namespace: <namespace>
+spec:
+  region: <object-storage-region>
+status:
+  ready: true
+  conditions:
+    - type: Ready
+      status: "True"
+      lastTransitionTime: <timestamp>
+  hostname: <hostname-for-bucket>
+  creationTime: <bucket-creation-timestamp>
+```
+
+### Access Key Creation
+
+The following is the minimal required configuration needed to provision an Object Storage key.
+
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  name: <unique-key-label>
+  namespace: <namespace>
+spec:
+  bucketAccess:
+    - bucketName: <unique-bucket-label>
+      permissions: read_only
+      region: <object-storage-region>
+  generatedSecret:
+    type: Opaque
+```
+
+Upon creation of the resource, CAPL will provision an access key in the region specified using the `.metadata.name` as the key's label.
+
+The credentials for the provisioned access key will be stored in a Secret. By default, the Secret is generated in the same namespace as the `LinodeObjectStorageKey`:
 
 ```yaml
 apiVersion: v1
@@ -64,62 +104,62 @@ metadata:
       controller: true
       uid: <unique-uid>
 data:
-  bucket_name: <unique-bucket-label>
-  bucket_region: <linode-obj-bucket-region>
-  bucket_endpoint: <hostname-to-access-bucket>
   access_key: <base64-encoded-access-key>
   secret_key: <base64-encoded-secret-key>
 ```
 
-The<unique-bucket-label>-obj-key secret is owned and managed by CAPL during the life of the `LinodeObjectStorageBucket`.
+The secret is owned and managed by CAPL during the life of the `LinodeObjectStorageBucket`.
 
-### Access Keys Rotation
+### Access Key Status
 
-The following configuration with `keyGeneration` set to a new value (different from `.status.lastKeyGeneration`) will instruct CAPL to rotate the access keys.
-
-```yaml
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-kind: LinodeObjectStorageBucket
-metadata:
-  name: <unique-bucket-label>
-  namespace: <namespace>
-spec:
-  cluster: <object-storage-region>
-  secretType: Opaque
-  keyGeneration: 1
-# status:
-#   lastKeyGeneration: 0
-```
-
-### Bucket Status
-
-Upon successful provisioning of a bucket and keys, the `LinodeObjectStorageBucket` resource's status will resemble the following:
+Upon successful provisioning of a key, the `LinodeObjectStorageKey` resource's status will resemble the following:
 
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-kind: LinodeObjectStorageBucket
+kind: LinodeObjectStorageKey
 metadata:
-  name: <unique-bucket-label>
+  name: <unique-key-label>
   namespace: <namespace>
 spec:
-  cluster: <object-storage-region>
-  secretType: Opaque
-  keyGeneration: 0
+  bucketAccess:
+    - bucketName: <unique-bucket-label>
+      permissions: read_only
+      region: <object-storage-region>
+  generatedSecret:
+    type: Opaque
 status:
   ready: true
   conditions:
     - type: Ready
       status: "True"
       lastTransitionTime: <timestamp>
-  hostname: <hostname-for-bucket>
-  creationTime: <bucket-creation-timestamp>
+  accessKeyRef: <object-storage-key-id>
+  creationTime: <key-creation-timestamp>
   lastKeyGeneration: 0
-  keySecretName: <unique-bucket-label>-bucket-details
-  accessKeyRefs:
-    - <access-key-rw-id>
-    - <access-key-ro-id>
+```
+
+### Access Key Rotation
+
+The following configuration with `keyGeneration` set to a new value (different from `.status.lastKeyGeneration`) will instruct CAPL to rotate the access key.
+
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  name: <unique-key-label>
+  namespace: <namespace>
+spec:
+  bucketAccess:
+    - bucketName: <unique-bucket-label>
+      permissions: read_only
+      region: <object-storage-region>
+  generatedSecret:
+    type: Opaque
+  keyGeneration: 1
+# status:
+#   lastKeyGeneration: 0
 ```
 
 ### Resource Deletion
 
-When deleting a `LinodeObjectStorageBucket` resource, CAPL will deprovision the access keys and managed secret but retain the underlying bucket to avoid unintended data loss.
+When deleting a `LinodeObjectStorageKey` resource, CAPL will deprovision the access key and delete the managed secret. However, when deleting a `LinodeObjectStorageBucket` resource, CAPL will retain the underlying bucket to avoid unintended data loss.

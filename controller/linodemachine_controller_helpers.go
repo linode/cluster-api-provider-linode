@@ -69,7 +69,7 @@ func retryIfTransient(err error) (ctrl.Result, error) {
 	return ctrl.Result{}, err
 }
 
-func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags []string, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
+func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
@@ -96,7 +96,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, tags
 	if createConfig.Tags == nil {
 		createConfig.Tags = []string{}
 	}
-	createConfig.Tags = append(createConfig.Tags, tags...)
+	createConfig.Tags = append(createConfig.Tags, machineScope.LinodeCluster.Name)
 
 	if createConfig.Label == "" {
 		createConfig.Label = machineScope.LinodeMachine.Name
