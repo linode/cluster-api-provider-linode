@@ -7,3 +7,4 @@ resources:
   - linodeMachineTemplate.yaml
   - machineDeployment.yaml
   - secret.yaml
+  - linodeFirewall.yaml
