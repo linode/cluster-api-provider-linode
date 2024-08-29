@@ -63,12 +63,13 @@ type LinodeFirewallSpec struct {
 }
 
 type FirewallRule struct {
-	Action      string                   `json:"action"`
-	Label       string                   `json:"label"`
-	Description string                   `json:"description,omitempty"`
-	Ports       string                   `json:"ports,omitempty"`
-	Protocol    linodego.NetworkProtocol `json:"protocol"`
-	Addresses   *NetworkAddresses        `json:"addresses"`
+	Action      string `json:"action"`
+	Label       string `json:"label"`
+	Description string `json:"description,omitempty"`
+	Ports       string `json:"ports,omitempty"`
+	// +kubebuilder:validation:Enum=TCP;UDP;ICMP;IPENCAP
+	Protocol  linodego.NetworkProtocol `json:"protocol"`
+	Addresses *NetworkAddresses        `json:"addresses"`
 }
 
 // NetworkAddresses holds a list of IPv4 and IPv6 addresses
