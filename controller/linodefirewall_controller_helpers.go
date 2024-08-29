@@ -178,7 +178,7 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 				Action:      rule.Action,
 				Label:       ruleLabel,
 				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    linodego.TCP,
+				Protocol:    rule.Protocol,
 				Ports:       rule.Ports,
 				Addresses:   linodego.NetworkAddresses{IPv4: &v4chunk},
 			})
@@ -193,7 +193,7 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 				Action:      rule.Action,
 				Label:       ruleLabel,
 				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    linodego.TCP,
+				Protocol:    rule.Protocol,
 				Ports:       rule.Ports,
 				Addresses:   linodego.NetworkAddresses{IPv6: &v6chunk},
 			})
@@ -232,7 +232,7 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 				Action:      rule.Action,
 				Label:       ruleLabel,
 				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    linodego.TCP,
+				Protocol:    rule.Protocol,
 				Ports:       rule.Ports,
 				Addresses:   linodego.NetworkAddresses{IPv4: &v4chunk},
 			})
@@ -247,7 +247,7 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 				Action:      rule.Action,
 				Label:       ruleLabel,
 				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    linodego.TCP,
+				Protocol:    rule.Protocol,
 				Ports:       rule.Ports,
 				Addresses:   linodego.NetworkAddresses{IPv6: &v6chunk},
 			})
