@@ -164,6 +164,7 @@ resources:
   version: v1alpha2
   webhooks:
     validation: true
+    defaulting: true
     webhookVersion: v1
 - api:
     crdVersion: v1

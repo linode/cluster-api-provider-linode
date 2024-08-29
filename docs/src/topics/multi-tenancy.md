@@ -61,6 +61,16 @@ spec:
   credentialsRef:
     name: linode-credentials
   ...
+---
+# Example: LinodeObjectStorageKey
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  name: test-key
+spec:
+  credentialsRef:
+    name: linode-credentials
+  ...
 ```
 
 Secrets from other namespaces by additionally specifying an optional

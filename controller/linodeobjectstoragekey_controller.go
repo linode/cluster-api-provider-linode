@@ -173,11 +173,11 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 		r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyAssigned", "Object storage key assigned")
 
 	// Ensure the generated secret still exists
-	case keyScope.Key.Status.AccessKeyRef != nil && keyScope.Key.Status.SecretName != nil:
+	case keyScope.Key.Status.AccessKeyRef != nil:
 		secret := &corev1.Secret{}
 		key := client.ObjectKey{
-			Namespace: keyScope.Key.Namespace,
-			Name:      *keyScope.Key.Status.SecretName,
+			Namespace: keyScope.Key.Spec.GeneratedSecret.Namespace,
+			Name:      keyScope.Key.Spec.GeneratedSecret.Name,
 		}
 
 		if err := keyScope.Client.Get(ctx, key, secret); err != nil {
@@ -213,7 +213,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 
 		emptySecret := &corev1.Secret{ObjectMeta: secret.ObjectMeta}
 		operation, err := controllerutil.CreateOrUpdate(ctx, keyScope.Client, emptySecret, func() error {
-			emptySecret.Type = keyScope.Key.Spec.SecretType
+			emptySecret.Type = keyScope.Key.Spec.GeneratedSecret.Type
 			emptySecret.StringData = secret.StringData
 			emptySecret.Data = nil
 
@@ -226,9 +226,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 			return err
 		}
 
-		keyScope.Key.Status.SecretName = util.Pointer(secret.Name)
-
-		keyScope.Logger.Info(fmt.Sprintf("Secret %s was %s with access key", secret.Name, operation))
+		keyScope.Logger.Info(fmt.Sprintf("Secret %s/%s was %s with access key", secret.Namespace, secret.Name, operation))
 		r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyStored", "Object storage key stored in secret")
 	}
 
@@ -252,6 +250,23 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 	}
 
 	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "KeyRevoked", "Object storage key revoked")
+
+	// If this key's Secret was generated in another namespace, manually delete it since it has no owner reference.
+	if keyScope.Key.Spec.GeneratedSecret.Namespace != keyScope.Key.Namespace {
+		secret := corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      keyScope.Key.Spec.GeneratedSecret.Name,
+				Namespace: keyScope.Key.Spec.GeneratedSecret.Namespace,
+			},
+		}
+		if err := keyScope.Client.Delete(ctx, &secret); err != nil {
+			err := errors.New("failed to delete generated secret; unable to delete")
+			keyScope.Logger.Error(err, "client.Delete")
+			r.setFailure(keyScope, err)
+
+			return err
+		}
+	}
 
 	if !controllerutil.RemoveFinalizer(keyScope.Key, infrav1alpha2.ObjectStorageKeyFinalizer) {
 		err := errors.New("failed to remove finalizer from key; unable to delete")
