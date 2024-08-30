@@ -9,12 +9,14 @@ spec:
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
+      firewallRef:
+        name: ${CLUSTER_NAME}
       # diskEncryption: disabled
       interfaces:
         - purpose: public
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
-      # - ${LINODE_SSH_PUBKEY}
+#       - ${LINODE_SSH_PUBKEY}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
@@ -26,9 +28,11 @@ spec:
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
+      firewallRef:
+        name: ${CLUSTER_NAME}
       # diskEncryption: disabled
       interfaces:
         - purpose: public
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
-      # - ${LINODE_SSH_PUBKEY}
+#       - ${LINODE_SSH_PUBKEY}
