@@ -7,20 +7,4 @@ metadata:
   name: ${CLUSTER_NAME}
 spec:
   enabled: ${LINODE_FIREWALL_ENABLED:=false}
-  inboundRules:
-    - action: ACCEPT
-      label: intra-cluster
-      ports: "1-65535"
-      protocol: "TCP"
-      addresses:
-        ipv4:
-          - "10.0.0.0/24"
-    - action: ACCEPT
-      addresses:
-        ipv4:
-          - 0.0.0.0/0
-        ipv6:
-          - ::/0
-      ports: "6443"
-      protocol: TCP
-      label: inbound-api-server
+  inboundPolicy: DROP
