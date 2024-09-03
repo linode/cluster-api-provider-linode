@@ -108,3 +108,10 @@ patches:
       kind: LinodeFirewall
       metadata:
         name: ${CLUSTER_NAME}
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/firewallRef
