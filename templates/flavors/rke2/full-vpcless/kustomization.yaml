@@ -71,3 +71,11 @@ patches:
                   device: /dev/sdc
               mounts:
                 - ["/dev/sdc", "/var/lib/etcd_data"]
+  - target:
+      kind: LinodeFirewall
+    patch: |-
+      $patch: delete
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeFirewall
+      metadata:
+        name: ${CLUSTER_NAME}
