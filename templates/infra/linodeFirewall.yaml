@@ -1,0 +1,27 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeFirewall
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  name: ${CLUSTER_NAME}
+spec:
+  enabled: ${LINODE_FIREWALL_ENABLED:=false}
+  inboundPolicy: DROP
+  inboundRules:
+    - action: ACCEPT
+      label: intra-cluster
+      ports: "1-65535"
+      protocol: "TCP"
+      addresses:
+        ipv4:
+          - "10.0.0.0/8"
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 0.0.0.0/0
+        ipv6:
+          - ::/0
+      ports: "6443"
+      protocol: TCP
+      label: inbound-api-server

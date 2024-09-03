@@ -163,3 +163,18 @@ patches:
           - sed -i '/swap/d' /etc/fstab
           - swapoff -a
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
+  - target:
+      kind: LinodeFirewall
+    patch: |-
+      $patch: delete
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeFirewall
+      metadata:
+        name: ${CLUSTER_NAME}
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/firewallRef

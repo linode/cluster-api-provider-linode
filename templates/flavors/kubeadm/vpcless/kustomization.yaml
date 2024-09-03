@@ -117,3 +117,18 @@ patches:
     patch: |-
       - op: remove
         path: /spec/kubeadmConfigSpec/initConfiguration/skipPhases
+  - target:
+      kind: LinodeFirewall
+    patch: |-
+      $patch: delete
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeFirewall
+      metadata:
+        name: ${CLUSTER_NAME}
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/firewallRef
