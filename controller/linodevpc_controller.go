@@ -127,7 +127,7 @@ func (r *LinodeVPCReconciler) reconcile(
 			vpcScope.LinodeVPC.Status.FailureReason = util.Pointer(failureReason)
 			vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer(err.Error())
 
-			conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, err.Error())
+			conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
 
 			r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
