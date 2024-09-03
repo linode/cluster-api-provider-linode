@@ -138,9 +138,8 @@ linters:
     - errname
     - errorlint
     - errcheck
-    - exportloopref
+    - copyloopvar
     - exhaustive
-    - exportloopref
     - forbidigo
     - forcetypeassert
     # - funlen
@@ -205,7 +204,7 @@ issues:
         - errcheck
         - dupl
         - gosec
-        - exportloopref
+        - copyloopvar
         - unparam
     # conversion files rely on largely generated code so are very similar
     - path: _conversion\.go

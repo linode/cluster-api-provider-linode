@@ -121,7 +121,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 			pgScope.LinodePlacementGroup.Status.FailureReason = util.Pointer(failureReason)
 			pgScope.LinodePlacementGroup.Status.FailureMessage = util.Pointer(err.Error())
 
-			conditions.MarkFalse(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, err.Error())
+			conditions.MarkFalse(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
 
 			r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}

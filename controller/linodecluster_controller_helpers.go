@@ -160,7 +160,7 @@ func handleDNS(clusterScope *scope.ClusterScope) {
 	}
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: dnsHost,
-		Port: int32(apiLBPort),
+		Port: int32(apiLBPort), // #nosec G115: Integer overflow conversion is safe for port numbers
 	}
 }
 
@@ -196,7 +196,7 @@ func handleNBCreate(ctx context.Context, logger logr.Logger, clusterScope *scope
 
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: *linodeNB.IPv4,
-		Port: int32(configs[0].Port),
+		Port: int32(configs[0].Port), // #nosec G115: Integer overflow conversion is safe for port numbers
 	}
 
 	return nil
