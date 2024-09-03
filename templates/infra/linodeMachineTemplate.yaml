@@ -10,6 +10,8 @@ spec:
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       firewallRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeFirewall
         name: ${CLUSTER_NAME}
       # diskEncryption: disabled
       interfaces:
@@ -29,6 +31,8 @@ spec:
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
       firewallRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeFirewall
         name: ${CLUSTER_NAME}
       # diskEncryption: disabled
       interfaces:
