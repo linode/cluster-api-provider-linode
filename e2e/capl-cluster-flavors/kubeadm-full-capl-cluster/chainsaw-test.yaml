@@ -410,8 +410,13 @@ spec:
               apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
               kind: LinodeVPC
               name: ($cluster)
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeFirewall
+              name: ($cluster)
         - error:
-            file: check-child-cluster-and-vpc-deleted.yaml
+            file: check-child-cluster-vpc-and-firewall-deleted.yaml
 
     # Test to check if linodes are deleted
     - name: Testing to check if the linodes are deleted
