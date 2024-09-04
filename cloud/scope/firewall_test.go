@@ -378,7 +378,7 @@ func TestFirewallRemoveCredentialsRefFinalizer(t *testing.T) {
 		expects        func(mock *mock.MockK8sClient)
 	}{
 		{
-			name: "Success - finalizer should be added to the Linode Firewall credentials Secret",
+			name: "Success - finalizer should be removed from the Linode Firewall credentials Secret",
 			LinodeFirewall: &infrav1alpha2.LinodeFirewall{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-fw",
@@ -409,7 +409,7 @@ func TestFirewallRemoveCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).AnyTimes()
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},

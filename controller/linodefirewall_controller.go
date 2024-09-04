@@ -211,6 +211,11 @@ func (r *LinodeFirewallReconciler) reconcileDelete(
 		return ctrl.Result{}, nil
 	}
 
+	if err := fwScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+		logger.Error(err, "failed to remove credentials finalizer")
+		return ctrl.Result{}, err
+	}
+
 	err := fwScope.LinodeClient.DeleteFirewall(ctx, *fwScope.LinodeFirewall.Spec.FirewallID)
 	if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 		logger.Error(err, "failed to delete Firewall")
