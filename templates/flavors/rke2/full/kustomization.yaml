@@ -6,6 +6,7 @@ resources:
   - ../../../addons/cluster-autoscaler
   - ../../../addons/etcd-backup-restore
   - ../../../addons/machine-health-check
+  - ../../../addons/placementGroups
 
 patches:
   - target:
@@ -71,3 +72,19 @@ patches:
                   device: /dev/sdc
               mounts:
                 - ["/dev/sdc", "/var/lib/etcd_data"]
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodePlacementGroup
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        template:
+          spec:
+            placementGroupRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodePlacementGroup
+              name: ${CLUSTER_NAME}
