@@ -76,6 +76,7 @@ patches:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
       kind: LinodeMachineTemplate
+      name: .*-control-plane
     patch: |-
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
