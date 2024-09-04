@@ -4,4 +4,4 @@ kind: LinodePlacementGroup
 metadata:
   name: ${CLUSTER_NAME}
 spec:
-  region: ${REGION}
+  region: ${LINODE_REGION}
