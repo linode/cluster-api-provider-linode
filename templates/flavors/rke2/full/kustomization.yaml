@@ -78,7 +78,7 @@ patches:
       kind: LinodeMachineTemplate
     patch: |-
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-      kind: LinodePlacementGroup
+      kind: LinodeMachineTemplate
       metadata:
         name: ${CLUSTER_NAME}-control-plane
       spec:
