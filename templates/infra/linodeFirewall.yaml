@@ -6,6 +6,8 @@ metadata:
     cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
   name: ${CLUSTER_NAME}
 spec:
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
   enabled: ${LINODE_FIREWALL_ENABLED:=false}
   inboundPolicy: DROP
   inboundRules:
