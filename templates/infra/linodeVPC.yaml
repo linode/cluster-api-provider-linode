@@ -6,6 +6,8 @@ metadata:
   labels:
     cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
 spec:
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
   region: ${LINODE_REGION}
   subnets:
     - ipv4: 10.0.0.0/8
