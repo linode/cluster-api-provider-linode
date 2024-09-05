@@ -9,7 +9,7 @@ spec:
   repoURL: https://linode.github.io/linode-blockstorage-csi-driver/
   chartName: linode-blockstorage-csi-driver
   namespace: kube-system
-  version: v0.7.0
+  version: ${LINODE_CSI_VERSION:=v0.8.4}
   options:
     waitForJobs: true
     wait: true
