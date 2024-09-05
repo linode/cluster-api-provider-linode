@@ -11,6 +11,8 @@ metadata:
     cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
   name: ${CLUSTER_NAME}-etcd-backup
 spec:
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
   region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
@@ -25,6 +27,8 @@ metadata:
     cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
   name: ${CLUSTER_NAME}-etcd-backup
 spec:
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
   bucketAccess:
     - bucketName: ${CLUSTER_NAME}-etcd-backup
       permissions: read_write
