@@ -1,0 +1,9 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodePlacementGroup
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
+  region: ${LINODE_REGION}

@@ -6,6 +6,7 @@ resources:
   - ../../../addons/cluster-autoscaler
   - ../../../addons/etcd-backup-restore
   - ../../../addons/machine-health-check
+  - ../../../addons/placementGroups
 
 patches:
   - target:
@@ -85,3 +86,20 @@ patches:
           maxRetry: 5
           retryPeriod: 2m
           minHealthyPeriod: 2h
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+      name: .*-control-plane
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeMachineTemplate
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        template:
+          spec:
+            placementGroupRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodePlacementGroup
+              name: ${CLUSTER_NAME}
