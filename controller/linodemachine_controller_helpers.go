@@ -312,15 +312,20 @@ func getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger
 
 	logger = logger.WithValues("firewallName", name, "firewallNamespace", namespace)
 
-	linodeFirewall := infrav1alpha2.LinodeFirewall{
+	linodeFirewall := &infrav1alpha2.LinodeFirewall{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
 		},
 	}
-	objectKey := client.ObjectKeyFromObject(&linodeFirewall)
-	err := machineScope.Client.Get(ctx, objectKey, &linodeFirewall)
+	objectKey := client.ObjectKeyFromObject(linodeFirewall)
+	err := machineScope.Client.Get(ctx, objectKey, linodeFirewall)
 	if err != nil {
+		logger.Error(err, "Failed to fetch LinodeFirewall")
+		return -1, err
+	}
+	if linodeFirewall.Spec.FirewallID == nil {
+		err = errors.New("nil firewallID")
 		logger.Error(err, "Failed to fetch LinodeFirewall")
 		return -1, err
 	}
