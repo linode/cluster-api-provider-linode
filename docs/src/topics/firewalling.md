@@ -81,17 +81,14 @@ spec:
 ```
 
 ## Cloud Firewalls
+Cloud firewalls are provisioned with all flavors that use VPCs. They are provisioned in disabled mode but can be enabled
+with the environment variable `LINODE_FIREWALL_ENABLED=true`. The default rules allow for all intra-cluster VPC traffic 
+along with any traffic going to the API server. 
 
+### Creating Cloud Firewalls
 For controlling firewalls via Linode resources, a [Cloud Firewall](https://www.linode.com/products/cloud-firewall/) can
-be defined and provisioned via the `LinodeFirewall` resource in CAPL.
-
-The created Cloud Firewall can be used on a `LinodeMachine` or a `LinodeMachineTemplate` by setting the `firewallRef` field.
-Alternatively, the provisioned Cloud Firewall's ID can be used in the `firewallID` field.
-
-```admonish note
-The `firewallRef` and `firewallID` fields are currently immutable for `LinodeMachines` and `LinodeMachineTemplates`. This will
-be addressed in a later release. 
-```
+be defined and provisioned via the `LinodeFirewall` resource in CAPL. Any updates to the cloud firewall CAPL resource
+will be updated in the cloud firewall and overwrite any changes made outside the CAPL resource.
 
 Example `LinodeFirewall`:
 ```yaml
@@ -104,14 +101,49 @@ spec:
   inboundPolicy: DROP
   inboundRules:
     - action: ACCEPT
-      label: k8s-api
-      ports: "6443"
+      label: intra-cluster
+      ports: "1-65535"
       protocol: "TCP"
       addresses:
         ipv4:
-          - "10.0.0.0/24"
-  # outboundPolicy: ACCEPT
-  # outboundRules: []
+          - "10.0.0.0/8"
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 0.0.0.0/0
+        ipv6:
+          - ::/0
+      ports: "6443"
+      protocol: TCP
+      label: inbound-api-server
 ```
 
-Cloud Firewalls are not automatically created for any CAPL flavor at this time.
+### Cloud Firewall Machine Integration
+The created Cloud Firewall can be used on a `LinodeMachine` or a `LinodeMachineTemplate` by setting the `firewallRef` field.
+Alternatively, the provisioned Cloud Firewall's ID can be used in the `firewallID` field.
+
+```admonish note
+The `firewallRef` and `firewallID` fields are currently immutable for `LinodeMachines` and `LinodeMachineTemplates`. This will
+be addressed in a later release. 
+```
+
+Example `LinodeMachineTemplate`:
+```yaml
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: test-cluster-control-plane
+  namespace: default
+spec:
+  template:
+    spec:
+      firewallRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeFirewall
+        name: sample-fw
+      image: linode/ubuntu22.04
+      interfaces:
+        - purpose: public
+      region: us-ord
+      type: g6-standard-4
+```
