@@ -19,6 +19,7 @@ type LinodeClient interface {
 	LinodeDNSClient
 	LinodePlacementGroupClient
 	LinodeFirewallClient
+	LinodeTokenClient
 }
 
 type AkamClient interface {
@@ -117,4 +118,8 @@ type LinodeFirewallClient interface {
 
 type K8sClient interface {
 	client.Client
+}
+
+type LinodeTokenClient interface {
+	SetToken(token string) *linodego.Client
 }

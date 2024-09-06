@@ -57,16 +57,6 @@ func NewFirewallScope(ctx context.Context, linodeClientConfig ClientConfig, para
 	if err := validateFirewallScopeParams(params); err != nil {
 		return nil, err
 	}
-
-	// Override the controller credentials with ones from the Firewall's Secret reference (if supplied).
-	if params.LinodeFirewall.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeFirewall.Spec.CredentialsRef, params.LinodeFirewall.GetNamespace(), "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-	}
 	linodeClient, err := CreateLinodeClient(linodeClientConfig,
 		WithRetryCount(0),
 	)
@@ -125,4 +115,14 @@ func (s *FirewallScope) RemoveCredentialsRefFinalizer(ctx context.Context) error
 	return removeCredentialsFinalizer(ctx, s.Client,
 		*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
 		toFinalizer(s.LinodeFirewall))
+}
+
+func (s *FirewallScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(), "apiToken")
+	if err != nil {
+		return fmt.Errorf("credentials from secret ref: %w", err)
+	}
+	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+	return nil
 }

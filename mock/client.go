@@ -754,6 +754,20 @@ func (mr *MockLinodeClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
 }
 
+// SetToken mocks base method.
+func (m *MockLinodeClient) SetToken(token string) *linodego.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetToken", token)
+	ret0, _ := ret[0].(*linodego.Client)
+	return ret0
+}
+
+// SetToken indicates an expected call of SetToken.
+func (mr *MockLinodeClientMockRecorder) SetToken(token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetToken", reflect.TypeOf((*MockLinodeClient)(nil).SetToken), token)
+}
+
 // UnassignPlacementGroupLinodes mocks base method.
 func (m *MockLinodeClient) UnassignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupUnAssignOptions) (*linodego.PlacementGroup, error) {
 	m.ctrl.T.Helper()
@@ -2262,4 +2276,41 @@ func (mr *MockK8sClientMockRecorder) Update(ctx, obj any, opts ...any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockK8sClient)(nil).Update), varargs...)
+}
+
+// MockLinodeTokenClient is a mock of LinodeTokenClient interface.
+type MockLinodeTokenClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockLinodeTokenClientMockRecorder
+}
+
+// MockLinodeTokenClientMockRecorder is the mock recorder for MockLinodeTokenClient.
+type MockLinodeTokenClientMockRecorder struct {
+	mock *MockLinodeTokenClient
+}
+
+// NewMockLinodeTokenClient creates a new mock instance.
+func NewMockLinodeTokenClient(ctrl *gomock.Controller) *MockLinodeTokenClient {
+	mock := &MockLinodeTokenClient{ctrl: ctrl}
+	mock.recorder = &MockLinodeTokenClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLinodeTokenClient) EXPECT() *MockLinodeTokenClientMockRecorder {
+	return m.recorder
+}
+
+// SetToken mocks base method.
+func (m *MockLinodeTokenClient) SetToken(token string) *linodego.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetToken", token)
+	ret0, _ := ret[0].(*linodego.Client)
+	return ret0
+}
+
+// SetToken indicates an expected call of SetToken.
+func (mr *MockLinodeTokenClientMockRecorder) SetToken(token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetToken", reflect.TypeOf((*MockLinodeTokenClient)(nil).SetToken), token)
 }

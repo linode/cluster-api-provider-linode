@@ -239,24 +239,24 @@ func TestNewClusterScope(t *testing.T) {
 					infrav1alpha2.AddToScheme(s)
 					return s
 				}).AnyTimes()
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"apiToken": []byte("example"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"dnsToken": []byte("example"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
+				// mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				// 	cred := corev1.Secret{
+				// 		Data: map[string][]byte{
+				// 			"apiToken": []byte("example"),
+				// 		},
+				// 	}
+				// 	*obj = cred
+				// 	return nil
+				// })
+				// mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+				// 	cred := corev1.Secret{
+				// 		Data: map[string][]byte{
+				// 			"dnsToken": []byte("example"),
+				// 		},
+				// 	}
+				// 	*obj = cred
+				// 	return nil
+				// })
 			},
 		},
 		{

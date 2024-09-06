@@ -76,6 +76,7 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 		// Use default (controller) credentials
 	}
 
+	// Use default (controller) credentials to instantiate the Linode Client
 	if credentialRef != nil {
 		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
 		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "apiToken")
@@ -179,4 +180,26 @@ func (s *MachineScope) RemoveCredentialsRefFinalizer(ctx context.Context) error 
 	return removeCredentialsFinalizer(ctx, s.Client,
 		*s.LinodeMachine.Spec.CredentialsRef, s.LinodeMachine.GetNamespace(),
 		toFinalizer(s.LinodeMachine))
+}
+
+func (s *MachineScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	var (
+		credentialRef    *corev1.SecretReference
+		defaultNamespace string
+	)
+	switch {
+	case s.LinodeMachine.Spec.CredentialsRef != nil:
+		credentialRef = s.LinodeMachine.Spec.CredentialsRef
+		defaultNamespace = s.LinodeMachine.GetNamespace()
+	default:
+		credentialRef = s.LinodeCluster.Spec.CredentialsRef
+		defaultNamespace = s.LinodeCluster.GetNamespace()
+	}
+	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *credentialRef, defaultNamespace, "apiToken")
+	if err != nil {
+		return fmt.Errorf("credentials from secret ref: %w", err)
+	}
+	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+	return nil
 }
