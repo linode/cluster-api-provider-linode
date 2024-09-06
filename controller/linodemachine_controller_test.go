@@ -805,6 +805,16 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 		Namespace:       namespace,
 		OwnerReferences: ownerRefs,
 	}
+	missingFW := &infrav1alpha2.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-missing-fw",
+			Namespace: namespace,
+		},
+		Spec: infrav1alpha2.LinodeFirewallSpec{
+			FirewallID: nil,
+			Enabled:    true,
+		},
+	}
 	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
@@ -869,6 +879,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 			},
 		}
 		mScope.Machine = machine
+		_ = k8sClient.Create(ctx, missingFW)
 		Expect(k8sClient.Create(ctx, linodeCluster)).To(Succeed())
 		Expect(k8sClient.Create(ctx, linodeMachine)).To(Succeed())
 		_ = k8sClient.Create(ctx, secret)
@@ -921,7 +932,30 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 				),
 			),
 			Path(
+				Call("machine is not created because it fails to get referenced firewall", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.FirewallRef = &corev1.ObjectReference{
+						Name:      "test-missing-fw",
+						Namespace: namespace,
+					}
+				}),
+				OneOf(
+					Path(Result("create fails when failing to get referenced firewall", func(ctx context.Context, mck Mock) {
+						getRegion := mck.LinodeClient.EXPECT().
+							GetRegion(ctx, gomock.Any()).
+							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+						mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							After(getRegion).
+							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).To(HaveOccurred())
+						Expect(mck.Logs()).To(ContainSubstring("nil firewallID"))
+					})),
+				),
+			),
+			Path(
 				Call("machine is not created because there were too many requests", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.FirewallRef = nil
 				}),
 				OneOf(
 					Path(Result("create requeues when failing to create instance config", func(ctx context.Context, mck Mock) {

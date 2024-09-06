@@ -29,6 +29,7 @@
     - [Autoscaling](./topics/autoscaling.md)
     - [VPC](./topics/vpc.md)
     - [Firewalling](./topics/firewalling.md)
+    - [Placement Groups](./topics/placement-groups.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
     - [Testing](./developers/testing.md)

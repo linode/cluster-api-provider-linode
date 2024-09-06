@@ -360,6 +360,19 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 		},
 	}
 
+	linodeMachine := infrav1alpha2.LinodeMachine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-machine",
+			Namespace: defaultNamespace,
+		},
+		Spec: infrav1alpha2.LinodeMachineSpec{
+			ProviderID: ptr.To("linode://123"),
+		},
+		Status: infrav1alpha2.LinodeMachineStatus{
+			Addresses: []clusterv1.MachineAddress{},
+		},
+	}
+
 	ctlrSuite := NewControllerSuite(
 		GinkgoT(),
 		mock.MockLinodeClient{},
@@ -382,6 +395,11 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.Client = mck.K8sClient
 					mck.LinodeClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				}),
+				Result("cluster deleted", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
+					err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
+					Expect(err).NotTo(HaveOccurred())
 				}),
 			),
 			Path(
@@ -411,12 +429,40 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 					Expect(err.Error()).To(ContainSubstring("delete NB error"))
 				}),
 			),
+			Path(
+				Call("cluster not deleted because some LinodeMachines are yet to be deleted and NB present", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+					cScope.Client = mck.K8sClient
+					cScope.LinodeCluster.Spec.Network.NodeBalancerID = &nodebalancerID
+					mck.LinodeClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+					cScope.LinodeMachines = infrav1alpha2.LinodeMachineList{
+						Items: []infrav1alpha2.LinodeMachine{linodeMachine},
+					}
+				}),
+				Result("cluster not deleted because some LinodeMachines are yet to be deleted and NB present", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
+					err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Waiting for associated LinodeMachine objects to be deleted"))
+				}),
+			),
+			Path(
+				Call("cluster not deleted because some LinodeMachines are yet to be deleted and NB nil", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+					cScope.Client = mck.K8sClient
+					cScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
+					cScope.LinodeMachines = infrav1alpha2.LinodeMachineList{
+						Items: []infrav1alpha2.LinodeMachine{linodeMachine},
+					}
+				}),
+				Result("cluster not deleted because some LinodeMachines are yet to be deleted and NB nil", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
+					err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("Waiting for associated LinodeMachine objects to be deleted"))
+				}),
+			),
 		),
-		Result("cluster deleted", func(ctx context.Context, mck Mock) {
-			reconciler.Client = mck.K8sClient
-			err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
-			Expect(err).NotTo(HaveOccurred())
-		}),
 	)
 })
 

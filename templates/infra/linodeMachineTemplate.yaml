@@ -6,6 +6,8 @@ metadata:
 spec:
   template:
     spec:
+      credentialsRef:
+        name: ${CLUSTER_NAME}-credentials
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
@@ -27,6 +29,8 @@ metadata:
 spec:
   template:
     spec:
+      credentialsRef:
+        name: ${CLUSTER_NAME}-credentials
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}

@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -226,6 +227,10 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != lbTypeDNS {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 
+		if len(clusterScope.LinodeMachines.Items) > 0 {
+			return errors.New("Waiting for associated LinodeMachine objects to be deleted")
+		}
+
 		if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 			logger.Error(err, "failed to remove credentials finalizer")
 			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
@@ -256,6 +261,10 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
 	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
 	clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = []infrav1alpha2.LinodeNBPortConfig{}
+
+	if len(clusterScope.LinodeMachines.Items) > 0 {
+		return errors.New("Waiting for associated LinodeMachine objects to be deleted")
+	}
 
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")

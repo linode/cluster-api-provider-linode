@@ -6,7 +6,7 @@ resources:
   - ../../../addons/cluster-autoscaler
   - ../../../addons/etcd-backup-restore
   - ../../../addons/machine-health-check
-
+  - ../../../addons/placementGroups
 
 patches:
   - target:
@@ -205,3 +205,20 @@ patches:
     patch: |-
       - op: remove
         path: /spec/template/spec/firewallRef
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+      name: .*-control-plane
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeMachineTemplate
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        template:
+          spec:
+            placementGroupRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodePlacementGroup
+              name: ${CLUSTER_NAME}
