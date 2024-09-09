@@ -407,7 +407,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 	}
 }
 
-func TestSetCredentialRefTokenForLinodeClients(t *testing.T) {
+func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name          string
