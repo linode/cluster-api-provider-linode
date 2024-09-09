@@ -3,6 +3,7 @@ package scope
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -202,58 +203,38 @@ func TestNewMachineScope(t *testing.T) {
 
 	NewSuite(t, mock.MockK8sClient{}).Run(
 		OneOf(
-			Path(Result("invalid params", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(
-					ctx,
-					ClientConfig{Token: "apiToken"},
-					MachineScopeParams{},
-				)
-				require.ErrorContains(t, err, "is required")
-				assert.Nil(t, mScope)
-			})),
-			Path(Result("no token", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, ClientConfig{Token: ""}, MachineScopeParams{
-					Client:        mck.K8sClient,
-					Cluster:       &clusterv1.Cluster{},
-					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha2.LinodeMachine{},
-				})
-				require.ErrorContains(t, err, "failed to create linode client")
-				assert.Nil(t, mScope)
-			})),
 			Path(
-				Call("no secret", func(ctx context.Context, mck Mock) {
-					mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(schema.GroupResource{}, "example"))
-				}),
-				Result("error", func(ctx context.Context, mck Mock) {
+				Result("invalid params", func(ctx context.Context, mck Mock) {
+					mScope, err := NewMachineScope(
+						ctx,
+						ClientConfig{Token: "apiToken"},
+						MachineScopeParams{},
+					)
+					require.ErrorContains(t, err, "is required")
+					assert.Nil(t, mScope)
+				})),
+			Path(
+				Result("no token", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(ctx, ClientConfig{Token: ""}, MachineScopeParams{
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
 						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{
-							Spec: infrav1alpha2.LinodeMachineSpec{
-								CredentialsRef: &corev1.SecretReference{
-									Name:      "example",
-									Namespace: "test",
-								},
-							},
-						},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{},
 					})
-					require.ErrorContains(t, err, "credentials from secret ref")
+					require.ErrorContains(t, err, "failed to create linode client")
 					assert.Nil(t, mScope)
-				}),
-			),
+				})),
 		),
 		OneOf(
-			Path(Call("valid scheme", func(ctx context.Context, mck Mock) {
-				mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha2.AddToScheme(s)
-					return s
-				}).AnyTimes()
-			})),
+			Path(
+				Call("valid scheme", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+						s := runtime.NewScheme()
+						infrav1alpha2.AddToScheme(s)
+						return s
+					}).AnyTimes()
+				})),
 			Path(
 				Call("invalid scheme", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme()).AnyTimes()
@@ -272,61 +253,12 @@ func TestNewMachineScope(t *testing.T) {
 			),
 		),
 		OneOf(
-			Path(Call("credentials in secret", func(ctx context.Context, mck Mock) {
-				mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
-					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
-						*obj = corev1.Secret{
-							Data: map[string][]byte{
-								"apiToken": []byte("apiToken"),
-							},
-						}
-						return nil
-					}).AnyTimes()
-			})),
-			Path(Result("default credentials", func(ctx context.Context, mck Mock) {
+			Path(Result("default credentials used", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(ctx, ClientConfig{Token: "apiToken"}, MachineScopeParams{
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
 					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha2.LinodeMachine{},
-				})
-				require.NoError(t, err)
-				assert.NotNil(t, mScope)
-			})),
-		),
-		OneOf(
-			Path(Result("credentials from LinodeMachine credentialsRef", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, ClientConfig{Token: ""}, MachineScopeParams{
-					Client:        mck.K8sClient,
-					Cluster:       &clusterv1.Cluster{},
-					Machine:       &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-					LinodeMachine: &infrav1alpha2.LinodeMachine{
-						Spec: infrav1alpha2.LinodeMachineSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Name:      "example",
-								Namespace: "test",
-							},
-						},
-					},
-				})
-				require.NoError(t, err)
-				assert.NotNil(t, mScope)
-			})),
-			Path(Result("credentials from LinodeCluster credentialsRef", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, ClientConfig{Token: "apiToken"}, MachineScopeParams{
-					Client:  mck.K8sClient,
-					Cluster: &clusterv1.Cluster{},
-					Machine: &clusterv1.Machine{},
-					LinodeCluster: &infrav1alpha2.LinodeCluster{
-						Spec: infrav1alpha2.LinodeClusterSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Name:      "example",
-								Namespace: "test",
-							},
-						},
-					},
 					LinodeMachine: &infrav1alpha2.LinodeMachine{},
 				})
 				require.NoError(t, err)
@@ -590,6 +522,171 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 
 			if err := mScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
 				t.Errorf("MachineScope.RemoveCredentialsRefFinalizer() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestMachineSetCredentialRefTokenForLinodeClients(t *testing.T) {
+	t.Parallel()
+	type fields struct {
+		LinodeMachine *infrav1alpha2.LinodeMachine
+		LinodeCluster *infrav1alpha2.LinodeCluster
+	}
+	tests := []struct {
+		name          string
+		fields        fields
+		expects       func(mock *mock.MockK8sClient)
+		expectedError error
+	}{
+		{
+			name: "Success - Using LinodeMachine.Spec.CredentialsRef",
+			fields: fields{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						CredentialsRef: &corev1.SecretReference{
+							Name:      "example",
+							Namespace: "test",
+						},
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{},
+			},
+			expectedError: nil,
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				}).AnyTimes()
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "example",
+							Namespace: "test",
+						},
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+
+					return nil
+				}).AnyTimes()
+			},
+		},
+		{
+			name: "Error getting Linode Machine credentials Secret",
+			fields: fields{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						CredentialsRef: &corev1.SecretReference{
+							Name:      "example",
+							Namespace: "test",
+						},
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{},
+			},
+			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: test error"),
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				}).AnyTimes()
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
+			},
+		},
+		{
+			name: "Success - Using LinodeCluster.Spec.CredentialsRef",
+			fields: fields{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						CredentialsRef: &corev1.SecretReference{
+							Name:      "example",
+							Namespace: "test",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+			},
+			expectedError: nil,
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				}).AnyTimes()
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "example",
+							Namespace: "test",
+						},
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+
+					return nil
+				}).AnyTimes()
+			},
+		},
+		{
+			name: "Error getting Linode Cluster credentials Secret",
+			fields: fields{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						CredentialsRef: &corev1.SecretReference{
+							Name:      "example",
+							Namespace: "test",
+						},
+					},
+				},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+			},
+			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: test error"),
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				}).AnyTimes()
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
+			},
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			mScope, err := NewMachineScope(
+				context.Background(),
+				ClientConfig{Token: "apiToken"},
+				MachineScopeParams{
+					Client:        mockK8sClient,
+					Cluster:       &clusterv1.Cluster{},
+					Machine:       &clusterv1.Machine{},
+					LinodeCluster: testcase.fields.LinodeCluster,
+					LinodeMachine: testcase.fields.LinodeMachine,
+				},
+			)
+			if err != nil {
+				t.Errorf("NewMachineScope() error = %v", err)
+			}
+
+			if err := mScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
 	}

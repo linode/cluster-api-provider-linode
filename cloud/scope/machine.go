@@ -55,37 +55,6 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
-
-	// Override the controller credentials with ones from the Machine's Secret reference (if supplied).
-	// Credentials will be used in the following order:
-	//   1. LinodeMachine
-	//   2. Owner LinodeCluster
-	//   3. Controller
-	var (
-		credentialRef    *corev1.SecretReference
-		defaultNamespace string
-	)
-	switch {
-	case params.LinodeMachine.Spec.CredentialsRef != nil:
-		credentialRef = params.LinodeMachine.Spec.CredentialsRef
-		defaultNamespace = params.LinodeMachine.GetNamespace()
-	case params.LinodeCluster.Spec.CredentialsRef != nil:
-		credentialRef = params.LinodeCluster.Spec.CredentialsRef
-		defaultNamespace = params.LinodeCluster.GetNamespace()
-	default:
-		// Use default (controller) credentials
-	}
-
-	// Use default (controller) credentials to instantiate the Linode Client
-	if credentialRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *credentialRef, defaultNamespace, "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-	}
-
 	linodeClient, err := CreateLinodeClient(linodeClientConfig,
 		WithRetryCount(0),
 	)
