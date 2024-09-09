@@ -55,7 +55,6 @@ func NewClusterScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 	if err := validateClusterScopeParams(params); err != nil {
 		return nil, err
 	}
-	//Or just don't do anything, create the linodeClient first using controller credentials and later just replace
 
 	linodeClient, err := CreateLinodeClient(linodeClientConfig)
 	if err != nil {
@@ -141,7 +140,6 @@ func (s *ClusterScope) RemoveCredentialsRefFinalizer(ctx context.Context) error 
 }
 
 func (s *ClusterScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
-
 	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "apiToken")
 	if err != nil {
 		return fmt.Errorf("credentials from secret ref: %w", err)

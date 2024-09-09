@@ -266,7 +266,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -356,7 +356,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -427,6 +427,11 @@ func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			},
 			expectedError: nil,
 			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -449,6 +454,11 @@ func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 				},
 			},
 			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
 			},
 			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
@@ -477,7 +487,7 @@ func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 				t.Errorf("NewVPCScope() error = %v", err)
 			}
 			if err := vScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
-				t.Errorf("%v", err)
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
 	}

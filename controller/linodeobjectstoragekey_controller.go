@@ -131,6 +131,14 @@ func (r *LinodeObjectStorageKeyReconciler) reconcile(ctx context.Context, keySco
 		return res, err
 	}
 
+	// Override the controller credentials with ones from the Key's Secret reference (if supplied).
+	if keyScope.Key.Spec.CredentialsRef != nil {
+		if err := keyScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+			keyScope.Logger.Error(err, "failed to update linode client token from Credential Ref")
+			return res, err
+		}
+	}
+
 	if err := r.reconcileApply(ctx, keyScope); err != nil {
 		return res, err
 	}

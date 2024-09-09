@@ -266,7 +266,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -356,7 +356,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 					*obj = cred
 
 					return nil
-				}).Times(2)
+				}).Times(1)
 				mock.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -426,6 +426,11 @@ func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			},
 			expectedError: nil,
 			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -438,7 +443,7 @@ func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - Pass in valid args but get an error when getting the credentials secret",
+			name: "Error - Get an error when getting the credentials secret",
 			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
 				Spec: infrav1alpha2.LinodePlacementGroupSpec{
 					CredentialsRef: &corev1.SecretReference{
@@ -448,6 +453,11 @@ func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
 				},
 			},
 			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
 				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
 			},
 			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test-namespace/test-name: test error"),
@@ -476,7 +486,7 @@ func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
 				t.Errorf("NewPGScope() error = %v", err)
 			}
 			if err := pgScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
-				t.Errorf("%v", err)
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
 	}

@@ -105,41 +105,6 @@ func TestNewObjectStorageKeyScope(t *testing.T) {
 			},
 		},
 		{
-			name: "with credentials from secret",
-			args: args{
-				apiKey: "apikey",
-				params: ObjectStorageKeyScopeParams{
-					Client: nil,
-					Key: &infrav1alpha2.LinodeObjectStorageKey{
-						Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-							CredentialsRef: &corev1.SecretReference{
-								Name:      "example",
-								Namespace: "test",
-							},
-						},
-					},
-					Logger: &logr.Logger{},
-				},
-			},
-			expectedErr: nil,
-			expects: func(k8s *mock.MockK8sClient) {
-				k8s.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha2.AddToScheme(s)
-					return s
-				})
-				k8s.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, name types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"apiToken": []byte("example"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-			},
-		},
-		{
 			name: "empty params",
 			args: args{
 				apiKey: "apikey",
@@ -161,28 +126,6 @@ func TestNewObjectStorageKeyScope(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to init patch helper:"),
 			expects: func(k8s *mock.MockK8sClient) {
 				k8s.EXPECT().Scheme().Return(runtime.NewScheme())
-			},
-		},
-		{
-			name: "credentials from ref fail",
-			args: args{
-				apiKey: "apikey",
-				params: ObjectStorageKeyScopeParams{
-					Client: nil,
-					Key: &infrav1alpha2.LinodeObjectStorageKey{
-						Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-							CredentialsRef: &corev1.SecretReference{
-								Name:      "example",
-								Namespace: "test",
-							},
-						},
-					},
-					Logger: &logr.Logger{},
-				},
-			},
-			expectedErr: fmt.Errorf("credentials from secret ref: get credentials secret test/example: failed to get secret"),
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
 			},
 		},
 		{
@@ -224,7 +167,7 @@ func TestNewObjectStorageKeyScope(t *testing.T) {
 	}
 }
 
-func TestObjectStrorageKeyAddFinalizer(t *testing.T) {
+func TestObjectStorageKeyAddFinalizer(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -638,4 +581,107 @@ func TestShouldRotateKey(t *testing.T) {
 			},
 		},
 	}).ShouldRotateKey())
+}
+func TestObjectStorageKeySetCredentialRefTokenForLinodeClients(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		apiKey string
+		params ObjectStorageKeyScopeParams
+	}
+	tests := []struct {
+		name            string
+		args            args
+		expectedErr     error
+		expects         func(k8s *mock.MockK8sClient)
+		clientBuildFunc func(apiKey string) (LinodeClient, error)
+	}{
+		{
+			name: "with credentials from secret",
+			args: args{
+				apiKey: "apikey",
+				params: ObjectStorageKeyScopeParams{
+					Client: nil,
+					Key: &infrav1alpha2.LinodeObjectStorageKey{
+						Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+							CredentialsRef: &corev1.SecretReference{
+								Name:      "example",
+								Namespace: "test",
+							},
+						},
+					},
+					Logger: &logr.Logger{},
+				},
+			},
+			expectedErr: nil,
+			expects: func(k8s *mock.MockK8sClient) {
+				k8s.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				k8s.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, name types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+			},
+		},
+		{
+			name: "credentials from ref fail",
+			args: args{
+				apiKey: "apikey",
+				params: ObjectStorageKeyScopeParams{
+					Client: nil,
+					Key: &infrav1alpha2.LinodeObjectStorageKey{
+						Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+							CredentialsRef: &corev1.SecretReference{
+								Name:      "example",
+								Namespace: "test",
+							},
+						},
+					},
+					Logger: &logr.Logger{},
+				},
+			},
+			expectedErr: fmt.Errorf("credentials from secret ref: get credentials secret test/example: failed to get secret"),
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
+			},
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			testcase.args.params.Client = mockK8sClient
+
+			kscope, err := NewObjectStorageKeyScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+
+			if err != nil {
+				t.Errorf("NewObjectStorageKeyScope() error = %v", err)
+			}
+
+			if err := kscope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+				assert.ErrorContains(t, err, testcase.expectedErr.Error())
+			}
+		})
+	}
 }
