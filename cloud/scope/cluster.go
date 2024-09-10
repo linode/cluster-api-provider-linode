@@ -140,15 +140,18 @@ func (s *ClusterScope) RemoveCredentialsRefFinalizer(ctx context.Context) error 
 }
 
 func (s *ClusterScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
-	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "apiToken")
-	if err != nil {
-		return fmt.Errorf("credentials from secret ref: %w", err)
+	if s.LinodeCluster.Spec.CredentialsRef != nil {
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		dnsToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "dnsToken")
+		if err != nil || len(dnsToken) == 0 {
+			dnsToken = apiToken
+		}
+		s.LinodeDomainsClient = s.LinodeDomainsClient.SetToken(string(dnsToken))
+		return nil
 	}
-	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
-	dnsToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "dnsToken")
-	if err != nil || len(dnsToken) == 0 {
-		dnsToken = apiToken
-	}
-	s.LinodeDomainsClient = s.LinodeDomainsClient.SetToken(string(dnsToken))
 	return nil
 }

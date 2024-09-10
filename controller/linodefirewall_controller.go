@@ -143,12 +143,11 @@ func (r *LinodeFirewallReconciler) reconcile(
 	}
 
 	// Override the controller credentials with ones from the Firewall's Secret reference (if supplied).
-	if fwScope.LinodeFirewall.Spec.CredentialsRef != nil {
-		if err := fwScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
-			logger.Error(err, "failed to update linode client token from Credential Ref")
-			return ctrl.Result{}, err
-		}
+	if err := fwScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return ctrl.Result{}, err
 	}
+
 	action := "update"
 	if fwScope.LinodeFirewall.Spec.FirewallID != nil {
 		failureReason = infrav1alpha2.UpdateFirewallError

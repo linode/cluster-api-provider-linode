@@ -157,11 +157,9 @@ func (r *LinodeClusterReconciler) reconcile(
 		return res, err
 	}
 
-	if clusterScope.LinodeCluster.Spec.CredentialsRef != nil {
-		if err := clusterScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
-			logger.Error(err, "failed to update linode client token from Credential Ref")
-			return res, err
-		}
+	if err := clusterScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return res, err
 	}
 
 	// Create

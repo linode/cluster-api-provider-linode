@@ -118,11 +118,14 @@ func (s *FirewallScope) RemoveCredentialsRefFinalizer(ctx context.Context) error
 }
 
 func (s *FirewallScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
-	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(), "apiToken")
-	if err != nil {
-		return fmt.Errorf("credentials from secret ref: %w", err)
+	if s.LinodeFirewall.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
 	}
-	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
 	return nil
 }

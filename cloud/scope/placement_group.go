@@ -129,5 +129,4 @@ func (s *PlacementGroupScope) SetCredentialRefTokenForLinodeClients(ctx context.
 	}
 	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
 	return nil
-
 }
