@@ -121,11 +121,14 @@ func (s *VPCScope) RemoveCredentialsRefFinalizer(ctx context.Context) error {
 }
 
 func (s *VPCScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
-	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeVPC.Spec.CredentialsRef, s.LinodeVPC.GetNamespace(), "apiToken")
-	if err != nil {
-		return fmt.Errorf("credentials from secret ref: %w", err)
+	if s.LinodeVPC.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeVPC.Spec.CredentialsRef, s.LinodeVPC.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
 	}
-	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
 	return nil
 }

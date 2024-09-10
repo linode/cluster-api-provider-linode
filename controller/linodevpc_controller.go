@@ -159,11 +159,9 @@ func (r *LinodeVPCReconciler) reconcile(
 	}
 
 	// Override the controller credentials with ones from the VPC's Secret reference (if supplied).
-	if vpcScope.LinodeVPC.Spec.CredentialsRef != nil {
-		if err := vpcScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
-			logger.Error(err, "failed to update linode client token from Credential Ref")
-			return res, err
-		}
+	if err := vpcScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return res, err
 	}
 
 	// Update

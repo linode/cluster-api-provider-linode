@@ -153,11 +153,9 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	}
 
 	// Override the controller credentials with ones from the Placement Groups's Secret reference (if supplied).
-	if pgScope.LinodePlacementGroup.Spec.CredentialsRef != nil {
-		if err := pgScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
-			logger.Error(err, "failed to update linode client token from Credential Ref")
-			return res, err
-		}
+	if err := pgScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return res, err
 	}
 
 	// Update

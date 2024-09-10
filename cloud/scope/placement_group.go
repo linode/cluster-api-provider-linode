@@ -122,11 +122,14 @@ func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig
 }
 
 func (s *PlacementGroupScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
-	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodePlacementGroup.Spec.CredentialsRef, s.LinodePlacementGroup.GetNamespace(), "apiToken")
-	if err != nil {
-		return fmt.Errorf("credentials from secret ref: %w", err)
+	if s.LinodePlacementGroup.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodePlacementGroup.Spec.CredentialsRef, s.LinodePlacementGroup.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
 	}
-	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
 	return nil
 }
