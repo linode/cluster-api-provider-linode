@@ -12,7 +12,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'rke2-cluster', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'rke2', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `32`)), '-'))

@@ -57,14 +57,14 @@ patches:
         path: /spec/vpcRef
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1beta1
       kind: RKE2ControlPlane
     patch: |-
       - op: remove
         path: /spec/serverConfig/disableComponents/kubernetesComponents/1
   - target:
       group: bootstrap.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1beta1
       kind: RKE2ConfigTemplate
     patch: |-
       - op: replace
@@ -78,7 +78,7 @@ patches:
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1alpha1
+      version: v1beta1
       kind: RKE2ControlPlane
     patch: |-
       - op: replace
