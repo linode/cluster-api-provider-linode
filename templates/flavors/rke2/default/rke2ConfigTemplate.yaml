@@ -1,5 +1,5 @@
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1alpha1
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: RKE2ConfigTemplate
 metadata:
   name: ${CLUSTER_NAME}-md-0
@@ -7,7 +7,6 @@ spec:
   template:
     spec:
       agentConfig:
-        version: ${KUBERNETES_VERSION}
         nodeName: '{{ ds.meta_data.label }}'
         cisProfile: ${CIS_PROFILE:-"cis-1.23"}
         protectKernelDefaults: true
