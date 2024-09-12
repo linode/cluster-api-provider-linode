@@ -178,10 +178,12 @@ func (r *LinodeClusterReconciler) reconcile(
 		}
 	}
 
-	err := addMachineToLB(ctx, clusterScope)
-	if err != nil {
-		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
-		return retryIfTransient(err)
+	if (clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil) || clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
+		err := addMachineToLB(ctx, clusterScope)
+		if err != nil {
+			logger.Error(err, "Failed to add Linode machine to loadbalancer option")
+			return retryIfTransient(err)
+		}
 	}
 
 	return res, nil
@@ -221,7 +223,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 
 		if len(clusterScope.LinodeMachines.Items) > 0 {
-			return errors.New("Waiting for associated LinodeMachine objects to be deleted")
+			return errors.New("waiting for associated LinodeMachine objects to be deleted")
 		}
 
 		if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
@@ -256,7 +258,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = []infrav1alpha2.LinodeNBPortConfig{}
 
 	if len(clusterScope.LinodeMachines.Items) > 0 {
-		return errors.New("Waiting for associated LinodeMachine objects to be deleted")
+		return errors.New("waiting for associated LinodeMachine objects to be deleted")
 	}
 
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {

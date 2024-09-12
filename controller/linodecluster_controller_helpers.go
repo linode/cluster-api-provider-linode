@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -30,12 +29,6 @@ func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error
 			return err
 		}
 		return nil
-	}
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil {
-		return errors.New("nil NodeBalancer Config ID")
-	}
-	if clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
-		return errors.New("nil NodeBalancer Config ID")
 	}
 	nodeBalancerNodes, err := clusterScope.LinodeClient.ListNodeBalancerNodes(
 		ctx,
