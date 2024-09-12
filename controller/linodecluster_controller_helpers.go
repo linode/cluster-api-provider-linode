@@ -24,11 +24,19 @@ import (
 
 func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error {
 	logger := logr.FromContextOrDiscard(ctx)
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "external" {
+		logger.Info("LoadBalancing is handled externally")
+		return nil
+	}
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
 		if err := services.EnsureDNSEntries(ctx, clusterScope, "create"); err != nil {
 			return err
 		}
 		return nil
+	}
+	// Reconcile previously provisioned clusters with Spec.Network = {} and ControlPlaneEndpoint.Host externally managed
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil || clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
+		clusterScope.LinodeCluster.Spec.Network.LoadBalancerType = "external"
 	}
 	nodeBalancerNodes, err := clusterScope.LinodeClient.ListNodeBalancerNodes(
 		ctx,
