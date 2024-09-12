@@ -36,7 +36,9 @@ func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error
 	}
 	// Reconcile previously provisioned clusters with Spec.Network = {} and ControlPlaneEndpoint.Host externally managed
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil || clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
+		logger.Info("NodeBalancerID or ApiserverNodeBalancerConfigID not set for Type LoadBalancer, this cluster is managed externally")
 		clusterScope.LinodeCluster.Spec.Network.LoadBalancerType = "external"
+		return nil
 	}
 	nodeBalancerNodes, err := clusterScope.LinodeClient.ListNodeBalancerNodes(
 		ctx,
