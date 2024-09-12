@@ -43,9 +43,13 @@ func (r *LinodeCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable update and deletion validation.
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=create,versions=v1alpha2,name=validation.linodecluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=create,versions=v1alpha2,name=validation.linodecluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &LinodeCluster{}
+
+// +kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=create,versions=v1alpha2,name=mutation.linodecluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+
+var _ webhook.Defaulter = &LinodeCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *LinodeCluster) ValidateCreate() (admission.Warnings, error) {
@@ -110,4 +114,12 @@ func (r *LinodeCluster) validateLinodeClusterSpec(ctx context.Context, client Li
 		return nil
 	}
 	return errs
+}
+
+// Default implements webhook.Defaulter so a webhook will be registered for the type
+func (r *LinodeCluster) Default() {
+	// Always override LoadBalancerType to external if the controlPlaneEndpoint.Host is already set during the first create request.
+	if r.Spec.ControlPlaneEndpoint.Host != "" {
+		r.Spec.Network.LoadBalancerType = "external"
+	}
 }
