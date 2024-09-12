@@ -220,7 +220,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != lbTypeDNS {
 		logger.Info("NodeBalancer ID is missing, nothing to do")
 
-		//clusterScope.LinodeMachines.Items only has controlPlane nodes in the list
+		// clusterScope.LinodeMachines.Items only has controlPlane nodes in the list
 		if len(clusterScope.LinodeMachines.Items) > 0 {
 			return errors.New("waiting for associated LinodeMachine objects to be deleted")
 		}
