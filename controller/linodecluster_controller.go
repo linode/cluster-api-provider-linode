@@ -178,7 +178,7 @@ func (r *LinodeClusterReconciler) reconcile(
 		}
 	}
 
-	if (clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil) || clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil || clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
 		err := addMachineToLB(ctx, clusterScope)
 		if err != nil {
 			logger.Error(err, "Failed to add Linode machine to loadbalancer option")
