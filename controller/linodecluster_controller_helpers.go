@@ -67,17 +67,18 @@ func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error
 	return nil
 }
 
-func removeMachineFromLB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
-		if err := services.DeleteNodesFromNB(ctx, logger, clusterScope); err != nil {
-			logger.Error(err, "Failed to remove node from Node Balancer backend")
-			return err
-		}
-	} else if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
-		if err := services.EnsureDNSEntries(ctx, clusterScope, "delete"); err != nil {
-			logger.Error(err, "Failed to remove IP from DNS")
-			return err
-		}
+func removeMachineFromDNS(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	if err := services.EnsureDNSEntries(ctx, clusterScope, "delete"); err != nil {
+		logger.Error(err, "Failed to remove IP from DNS")
+		return err
+	}
+	return nil
+}
+
+func removeMachineFromNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	if err := services.DeleteNodesFromNB(ctx, logger, clusterScope); err != nil {
+		logger.Error(err, "Failed to remove node from Node Balancer backend")
+		return err
 	}
 	return nil
 }

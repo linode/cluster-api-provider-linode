@@ -217,45 +217,42 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil && clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != lbTypeDNS {
-		logger.Info("NodeBalancer ID is missing, nothing to do")
+	switch {
+	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "external":
+		logger.Info("LoadBalacing managed externally, nothing to do.")
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Deletion in progress")
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "LoadBalacing managed externally", "LoadBalacing managed externally, nothing to do.")
 
-		// clusterScope.LinodeMachines.Items only has controlPlane nodes in the list
-		if len(clusterScope.LinodeMachines.Items) > 0 {
-			return errors.New("waiting for associated LinodeMachine objects to be deleted")
+	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeDNS:
+		if err := removeMachineFromDNS(ctx, logger, clusterScope); err != nil {
+			return fmt.Errorf("remove machine from loadbalancer: %w", err)
+		}
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancing for Type DNS deleted")
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancing for Type DNS deleted")
+
+	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil:
+		logger.Info("NodeBalancer ID is missing for Type NodeBalancer, nothing to do")
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "NodeBalancerIDMissing", "NodeBalancer already removed, nothing to do")
+
+	default:
+		if err := removeMachineFromNB(ctx, logger, clusterScope); err != nil {
+			return fmt.Errorf("remove machine from loadbalancer: %w", err)
 		}
 
-		if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
-			logger.Error(err, "failed to remove credentials finalizer")
-			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
-			return err
-		}
-		controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.ClusterFinalizer)
-		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "NodeBalancerIDMissing", "NodeBalancer ID is missing, nothing to do")
-
-		return nil
-	}
-
-	if err := removeMachineFromLB(ctx, logger, clusterScope); err != nil {
-		return fmt.Errorf("remove machine from loadbalancer: %w", err)
-	}
-
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType != lbTypeDNS && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil {
 		err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "failed to delete NodeBalancer")
 			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
 			return err
 		}
+
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer for Type NodeBalancer deleted")
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer for Type NodeBalancer deleted")
+
+		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
+		clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
+		clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = []infrav1alpha2.LinodeNBPortConfig{}
 	}
-
-	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer deleted")
-	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer deleted")
-
-	clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
-	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
-	clusterScope.LinodeCluster.Spec.Network.AdditionalPorts = []infrav1alpha2.LinodeNBPortConfig{}
-
 	if len(clusterScope.LinodeMachines.Items) > 0 {
 		return errors.New("waiting for associated LinodeMachine objects to be deleted")
 	}
