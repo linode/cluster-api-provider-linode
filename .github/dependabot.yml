@@ -11,7 +11,7 @@ updates:
       kubernetes:
         patterns: [ "k8s.io/*", "sigs.k8s.io/*" ]
       otel:
-        patterns: ["go.opentelemetry.io/otel/*"]
+        patterns: ["go.opentelemetry.io/*"]
     commit-message:
       prefix: ":seedling:"
     labels:
