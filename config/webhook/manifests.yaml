@@ -10,25 +10,6 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster
-  failurePolicy: Fail
-  name: mutation.linodecluster.infrastructure.cluster.x-k8s.io
-  rules:
-  - apiGroups:
-    - infrastructure.cluster.x-k8s.io
-    apiVersions:
-    - v1alpha2
-    operations:
-    - CREATE
-    resources:
-    - linodeclusters
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
       path: /mutate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey
   failurePolicy: Fail
   name: mutation.linodeobjectstoragekey.infrastructure.cluster.x-k8s.io
