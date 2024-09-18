@@ -104,7 +104,8 @@ func (lm *LinodeCluster) SetConditions(conditions clusterv1.Conditions) {
 // NetworkSpec encapsulates Linode networking resources.
 type NetworkSpec struct {
 	// LoadBalancerType is the type of load balancer to use, defaults to NodeBalancer if not otherwise set
-	// +kubebuilder:validation:Enum=NodeBalancer;dns
+	// +kubebuilder:validation:Enum=NodeBalancer;dns;external
+	// +kubebuilder:default=NodeBalancer
 	// +optional
 	LoadBalancerType string `json:"loadBalancerType,omitempty"`
 	// DNSProvider is provider who manages the domain

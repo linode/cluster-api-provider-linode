@@ -412,7 +412,7 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 					reconciler.Client = mck.K8sClient
 					err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(mck.Events()).To(ContainSubstring("Warning NodeBalancerIDMissing NodeBalancer ID is missing, nothing to do"))
+					Expect(mck.Events()).To(ContainSubstring("Warning NodeBalancerIDMissing NodeBalancer already removed, nothing to do"))
 				}),
 			),
 			Path(
@@ -443,7 +443,7 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 					reconciler.Client = mck.K8sClient
 					err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("Waiting for associated LinodeMachine objects to be deleted"))
+					Expect(err.Error()).To(ContainSubstring("waiting for associated LinodeMachine objects to be deleted"))
 				}),
 			),
 			Path(
@@ -459,7 +459,7 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 					reconciler.Client = mck.K8sClient
 					err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
 					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("Waiting for associated LinodeMachine objects to be deleted"))
+					Expect(err.Error()).To(ContainSubstring("waiting for associated LinodeMachine objects to be deleted"))
 				}),
 			),
 		),

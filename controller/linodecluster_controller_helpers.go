@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -25,17 +24,21 @@ import (
 
 func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error {
 	logger := logr.FromContextOrDiscard(ctx)
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "external" {
+		logger.Info("LoadBalancing is handled externally")
+		return nil
+	}
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
 		if err := services.EnsureDNSEntries(ctx, clusterScope, "create"); err != nil {
 			return err
 		}
 		return nil
 	}
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil {
-		return errors.New("nil NodeBalancer Config ID")
-	}
-	if clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
-		return errors.New("nil NodeBalancer Config ID")
+	// Reconcile clusters with Spec.Network = {} and ControlPlaneEndpoint.Host externally managed
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil || clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
+		logger.Info("NodeBalancerID or ApiserverNodeBalancerConfigID not set for Type NodeBalancer, this cluster is managed externally")
+		clusterScope.LinodeCluster.Spec.Network.LoadBalancerType = "external"
+		return nil
 	}
 	nodeBalancerNodes, err := clusterScope.LinodeClient.ListNodeBalancerNodes(
 		ctx,
@@ -64,17 +67,18 @@ func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error
 	return nil
 }
 
-func removeMachineFromLB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" {
-		if err := services.DeleteNodesFromNB(ctx, logger, clusterScope); err != nil {
-			logger.Error(err, "Failed to remove node from Node Balancer backend")
-			return err
-		}
-	} else if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
-		if err := services.EnsureDNSEntries(ctx, clusterScope, "delete"); err != nil {
-			logger.Error(err, "Failed to remove IP from DNS")
-			return err
-		}
+func removeMachineFromDNS(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	if err := services.EnsureDNSEntries(ctx, clusterScope, "delete"); err != nil {
+		logger.Error(err, "Failed to remove IP from DNS")
+		return err
+	}
+	return nil
+}
+
+func removeMachineFromNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+	if err := services.DeleteNodesFromNB(ctx, logger, clusterScope); err != nil {
+		logger.Error(err, "Failed to remove node from Node Balancer backend")
+		return err
 	}
 	return nil
 }
