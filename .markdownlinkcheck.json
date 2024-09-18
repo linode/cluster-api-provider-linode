@@ -1,6 +1,8 @@
 {
     "ignorePatterns": [
         { "pattern": "^https://www.linode.com" },
+        { "pattern": "^https://www.techdocs.akamai.com" },
+        { "pattern": "^https://techdocs.akamai.com" },
         { "pattern": "^https://linode.com" },
         { "pattern": "^http://localhost" }
     ],

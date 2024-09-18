@@ -15,6 +15,32 @@ Key facts about VPC network configuration:
 4. [Kubernetes host-scope IPAM mode](https://docs.cilium.io/en/stable/network/concepts/ipam/kubernetes/) is used to assign pod CIDRs to nodes. We run [linode CCM](https://github.com/linode/linode-cloud-controller-manager) with [route-controller enabled](https://github.com/linode/linode-cloud-controller-manager?tab=readme-ov-file#routes) which automatically adds/updates routes within VPC when pod cidrs are added/updated by k8s. This enables pod-to-pod traffic to be routable within the VPC.
 5. kube-proxy is disabled by default.
 
+
+## Configuring the VPC interface
+In order to configure the VPC interface beyond the default above, an explicit interface can be configured in the `LinodeMachineTemplate`.
+When the `LinodeMachine` controller find an interface with `purpose: vpc` it will automatically inject the `SubnetID` from the
+`VPCRef`. 
+
+_Example template where the VPC interface is not the primary interface_
+```yaml
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: test-cluster-md-0
+  namespace: default
+spec:
+  template:
+    spec:
+      region: "us-mia"
+      type: "g6-standard-4"
+      image: linode/ubuntu22.04
+      interfaces:
+      - purpose: vpc
+        primary: false
+      - purpose: public
+        primary: true
+```
 ## How VPC is provisioned
 A VPC is tied to a region. CAPL generates LinodeVPC manifest which contains the VPC name, region and subnet information. By defult, VPC name is set to cluster name but can be overwritten by specifying relevant environment variable.
 
