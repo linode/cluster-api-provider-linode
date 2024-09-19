@@ -21,10 +21,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/go-resty/resty/v2"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -82,6 +85,16 @@ var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
 	linodego.InstanceRestoring:    true,
 	linodego.InstanceResizing:     true,
 }
+
+type PostRequestCounter struct {
+	reqRemaining int
+	refreshTime  int
+}
+
+var (
+	mu       sync.RWMutex
+	tokenMap = make(map[string]*PostRequestCounter, 0)
+)
 
 // LinodeMachineReconciler reconciles a LinodeMachine object
 type LinodeMachineReconciler struct {
@@ -285,7 +298,17 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
 		return retryIfTransient(err)
 	}
+
+	mu.Lock()
+	if isPOSTLimitReached(r.LinodeClientConfig.Token, logger) {
+		mu.Unlock()
+		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+	}
+
+	machineScope.LinodeClient.OnAfterResponse(r.apiResponseRatelimitCounter)
 	linodeInstance, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
+	mu.Unlock()
+
 	if err != nil {
 		logger.Error(err, "Failed to create Linode machine instance")
 		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
@@ -498,4 +521,57 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 
 func (r *LinodeMachineReconciler) TracedClient() client.Client {
 	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
+}
+
+func (r *LinodeMachineReconciler) apiResponseRatelimitCounter(resp *resty.Response) error {
+	if resp.Request.Method != "POST" || !strings.HasSuffix(resp.Request.URL, "/linode/instances") {
+		return nil
+	}
+
+	postReqCtr, exists := tokenMap[r.LinodeClientConfig.Token]
+	if !exists {
+		postReqCtr = &PostRequestCounter{
+			reqRemaining: 10,
+			refreshTime:  0,
+		}
+		tokenMap[r.LinodeClientConfig.Token] = postReqCtr
+	}
+
+	var err error
+	postReqCtr.reqRemaining, err = strconv.Atoi(resp.Header().Get("X-Ratelimit-Remaining"))
+	if err != nil {
+		return err
+	}
+
+	postReqCtr.refreshTime, err = strconv.Atoi(resp.Header().Get("X-Ratelimit-Reset"))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func isPOSTLimitReached(token string, logger logr.Logger) bool {
+	postReqCtr, exists := tokenMap[token]
+	if !exists {
+		postReqCtr = &PostRequestCounter{
+			reqRemaining: 10,
+			refreshTime:  0,
+		}
+		tokenMap[token] = postReqCtr
+	}
+
+	logger.Info(fmt.Sprintf("Requests Remaining: %v, Refresh Time: %v, currentTime: %v", postReqCtr.reqRemaining, postReqCtr.refreshTime, time.Now().Unix()))
+	if postReqCtr.reqRemaining == 5 || postReqCtr.reqRemaining == 0 {
+		actualRefreshTime := postReqCtr.refreshTime
+		if postReqCtr.reqRemaining == 5 {
+			actualRefreshTime = postReqCtr.refreshTime - 15
+		}
+		if time.Now().Unix() <= int64(actualRefreshTime) {
+			logger.Info("Cannot make more requests as max requests have been made. Waiting and retrying ...")
+			return true
+		} else if postReqCtr.reqRemaining == 0 {
+			postReqCtr.reqRemaining = 10
+		}
+	}
+	return false
 }

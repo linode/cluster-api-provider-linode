@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/go-resty/resty/v2"
 	"github.com/linode/linodego"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -51,6 +52,7 @@ type LinodeInstanceClient interface {
 	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
 	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
 	GetType(ctx context.Context, typeID string) (*linodego.LinodeType, error)
+	OnAfterResponse(m func(response *resty.Response) error)
 }
 
 // LinodeVPCClient defines the methods that interact with Linode's VPC service.

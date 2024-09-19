@@ -157,6 +157,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				IPv6:   "fd00::",
 				Status: linodego.InstanceOffline,
 			}, nil)
+		mockLinodeClient.EXPECT().
+			OnAfterResponse(gomock.Any()).
+			Return()
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
@@ -240,6 +243,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					time.Sleep(time.Microsecond)
 					return nil, errors.New("time is up")
 				})
+			mockLinodeClient.EXPECT().
+				OnAfterResponse(gomock.Any()).
+				Return()
 
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -283,6 +289,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				DoAndReturn(func(_, _ any) (*linodego.Instance, error) {
 					return nil, linodego.NewError(errors.New("context deadline exceeded"))
 				})
+			mockLinodeClient.EXPECT().
+				OnAfterResponse(gomock.Any()).
+				Return()
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
 				LinodeClient:  mockLinodeClient,
@@ -324,6 +333,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					IPv6:   "fd00::",
 					Status: linodego.InstanceOffline,
 				}, nil)
+			mockLinodeClient.EXPECT().
+				OnAfterResponse(gomock.Any()).
+				Return()
 			listInstConfs := mockLinodeClient.EXPECT().
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
 				After(createInst).
@@ -475,6 +487,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					IPv6:   "fd00::",
 					Status: linodego.InstanceOffline,
 				}, nil)
+			mockLinodeClient.EXPECT().
+				OnAfterResponse(gomock.Any()).
+				Return()
 			listInstConfs := mockLinodeClient.EXPECT().
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
 				After(createInst).
@@ -729,6 +744,9 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 				IPv6:   "fd00::",
 				Status: linodego.InstanceOffline,
 			}, nil)
+		mockLinodeClient.EXPECT().
+			OnAfterResponse(gomock.Any()).
+			Return()
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
@@ -924,6 +942,9 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
 							After(getImage).
 							Return(nil, &linodego.Error{Code: http.StatusBadGateway})
+						mck.LinodeClient.EXPECT().
+							OnAfterResponse(gomock.Any()).
+							Return()
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
@@ -980,6 +1001,9 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
 							After(getImage).
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
+						mck.LinodeClient.EXPECT().
+							OnAfterResponse(gomock.Any()).
+							Return()
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
@@ -1002,6 +1026,9 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 								IPv6:   "fd00::",
 								Status: linodego.InstanceOffline,
 							}, nil)
+						mck.LinodeClient.EXPECT().
+							OnAfterResponse(gomock.Any()).
+							Return()
 						listInstConfigs := mck.LinodeClient.EXPECT().
 							ListInstanceConfigs(ctx, 123, gomock.Any()).
 							After(createInst).
@@ -1073,6 +1100,9 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 								IPv6:   "fd00::",
 								Status: linodego.InstanceOffline,
 							}, nil)
+						mck.LinodeClient.EXPECT().
+							OnAfterResponse(gomock.Any()).
+							Return()
 						bootInst := mck.LinodeClient.EXPECT().
 							BootInstance(ctx, 123, 0).
 							After(createInst).

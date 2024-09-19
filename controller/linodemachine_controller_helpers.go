@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -59,10 +60,22 @@ var (
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
 )
 
+func handleTooManyRequestsError(err error) (ctrl.Result, error) {
+	newErr := linodego.NewError(err)
+	if newErr.Response == nil {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
+	}
+	if newErr.Response.Request.Method != "POST" {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
+	}
+	retrySeconds := 30
+	return ctrl.Result{RequeueAfter: time.Duration(retrySeconds) * time.Second}, nil
+}
+
 func retryIfTransient(err error) (ctrl.Result, error) {
 	if util.IsRetryableError(err) {
 		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
-			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
+			return handleTooManyRequestsError(err)
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
