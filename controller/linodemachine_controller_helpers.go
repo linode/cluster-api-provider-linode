@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"slices"
 	"sort"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -68,8 +67,7 @@ func handleTooManyRequestsError(err error) (ctrl.Result, error) {
 	if newErr.Response.Request.Method != "POST" {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 	}
-	retrySeconds := 30
-	return ctrl.Result{RequeueAfter: time.Duration(retrySeconds) * time.Second}, nil
+	return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
 }
 
 func retryIfTransient(err error) (ctrl.Result, error) {

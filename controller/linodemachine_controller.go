@@ -531,7 +531,7 @@ func (r *LinodeMachineReconciler) apiResponseRatelimitCounter(resp *resty.Respon
 	postReqCtr, exists := tokenMap[r.LinodeClientConfig.Token]
 	if !exists {
 		postReqCtr = &PostRequestCounter{
-			reqRemaining: 10,
+			reqRemaining: reconciler.DefaultPOSTRequestLimit,
 			refreshTime:  0,
 		}
 		tokenMap[r.LinodeClientConfig.Token] = postReqCtr
@@ -554,23 +554,24 @@ func isPOSTLimitReached(token string, logger logr.Logger) bool {
 	postReqCtr, exists := tokenMap[token]
 	if !exists {
 		postReqCtr = &PostRequestCounter{
-			reqRemaining: 10,
+			reqRemaining: reconciler.DefaultPOSTRequestLimit,
 			refreshTime:  0,
 		}
 		tokenMap[token] = postReqCtr
 	}
 
 	logger.Info(fmt.Sprintf("Requests Remaining: %v, Refresh Time: %v, currentTime: %v", postReqCtr.reqRemaining, postReqCtr.refreshTime, time.Now().Unix()))
-	if postReqCtr.reqRemaining == 5 || postReqCtr.reqRemaining == 0 {
+	if postReqCtr.reqRemaining == reconciler.SecondaryPOSTRequestLimit || postReqCtr.reqRemaining == 0 {
 		actualRefreshTime := postReqCtr.refreshTime
-		if postReqCtr.reqRemaining == 5 {
-			actualRefreshTime = postReqCtr.refreshTime - 15
+		if postReqCtr.reqRemaining == reconciler.SecondaryPOSTRequestLimit {
+			actualRefreshTime = postReqCtr.refreshTime - int(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds())
 		}
 		if time.Now().Unix() <= int64(actualRefreshTime) {
 			logger.Info("Cannot make more requests as max requests have been made. Waiting and retrying ...")
 			return true
 		} else if postReqCtr.reqRemaining == 0 {
-			postReqCtr.reqRemaining = 10
+			// reset limits, set max allowed POST requests to default max
+			postReqCtr.reqRemaining = reconciler.DefaultPOSTRequestLimit
 		}
 	}
 	return false
