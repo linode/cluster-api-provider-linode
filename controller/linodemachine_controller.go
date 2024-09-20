@@ -191,12 +191,6 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 		return ctrl.Result{}, err
 	}
 
-	// Delete
-	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-		failureReason = cerrs.DeleteMachineError
-		return r.reconcileDelete(ctx, logger, machineScope)
-	}
-
 	// Override the controller credentials with ones from the Machine's Secret reference (if supplied).
 	// Credentials will be used in the following order:
 	//   1. LinodeMachine
@@ -207,6 +201,12 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 			logger.Error(err, "failed to update linode client token from Credential Ref")
 			return ctrl.Result{}, err
 		}
+	}
+
+	// Delete
+	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
+		failureReason = cerrs.DeleteMachineError
+		return r.reconcileDelete(ctx, logger, machineScope)
 	}
 
 	// Make sure bootstrap data is available and populated.
