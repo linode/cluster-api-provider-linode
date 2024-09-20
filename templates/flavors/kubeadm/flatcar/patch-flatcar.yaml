@@ -32,6 +32,11 @@ spec:
                     url: https://github.com/flatcar/sysext-bakery/releases/download/latest/kubernetes-${KUBERNETES_VERSION}-x86-64.raw
           systemd:
             units:
+              - name: update-engine.service
+                mask: ${FLATCAR_DISABLE_AUTO_UPDATE:=true}
+              - name: locksmithd.service
+                # NOTE: To coordinate the node reboot in this context, we recommend to use Kured.
+                mask: true
               - name: kubeadm.service
                 enabled: true
                 dropins:
@@ -85,6 +90,11 @@ spec:
                       url: https://github.com/flatcar/sysext-bakery/releases/download/latest/kubernetes-${KUBERNETES_VERSION}-x86-64.raw
             systemd:
               units:
+                - name: update-engine.service
+                  mask: ${FLATCAR_DISABLE_AUTO_UPDATE:=true}
+                - name: locksmithd.service
+                  # NOTE: To coordinate the node reboot in this context, we recommend to use Kured.
+                  mask: true
                 - name: kubeadm.service
                   enabled: true
                   dropins:

@@ -111,15 +111,16 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logg
 
 	// if vpc, attach additional interface as eth0 to linode
 	if machineScope.LinodeCluster.Spec.VPCRef != nil {
-		iface, err := getVPCInterfaceConfig(ctx, machineScope, logger)
+		iface, err := getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get VPC interface config")
 
 			return nil, err
 		}
-
-		// add VPC interface as first interface
-		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		if iface != nil {
+			// add VPC interface as first interface
+			createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		}
 	}
 
 	if machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
@@ -333,7 +334,7 @@ func getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger
 	return *linodeFirewall.Spec.FirewallID, nil
 }
 
-func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
 	name := machineScope.LinodeCluster.Spec.VPCRef.Name
 	namespace := machineScope.LinodeCluster.Spec.VPCRef.Namespace
 	if namespace == "" {
@@ -381,6 +382,12 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 	})
 
 	subnetID = vpc.Subnets[0].ID
+	for i, netInterface := range interfaces {
+		if netInterface.Purpose == linodego.InterfacePurposeVPC {
+			interfaces[i].SubnetID = &subnetID
+			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
+		}
+	}
 
 	return &linodego.InstanceConfigInterfaceCreateOptions{
 		Purpose:  linodego.InterfacePurposeVPC,

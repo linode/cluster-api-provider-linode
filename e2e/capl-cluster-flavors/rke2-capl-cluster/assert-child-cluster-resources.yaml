@@ -35,7 +35,7 @@ status:
   unavailableReplicas: 0
   availableReplicas: 1
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1alpha1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: RKE2ControlPlane
 metadata:
   labels:

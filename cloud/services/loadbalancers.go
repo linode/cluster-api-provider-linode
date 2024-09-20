@@ -183,11 +183,16 @@ func DeleteNodesFromNB(ctx context.Context, logger logr.Logger, clusterScope *sc
 	}
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
+		instanceID, errorInstanceID := util.GetInstanceID(eachMachine.Spec.ProviderID)
+		if errorInstanceID != nil {
+			return errorInstanceID
+		}
+
 		err := clusterScope.LinodeClient.DeleteNodeBalancerNode(
 			ctx,
 			*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
 			*clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID,
-			*eachMachine.Spec.InstanceID,
+			instanceID,
 		)
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "Failed to update Node Balancer")
@@ -200,7 +205,7 @@ func DeleteNodesFromNB(ctx context.Context, logger logr.Logger, clusterScope *sc
 				ctx,
 				*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
 				*portConfig.NodeBalancerConfigID,
-				*eachMachine.Spec.InstanceID,
+				instanceID,
 			)
 			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 				logger.Error(err, "Failed to update Node Balancer")

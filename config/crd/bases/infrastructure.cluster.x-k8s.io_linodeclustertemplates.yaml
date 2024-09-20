@@ -320,11 +320,13 @@ spec:
                               If not set, CAPL will create a unique identifier for you
                             type: string
                           loadBalancerType:
+                            default: NodeBalancer
                             description: LoadBalancerType is the type of load balancer
                               to use, defaults to NodeBalancer if not otherwise set
                             enum:
                             - NodeBalancer
                             - dns
+                            - external
                             type: string
                           nodeBalancerID:
                             description: NodeBalancerID is the id of NodeBalancer.
