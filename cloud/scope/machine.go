@@ -29,6 +29,7 @@ type MachineScope struct {
 	PatchHelper   *patch.Helper
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
+	TokenHash     string
 	LinodeClient  LinodeClient
 	LinodeCluster *infrav1alpha2.LinodeCluster
 	LinodeMachine *infrav1alpha2.LinodeMachine
@@ -71,6 +72,7 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 		PatchHelper:   helper,
 		Cluster:       params.Cluster,
 		Machine:       params.Machine,
+		TokenHash:     GetHash(linodeClientConfig.Token),
 		LinodeClient:  linodeClient,
 		LinodeCluster: params.LinodeCluster,
 		LinodeMachine: params.LinodeMachine,

@@ -21,13 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/go-resty/resty/v2"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -85,16 +82,6 @@ var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
 	linodego.InstanceRestoring:    true,
 	linodego.InstanceResizing:     true,
 }
-
-type PostRequestCounter struct {
-	reqRemaining int
-	refreshTime  int
-}
-
-var (
-	mu       sync.RWMutex
-	tokenMap = make(map[string]*PostRequestCounter, 0)
-)
 
 // LinodeMachineReconciler reconciles a LinodeMachine object
 type LinodeMachineReconciler struct {
@@ -291,6 +278,23 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	return ctrl.Result{}, nil
 }
 
+// createInstance provisions linode instance after checking if the request will be within the rate-limits
+// Note: it takes a lock before checking for the rate limits and releases it after making request to linode API or when returning from function
+func (r *LinodeMachineReconciler) createInstance(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, createOpts *linodego.InstanceCreateOptions) (*linodego.Instance, error, bool) {
+	ctr := util.GetPostReqCounter(machineScope.TokenHash)
+	ctr.Mu.Lock()
+	defer ctr.Mu.Unlock()
+
+	if ctr.IsPOSTLimitReached(logger) {
+		logger.Info(fmt.Sprintf("reached linode API rate limit, retry after %v seconds", reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay))
+		return nil, nil, true
+	}
+
+	machineScope.LinodeClient.OnAfterResponse(ctr.ApiResponseRatelimitCounter)
+	linodeInstance, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
+	return linodeInstance, err, false
+}
+
 func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	// get the bootstrap data for the Linode instance and set it for create config
 	createOpts, err := newCreateConfig(ctx, machineScope, logger)
@@ -299,15 +303,10 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		return retryIfTransient(err)
 	}
 
-	mu.Lock()
-	if isPOSTLimitReached(r.LinodeClientConfig.Token, logger) {
-		mu.Unlock()
-		return ctrl.Result{RequeueAfter: 15 * time.Second}, nil
+	linodeInstance, err, skipAndRetry := r.createInstance(ctx, logger, machineScope, createOpts)
+	if skipAndRetry {
+		return ctrl.Result{RequeueAfter: reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
 	}
-
-	machineScope.LinodeClient.OnAfterResponse(r.apiResponseRatelimitCounter)
-	linodeInstance, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-	mu.Unlock()
 
 	if err != nil {
 		logger.Error(err, "Failed to create Linode machine instance")
@@ -521,58 +520,4 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 
 func (r *LinodeMachineReconciler) TracedClient() client.Client {
 	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
-}
-
-func (r *LinodeMachineReconciler) apiResponseRatelimitCounter(resp *resty.Response) error {
-	if resp.Request.Method != "POST" || !strings.HasSuffix(resp.Request.URL, "/linode/instances") {
-		return nil
-	}
-
-	postReqCtr, exists := tokenMap[r.LinodeClientConfig.Token]
-	if !exists {
-		postReqCtr = &PostRequestCounter{
-			reqRemaining: reconciler.DefaultPOSTRequestLimit,
-			refreshTime:  0,
-		}
-		tokenMap[r.LinodeClientConfig.Token] = postReqCtr
-	}
-
-	var err error
-	postReqCtr.reqRemaining, err = strconv.Atoi(resp.Header().Get("X-Ratelimit-Remaining"))
-	if err != nil {
-		return err
-	}
-
-	postReqCtr.refreshTime, err = strconv.Atoi(resp.Header().Get("X-Ratelimit-Reset"))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func isPOSTLimitReached(token string, logger logr.Logger) bool {
-	postReqCtr, exists := tokenMap[token]
-	if !exists {
-		postReqCtr = &PostRequestCounter{
-			reqRemaining: reconciler.DefaultPOSTRequestLimit,
-			refreshTime:  0,
-		}
-		tokenMap[token] = postReqCtr
-	}
-
-	logger.Info(fmt.Sprintf("Requests Remaining: %v, Refresh Time: %v, currentTime: %v", postReqCtr.reqRemaining, postReqCtr.refreshTime, time.Now().Unix()))
-	if postReqCtr.reqRemaining == reconciler.SecondaryPOSTRequestLimit || postReqCtr.reqRemaining == 0 {
-		actualRefreshTime := postReqCtr.refreshTime
-		if postReqCtr.reqRemaining == reconciler.SecondaryPOSTRequestLimit {
-			actualRefreshTime = postReqCtr.refreshTime - int(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds())
-		}
-		if time.Now().Unix() <= int64(actualRefreshTime) {
-			logger.Info("Cannot make more requests as max requests have been made. Waiting and retrying ...")
-			return true
-		} else if postReqCtr.reqRemaining == 0 {
-			// reset limits, set max allowed POST requests to default max
-			postReqCtr.reqRemaining = reconciler.DefaultPOSTRequestLimit
-		}
-	}
-	return false
 }

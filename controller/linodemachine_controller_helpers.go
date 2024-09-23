@@ -64,7 +64,7 @@ func handleTooManyRequestsError(err error) (ctrl.Result, error) {
 	if newErr.Response == nil {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 	}
-	if newErr.Response.Request.Method != "POST" {
+	if newErr.Response.Request.Method != http.MethodPost {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 	}
 	return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
