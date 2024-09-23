@@ -60,16 +60,6 @@ func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VP
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
 	}
-
-	// Override the controller credentials with ones from the VPC's Secret reference (if supplied).
-	if params.LinodeVPC.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.LinodeVPC.Spec.CredentialsRef, params.LinodeVPC.GetNamespace(), "apiToken")
-		if err != nil {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-	}
 	linodeClient, err := CreateLinodeClient(linodeClientConfig,
 		WithRetryCount(0),
 	)
@@ -128,4 +118,17 @@ func (s *VPCScope) RemoveCredentialsRefFinalizer(ctx context.Context) error {
 	return removeCredentialsFinalizer(ctx, s.Client,
 		*s.LinodeVPC.Spec.CredentialsRef, s.LinodeVPC.GetNamespace(),
 		toFinalizer(s.LinodeVPC))
+}
+
+func (s *VPCScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	if s.LinodeVPC.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeVPC.Spec.CredentialsRef, s.LinodeVPC.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
+	}
+	return nil
 }

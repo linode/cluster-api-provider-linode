@@ -141,6 +141,12 @@ func (r *LinodeVPCReconciler) reconcile(
 		}
 	}()
 
+	// Override the controller credentials with ones from the VPC's Secret reference (if supplied).
+	if err := vpcScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return res, err
+	}
+
 	// Delete
 	if !vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.IsZero() {
 		failureReason = infrav1alpha2.DeleteVPCError

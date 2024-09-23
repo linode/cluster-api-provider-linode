@@ -49,16 +49,6 @@ func NewObjectStorageKeyScope(ctx context.Context, linodeClientConfig ClientConf
 	if err := validateObjectStorageKeyScopeParams(params); err != nil {
 		return nil, err
 	}
-
-	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
-	if params.Key.Spec.CredentialsRef != nil {
-		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.Key.Spec.CredentialsRef, params.Key.GetNamespace(), "apiToken")
-		if err != nil || len(apiToken) == 0 {
-			return nil, fmt.Errorf("credentials from secret ref: %w", err)
-		}
-		linodeClientConfig.Token = string(apiToken)
-	}
 	linodeClientConfig.Timeout = clientTimeout
 	linodeClient, err := CreateLinodeClient(linodeClientConfig)
 	if err != nil {
@@ -176,4 +166,18 @@ func (s *ObjectStorageKeyScope) ShouldInitKey() bool {
 func (s *ObjectStorageKeyScope) ShouldRotateKey() bool {
 	return s.Key.Status.LastKeyGeneration != nil &&
 		s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
+}
+
+// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
+func (s *ObjectStorageKeyScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
+	if s.Key.Spec.CredentialsRef != nil {
+		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
+		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.Key.Spec.CredentialsRef, s.Key.GetNamespace(), "apiToken")
+		if err != nil {
+			return fmt.Errorf("credentials from secret ref: %w", err)
+		}
+		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+		return nil
+	}
+	return nil
 }

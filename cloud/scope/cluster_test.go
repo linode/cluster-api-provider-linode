@@ -215,51 +215,6 @@ func TestNewClusterScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data and we create a valid ClusterScope",
-			args: args{
-				apiKey:    "test-key",
-				dnsApiKey: "test-key",
-				params: ClusterScopeParams{
-					Client:  nil,
-					Cluster: &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha2.LinodeCluster{
-						Spec: infrav1alpha2.LinodeClusterSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Name:      "example",
-								Namespace: "test",
-							},
-						},
-					},
-				},
-			},
-			expectedError: nil,
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
-					s := runtime.NewScheme()
-					infrav1alpha2.AddToScheme(s)
-					return s
-				}).AnyTimes()
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"apiToken": []byte("example"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"dnsToken": []byte("example"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-			},
-		},
-		{
 			name: "Error - ValidateClusterScopeParams triggers error because ClusterScopeParams is empty",
 			args: args{
 				apiKey:    "test-key",
@@ -281,29 +236,6 @@ func TestNewClusterScope(t *testing.T) {
 			expectedError: fmt.Errorf("failed to init patch helper:"),
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
-			},
-		},
-		{
-			name: "Error - Using getCredentialDataFromRef(), func returns an error. Unable to create a valid ClusterScope",
-			args: args{
-				apiKey:    "test-key",
-				dnsApiKey: "test-key",
-				params: ClusterScopeParams{
-					Client:  nil,
-					Cluster: &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha2.LinodeCluster{
-						Spec: infrav1alpha2.LinodeClusterSpec{
-							CredentialsRef: &corev1.SecretReference{
-								Name:      "example",
-								Namespace: "test",
-							},
-						},
-					},
-				},
-			},
-			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: failed to get secret"),
-			expects: func(mock *mock.MockK8sClient) {
-				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("failed to get secret"))
 			},
 		},
 		{
@@ -447,6 +379,121 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 
 			if err := cScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
 				t.Errorf("ClusterScope.RemoveCredentialsRefFinalizer() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestClusterSetCredentialRefTokenForLinodeClients(t *testing.T) {
+	t.Parallel()
+	type fields struct {
+		Cluster           *clusterv1.Cluster
+		LinodeCluster     *infrav1alpha2.LinodeCluster
+		LinodeMachineList infrav1alpha2.LinodeMachineList
+	}
+
+	tests := []struct {
+		name          string
+		fields        fields
+		expects       func(mock *mock.MockK8sClient)
+		expectedError error
+	}{
+		{
+			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data",
+			fields: fields{
+				Cluster:           &clusterv1.Cluster{},
+				LinodeMachineList: infrav1alpha2.LinodeMachineList{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						CredentialsRef: &corev1.SecretReference{
+							Name:      "example",
+							Namespace: "test",
+						},
+					},
+				},
+			},
+			expectedError: nil,
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "example",
+							Namespace: "test",
+						},
+						Data: map[string][]byte{
+							"apiToken": []byte("example"),
+						},
+					}
+					*obj = cred
+
+					return nil
+				}).AnyTimes()
+			},
+		},
+		{
+			name: "Error -  error when getting the credentials secret",
+			fields: fields{
+				Cluster:           &clusterv1.Cluster{},
+				LinodeMachineList: infrav1alpha2.LinodeMachineList{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						CredentialsRef: &corev1.SecretReference{
+							Name:      "example",
+							Namespace: "test",
+						},
+					},
+				},
+			},
+			expectedError: fmt.Errorf("credentials from secret ref: get credentials secret test/example: test error"),
+			expects: func(mock *mock.MockK8sClient) {
+				mock.EXPECT().Scheme().DoAndReturn(func() *runtime.Scheme {
+					s := runtime.NewScheme()
+					infrav1alpha2.AddToScheme(s)
+					return s
+				})
+				mock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("test error"))
+			},
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.expects(mockK8sClient)
+
+			cScope, err := NewClusterScope(
+				context.Background(),
+				ClientConfig{Token: "test-key"},
+				ClientConfig{Token: "test-key"},
+				ClusterScopeParams{
+					Cluster:           testcase.fields.Cluster,
+					LinodeCluster:     testcase.fields.LinodeCluster,
+					LinodeMachineList: testcase.fields.LinodeMachineList,
+					Client:            mockK8sClient,
+				})
+			if err != nil {
+				t.Errorf("NewClusterScope() error = %v", err)
+			}
+
+			if err := cScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
 	}

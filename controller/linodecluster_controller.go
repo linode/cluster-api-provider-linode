@@ -140,6 +140,11 @@ func (r *LinodeClusterReconciler) reconcile(
 		return res, err
 	}
 
+	if err := clusterScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return res, err
+	}
+
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
 		if err := r.reconcileDelete(ctx, logger, clusterScope); err != nil {
