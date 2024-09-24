@@ -1306,18 +1306,6 @@ func (mr *MockLinodeInstanceClientMockRecorder) ListStackscripts(ctx, opts any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStackscripts", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListStackscripts), ctx, opts)
 }
 
-// OnAfterResponse mocks base method.
-func (m_2 *MockLinodeInstanceClient) OnAfterResponse(m func(*resty.Response) error) {
-	m_2.ctrl.T.Helper()
-	m_2.ctrl.Call(m_2, "OnAfterResponse", m)
-}
-
-// OnAfterResponse indicates an expected call of OnAfterResponse.
-func (mr *MockLinodeInstanceClientMockRecorder) OnAfterResponse(m any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnAfterResponse", reflect.TypeOf((*MockLinodeInstanceClient)(nil).OnAfterResponse), m)
-}
-
 // ResizeInstanceDisk mocks base method.
 func (m *MockLinodeInstanceClient) ResizeInstanceDisk(ctx context.Context, linodeID, diskID, size int) error {
 	m.ctrl.T.Helper()

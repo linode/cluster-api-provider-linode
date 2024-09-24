@@ -285,8 +285,8 @@ func (r *LinodeMachineReconciler) createInstance(ctx context.Context, logger log
 	ctr.Mu.Lock()
 	defer ctr.Mu.Unlock()
 
-	if ctr.IsPOSTLimitReached(logger) {
-		logger.Info(fmt.Sprintf("reached linode API rate limit, retry after %v seconds", reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay))
+	if ctr.IsPOSTLimitReached() {
+		logger.Info(fmt.Sprintf("Cannot make more requests as max requests have been made. Waiting and retrying after %v seconds", reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay))
 		return nil, nil, true
 	}
 
@@ -317,6 +317,11 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		}
 		return retryIfTransient(err)
 	}
+
+	if linodeInstance == nil {
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForPreflightTimeout}, nil
+	}
+
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
 	// Set the provider ID since the instance is successfully created
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))

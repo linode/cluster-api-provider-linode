@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/go-resty/resty/v2"
 
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -63,7 +62,7 @@ func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) e
 }
 
 // IsPOSTLimitReached checks whether POST limits have been reached.
-func (c *PostRequestCounter) IsPOSTLimitReached(logger logr.Logger) bool {
+func (c *PostRequestCounter) IsPOSTLimitReached() bool {
 	// TODO: Once linode API adjusts rate-limits, remove secondary rate limit and simplify accordingly
 	if c.ReqRemaining == reconciler.SecondaryPOSTRequestLimit || c.ReqRemaining == 0 {
 		actualRefreshTime := c.RefreshTime
@@ -73,7 +72,6 @@ func (c *PostRequestCounter) IsPOSTLimitReached(logger logr.Logger) bool {
 		}
 		// check if refresh time has passed
 		if time.Now().Unix() <= int64(actualRefreshTime) {
-			logger.Info("Cannot make more requests as max requests have been made. Waiting and retrying ...")
 			return true
 		} else if c.ReqRemaining == 0 {
 			// reset limits, set max allowed POST requests to default max

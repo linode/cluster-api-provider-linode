@@ -21,6 +21,8 @@ type LinodeClient interface {
 	LinodePlacementGroupClient
 	LinodeFirewallClient
 	LinodeTokenClient
+
+	OnAfterResponse(m func(response *resty.Response) error)
 }
 
 type AkamClient interface {
@@ -52,7 +54,6 @@ type LinodeInstanceClient interface {
 	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
 	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)
 	GetType(ctx context.Context, typeID string) (*linodego.LinodeType, error)
-	OnAfterResponse(m func(response *resty.Response) error)
 }
 
 // LinodeVPCClient defines the methods that interact with Linode's VPC service.
