@@ -96,7 +96,6 @@ func (r *LinodeMachine) ValidateDelete() (admission.Warnings, error) {
 }
 
 func (r *LinodeMachine) validateLinodeMachine(ctx context.Context, linodeclient LinodeClient) error {
-
 	cl, err := client.New(config.GetConfigOrDie(), client.Options{})
 	if err != nil {
 		linodeclusterlog.Info("failed to configure runtime client", "name", r.Name)

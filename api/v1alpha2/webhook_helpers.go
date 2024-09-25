@@ -25,13 +25,14 @@ import (
 	"time"
 
 	"github.com/linode/linodego"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	. "github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
-	corev1 "k8s.io/api/core/v1"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 const (
@@ -49,8 +50,8 @@ var (
 	)
 )
 
-func validateRegion(ctx context.Context, client LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {
-	region, err := client.GetRegion(ctx, id)
+func validateRegion(ctx context.Context, linodegoclient LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {
+	region, err := linodegoclient.GetRegion(ctx, id)
 	if err != nil {
 		return field.NotFound(path, id)
 	}
@@ -64,9 +65,9 @@ func validateRegion(ctx context.Context, client LinodeClient, id string, path *f
 	return nil
 }
 
-func validateLinodeType(ctx context.Context, client LinodeClient, id string, path *field.Path) (*linodego.LinodeType, *field.Error) {
+func validateLinodeType(ctx context.Context, linodegoclient LinodeClient, id string, path *field.Path) (*linodego.LinodeType, *field.Error) {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
-	plan, err := client.GetType(ctx, id)
+	plan, err := linodegoclient.GetType(ctx, id)
 	if err != nil {
 		return nil, field.NotFound(path, id)
 	}
@@ -85,7 +86,7 @@ func validateLinodeType(ctx context.Context, client LinodeClient, id string, pat
 // [Clusters List]: https://www.linode.com/docs/api/object-storage/#clusters-list
 // [Cluster View]: https://www.linode.com/docs/api/object-storage/#cluster-view
 
-func validateObjectStorageRegion(ctx context.Context, client LinodeClient, id string, path *field.Path) *field.Error {
+func validateObjectStorageRegion(ctx context.Context, linodegoclient LinodeClient, id string, path *field.Path) *field.Error {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 
 	cexp := regexp.MustCompile("^(([[:lower:]]+-)*[[:lower:]]+)$")
@@ -99,7 +100,7 @@ func validateObjectStorageRegion(ctx context.Context, client LinodeClient, id st
 	} else {
 		region = cexp1.FindStringSubmatch(id)[1]
 	}
-	return validateRegion(ctx, client, region, path, LinodeObjectStorageCapability)
+	return validateRegion(ctx, linodegoclient, region, path, LinodeObjectStorageCapability)
 }
 
 func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {
