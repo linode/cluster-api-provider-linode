@@ -65,6 +65,8 @@ func handleTooManyRequestsError(err error) (ctrl.Result, error) {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 	}
 	if newErr.Response.Request.Method != http.MethodPost {
+		log := ctrl.LoggerFrom(context.TODO()).WithName("LinodeMachineReconciler").WithValues("name", "default")
+		log.Info(fmt.Sprintf("(handleTooManyRequestsError) Requeue for 1 min. Error is: %v", err))
 		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 	}
 	return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
@@ -444,18 +446,21 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		return err
 	}
 
-	region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
+	region, err := machineScope.LinodeCache.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
+	//region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
 	if err != nil {
-		return fmt.Errorf("get region: %w", err)
+		logger.Error(err, "failed to get region")
+		return err
 	}
 	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
 	imageName := reconciler.DefaultMachineControllerLinodeImage
 	if machineScope.LinodeMachine.Spec.Image != "" {
 		imageName = machineScope.LinodeMachine.Spec.Image
 	}
-	image, err := machineScope.LinodeClient.GetImage(ctx, imageName)
+	image, err := machineScope.LinodeCache.GetImage(ctx, imageName)
 	if err != nil {
-		return fmt.Errorf("get image: %w", err)
+		logger.Error(err, "failed to get image")
+		return err
 	}
 	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
 	if imageMetadataSupport && regionMetadataSupport {

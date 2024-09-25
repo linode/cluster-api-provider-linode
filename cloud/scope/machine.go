@@ -22,6 +22,7 @@ type MachineScopeParams struct {
 	Machine       *clusterv1.Machine
 	LinodeCluster *infrav1alpha2.LinodeCluster
 	LinodeMachine *infrav1alpha2.LinodeMachine
+	LinodeCache   *LinodeCache
 }
 
 type MachineScope struct {
@@ -33,6 +34,7 @@ type MachineScope struct {
 	LinodeClient  LinodeClient
 	LinodeCluster *infrav1alpha2.LinodeCluster
 	LinodeMachine *infrav1alpha2.LinodeMachine
+	LinodeCache   *LinodeCache
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
@@ -76,6 +78,7 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 		LinodeClient:  linodeClient,
 		LinodeCluster: params.LinodeCluster,
 		LinodeMachine: params.LinodeMachine,
+		LinodeCache:   params.LinodeCache,
 	}, nil
 }
 

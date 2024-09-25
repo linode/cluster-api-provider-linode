@@ -90,6 +90,7 @@ type LinodeMachineReconciler struct {
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
 	ReconcileTimeout   time.Duration
+	LinodeCache        *scope.LinodeCache
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=get;list;watch;create;update;patch;delete
@@ -154,6 +155,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Machine:       machine,
 			LinodeCluster: linodeCluster,
 			LinodeMachine: linodeMachine,
+			LinodeCache:   r.LinodeCache,
 		},
 	)
 	if err != nil {

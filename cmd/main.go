@@ -145,6 +145,7 @@ func main() {
 
 	linodeClientConfig := scope.ClientConfig{Token: linodeToken}
 	dnsClientConfig := scope.ClientConfig{Token: linodeDNSToken, BaseUrl: linodeDNSURL, RootCertificatePath: linodeDNSCA}
+	linodeCache := scope.LinodeCache{TTL: 15 * time.Minute, ClientConfig: linodeClientConfig, ImageCache: make(map[string]*scope.ImageCache, 0)}
 
 	restConfig := ctrl.GetConfigOrDie()
 	restConfig.QPS = float32(restConfigQPS)
@@ -190,6 +191,7 @@ func main() {
 		Recorder:           mgr.GetEventRecorderFor("LinodeMachineReconciler"),
 		WatchFilterValue:   machineWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
+		LinodeCache:        &linodeCache,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)

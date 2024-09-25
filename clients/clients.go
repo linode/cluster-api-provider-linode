@@ -50,6 +50,7 @@ type LinodeInstanceClient interface {
 	GetInstance(ctx context.Context, linodeID int) (*linodego.Instance, error)
 	DeleteInstance(ctx context.Context, linodeID int) error
 	GetRegion(ctx context.Context, regionID string) (*linodego.Region, error)
+	ListRegions(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Region, error)
 	GetImage(ctx context.Context, imageID string) (*linodego.Image, error)
 	CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (*linodego.Stackscript, error)
 	ListStackscripts(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Stackscript, error)

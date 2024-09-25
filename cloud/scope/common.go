@@ -98,6 +98,8 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (LinodeClient, erro
 		opt.set(&newClient)
 	}
 
+	newClient.SetDebug(true)
+
 	return linodeclient.NewLinodeClientWithTracing(
 		&newClient,
 		linodeclient.DefaultDecorator(),
