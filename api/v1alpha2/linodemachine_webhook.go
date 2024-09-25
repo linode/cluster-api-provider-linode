@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -93,11 +95,27 @@ func (r *LinodeMachine) ValidateDelete() (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (r *LinodeMachine) validateLinodeMachine(ctx context.Context, client LinodeClient) error {
+func (r *LinodeMachine) validateLinodeMachine(ctx context.Context, linodeclient LinodeClient) error {
+
+	cl, err := client.New(config.GetConfigOrDie(), client.Options{})
+	if err != nil {
+		linodeclusterlog.Info("failed to configure runtime client", "name", r.Name)
+		return err
+	}
+
+	if r.Spec.CredentialsRef != nil {
+		apiToken, err := getCredentialDataFromRef(ctx, cl, *r.Spec.CredentialsRef, r.GetNamespace(), "apiToken")
+		if err != nil {
+			linodeclusterlog.Info("credentials from secret ref error", "name", r.Name)
+			return err
+		}
+		linodeclient = linodeclient.SetToken(string(apiToken))
+	}
+
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if err := r.validateLinodeMachineSpec(ctx, client); err != nil {
+	if err := r.validateLinodeMachineSpec(ctx, linodeclient); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -109,14 +127,13 @@ func (r *LinodeMachine) validateLinodeMachine(ctx context.Context, client Linode
 		r.Name, errs)
 }
 
-func (r *LinodeMachine) validateLinodeMachineSpec(ctx context.Context, client LinodeClient) field.ErrorList {
-	// TODO: instrument with tracing, might need refactor to preserve readibility
+func (r *LinodeMachine) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient) field.ErrorList {
 	var errs field.ErrorList
 
-	if err := validateRegion(ctx, client, r.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
+	if err := validateRegion(ctx, linodeclient, r.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
 		errs = append(errs, err)
 	}
-	plan, err := validateLinodeType(ctx, client, r.Spec.Type, field.NewPath("spec").Child("type"))
+	plan, err := validateLinodeType(ctx, linodeclient, r.Spec.Type, field.NewPath("spec").Child("type"))
 	if err != nil {
 		errs = append(errs, err)
 	}

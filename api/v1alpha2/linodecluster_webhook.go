@@ -25,6 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -53,7 +55,6 @@ func (r *LinodeCluster) ValidateCreate() (admission.Warnings, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultWebhookTimeout)
 	defer cancel()
-
 	return nil, r.validateLinodeCluster(ctx, &defaultLinodeClient)
 }
 
@@ -73,11 +74,25 @@ func (r *LinodeCluster) ValidateDelete() (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (r *LinodeCluster) validateLinodeCluster(ctx context.Context, client LinodeClient) error {
+func (r *LinodeCluster) validateLinodeCluster(ctx context.Context, linodeclient LinodeClient) error {
+	cl, err := client.New(config.GetConfigOrDie(), client.Options{})
+	if err != nil {
+		linodeclusterlog.Info("failed to configure runtime client", "name", r.Name)
+		return err
+	}
+
+	if r.Spec.CredentialsRef != nil {
+		apiToken, err := getCredentialDataFromRef(ctx, cl, *r.Spec.CredentialsRef, r.GetNamespace(), "apiToken")
+		if err != nil {
+			linodeclusterlog.Info("credentials from secret ref error", "name", r.Name)
+			return err
+		}
+		linodeclient = linodeclient.SetToken(string(apiToken))
+	}
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if err := r.validateLinodeClusterSpec(ctx, client); err != nil {
+	if err := r.validateLinodeClusterSpec(ctx, linodeclient); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -89,11 +104,10 @@ func (r *LinodeCluster) validateLinodeCluster(ctx context.Context, client Linode
 		r.Name, errs)
 }
 
-func (r *LinodeCluster) validateLinodeClusterSpec(ctx context.Context, client LinodeClient) field.ErrorList {
-	// TODO: instrument with tracing, might need refactor to preserve readibility
+func (r *LinodeCluster) validateLinodeClusterSpec(ctx context.Context, linodeclient LinodeClient) field.ErrorList {
 	var errs field.ErrorList
 
-	if err := validateRegion(ctx, client, r.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
+	if err := validateRegion(ctx, linodeclient, r.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
 		errs = append(errs, err)
 	}
 

@@ -27,10 +27,11 @@ import (
 	"github.com/linode/linodego"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
-
-	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -99,4 +100,34 @@ func validateObjectStorageRegion(ctx context.Context, client LinodeClient, id st
 		region = cexp1.FindStringSubmatch(id)[1]
 	}
 	return validateRegion(ctx, client, region, path, LinodeObjectStorageCapability)
+}
+
+func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {
+	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
+	if err != nil {
+		return nil, err
+	}
+	rawData, ok := credSecret.Data[key]
+	if !ok {
+		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", key, credentialsRef.Namespace, credentialsRef.Name)
+	}
+
+	return rawData, nil
+}
+
+func getCredentials(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
+	secretRef := client.ObjectKey{
+		Name:      credentialsRef.Name,
+		Namespace: credentialsRef.Namespace,
+	}
+	if secretRef.Namespace == "" {
+		secretRef.Namespace = defaultNamespace
+	}
+
+	var credSecret corev1.Secret
+	if err := crClient.Get(ctx, secretRef, &credSecret); err != nil {
+		return nil, fmt.Errorf("get credentials secret %s/%s: %w", secretRef.Namespace, secretRef.Name, err)
+	}
+
+	return &credSecret, nil
 }
