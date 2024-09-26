@@ -161,6 +161,11 @@ type LinodeMachineStatus struct {
 	// Addresses contains the Linode instance associated addresses.
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
+	// CloudinitMetadataSupport determines whether to use cloud-init or not.
+	// +kubebuilder:default=true
+	// +optional
+	CloudinitMetadataSupport bool `json:"cloudinitMetadataSupport,omitempty"`
+
 	// InstanceState is the state of the Linode instance for this machine.
 	// +optional
 	InstanceState *linodego.InstanceStatus `json:"instanceState,omitempty"`

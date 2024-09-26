@@ -769,6 +769,11 @@ spec:
                   - type
                   type: object
                 type: array
+              cloudinitMetadataSupport:
+                default: true
+                description: CloudinitMetadataSupport determines whether to use cloud-init
+                  or not.
+                type: boolean
               conditions:
                 description: Conditions defines current service state of the LinodeMachine.
                 items:

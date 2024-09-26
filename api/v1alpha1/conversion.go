@@ -47,6 +47,11 @@ func Convert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in *infras
 	return autoConvert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in, out, s)
 }
 
+func Convert_v1alpha2_LinodeMachineStatus_To_v1alpha1_LinodeMachineStatus(in *infrastructurev1alpha2.LinodeMachineStatus, out *LinodeMachineStatus, s conversion.Scope) error {
+	// Ok to use the auto-generated conversion function
+	return autoConvert_v1alpha2_LinodeMachineStatus_To_v1alpha1_LinodeMachineStatus(in, out, s)
+}
+
 func Convert_v1alpha1_LinodeMachineSpec_To_v1alpha2_LinodeMachineSpec(in *LinodeMachineSpec, out *infrastructurev1alpha2.LinodeMachineSpec, s conversion.Scope) error {
 	return autoConvert_v1alpha1_LinodeMachineSpec_To_v1alpha2_LinodeMachineSpec(in, out, s)
 }

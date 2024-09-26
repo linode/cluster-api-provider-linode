@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -58,13 +59,14 @@ const (
 	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
-	ConditionPreflightCreated                clusterv1.ConditionType = "PreflightCreated"
-	ConditionPreflightRootDiskResizing       clusterv1.ConditionType = "PreflightRootDiskResizing"
-	ConditionPreflightRootDiskResized        clusterv1.ConditionType = "PreflightRootDiskResized"
-	ConditionPreflightAdditionalDisksCreated clusterv1.ConditionType = "PreflightAdditionalDisksCreated"
-	ConditionPreflightConfigured             clusterv1.ConditionType = "PreflightConfigured"
-	ConditionPreflightBootTriggered          clusterv1.ConditionType = "PreflightBootTriggered"
-	ConditionPreflightReady                  clusterv1.ConditionType = "PreflightReady"
+	ConditionPreflightMetadataSupportConfigured clusterv1.ConditionType = "PreflightMetadataSupportConfigured"
+	ConditionPreflightCreated                   clusterv1.ConditionType = "PreflightCreated"
+	ConditionPreflightRootDiskResizing          clusterv1.ConditionType = "PreflightRootDiskResizing"
+	ConditionPreflightRootDiskResized           clusterv1.ConditionType = "PreflightRootDiskResized"
+	ConditionPreflightAdditionalDisksCreated    clusterv1.ConditionType = "PreflightAdditionalDisksCreated"
+	ConditionPreflightConfigured                clusterv1.ConditionType = "PreflightConfigured"
+	ConditionPreflightBootTriggered             clusterv1.ConditionType = "PreflightBootTriggered"
+	ConditionPreflightReady                     clusterv1.ConditionType = "PreflightReady"
 
 	// WaitingForBootstrapDataReason used when machine is waiting for bootstrap data to be ready before proceeding.
 	WaitingForBootstrapDataReason = "WaitingForBootstrapData"
@@ -240,6 +242,13 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		return ctrl.Result{}, err
 	}
 
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured) {
+		res, err := r.reconcilePreflightMetadataSupportConfigure(ctx, logger, machineScope)
+		if err != nil || !res.IsZero() {
+			return res, err
+		}
+	}
+
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightCreated) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 		res, err := r.reconcilePreflightCreate(ctx, logger, machineScope)
 		if err != nil || !res.IsZero() {
@@ -275,6 +284,31 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
+	region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to fetch region %s", machineScope.LinodeMachine.Spec.Region))
+		return retryIfTransient(err)
+	}
+	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
+	imageName := reconciler.DefaultMachineControllerLinodeImage
+	if machineScope.LinodeMachine.Spec.Image != "" {
+		imageName = machineScope.LinodeMachine.Spec.Image
+	}
+	image, err := machineScope.LinodeClient.GetImage(ctx, imageName)
+	if err != nil {
+		logger.Error(err, fmt.Sprintf("Failed to fetch image %s", imageName))
+		return retryIfTransient(err)
+	}
+	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
+	if !imageMetadataSupport || !regionMetadataSupport {
+		logger.Info("cloud-init metadata support not available", "imageMetadataSupport", imageMetadataSupport, "regionMetadataSupport", regionMetadataSupport)
+		machineScope.LinodeMachine.Status.CloudinitMetadataSupport = false
+	}
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured)
 	return ctrl.Result{}, nil
 }
 
