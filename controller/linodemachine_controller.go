@@ -278,23 +278,6 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	return ctrl.Result{}, nil
 }
 
-// createInstance provisions linode instance after checking if the request will be within the rate-limits
-// Note: it takes a lock before checking for the rate limits and releases it after making request to linode API or when returning from function
-func (r *LinodeMachineReconciler) createInstance(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, createOpts *linodego.InstanceCreateOptions) (*linodego.Instance, error, bool) {
-	ctr := util.GetPostReqCounter(machineScope.TokenHash)
-	ctr.Mu.Lock()
-	defer ctr.Mu.Unlock()
-
-	if ctr.IsPOSTLimitReached() {
-		logger.Info(fmt.Sprintf("Cannot make more requests as max requests have been made. Waiting and retrying after %v seconds", reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay))
-		return nil, nil, true
-	}
-
-	machineScope.LinodeClient.OnAfterResponse(ctr.ApiResponseRatelimitCounter)
-	linodeInstance, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-	return linodeInstance, err, false
-}
-
 func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	// get the bootstrap data for the Linode instance and set it for create config
 	createOpts, err := newCreateConfig(ctx, machineScope, logger)
@@ -303,8 +286,8 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		return retryIfTransient(err)
 	}
 
-	linodeInstance, err, skipAndRetry := r.createInstance(ctx, logger, machineScope, createOpts)
-	if skipAndRetry {
+	linodeInstance, err := createInstance(ctx, logger, machineScope, createOpts)
+	if errors.Is(err, util.ErrRateLimit) {
 		return ctrl.Result{RequeueAfter: reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
 	}
 
@@ -316,10 +299,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 			return ctrl.Result{}, err
 		}
 		return retryIfTransient(err)
-	}
-
-	if linodeInstance == nil {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForPreflightTimeout}, nil
 	}
 
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
