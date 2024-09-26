@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	dns "github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	resty "github.com/go-resty/resty/v2"
 	linodego "github.com/linode/linodego"
 	gomock "go.uber.org/mock/gomock"
 	meta "k8s.io/apimachinery/pkg/api/meta"
@@ -738,6 +739,18 @@ func (m *MockLinodeClient) ListVPCs(ctx context.Context, opts *linodego.ListOpti
 func (mr *MockLinodeClientMockRecorder) ListVPCs(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockLinodeClient)(nil).ListVPCs), ctx, opts)
+}
+
+// OnAfterResponse mocks base method.
+func (m_2 *MockLinodeClient) OnAfterResponse(m func(*resty.Response) error) {
+	m_2.ctrl.T.Helper()
+	m_2.ctrl.Call(m_2, "OnAfterResponse", m)
+}
+
+// OnAfterResponse indicates an expected call of OnAfterResponse.
+func (mr *MockLinodeClientMockRecorder) OnAfterResponse(m any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnAfterResponse", reflect.TypeOf((*MockLinodeClient)(nil).OnAfterResponse), m)
 }
 
 // ResizeInstanceDisk mocks base method.

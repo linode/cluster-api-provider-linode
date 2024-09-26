@@ -65,6 +65,15 @@ const (
 
 	// DefaultDNSTTLSec is the default TTL used for DNS entries for api server loadbalancing
 	DefaultDNSTTLSec = 30
+
+	// DefaultLinodeTooManyPOSTRequestsErrorRetryDelay is the default requeue delay if there is Linode API error for POST request. Currently, it is set to 10 requests per 30 seconds
+	DefaultLinodeTooManyPOSTRequestsErrorRetryDelay = 30 * time.Second
+	// SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay is the secondary requeue delay if there is Linode API error for POST request. Currently, it is set to 5 requests per 15 seconds
+	SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay = 15 * time.Second
+	// DefaultPOSTRequestLimit is the default limit of how many POST requests can be made to /linode/instances endpoint in 30 seconds before rate-limit reset.
+	DefaultPOSTRequestLimit = 10
+	// SecondaryPOSTRequestLimit is the secondary limit of how many POST requests can be made to /linode/instances endpoint in 15 seconds before rate-limit kicks in.
+	SecondaryPOSTRequestLimit = 5
 )
 
 // DefaultedLoopTimeout will default the timeout if it is zero-valued.
