@@ -172,5 +172,6 @@ func (s *MachineScope) SetCredentialRefTokenForLinodeClients(ctx context.Context
 		return fmt.Errorf("credentials from secret ref: %w", err)
 	}
 	s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
+	s.TokenHash = GetHash(string(apiToken))
 	return nil
 }
