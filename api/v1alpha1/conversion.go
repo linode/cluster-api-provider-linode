@@ -89,5 +89,5 @@ func Convert_v1alpha2_LinodeObjectStorageBucket_To_v1alpha1_LinodeObjectStorageB
 
 func Convert_v1alpha2_LinodeClusterSpec_To_v1alpha1_LinodeClusterSpec(in *infrastructurev1alpha2.LinodeClusterSpec, out *LinodeClusterSpec, scope conversion.Scope) error {
 	// VLAN is not supported in v1alpha1
-	return nil
+	return autoConvert_v1alpha2_LinodeClusterSpec_To_v1alpha1_LinodeClusterSpec(in, out, scope)
 }
