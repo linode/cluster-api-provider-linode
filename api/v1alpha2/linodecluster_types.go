@@ -43,6 +43,11 @@ type LinodeClusterSpec struct {
 	// +optional
 	Network NetworkSpec `json:"network"`
 
+	// UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	UseVlan bool `json:"useVlan"`
+
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`

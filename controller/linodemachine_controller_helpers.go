@@ -24,15 +24,18 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"slices"
 	"sort"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/linode/linodego"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
@@ -120,7 +123,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logg
 		createConfig.RootPass = uuid.NewString()
 	}
 
-	// if vpc, attach additional interface as eth0 to linode
+	// if vpc is enabled, attach additional interface as eth0 to linode
 	if machineScope.LinodeCluster.Spec.VPCRef != nil {
 		iface, err := getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
 		if err != nil {
@@ -130,6 +133,20 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logg
 		}
 		if iface != nil {
 			// add VPC interface as first interface
+			createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		}
+	}
+
+	// if vlan is enabled, attach additional interface as eth0 to linode
+	if machineScope.LinodeCluster.Spec.UseVlan {
+		iface, err := getVlanInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get VLAN interface config")
+
+			return nil, err
+		}
+		if iface != nil {
+			// add VLAN interface as first interface
 			createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
 		}
 	}
@@ -343,6 +360,73 @@ func getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger
 	}
 
 	return *linodeFirewall.Spec.FirewallID, nil
+}
+
+func getNextIP(ips map[string]string, prefixStr string) string {
+	prefix := netip.MustParsePrefix(prefixStr)
+	currentIp := prefix.Addr().Next()
+
+	ipString := currentIp.String()
+	for {
+		if _, exists := ips[ipString]; !exists {
+			break
+		}
+		currentIp = currentIp.Next()
+		ipString = currentIp.String()
+	}
+	return ipString
+}
+
+func reserveNextIP(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (string, error) {
+	namespace := machineScope.Cluster.Namespace
+	clusterName := machineScope.Cluster.Name
+
+	var ipsMap corev1.ConfigMap
+	err := machineScope.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: fmt.Sprintf("%s-ips", clusterName)}, &ipsMap)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return "", fmt.Errorf("retreiving ips configmap %s/%s: %w", namespace, fmt.Sprintf("%s-ips", clusterName), err)
+	}
+
+	if ip, ok := ipsMap.Data[machineScope.LinodeMachine.Name]; ok {
+		return ip, nil
+	}
+
+	var nextIP string
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err = machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&ipsMap), &ipsMap); err != nil {
+			return fmt.Errorf("retreiving ips configmap %s/%s: %w", namespace, fmt.Sprintf("%s-ips", clusterName), err)
+		}
+		nextIP = getNextIP(util.InvertMap(ipsMap.Data), "10.0.0.0/11")
+		ipsMap.Data[machineScope.LinodeMachine.Name] = nextIP
+		if err := machineScope.Client.Update(ctx, &ipsMap); err != nil {
+			return fmt.Errorf("updating ips configMap: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	logger.Info("onbained IP for machine", "name", machineScope.LinodeMachine.Name, "ip", nextIP)
+	// if an IP is available
+	return nextIP, nil
+}
+
+func getVlanInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+	logger = logger.WithValues("vlanName", machineScope.Cluster.Name)
+
+	// Try to obtain a IP for the machine using its name
+
+	ip, err := reserveNextIP(ctx, machineScope, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	return &linodego.InstanceConfigInterfaceCreateOptions{
+		Purpose:     linodego.InterfacePurposeVLAN,
+		Label:       machineScope.Cluster.Name,
+		IPAMAddress: ip,
+	}, nil
 }
 
 func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
