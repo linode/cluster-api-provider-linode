@@ -103,14 +103,14 @@ func validateObjectStorageRegion(ctx context.Context, linodegoclient LinodeClien
 	return validateRegion(ctx, linodegoclient, region, path, LinodeObjectStorageCapability)
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {
+func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
 	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return nil, err
 	}
-	rawData, ok := credSecret.Data[key]
+	rawData, ok := credSecret.Data["apiToken"]
 	if !ok {
-		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", key, credentialsRef.Namespace, credentialsRef.Name)
+		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", "apiToken", credentialsRef.Namespace, credentialsRef.Name)
 	}
 
 	return rawData, nil
