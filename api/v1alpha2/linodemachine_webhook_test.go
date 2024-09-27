@@ -25,6 +25,7 @@ import (
 
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,6 +54,8 @@ func TestValidateLinodeMachine(t *testing.T) {
 		plan      = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
 		plan_zero = linodego.LinodeType{Disk: 0}
 		plan_max  = linodego.LinodeType{Disk: math.MaxInt}
+
+		validator = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -63,7 +66,8 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					assert.NoError(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					require.Empty(t, errs)
 				}),
 				Call("valid with disks", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
@@ -73,7 +77,8 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
 					machine.Spec.DataDisks = map[string]*InstanceDisk{"sdb": disk.DeepCopy()}
-					assert.NoError(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					require.Empty(t, errs)
 				}),
 			),
 		),
@@ -88,7 +93,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			assert.Error(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+			errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+			for _, err := range errs {
+				require.Error(t, err)
+			}
 		}),
 		OneOf(
 			Path(
@@ -99,7 +107,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("os disk too large", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
-					assert.ErrorContains(t, machine.validateLinodeMachine(ctx, mck.LinodeClient), strconv.Itoa(plan_zero.Disk))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, strconv.Itoa(plan_zero.Disk))
+					}
 				}),
 			),
 			Path(
@@ -111,7 +122,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
 					machine.Spec.DataDisks = map[string]*InstanceDisk{"sdb": disk.DeepCopy(), "sdc": disk.DeepCopy()}
-					assert.Error(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -122,7 +136,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.DataDisks = map[string]*InstanceDisk{"sda": disk.DeepCopy()}
-					assert.Error(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -133,7 +150,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk_zero.DeepCopy()
-					assert.Error(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 		),

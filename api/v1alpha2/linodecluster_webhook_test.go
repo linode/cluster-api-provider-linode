@@ -54,6 +54,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 				},
 			},
 		}
+		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -63,7 +64,8 @@ func TestValidateLinodeCluster(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					assert.NoError(t, cluster.validateLinodeCluster(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec)
+					require.Empty(t, errs)
 				}),
 			),
 		),
@@ -73,7 +75,10 @@ func TestValidateLinodeCluster(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			assert.Error(t, cluster.validateLinodeCluster(ctx, mck.LinodeClient))
+			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec)
+			for _, err := range errs {
+				require.Error(t, err)
+			}
 		}),
 	)
 }
@@ -94,6 +99,7 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 		}
+		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -103,8 +109,7 @@ func TestValidateCreate(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					//nolint:contextcheck // no context passed
-					_, err := cluster.ValidateCreate()
+					_, err := validator.ValidateCreate(ctx, &cluster)
 					assert.Error(t, err)
 				}),
 			),
@@ -142,6 +147,7 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 				},
 			},
 		}
+		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -151,7 +157,8 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					assert.NoError(t, validCluster.validateLinodeCluster(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validCluster.Spec)
+					require.Empty(t, errs)
 				}),
 			),
 		),
@@ -161,7 +168,10 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			require.ErrorContains(t, inValidCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsRootDomain")
+			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, inValidCluster.Spec)
+			for _, err := range errs {
+				require.Contains(t, err.Error(), "dnsRootDomain")
+			}
 		}),
 	)
 }

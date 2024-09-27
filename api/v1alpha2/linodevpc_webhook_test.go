@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/linode/linodego"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -48,6 +48,8 @@ func TestValidateLinodeVPC(t *testing.T) {
 		region            = linodego.Region{ID: "test"}
 		capabilities      = []string{LinodeVPCCapability}
 		capabilities_zero = []string{}
+
+		validator = &linodeVPCValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -59,7 +61,8 @@ func TestValidateLinodeVPC(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					assert.NoError(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					require.Empty(t, errs)
 				}),
 			),
 			Path(
@@ -71,7 +74,8 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/24"}, {Label: "bar", IPv4: "10.0.1.0/24"}}
-					assert.NoError(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					require.Empty(t, errs)
 				}),
 			),
 		),
@@ -86,7 +90,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+			errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+			for _, err := range errs {
+				require.Error(t, err)
+			}
 		}),
 		OneOf(
 			Path(
@@ -98,7 +105,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{IPv4: "10.0.0.0/8"}}
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -111,7 +121,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "$", IPv4: "10.0.0.0/8"}}
 
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -123,7 +136,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "--", IPv4: "10.0.0.0/8"}}
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 
@@ -136,7 +152,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "IPv4 CIDR"}}
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -148,7 +167,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "10.9.9.9/8"}}
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -160,7 +182,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "10.0.0.0/32"}}
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -173,7 +198,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "9.9.9.0/24"}}
 
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -185,7 +213,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "192.168.128.0/24"}}
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -197,7 +228,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "10.255.255.1/24"}, {Label: "test", IPv4: "10.255.255.0/24"}}
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 			Path(
@@ -209,7 +243,10 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/8"}, {Label: "bar", IPv4: "10.0.0.0/24"}}
-					assert.Error(t, vpc.validateLinodeVPC(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 		),

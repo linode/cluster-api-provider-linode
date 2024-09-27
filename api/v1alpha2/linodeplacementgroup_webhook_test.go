@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/linode/linodego"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -42,12 +42,14 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 				Namespace: "example",
 			},
 			Spec: LinodePlacementGroupSpec{
-				Region: "example",
+				Region: "us-sea",
 			},
 		}
 		region            = linodego.Region{ID: "test"}
 		capabilities      = []string{LinodePlacementGroupCapability}
 		capabilities_zero = []string{}
+
+		validator = &linodePlacementGroupValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -59,7 +61,8 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					assert.NoError(t, pg.validateLinodePlacementGroup(ctx, mck.LinodeClient))
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+					require.Empty(t, errs)
 				}),
 			),
 		),
@@ -74,7 +77,10 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			assert.Error(t, pg.validateLinodePlacementGroup(ctx, mck.LinodeClient))
+			errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+			for _, err := range errs {
+				require.Error(t, err)
+			}
 		}),
 		OneOf(
 			Path(
@@ -86,8 +92,10 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					pg := pg
 					pg.Name = "a20_b!4"
-
-					assert.Error(t, pg.validateLinodePlacementGroup(ctx, mck.LinodeClient))
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+					for _, err := range errs {
+						require.Error(t, err)
+					}
 				}),
 			),
 		),
