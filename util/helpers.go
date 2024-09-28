@@ -61,16 +61,3 @@ func GetInstanceID(providerID *string) (int, error) {
 	}
 	return instanceID, nil
 }
-
-// InvertMap returns a given map with keys and values are swapped
-func InvertMap[M ~map[K]V, K comparable, V comparable](m M) map[V]K {
-	if m == nil {
-		return nil
-	}
-
-	r := make(map[V]K, len(m))
-	for k, v := range m {
-		r[v] = k
-	}
-	return r
-}
