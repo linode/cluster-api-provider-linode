@@ -106,9 +106,9 @@ func (r *LinodeCluster) validateLinodeClusterSpec(ctx context.Context, client Li
 		}
 	}
 
-	if r.Spec.UseVlan && r.Spec.VPCRef != nil {
+	if r.Spec.Network.UseVlan && r.Spec.VPCRef != nil {
 		errs = append(errs, &field.Error{
-			Field: "Cannot use VLANs and VPCs together. Unset `useVlan` or remove `vpcRef`",
+			Field: "Cannot use VLANs and VPCs together. Unset `network.useVlan` or remove `vpcRef`",
 			Type:  field.ErrorTypeInvalid,
 		})
 	}

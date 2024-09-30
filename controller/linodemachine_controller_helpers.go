@@ -55,7 +55,11 @@ import (
 
 // Size limit in bytes on the decoded metadata.user_data for cloud-init
 // The decoded user_data must not exceed 16384 bytes per the Linode API
-const maxBootstrapDataBytes = 16384
+const (
+	maxBootstrapDataBytes = 16384
+	vlanIPRange           = "10.0.0.0/8"
+	vlanIPFormat          = "%s/11"
+)
 
 var (
 	errNoPublicIPv4Addrs      = errors.New("no public ipv4 addresses set")
@@ -142,7 +146,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logg
 	}
 
 	// if vlan is enabled, attach additional interface as eth0 to linode
-	if machineScope.LinodeCluster.Spec.UseVlan {
+	if machineScope.LinodeCluster.Spec.Network.UseVlan {
 		iface, err := getVlanInterfaceConfig(ctx, machineScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get VLAN interface config")
@@ -378,7 +382,7 @@ func getNextIP(ips []string, prefixStr string) string {
 
 	ipString := currentIp.String()
 	for {
-		if slices.Contains(ips, ipString) {
+		if !slices.Contains(ips, ipString) {
 			break
 		}
 		currentIp = currentIp.Next()
@@ -390,37 +394,47 @@ func getNextIP(ips []string, prefixStr string) string {
 func reserveNextIP(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (string, error) {
 	namespace := machineScope.Cluster.Namespace
 	clusterName := machineScope.Cluster.Name
-
+	var nextIP string
 	var ipsMap corev1.ConfigMap
 	err := machineScope.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: fmt.Sprintf("%s-ips", clusterName)}, &ipsMap)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			nextIP = getNextIP([]string{}, vlanIPRange)
+			ipsMap.Name = fmt.Sprintf("%s-ips", clusterName)
+			ipsMap.Namespace = namespace
+			ipsMap.Data = make(map[string]string)
+			ipsMap.Data[machineScope.LinodeMachine.Name] = nextIP
+			if err := machineScope.Client.Create(ctx, &ipsMap); err != nil {
+				return "", fmt.Errorf("creating ips configMap: %w", err)
+			}
+			logger.Info("Machine got ip", machineScope.LinodeMachine.Name, nextIP)
+			return fmt.Sprintf(vlanIPFormat, nextIP), nil
+		}
 		return "", fmt.Errorf("retreiving ips configmap %s/%s: %w", namespace, fmt.Sprintf("%s-ips", clusterName), err)
 	}
 
 	if ip, ok := ipsMap.Data[machineScope.LinodeMachine.Name]; ok {
-		return ip, nil
+		return fmt.Sprintf(vlanIPFormat, ip), nil
 	}
 
-	var nextIP string
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		if err = machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&ipsMap), &ipsMap); err != nil {
-			return fmt.Errorf("retreiving ips configmap %s/%s: %w", namespace, fmt.Sprintf("%s-ips", clusterName), err)
+		if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&ipsMap), &ipsMap); err != nil {
+			return err
 		}
 
-		nextIP = getNextIP(maps.Values(ipsMap.Data), "10.0.0.0/11")
+		nextIP = getNextIP(maps.Values(ipsMap.Data), vlanIPRange)
 		ipsMap.Data[machineScope.LinodeMachine.Name] = nextIP
 		if err := machineScope.Client.Update(ctx, &ipsMap); err != nil {
-			return fmt.Errorf("updating ips configMap: %w", err)
+			return err
 		}
 		return nil
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("updating ips in configmap %s/%s: %w", namespace, fmt.Sprintf("%s-ips", clusterName), err)
 	}
 
-	logger.Info("onbained IP for machine", "name", machineScope.LinodeMachine.Name, "ip", nextIP)
-	// if an IP is available
-	return nextIP, nil
+	logger.Info("onbtained IP for machine", "name", machineScope.LinodeMachine.Name, "ip", nextIP)
+	return fmt.Sprintf(vlanIPFormat, nextIP), nil
 }
 
 func getVlanInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {

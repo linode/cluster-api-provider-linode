@@ -43,11 +43,6 @@ type LinodeClusterSpec struct {
 	// +optional
 	Network NetworkSpec `json:"network"`
 
-	// UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	UseVlan bool `json:"useVlan"`
-
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
@@ -153,6 +148,11 @@ type NetworkSpec struct {
 	// additionalPorts contains list of ports to be configured with NodeBalancer.
 	// +optional
 	AdditionalPorts []LinodeNBPortConfig `json:"additionalPorts,omitempty"`
+
+	// UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	UseVlan bool `json:"useVlan"`
 }
 
 type LinodeNBPortConfig struct {
