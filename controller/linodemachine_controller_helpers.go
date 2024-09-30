@@ -225,8 +225,9 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 		}
 
 		if iface.Purpose == linodego.InterfacePurposeVLAN {
+			// vlan addresses have a /11 appended to them - we should strip it out.
 			ips = append(ips, clusterv1.MachineAddress{
-				Address: iface.IPAMAddress,
+				Address: netip.MustParsePrefix(iface.IPAMAddress).Addr().String(),
 				Type:    clusterv1.MachineInternalIP,
 			})
 		}
@@ -391,6 +392,21 @@ func getNextIP(ips []string, prefixStr string) string {
 	return ipString
 }
 
+func createIPsConfigMap(ctx context.Context, machineScope *scope.MachineScope, ip string) error {
+	return machineScope.Client.Create(ctx, &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-ips", machineScope.Cluster.Name),
+			Namespace: machineScope.Cluster.Namespace,
+			Labels: map[string]string{
+				"clusterctl.cluster.x-k8s.io/move": "true",
+			},
+		},
+		Data: map[string]string{
+			machineScope.LinodeMachine.Name: ip,
+		},
+	})
+}
+
 func reserveNextIP(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (string, error) {
 	namespace := machineScope.Cluster.Namespace
 	clusterName := machineScope.Cluster.Name
@@ -400,12 +416,8 @@ func reserveNextIP(ctx context.Context, machineScope *scope.MachineScope, logger
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			nextIP = getNextIP([]string{}, vlanIPRange)
-			ipsMap.Name = fmt.Sprintf("%s-ips", clusterName)
-			ipsMap.Namespace = namespace
-			ipsMap.Data = make(map[string]string)
-			ipsMap.Data[machineScope.LinodeMachine.Name] = nextIP
-			if err := machineScope.Client.Create(ctx, &ipsMap); err != nil {
-				return "", fmt.Errorf("creating ips configMap: %w", err)
+			if err := createIPsConfigMap(ctx, machineScope, nextIP); err != nil {
+				return "", fmt.Errorf("creating Ips configmap: %w", err)
 			}
 			logger.Info("Machine got ip", machineScope.LinodeMachine.Name, nextIP)
 			return fmt.Sprintf(vlanIPFormat, nextIP), nil
