@@ -177,11 +177,10 @@ func TestValidateCreate(t *testing.T) {
 
 							return nil
 						}).AnyTimes()
-
 				}),
 				Result("valid", func(ctx context.Context, mck Mock) {
 					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefCluster.Spec.CredentialsRef, cluster.GetNamespace())
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
 				}),
 			),
