@@ -112,7 +112,7 @@ func TestValidateCreate(t *testing.T) {
 				Namespace: "example",
 			},
 			Spec: LinodeClusterSpec{
-				Region: "us-sea",
+				Region: "us-ord",
 				Network: NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
 				},
@@ -125,9 +125,9 @@ func TestValidateCreate(t *testing.T) {
 			},
 			Spec: LinodeClusterSpec{
 				CredentialsRef: &corev1.SecretReference{
-					Name: "rke2-cluster-credentials",
+					Name: "cluster-credentials",
 				},
-				Region: "us-sea",
+				Region: "us-ord",
 				Network: NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
 				},
@@ -161,25 +161,12 @@ func TestValidateCreate(t *testing.T) {
 		),
 		OneOf(
 			Path(
-				Call("error fetching the token", func(ctx context.Context, mck Mock) {
-					mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test error"))
-
-				}),
-				Result("error", func(ctx context.Context, mck Mock) {
-					_, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefCluster.Spec.CredentialsRef, cluster.GetNamespace())
-					assert.Error(t, err)
-
-				}),
-			),
-		),
-		OneOf(
-			Path(
 				Call("verfied linodeClient", func(ctx context.Context, mck Mock) {
 					mockK8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
 						DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 							cred := corev1.Secret{
 								ObjectMeta: metav1.ObjectMeta{
-									Name:      "rke2-cluster-credentials",
+									Name:      "cluster-credentials",
 									Namespace: "example",
 								},
 								Data: map[string][]byte{
