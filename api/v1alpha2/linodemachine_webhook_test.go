@@ -27,8 +27,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
 
@@ -154,6 +157,80 @@ func TestValidateLinodeMachine(t *testing.T) {
 					for _, err := range errs {
 						require.Error(t, err)
 					}
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateCreateLinodeMachine(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		machine = LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeMachineSpec{
+				Region: "example",
+				Type:   "example",
+			},
+		}
+		credentialsRefMachine = LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeMachineSpec{
+				CredentialsRef: &corev1.SecretReference{
+					Name: "cluster-credentials",
+				},
+				Region: "example",
+				Type:   "example",
+			},
+		}
+		validator = &linodeMachineValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("invalid request", func(ctx context.Context, mck Mock) {
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &machine)
+					assert.Error(t, err)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("verfied linodeClient", func(ctx context.Context, mck Mock) {
+					mockK8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
+						DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+							cred := corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "cluster-credentials",
+									Namespace: "example",
+								},
+								Data: map[string][]byte{
+									"apiToken": []byte("token"),
+								},
+							}
+							*obj = cred
+
+							return nil
+						}).AnyTimes()
+				}),
+				Result("valid", func(ctx context.Context, mck Mock) {
+					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefMachine.Spec.CredentialsRef, credentialsRefMachine.GetNamespace())
+					require.NoError(t, err)
+					assert.Equal(t, []byte("token"), str)
 				}),
 			),
 		),
