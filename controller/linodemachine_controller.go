@@ -285,7 +285,12 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
 		return retryIfTransient(err)
 	}
-	linodeInstance, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
+
+	linodeInstance, err := createInstance(ctx, logger, machineScope, createOpts)
+	if errors.Is(err, util.ErrRateLimit) {
+		return ctrl.Result{RequeueAfter: reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
+	}
+
 	if err != nil {
 		logger.Error(err, "Failed to create Linode machine instance")
 		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
@@ -295,6 +300,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		}
 		return retryIfTransient(err)
 	}
+
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
 	// Set the provider ID since the instance is successfully created
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))

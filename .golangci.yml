@@ -7,6 +7,9 @@ output:
   # colored-line-number|line-number|json|tab|checkstyle|code-climate, default is "colored-line-number"
   formats: colored-line-number
 
+github_checks:
+  annotations: false
+
 linters-settings:
   errcheck:
     # report about not checking of errors in type assetions: `a := b.(MyStruct)`;

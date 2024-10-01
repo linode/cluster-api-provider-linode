@@ -2,8 +2,10 @@ package scope
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -186,4 +188,10 @@ func toFinalizer(obj client.Object) string {
 		return fmt.Sprintf("%s.%s/%s", kind, group, name)
 	}
 	return fmt.Sprintf("%s.%s/%s.%s", kind, group, namespace, name)
+}
+
+// GetHash returns sha256 hash of input string
+func GetHash(key string) string {
+	hash := sha256.Sum256([]byte(key))
+	return hex.EncodeToString(hash[:])
 }

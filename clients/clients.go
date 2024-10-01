@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/go-resty/resty/v2"
 	"github.com/linode/linodego"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -20,6 +21,8 @@ type LinodeClient interface {
 	LinodePlacementGroupClient
 	LinodeFirewallClient
 	LinodeTokenClient
+
+	OnAfterResponse(m func(response *resty.Response) error)
 }
 
 type AkamClient interface {
