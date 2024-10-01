@@ -57,7 +57,8 @@ func TestValidateLinodeCluster(t *testing.T) {
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
+		validator              = &linodeClusterValidator{}
+		expectedErrorSubString = "spec.region: Not found: \"example\""
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -80,7 +81,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 		Result("error", func(ctx context.Context, mck Mock) {
 			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec)
 			for _, err := range errs {
-				require.Error(t, err)
+				assert.ErrorContains(t, err, expectedErrorSubString)
 			}
 		}),
 	)
