@@ -188,13 +188,14 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 			},
 			Spec: LinodeMachineSpec{
 				CredentialsRef: &corev1.SecretReference{
-					Name: "cluster-credentials",
+					Name: "machine-credentials",
 				},
 				Region: "example",
 				Type:   "example",
 			},
 		}
-		validator = &linodeMachineValidator{}
+		expectedErrorSubString = "\"example\" is invalid: [spec.region: Not found: \"example\", spec.type: Not found: \"example\"]"
+		validator              = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -204,7 +205,7 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &machine)
-					assert.Error(t, err)
+					assert.ErrorContains(t, err, expectedErrorSubString)
 				}),
 			),
 		),
@@ -215,7 +216,7 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 							cred := corev1.Secret{
 								ObjectMeta: metav1.ObjectMeta{
-									Name:      "cluster-credentials",
+									Name:      "machine-credentials",
 									Namespace: "example",
 								},
 								Data: map[string][]byte{

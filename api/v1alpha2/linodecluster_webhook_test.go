@@ -106,7 +106,8 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 		}
-		credentialsRefCluster = LinodeCluster{
+		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
+		credentialsRefCluster  = LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
@@ -132,7 +133,7 @@ func TestValidateCreate(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &cluster)
-					assert.Error(t, err)
+					assert.ErrorContains(t, err, expectedErrorSubString)
 				}),
 			),
 		),

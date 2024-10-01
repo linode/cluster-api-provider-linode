@@ -103,10 +103,10 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 	if spec.CredentialsRef != nil {
 		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, vpc.GetNamespace())
 		if err != nil {
-			linodevpclog.Info("credentials from secret ref error", "name", vpc.Name)
+			linodevpclog.Error(err, "failed getting credentials from secret ref", "name", vpc.Name)
 			return nil, err
 		}
-		linodevpclog.Info("creating a verfied linode client for create request", "name", vpc.Name)
+		linodevpclog.Info("creating a verified linode client for create request", "name", vpc.Name)
 		linodeclient.SetToken(string(apiToken))
 	}
 	// TODO: instrument with tracing, might need refactor to preserve readibility

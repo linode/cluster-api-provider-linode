@@ -64,10 +64,10 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, obj runtime
 	if spec.CredentialsRef != nil {
 		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, cluster.GetNamespace())
 		if err != nil {
-			linodeclusterlog.Info("credentials from secret ref error", "name", cluster.Name)
+			linodeclusterlog.Error(err, "failed getting credentials from secret ref", "name", cluster.Name)
 			return nil, err
 		}
-		linodeclusterlog.Info("creating a verfied linode client for create request", "name", cluster.Name)
+		linodeclusterlog.Info("creating a verified linode client for create request", "name", cluster.Name)
 		linodeclient.SetToken(string(apiToken))
 	}
 	// TODO: instrument with tracing, might need refactor to preserve readibility

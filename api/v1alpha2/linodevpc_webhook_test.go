@@ -274,16 +274,16 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 				Region: "example",
 			},
 		}
-		validator = &linodeVPCValidator{}
-
-		credentialsRefVPC = LinodeVPC{
+		validator              = &linodeVPCValidator{}
+		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
+		credentialsRefVPC      = LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
 			Spec: LinodeVPCSpec{
 				CredentialsRef: &corev1.SecretReference{
-					Name: "cluster-credentials",
+					Name: "vpc-credentials",
 				},
 				Region: "us-ord",
 			},
@@ -298,7 +298,7 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &vpc)
-					assert.Error(t, err)
+					assert.ErrorContains(t, err, expectedErrorSubString)
 				}),
 			),
 		),
@@ -309,7 +309,7 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 							cred := corev1.Secret{
 								ObjectMeta: metav1.ObjectMeta{
-									Name:      "cluster-credentials",
+									Name:      "vpc-credentials",
 									Namespace: "example",
 								},
 								Data: map[string][]byte{

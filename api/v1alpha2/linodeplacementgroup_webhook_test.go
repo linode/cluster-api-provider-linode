@@ -131,13 +131,13 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 			},
 			Spec: LinodePlacementGroupSpec{
 				CredentialsRef: &corev1.SecretReference{
-					Name: "cluster-credentials",
+					Name: "pg-credentials",
 				},
 				Region: "us-ord",
 			},
 		}
-
-		validator = &linodePlacementGroupValidator{}
+		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
+		validator              = &linodePlacementGroupValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -147,7 +147,7 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &pg)
-					assert.Error(t, err)
+					assert.ErrorContains(t, err, expectedErrorSubString)
 				}),
 			),
 		),
@@ -158,7 +158,7 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 							cred := corev1.Secret{
 								ObjectMeta: metav1.ObjectMeta{
-									Name:      "cluster-credentials",
+									Name:      "pg-credentials",
 									Namespace: "example",
 								},
 								Data: map[string][]byte{

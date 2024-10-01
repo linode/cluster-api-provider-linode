@@ -73,10 +73,10 @@ func (r *linodePlacementGroupValidator) ValidateCreate(ctx context.Context, obj 
 	if spec.CredentialsRef != nil {
 		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, pg.GetNamespace())
 		if err != nil {
-			linodepglog.Info("credentials from secret ref error", "name", pg.Name)
+			linodepglog.Error(err, "failed getting credentials from secret ref", "name", pg.Name)
 			return nil, err
 		}
-		linodepglog.Info("creating a verfied linode client for create request", "name", pg.Name)
+		linodepglog.Info("creating a verified linode client for create request", "name", pg.Name)
 		linodeclient.SetToken(string(apiToken))
 	}
 	// TODO: instrument with tracing, might need refactor to preserve readibility

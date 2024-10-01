@@ -82,10 +82,10 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime
 	if spec.CredentialsRef != nil {
 		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, machine.GetNamespace())
 		if err != nil {
-			linodemachinelog.Info("credentials from secret ref error", "name", machine.Name)
+			linodemachinelog.Error(err, "failed getting credentials from secret ref", "name", machine.Name)
 			return nil, err
 		}
-		linodemachinelog.Info("creating a verfied linode client for create request", "name", machine.Name)
+		linodemachinelog.Info("creating a verified linode client for create request", "name", machine.Name)
 		linodeclient.SetToken(string(apiToken))
 	}
 	var errs field.ErrorList
