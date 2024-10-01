@@ -203,6 +203,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
@@ -267,6 +268,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("time is up"))
 
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
 			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Severity).To(Equal(clusterv1.ConditionSeverityError))
 			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Message).To(ContainSubstring("time is up"))
@@ -442,6 +444,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
@@ -532,6 +535,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
 			Expect(err).ToNot(HaveOccurred())
 
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightAdditionalDisksCreated)).To(BeFalse())
@@ -624,6 +628,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
@@ -921,6 +926,21 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 	ctlrSuite.Run(
 		OneOf(
 			Path(
+				Call("machine is not created because of too many requests", func(ctx context.Context, mck Mock) {
+				}),
+				Path(Result("create requeues when failing to create instance config", func(ctx context.Context, mck Mock) {
+					getRegion := mck.LinodeClient.EXPECT().
+						GetRegion(ctx, gomock.Any()).
+						Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+					mck.LinodeClient.EXPECT().
+						GetImage(ctx, gomock.Any()).
+						After(getRegion).
+						Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
+					res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to fetch image"))
+				})),
 				Call("machine is not created because there was an error creating instance", func(ctx context.Context, mck Mock) {
 				}),
 				OneOf(
@@ -958,16 +978,11 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						Name:      "test-missing-fw",
 						Namespace: namespace,
 					}
+					linodeMachine.Status.CloudinitMetadataSupport = true
+					conditions.MarkTrue(mScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured)
 				}),
 				OneOf(
 					Path(Result("create fails when failing to get referenced firewall", func(ctx context.Context, mck Mock) {
-						getRegion := mck.LinodeClient.EXPECT().
-							GetRegion(ctx, gomock.Any()).
-							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-						mck.LinodeClient.EXPECT().
-							GetImage(ctx, gomock.Any()).
-							After(getRegion).
-							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).To(HaveOccurred())
 						Expect(mck.Logs()).To(ContainSubstring("nil firewallID"))
@@ -977,29 +992,11 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 			Path(
 				Call("machine is not created because there were too many requests", func(ctx context.Context, mck Mock) {
 					linodeMachine.Spec.FirewallRef = nil
+					linodeMachine.Status.CloudinitMetadataSupport = true
 				}),
 				OneOf(
-					Path(Result("create requeues when failing to create instance config", func(ctx context.Context, mck Mock) {
-						mck.LinodeClient.EXPECT().
-							GetRegion(ctx, gomock.Any()).
-							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-						mck.LinodeClient.EXPECT().
-							GetImage(ctx, gomock.Any()).
-							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
-						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
-						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode machine InstanceCreateOptions"))
-					})),
 					Path(Result("create requeues when failing to create instance", func(ctx context.Context, mck Mock) {
-						mck.LinodeClient.EXPECT().
-							GetRegion(ctx, gomock.Any()).
-							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-						getImage := mck.LinodeClient.EXPECT().
-							GetImage(ctx, gomock.Any()).
-							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 						mck.LinodeClient.EXPECT().CreateInstance(gomock.Any(), gomock.Any()).
-							After(getImage).
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
 						mck.LinodeClient.EXPECT().
 							OnAfterResponse(gomock.Any()).
@@ -1011,15 +1008,8 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 					})),
 					Path(Result("create requeues when failing to update instance config", func(ctx context.Context, mck Mock) {
 						linodeMachine.Spec.Configuration = &infrav1alpha2.InstanceConfiguration{Kernel: "test"}
-						mck.LinodeClient.EXPECT().
-							GetRegion(ctx, gomock.Any()).
-							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-						getImage := mck.LinodeClient.EXPECT().
-							GetImage(ctx, gomock.Any()).
-							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 						createInst := mck.LinodeClient.EXPECT().
 							CreateInstance(ctx, gomock.Any()).
-							After(getImage).
 							Return(&linodego.Instance{
 								ID:     123,
 								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
@@ -1529,6 +1519,9 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 					Name:      "test-fw",
 				},
 			},
+			Status: infrav1alpha2.LinodeMachineStatus{
+				CloudinitMetadataSupport: true,
+			},
 		}
 
 		lpgReconciler = &LinodePlacementGroupReconciler{
@@ -1556,13 +1549,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 
 	It("creates a instance in a PlacementGroup with a firewall", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
-		getRegion := mockLinodeClient.EXPECT().
-			GetRegion(ctx, gomock.Any()).
-			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, infrav1alpha2.LinodePlacementGroupCapability}}, nil)
-		mockLinodeClient.EXPECT().
-			GetImage(ctx, gomock.Any()).
-			After(getRegion).
-			Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 
 		helper, err := patch.NewHelper(&linodePlacementGroup, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
@@ -1720,15 +1706,11 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 					},
 				},
 			},
+			Status: infrav1alpha2.LinodeMachineStatus{
+				CloudinitMetadataSupport: true,
+			},
 		}
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
-		getRegion := mockLinodeClient.EXPECT().
-			GetRegion(ctx, gomock.Any()).
-			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, infrav1alpha2.LinodePlacementGroupCapability}}, nil)
-		mockLinodeClient.EXPECT().
-			GetImage(ctx, gomock.Any()).
-			After(getRegion).
-			Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 		mockLinodeClient.EXPECT().
 			ListVPCs(ctx, gomock.Any()).
 			Return([]linodego.VPC{}, nil)
@@ -1802,15 +1784,11 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 					},
 				},
 			},
+			Status: infrav1alpha2.LinodeMachineStatus{
+				CloudinitMetadataSupport: true,
+			},
 		}
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
-		getRegion := mockLinodeClient.EXPECT().
-			GetRegion(ctx, gomock.Any()).
-			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, infrav1alpha2.LinodePlacementGroupCapability}}, nil)
-		mockLinodeClient.EXPECT().
-			GetImage(ctx, gomock.Any()).
-			After(getRegion).
-			Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
 		mockLinodeClient.EXPECT().
 			ListVPCs(ctx, gomock.Any()).
 			Return([]linodego.VPC{}, nil)

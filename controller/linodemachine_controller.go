@@ -214,7 +214,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	// Make sure bootstrap data is available and populated.
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap data secret is not yet available")
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightCreated, WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured, WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
@@ -242,7 +242,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		return ctrl.Result{}, err
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured) {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 		res, err := r.reconcilePreflightMetadataSupportConfigure(ctx, logger, machineScope)
 		if err != nil || !res.IsZero() {
 			return res, err
@@ -293,7 +293,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 		logger.Error(err, fmt.Sprintf("Failed to fetch region %s", machineScope.LinodeMachine.Spec.Region))
 		return retryIfTransient(err)
 	}
-	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
+	regionMetadataSupport := slices.Contains(region.Capabilities, linodego.CapabilityMetadata)
 	imageName := reconciler.DefaultMachineControllerLinodeImage
 	if machineScope.LinodeMachine.Spec.Image != "" {
 		imageName = machineScope.LinodeMachine.Spec.Image
@@ -304,6 +304,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 		return retryIfTransient(err)
 	}
 	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
+	machineScope.LinodeMachine.Status.CloudinitMetadataSupport = true
 	if !imageMetadataSupport || !regionMetadataSupport {
 		logger.Info("cloud-init metadata support not available", "imageMetadataSupport", imageMetadataSupport, "regionMetadataSupport", regionMetadataSupport)
 		machineScope.LinodeMachine.Status.CloudinitMetadataSupport = false
