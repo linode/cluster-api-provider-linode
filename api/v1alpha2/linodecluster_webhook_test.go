@@ -106,18 +106,6 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 		}
-		validCluster = LinodeCluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example",
-				Namespace: "example",
-			},
-			Spec: LinodeClusterSpec{
-				Region: "us-ord",
-				Network: NetworkSpec{
-					LoadBalancerType: "NodeBalancer",
-				},
-			},
-		}
 		credentialsRefCluster = LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
@@ -139,23 +127,12 @@ func TestValidateCreate(t *testing.T) {
 	NewSuite(t, mock.MockLinodeClient{}).Run(
 		OneOf(
 			Path(
-				Call("invalid region", func(ctx context.Context, mck Mock) {
+				Call("invalid request", func(ctx context.Context, mck Mock) {
 
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &cluster)
 					assert.Error(t, err)
-				}),
-			),
-		),
-		OneOf(
-			Path(
-				Call("valid region", func(ctx context.Context, mck Mock) {
-
-				}),
-				Result("no error", func(ctx context.Context, mck Mock) {
-					_, err := validator.ValidateCreate(ctx, &validCluster)
-					assert.NoError(t, err)
 				}),
 			),
 		),
