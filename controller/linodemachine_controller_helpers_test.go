@@ -14,8 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
@@ -462,6 +465,174 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 				assert.Equal(t, actualConfig.Devices.SDF, testcase.expectedDiskMap.SDF)
 				assert.Equal(t, actualConfig.Devices.SDG, testcase.expectedDiskMap.SDG)
 			}
+		})
+	}
+}
+
+func TestGetVlanInterfaceConfig(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		machineScope    *scope.MachineScope
+		wantIfaceConfig *linodego.InstanceConfigInterfaceCreateOptions
+		expects         func(client *mock.MockLinodeClient, kClient *mock.MockK8sClient)
+	}{{
+		name: "No errors - getVlanInterfaceConfig gets ip",
+		machineScope: &scope.MachineScope{
+			Cluster: &v1beta1.Cluster{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			LinodeCluster: &infrav1alpha2.LinodeCluster{
+				Spec: infrav1alpha2.LinodeClusterSpec{
+					Network: infrav1alpha2.NetworkSpec{
+						UseVlan: true,
+					},
+				},
+			},
+			LinodeMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cluster",
+					Namespace: "default",
+				},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
+			},
+		},
+		wantIfaceConfig: &linodego.InstanceConfigInterfaceCreateOptions{
+			IPAMAddress: "10.0.0.4/11",
+			Purpose:     linodego.InterfacePurposeVLAN,
+			Label:       "test",
+		},
+		expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+			kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.ConfigMap, opts ...client.GetOption) error {
+				data := corev1.ConfigMap{
+					Data: map[string]string{
+						"node1": "10.0.0.1",
+						"node2": "10.0.0.2",
+						"node3": "10.0.0.3",
+					},
+				}
+				*obj = data
+				return nil
+			}).MaxTimes(2)
+			kMock.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, obj *corev1.ConfigMap, opts ...client.UpdateOption) error {
+				data := corev1.ConfigMap{
+					Data: obj.Data,
+				}
+				*obj = data
+				return nil
+			})
+		},
+	}, {
+		name: "No config map exists previously - getVlanInterfaceConfig creates one",
+		machineScope: &scope.MachineScope{
+			Cluster: &v1beta1.Cluster{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			LinodeCluster: &infrav1alpha2.LinodeCluster{
+				Spec: infrav1alpha2.LinodeClusterSpec{
+					Network: infrav1alpha2.NetworkSpec{
+						UseVlan: true,
+					},
+				},
+			},
+			LinodeMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cluster",
+					Namespace: "default",
+				},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
+			},
+		},
+		wantIfaceConfig: &linodego.InstanceConfigInterfaceCreateOptions{
+			IPAMAddress: "10.0.0.1/11",
+			Purpose:     linodego.InterfacePurposeVLAN,
+			Label:       "test",
+		},
+		expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+			kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.ConfigMap, opts ...client.GetOption) error {
+				return apierrors.NewNotFound(schema.GroupResource{Group: "", Resource: "configmap"}, key.Name)
+			})
+			kMock.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, obj *corev1.ConfigMap, opts ...client.CreateOption) error {
+				return nil
+			})
+		},
+	}, {
+		name: "configmap exists, get a conflict",
+		machineScope: &scope.MachineScope{
+			Cluster: &v1beta1.Cluster{
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			LinodeCluster: &infrav1alpha2.LinodeCluster{
+				Spec: infrav1alpha2.LinodeClusterSpec{
+					Network: infrav1alpha2.NetworkSpec{
+						UseVlan: true,
+					},
+				},
+			},
+			LinodeMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cluster",
+					Namespace: "default",
+				},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{},
+			},
+		},
+		wantIfaceConfig: &linodego.InstanceConfigInterfaceCreateOptions{
+			IPAMAddress: "10.0.0.4/11",
+			Purpose:     linodego.InterfacePurposeVLAN,
+			Label:       "test",
+		},
+		expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+			kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.ConfigMap, opts ...client.GetOption) error {
+				data := corev1.ConfigMap{
+					Data: map[string]string{
+						"node1": "10.0.0.1",
+						"node2": "10.0.0.2",
+						"node3": "10.0.0.3",
+					},
+				}
+				*obj = data
+				return nil
+			}).MaxTimes(3)
+			kMock.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, obj *corev1.ConfigMap, opts ...client.UpdateOption) error {
+				return apierrors.NewConflict(schema.GroupResource{Group: "", Resource: "configmap"}, obj.Name, fmt.Errorf("error"))
+			})
+			kMock.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, obj *corev1.ConfigMap, opts ...client.UpdateOption) error {
+				return nil
+			})
+		},
+	},
+	}
+
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mock.NewMockLinodeClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.machineScope.LinodeClient = mockClient
+			testcase.machineScope.Client = mockK8sClient
+			testcase.expects(mockClient, mockK8sClient)
+			logger := logr.Logger{}
+
+			config, err := getVlanInterfaceConfig(context.Background(), testcase.machineScope, logger)
+			assert.Nil(t, err)
+			assert.Equal(t, testcase.wantIfaceConfig.IPAMAddress, config.IPAMAddress)
+			assert.Equal(t, testcase.wantIfaceConfig.Label, config.Label)
+			assert.Equal(t, testcase.wantIfaceConfig.Purpose, config.Purpose)
 		})
 	}
 }

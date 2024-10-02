@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
@@ -162,6 +163,63 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
 			require.ErrorContains(t, inValidCluster.validateLinodeCluster(ctx, mck.LinodeClient), "dnsRootDomain")
+		}),
+	)
+}
+
+func TestValidateVlanAndVPC(t *testing.T) {
+	t.Parallel()
+
+	var (
+		validCluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "us-ord",
+				Network: NetworkSpec{
+					UseVlan: true,
+				},
+			},
+		}
+		inValidCluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "us-ord",
+				Network: NetworkSpec{
+					UseVlan: true,
+				},
+				VPCRef: &v1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeVPC",
+				},
+			},
+		}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					assert.NoError(t, validCluster.validateLinodeCluster(ctx, mck.LinodeClient))
+				}),
+			),
+		),
+		OneOf(
+			Path(Call("vlan and VPC set", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			})),
+		),
+		Result("error", func(ctx context.Context, mck Mock) {
+			require.ErrorContains(t, inValidCluster.validateLinodeCluster(ctx, mck.LinodeClient), "Cannot use VLANs and VPCs together")
 		}),
 	)
 }
