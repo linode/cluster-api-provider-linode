@@ -49,11 +49,17 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Region: "example",
 			},
 		}
-		region            = linodego.Region{ID: "test"}
-		capabilities      = []string{LinodeVPCCapability}
-		capabilities_zero = []string{}
-
-		validator = &linodeVPCValidator{}
+		region                        = linodego.Region{ID: "test"}
+		capabilities                  = []string{LinodeVPCCapability}
+		capabilities_zero             = []string{}
+		regionNotFoundError           = "spec.region: Not found: \"example\""
+		vpcCapabilityError            = "spec.region: Invalid value: \"example\": no capability: VPCs"
+		InvalidSubnetLabelError       = "spec.Subnets[0].Label: Invalid value: \"$\": can only contain ASCII letters, numbers, and hyphens (-)"
+		ErrorSubnetRangeInvalidPrefix = "spec.Subnets[0].IPv4: Invalid value: \"10.0.0.0/32\": allowed prefix lengths: 1-29"
+		ErrorSubnetRangeNotPrivate    = "spec.Subnets[0].IPv4: Invalid value: \"9.9.9.0/24\": range must belong to a private address space as defined in RFC1918"
+		ErrorSubnetRange              = "spec.Subnets[0].IPv4: Invalid value: \"IPv4 CIDR\": must be IPv4 range in CIDR canonical form"
+		ErrorSubnetRangeNotIPv4       = "spec.Subnets[0].IPv4: Invalid value: \"10.9.9.9/8\": must be IPv4 range in CIDR canonical form"
+		validator                     = &linodeVPCValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -84,21 +90,30 @@ func TestValidateLinodeVPC(t *testing.T) {
 			),
 		),
 		OneOf(
-			Path(Call("invalid region", func(ctx context.Context, mck Mock) {
-				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
-			})),
-			Path(Call("region not supported", func(ctx context.Context, mck Mock) {
-				region := region
-				region.Capabilities = slices.Clone(capabilities_zero)
-				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
-			})),
+			Path(
+				Call("invalid region", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, regionNotFoundError)
+					}
+				}),
+			),
+			Path(
+				Call("region not supported", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities_zero)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, vpcCapabilityError)
+					}
+				})),
 		),
-		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
-			for _, err := range errs {
-				require.Error(t, err)
-			}
-		}),
 		OneOf(
 			Path(
 				Call("no subnet label", func(ctx context.Context, mck Mock) {
@@ -127,7 +142,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, InvalidSubnetLabelError)
 					}
 				}),
 			),
@@ -158,7 +173,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "IPv4 CIDR"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, ErrorSubnetRange)
 					}
 				}),
 			),
@@ -173,7 +188,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "10.9.9.9/8"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, ErrorSubnetRangeNotIPv4)
 					}
 				}),
 			),
@@ -188,7 +203,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "10.0.0.0/32"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, ErrorSubnetRangeInvalidPrefix)
 					}
 				}),
 			),
@@ -204,7 +219,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, ErrorSubnetRangeNotPrivate)
 					}
 				}),
 			),
