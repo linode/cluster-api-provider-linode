@@ -103,7 +103,7 @@ func TestSetUserData(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{},
+				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
@@ -119,12 +119,6 @@ func TestSetUserData(t *testing.T) {
 					*obj = cred
 					return nil
 				})
-				mockClient.EXPECT().GetRegion(gomock.Any(), "us-ord").Return(&linodego.Region{
-					Capabilities: []string{"Metadata"},
-				}, nil)
-				mockClient.EXPECT().GetImage(gomock.Any(), "linode/ubuntu22.04").Return(&linodego.Image{
-					Capabilities: []string{"cloud-init"},
-				}, nil)
 			},
 		},
 		{
@@ -143,7 +137,7 @@ func TestSetUserData(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-east", Image: "linode/ubuntu22.04", Type: "g6-standard-1"},
-				Status: infrav1alpha2.LinodeMachineStatus{},
+				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: false},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{StackScriptID: 1234, StackScriptData: map[string]string{
@@ -160,10 +154,6 @@ func TestSetUserData(t *testing.T) {
 					*obj = cred
 					return nil
 				})
-				mockClient.EXPECT().GetRegion(gomock.Any(), "us-east").Return(&linodego.Region{
-					Capabilities: []string{"Metadata"},
-				}, nil)
-				mockClient.EXPECT().GetImage(gomock.Any(), "linode/ubuntu22.04").Return(&linodego.Image{}, nil)
 				mockClient.EXPECT().ListStackscripts(gomock.Any(), &linodego.ListOptions{Filter: "{\"label\":\"CAPL-dev\"}"}).Return([]linodego.Stackscript{{
 					Label: "CAPI Test 1",
 					ID:    1234,
@@ -229,77 +219,6 @@ func TestSetUserData(t *testing.T) {
 			expectedError: fmt.Errorf("bootstrap data secret is nil for LinodeMachine default/test-cluster"),
 		},
 		{
-			name: "Error - SetUserData failed to get regions",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
-					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
-						DataSecretName: ptr.To("test-data"),
-					},
-					InfrastructureRef: corev1.ObjectReference{},
-				},
-			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster",
-					Namespace: "default",
-				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{},
-			}},
-			createConfig: &linodego.InstanceCreateOptions{},
-			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
-				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"value": []byte("hello"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-				mockClient.EXPECT().GetRegion(gomock.Any(), "us-ord").Return(nil, fmt.Errorf("cannot find region"))
-			},
-			expectedError: fmt.Errorf("cannot find region"),
-		},
-		{
-			name: "Error - SetUserData failed to get images",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
-					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
-						DataSecretName: ptr.To("test-data"),
-					},
-					InfrastructureRef: corev1.ObjectReference{},
-				},
-			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster",
-					Namespace: "default",
-				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{},
-			}},
-			createConfig: &linodego.InstanceCreateOptions{},
-			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
-				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"value": []byte("hello"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-				mockClient.EXPECT().GetRegion(gomock.Any(), "us-ord").Return(&linodego.Region{
-					Capabilities: []string{"Metadata"},
-				}, nil)
-				mockClient.EXPECT().GetImage(gomock.Any(), "linode/ubuntu22.04").Return(nil, fmt.Errorf("cannot find image"))
-			},
-			expectedError: fmt.Errorf("cannot find image"),
-		},
-		{
 			name: "Error - SetUserData failed to get stackscripts",
 			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
 				Spec: v1beta1.MachineSpec{
@@ -315,7 +234,7 @@ func TestSetUserData(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-east", Image: "linode/ubuntu22.04", Type: "g6-standard-1"},
-				Status: infrav1alpha2.LinodeMachineStatus{},
+				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: false},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{StackScriptID: 1234, StackScriptData: map[string]string{
@@ -332,10 +251,6 @@ func TestSetUserData(t *testing.T) {
 					*obj = cred
 					return nil
 				})
-				mockClient.EXPECT().GetRegion(gomock.Any(), "us-east").Return(&linodego.Region{
-					Capabilities: []string{"Metadata"},
-				}, nil)
-				mockClient.EXPECT().GetImage(gomock.Any(), "linode/ubuntu22.04").Return(&linodego.Image{}, nil)
 				mockClient.EXPECT().ListStackscripts(gomock.Any(), &linodego.ListOptions{Filter: "{\"label\":\"CAPL-dev\"}"}).Return(nil, fmt.Errorf("failed to get stackscripts"))
 			},
 			expectedError: fmt.Errorf("ensure stackscript: failed to get stackscript with label CAPL-dev: failed to get stackscripts"),
