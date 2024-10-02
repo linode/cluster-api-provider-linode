@@ -82,7 +82,7 @@ patches:
         value:
           - |
             mkdir -p /etc/rancher/rke2/config.yaml.d/
-            echo "node-ip: $(hostname -I | grep -oE 10\.0\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
+            echo "node-ip: $(hostname -I | grep -oE ^10\.0\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
           - sed -i '/swap/d' /etc/fstab
           - swapoff -a
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
@@ -113,7 +113,7 @@ patches:
         value:
           - |
             mkdir -p /etc/rancher/rke2/config.yaml.d/
-            echo "node-ip: $(hostname -I | grep -oE 10\.0\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
+            echo "node-ip: $(hostname -I | grep -oE ^10\.0\.[0-9]+\.[0-9]+)" >> /etc/rancher/rke2/config.yaml.d/capi-config.yaml
           - sed -i '/swap/d' /etc/fstab
           - swapoff -a
           - hostnamectl set-hostname '{{ ds.meta_data.label }}' && hostname -F /etc/hostname
