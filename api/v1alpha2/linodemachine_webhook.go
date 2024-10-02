@@ -28,8 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
@@ -53,74 +53,90 @@ var (
 // log is for logging in this package.
 var linodemachinelog = logf.Log.WithName("linodemachine-resource")
 
+type linodeMachineValidator struct {
+	Client client.Client
+}
+
 // SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *LinodeMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithValidator(&linodeMachineValidator{Client: mgr.GetClient()}).
 		Complete()
 }
-
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable update and deletion validation.
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodemachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=create,versions=v1alpha2,name=validation.linodemachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &LinodeMachine{}
-
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *LinodeMachine) ValidateCreate() (admission.Warnings, error) {
-	linodemachinelog.Info("validate create", "name", r.Name)
+func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	machine, ok := obj.(*LinodeMachine)
+	if !ok {
+		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
+	}
+	spec := machine.Spec
+	linodemachinelog.Info("validate create", "name", machine.Name)
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultWebhookTimeout)
-	defer cancel()
+	var linodeclient LinodeClient = defaultLinodeClient
 
-	return nil, r.validateLinodeMachine(ctx, &defaultLinodeClient)
+	if spec.CredentialsRef != nil {
+		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, machine.GetNamespace())
+		if err != nil {
+			linodemachinelog.Error(err, "failed getting credentials from secret ref", "name", machine.Name)
+			return nil, err
+		}
+		linodemachinelog.Info("creating a verified linode client for create request", "name", machine.Name)
+		linodeclient.SetToken(string(apiToken))
+	}
+	var errs field.ErrorList
+
+	if err := r.validateLinodeMachineSpec(ctx, linodeclient, spec); err != nil {
+		errs = slices.Concat(errs, err)
+	}
+
+	if len(errs) == 0 {
+		return nil, nil
+	}
+	return nil, apierrors.NewInvalid(
+		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeMachine"},
+		machine.Name, errs)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *LinodeMachine) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	linodemachinelog.Info("validate update", "name", r.Name)
+func (r *linodeMachineValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	old, ok := oldObj.(*LinodeMachine)
+	if !ok {
+		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
+	}
+	linodemachinelog.Info("validate update", "name", old.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *LinodeMachine) ValidateDelete() (admission.Warnings, error) {
-	linodemachinelog.Info("validate delete", "name", r.Name)
+func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	c, ok := obj.(*LinodeMachine)
+	if !ok {
+		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
+	}
+	linodemachinelog.Info("validate delete", "name", c.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
 }
 
-func (r *LinodeMachine) validateLinodeMachine(ctx context.Context, client LinodeClient) error {
-	// TODO: instrument with tracing, might need refactor to preserve readibility
+func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient, spec LinodeMachineSpec) field.ErrorList {
 	var errs field.ErrorList
 
-	if err := r.validateLinodeMachineSpec(ctx, client); err != nil {
-		errs = slices.Concat(errs, err)
-	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-	return apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeMachine"},
-		r.Name, errs)
-}
-
-func (r *LinodeMachine) validateLinodeMachineSpec(ctx context.Context, client LinodeClient) field.ErrorList {
-	// TODO: instrument with tracing, might need refactor to preserve readibility
-	var errs field.ErrorList
-
-	if err := validateRegion(ctx, client, r.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
+	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
 		errs = append(errs, err)
 	}
-	plan, err := validateLinodeType(ctx, client, r.Spec.Type, field.NewPath("spec").Child("type"))
+	plan, err := validateLinodeType(ctx, linodeclient, spec.Type, field.NewPath("spec").Child("type"))
 	if err != nil {
 		errs = append(errs, err)
 	}
-	if err := r.validateLinodeMachineDisks(plan); err != nil {
+	if err := r.validateLinodeMachineDisks(plan, spec); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -130,7 +146,7 @@ func (r *LinodeMachine) validateLinodeMachineSpec(ctx context.Context, client Li
 	return errs
 }
 
-func (r *LinodeMachine) validateLinodeMachineDisks(plan *linodego.LinodeType) *field.Error {
+func (r *linodeMachineValidator) validateLinodeMachineDisks(plan *linodego.LinodeType, spec LinodeMachineSpec) *field.Error {
 	// The Linode plan information is required to perform disk validation
 	if plan == nil {
 		return nil
@@ -145,10 +161,10 @@ func (r *LinodeMachine) validateLinodeMachineDisks(plan *linodego.LinodeType) *f
 	)
 	planSize.DeepCopyInto(remainSize)
 
-	if remainSize, err = validateDisk(r.Spec.OSDisk, field.NewPath("spec").Child("osDisk"), remainSize, &planSize); err != nil {
+	if remainSize, err = validateDisk(spec.OSDisk, field.NewPath("spec").Child("osDisk"), remainSize, &planSize); err != nil {
 		return err
 	}
-	if _, err := validateDataDisks(r.Spec.DataDisks, field.NewPath("spec").Child("dataDisks"), remainSize, &planSize); err != nil {
+	if _, err := validateDataDisks(spec.DataDisks, field.NewPath("spec").Child("dataDisks"), remainSize, &planSize); err != nil {
 		return err
 	}
 

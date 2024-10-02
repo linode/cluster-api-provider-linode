@@ -565,29 +565,12 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		return err
 	}
 
-	region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
-	if err != nil {
-		return fmt.Errorf("get region: %w", err)
-	}
-	regionMetadataSupport := slices.Contains(region.Capabilities, "Metadata")
-	imageName := reconciler.DefaultMachineControllerLinodeImage
-	if machineScope.LinodeMachine.Spec.Image != "" {
-		imageName = machineScope.LinodeMachine.Spec.Image
-	}
-	image, err := machineScope.LinodeClient.GetImage(ctx, imageName)
-	if err != nil {
-		return fmt.Errorf("get image: %w", err)
-	}
-	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
-	if imageMetadataSupport && regionMetadataSupport {
+	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
 		createConfig.Metadata = &linodego.InstanceMetadataOptions{
 			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
 		}
 	} else {
-		logger.Info("using StackScripts for bootstrapping",
-			"imageMetadataSupport", imageMetadataSupport,
-			"regionMetadataSupport", regionMetadataSupport,
-		)
+		logger.Info("using StackScripts for bootstrapping")
 		capiStackScriptID, err := services.EnsureStackscript(ctx, machineScope)
 		if err != nil {
 			return fmt.Errorf("ensure stackscript: %w", err)
