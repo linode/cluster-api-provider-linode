@@ -25,9 +25,13 @@ import (
 
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
 
@@ -48,11 +52,15 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
-		disk      = InstanceDisk{Size: resource.MustParse("1G")}
-		disk_zero = InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
-		plan      = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
-		plan_zero = linodego.LinodeType{Disk: 0}
-		plan_max  = linodego.LinodeType{Disk: math.MaxInt}
+		disk                                        = InstanceDisk{Size: resource.MustParse("1G")}
+		disk_zero                                   = InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
+		plan                                        = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
+		plan_zero                                   = linodego.LinodeType{Disk: 0}
+		plan_max                                    = linodego.LinodeType{Disk: math.MaxInt}
+		expectedErrorSubStringOSDisk                = "Invalid value: \"1G\": sum disk sizes exceeds plan storage: 2G"
+		expectedErrorSubStringOSDiskDataDiskInvalid = "spec.dataDisks.sda: Forbidden: allowed device paths: [sdb sdc sdd sde sdf sdg sdh]"
+		expectedErrorSubStringOSDiskOSDiskInvalid   = "spec.osDisk: Invalid value: \"0\": invalid size"
+		validator                                   = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -63,7 +71,8 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					assert.NoError(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					require.Empty(t, errs)
 				}),
 				Call("valid with disks", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
@@ -73,7 +82,8 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
 					machine.Spec.DataDisks = map[string]*InstanceDisk{"sdb": disk.DeepCopy()}
-					assert.NoError(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					require.Empty(t, errs)
 				}),
 			),
 		),
@@ -88,7 +98,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			assert.Error(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+			errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+			for _, err := range errs {
+				require.Error(t, err)
+			}
 		}),
 		OneOf(
 			Path(
@@ -99,7 +112,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("os disk too large", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
-					assert.ErrorContains(t, machine.validateLinodeMachine(ctx, mck.LinodeClient), strconv.Itoa(plan_zero.Disk))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, strconv.Itoa(plan_zero.Disk))
+					}
 				}),
 			),
 			Path(
@@ -111,7 +127,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
 					machine.Spec.DataDisks = map[string]*InstanceDisk{"sdb": disk.DeepCopy(), "sdc": disk.DeepCopy()}
-					assert.Error(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
+					}
 				}),
 			),
 			Path(
@@ -122,7 +141,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.DataDisks = map[string]*InstanceDisk{"sda": disk.DeepCopy()}
-					assert.Error(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskDataDiskInvalid)
+					}
 				}),
 			),
 			Path(
@@ -133,7 +155,85 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk_zero.DeepCopy()
-					assert.Error(t, machine.validateLinodeMachine(ctx, mck.LinodeClient))
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskOSDiskInvalid)
+					}
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateCreateLinodeMachine(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		machine = LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeMachineSpec{
+				Region: "example",
+				Type:   "example",
+			},
+		}
+		credentialsRefMachine = LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeMachineSpec{
+				CredentialsRef: &corev1.SecretReference{
+					Name: "machine-credentials",
+				},
+				Region: "example",
+				Type:   "example",
+			},
+		}
+		expectedErrorSubString = "\"example\" is invalid: [spec.region: Not found: \"example\", spec.type: Not found: \"example\"]"
+		validator              = &linodeMachineValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("invalid request", func(ctx context.Context, mck Mock) {
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &machine)
+					assert.ErrorContains(t, err, expectedErrorSubString)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("verfied linodeClient", func(ctx context.Context, mck Mock) {
+					mockK8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
+						DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+							cred := corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "machine-credentials",
+									Namespace: "example",
+								},
+								Data: map[string][]byte{
+									"apiToken": []byte("token"),
+								},
+							}
+							*obj = cred
+
+							return nil
+						}).AnyTimes()
+				}),
+				Result("valid", func(ctx context.Context, mck Mock) {
+					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefMachine.Spec.CredentialsRef, credentialsRefMachine.GetNamespace())
+					require.NoError(t, err)
+					assert.Equal(t, []byte("token"), str)
 				}),
 			),
 		),

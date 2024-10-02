@@ -24,8 +24,12 @@ import (
 
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
 
@@ -45,9 +49,13 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 				Region: "example",
 			},
 		}
-		region            = linodego.Region{ID: "test"}
-		capabilities      = []string{LinodePlacementGroupCapability}
-		capabilities_zero = []string{}
+		region                      = linodego.Region{ID: "test"}
+		capabilities                = []string{LinodePlacementGroupCapability}
+		capabilities_zero           = []string{}
+		invalidRegionError          = "spec.region: Not found: \"example\""
+		invalidRegionNoPGCapability = "spec.region: Invalid value: \"example\": no capability: Placement Group"
+		invalidPGLabelError         = "metadata.name: Invalid value: \"a20_b!4\": can only contain ASCII letters, numbers, hyphens (-), underscores (_) and periods (.), must start and end with a alphanumeric character"
+		validator                   = &linodePlacementGroupValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -59,23 +67,34 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					assert.NoError(t, pg.validateLinodePlacementGroup(ctx, mck.LinodeClient))
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+					require.Empty(t, errs)
 				}),
 			),
 		),
 		OneOf(
 			Path(Call("invalid region", func(ctx context.Context, mck Mock) {
 				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
-			})),
+			}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, invalidRegionError)
+					}
+				})),
 			Path(Call("region not supported", func(ctx context.Context, mck Mock) {
 				region := region
 				region.Capabilities = slices.Clone(capabilities_zero)
 				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
-			})),
+			}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, invalidRegionNoPGCapability)
+					}
+				})),
 		),
-		Result("error", func(ctx context.Context, mck Mock) {
-			assert.Error(t, pg.validateLinodePlacementGroup(ctx, mck.LinodeClient))
-		}),
+
 		OneOf(
 			Path(
 				Call("invalid placementgroup label", func(ctx context.Context, mck Mock) {
@@ -86,8 +105,84 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					pg := pg
 					pg.Name = "a20_b!4"
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, invalidPGLabelError)
+					}
+				}),
+			),
+		),
+	)
+}
 
-					assert.Error(t, pg.validateLinodePlacementGroup(ctx, mck.LinodeClient))
+func TestValidateCreateLinodePlacementGroup(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		pg = LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodePlacementGroupSpec{
+				Region: "example",
+			},
+		}
+
+		credentialsRefPG = LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodePlacementGroupSpec{
+				CredentialsRef: &corev1.SecretReference{
+					Name: "pg-credentials",
+				},
+				Region: "us-ord",
+			},
+		}
+		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
+		validator              = &linodePlacementGroupValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("invalid request", func(ctx context.Context, mck Mock) {
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &pg)
+					assert.ErrorContains(t, err, expectedErrorSubString)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("verfied linodeClient", func(ctx context.Context, mck Mock) {
+					mockK8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
+						DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+							cred := corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "pg-credentials",
+									Namespace: "example",
+								},
+								Data: map[string][]byte{
+									"apiToken": []byte("token"),
+								},
+							}
+							*obj = cred
+
+							return nil
+						}).AnyTimes()
+				}),
+				Result("valid", func(ctx context.Context, mck Mock) {
+					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefPG.Spec.CredentialsRef, credentialsRefPG.GetNamespace())
+					require.NoError(t, err)
+					assert.Equal(t, []byte("token"), str)
 				}),
 			),
 		),

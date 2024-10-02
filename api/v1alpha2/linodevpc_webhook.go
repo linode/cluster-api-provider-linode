@@ -31,8 +31,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
@@ -74,68 +74,88 @@ func mustParseIPSet(cidrs ...string) *netipx.IPSet {
 // log is for logging in this package.
 var linodevpclog = logf.Log.WithName("linodevpc-resource")
 
+type linodeVPCValidator struct {
+	Client client.Client
+}
+
 // SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *LinodeVPC) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
+		WithValidator(&linodeVPCValidator{Client: mgr.GetClient()}).
 		Complete()
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable update and deletion validation.
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodevpc,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs,verbs=create,versions=v1alpha2,name=validation.linodevpc.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &LinodeVPC{}
-
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *LinodeVPC) ValidateCreate() (admission.Warnings, error) {
-	linodevpclog.Info("validate create", "name", r.Name)
+func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	vpc, ok := obj.(*LinodeVPC)
+	if !ok {
+		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
+	}
+	spec := vpc.Spec
+	linodevpclog.Info("validate create", "name", vpc.Name)
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultWebhookTimeout)
-	defer cancel()
+	var linodeclient LinodeClient = defaultLinodeClient
 
-	return nil, r.validateLinodeVPC(ctx, &defaultLinodeClient)
+	if spec.CredentialsRef != nil {
+		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, vpc.GetNamespace())
+		if err != nil {
+			linodevpclog.Error(err, "failed getting credentials from secret ref", "name", vpc.Name)
+			return nil, err
+		}
+		linodevpclog.Info("creating a verified linode client for create request", "name", vpc.Name)
+		linodeclient.SetToken(string(apiToken))
+	}
+	// TODO: instrument with tracing, might need refactor to preserve readibility
+	var errs field.ErrorList
+
+	if err := r.validateLinodeVPCSpec(ctx, linodeclient, spec); err != nil {
+		errs = slices.Concat(errs, err)
+	}
+
+	if len(errs) == 0 {
+		return nil, nil
+	}
+	return nil, apierrors.NewInvalid(
+		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
+		vpc.Name, errs)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *LinodeVPC) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	linodevpclog.Info("validate update", "name", r.Name)
+func (r *linodeVPCValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	old, ok := oldObj.(*LinodeVPC)
+	if !ok {
+		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
+	}
+	linodevpclog.Info("validate update", "name", old.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *LinodeVPC) ValidateDelete() (admission.Warnings, error) {
-	linodevpclog.Info("validate delete", "name", r.Name)
+func (r *linodeVPCValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	c, ok := obj.(*LinodeVPC)
+	if !ok {
+		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
+	}
+	linodevpclog.Info("validate delete", "name", c.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
 }
 
-func (r *LinodeVPC) validateLinodeVPC(ctx context.Context, client LinodeClient) error {
+func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient LinodeClient, spec LinodeVPCSpec) field.ErrorList {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if err := r.validateLinodeVPCSpec(ctx, client); err != nil {
-		errs = slices.Concat(errs, err)
-	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-	return apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
-		r.Name, errs)
-}
-
-func (r *LinodeVPC) validateLinodeVPCSpec(ctx context.Context, client LinodeClient) field.ErrorList {
-	// TODO: instrument with tracing, might need refactor to preserve readibility
-	var errs field.ErrorList
-
-	if err := validateRegion(ctx, client, r.Spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
+	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
 		errs = append(errs, err)
 	}
-	if err := r.validateLinodeVPCSubnets(); err != nil {
+	if err := r.validateLinodeVPCSubnets(spec); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -145,7 +165,7 @@ func (r *LinodeVPC) validateLinodeVPCSpec(ctx context.Context, client LinodeClie
 	return errs
 }
 
-func (r *LinodeVPC) validateLinodeVPCSubnets() field.ErrorList {
+func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec LinodeVPCSpec) field.ErrorList {
 	var (
 		errs    field.ErrorList
 		builder netipx.IPSetBuilder
@@ -153,7 +173,7 @@ func (r *LinodeVPC) validateLinodeVPCSubnets() field.ErrorList {
 		labels  = []string{}
 	)
 
-	for i, subnet := range r.Spec.Subnets {
+	for i, subnet := range spec.Subnets {
 		var (
 			label     = subnet.Label
 			labelPath = field.NewPath("spec").Child("Subnets").Index(i).Child("Label")
