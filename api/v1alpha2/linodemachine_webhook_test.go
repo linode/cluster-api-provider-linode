@@ -57,7 +57,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 		plan                                        = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
 		plan_zero                                   = linodego.LinodeType{Disk: 0}
 		plan_max                                    = linodego.LinodeType{Disk: math.MaxInt}
-		expectedErrorSubStringOSDisk                = "spec.dataDisks.sdc: Invalid value: \"1G\": sum disk sizes exceeds plan storage: 2G"
+		expectedErrorSubStringOSDisk                = "Invalid value: \"1G\": sum disk sizes exceeds plan storage: 2G"
 		expectedErrorSubStringOSDiskDataDiskInvalid = "spec.dataDisks.sda: Forbidden: allowed device paths: [sdb sdc sdd sde sdf sdg sdh]"
 		expectedErrorSubStringOSDiskOSDiskInvalid   = "spec.osDisk: Invalid value: \"0\": invalid size"
 		validator                                   = &linodeMachineValidator{}
