@@ -382,6 +382,9 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 
 	cScope := &scope.ClusterScope{
 		LinodeCluster: &linodeCluster,
+		Cluster: &clusterv1.Cluster{
+			ObjectMeta: metadata,
+		},
 	}
 
 	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
@@ -391,7 +394,23 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 	ctlrSuite.Run(
 		OneOf(
 			Path(
+				Call("cluster with vlan is deleted", func(ctx context.Context, mck Mock) {
+					cScope.LinodeCluster.Spec.Network.UseVlan = true
+					cScope.LinodeClient = mck.LinodeClient
+					cScope.Client = mck.K8sClient
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+					mck.K8sClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+					mck.LinodeClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				}),
+				Result("cluster with vlan deleted", func(ctx context.Context, mck Mock) {
+					reconciler.Client = mck.K8sClient
+					err := reconciler.reconcileDelete(ctx, logr.Logger{}, cScope)
+					Expect(err).NotTo(HaveOccurred())
+				}),
+			),
+			Path(
 				Call("cluster is deleted", func(ctx context.Context, mck Mock) {
+					cScope.LinodeCluster.Spec.Network.UseVlan = false
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.Client = mck.K8sClient
 					mck.LinodeClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
