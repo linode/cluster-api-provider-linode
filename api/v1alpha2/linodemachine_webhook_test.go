@@ -52,13 +52,15 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
-		disk      = InstanceDisk{Size: resource.MustParse("1G")}
-		disk_zero = InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
-		plan      = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
-		plan_zero = linodego.LinodeType{Disk: 0}
-		plan_max  = linodego.LinodeType{Disk: math.MaxInt}
-
-		validator = &linodeMachineValidator{}
+		disk                                        = InstanceDisk{Size: resource.MustParse("1G")}
+		disk_zero                                   = InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
+		plan                                        = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
+		plan_zero                                   = linodego.LinodeType{Disk: 0}
+		plan_max                                    = linodego.LinodeType{Disk: math.MaxInt}
+		expectedErrorSubStringOSDisk                = "spec.dataDisks.sdc: Invalid value: \"1G\": sum disk sizes exceeds plan storage: 2G"
+		expectedErrorSubStringOSDiskDataDiskInvalid = "spec.dataDisks.sda: Forbidden: allowed device paths: [sdb sdc sdd sde sdf sdg sdh]"
+		expectedErrorSubStringOSDiskOSDiskInvalid   = "spec.osDisk: Invalid value: \"0\": invalid size"
+		validator                                   = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -127,7 +129,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine.Spec.DataDisks = map[string]*InstanceDisk{"sdb": disk.DeepCopy(), "sdc": disk.DeepCopy()}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
 				}),
 			),
@@ -141,7 +143,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine.Spec.DataDisks = map[string]*InstanceDisk{"sda": disk.DeepCopy()}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskDataDiskInvalid)
 					}
 				}),
 			),
@@ -155,7 +157,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine.Spec.OSDisk = disk_zero.DeepCopy()
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskOSDiskInvalid)
 					}
 				}),
 			),
