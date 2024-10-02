@@ -46,14 +46,16 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 				Namespace: "example",
 			},
 			Spec: LinodePlacementGroupSpec{
-				Region: "us-sea",
+				Region: "example",
 			},
 		}
-		region            = linodego.Region{ID: "test"}
-		capabilities      = []string{LinodePlacementGroupCapability}
-		capabilities_zero = []string{}
-
-		validator = &linodePlacementGroupValidator{}
+		region                      = linodego.Region{ID: "test"}
+		capabilities                = []string{LinodePlacementGroupCapability}
+		capabilities_zero           = []string{}
+		invalidRegionError          = "spec.region: Not found: \"example\""
+		invalidRegionNoPGCapability = "spec.region: Invalid value: \"example\": no capability: Placement Group"
+		invalidPGLabelError         = "metadata.name: Invalid value: \"a20_b!4\": can only contain ASCII letters, numbers, hyphens (-), underscores (_) and periods (.), must start and end with a alphanumeric character"
+		validator                   = &linodePlacementGroupValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -73,19 +75,26 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 		OneOf(
 			Path(Call("invalid region", func(ctx context.Context, mck Mock) {
 				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
-			})),
+			}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, invalidRegionError)
+					}
+				})),
 			Path(Call("region not supported", func(ctx context.Context, mck Mock) {
 				region := region
 				region.Capabilities = slices.Clone(capabilities_zero)
 				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
-			})),
+			}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, invalidRegionNoPGCapability)
+					}
+				})),
 		),
-		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
-			for _, err := range errs {
-				require.Error(t, err)
-			}
-		}),
+
 		OneOf(
 			Path(
 				Call("invalid placementgroup label", func(ctx context.Context, mck Mock) {
@@ -98,7 +107,7 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 					pg.Name = "a20_b!4"
 					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.ObjectMeta.Name)
 					for _, err := range errs {
-						require.Error(t, err)
+						assert.ErrorContains(t, err, invalidPGLabelError)
 					}
 				}),
 			),
