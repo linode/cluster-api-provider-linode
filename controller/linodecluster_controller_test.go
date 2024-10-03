@@ -398,8 +398,6 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 					cScope.LinodeCluster.Spec.Network.UseVlan = true
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.Client = mck.K8sClient
-					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-					mck.K8sClient.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 					mck.LinodeClient.EXPECT().DeleteNodeBalancer(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
 				Result("cluster with vlan deleted", func(ctx context.Context, mck Mock) {

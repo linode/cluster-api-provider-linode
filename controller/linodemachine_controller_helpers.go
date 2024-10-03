@@ -31,7 +31,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/linode/linodego"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -372,21 +371,6 @@ func getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger
 	}
 
 	return *linodeFirewall.Spec.FirewallID, nil
-}
-
-func createIPsConfigMap(ctx context.Context, machineScope *scope.MachineScope, ip string) error {
-	return machineScope.Client.Create(ctx, &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-ips", machineScope.Cluster.Name),
-			Namespace: machineScope.Cluster.Namespace,
-			Labels: map[string]string{
-				"clusterctl.cluster.x-k8s.io/move": "true",
-			},
-		},
-		Data: map[string]string{
-			machineScope.LinodeMachine.Name: ip,
-		},
-	})
 }
 
 func getVlanInterfaceConfig(machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
