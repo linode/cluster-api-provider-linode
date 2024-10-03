@@ -144,5 +144,6 @@ patches:
       - op: remove
         path: /spec/vpcRef
       - op: add
-        path: /spec/useVlan
-        value: true
+        path: /spec/network
+        value:
+          useVlan: true
