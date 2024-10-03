@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	b64 "encoding/base64"
 	"encoding/gob"
@@ -466,6 +467,20 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 	return &createConfig
 }
 
+func compressUserData(bootstrapData []byte) ([]byte, error) {
+	var userDataBuff bytes.Buffer
+	var err error
+	gz := gzip.NewWriter(&userDataBuff)
+	defer func(gz *gzip.Writer) {
+		err = gz.Close()
+	}(gz)
+	if _, err := gz.Write(bootstrapData); err != nil {
+		return nil, err
+	}
+	err = gz.Close()
+	return userDataBuff.Bytes(), err
+}
+
 func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
 	bootstrapData, err := machineScope.GetBootstrapData(ctx)
 	if err != nil {
@@ -473,18 +488,24 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 
 		return err
 	}
-	if len(bootstrapData) > maxBootstrapDataBytes {
-		err = errors.New("bootstrap data too large")
-		logger.Error(err, "decoded bootstrap data exceeds size limit",
-			"limit", maxBootstrapDataBytes,
-		)
-
-		return err
-	}
 
 	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
+		userData, err := compressUserData(bootstrapData)
+		if err != nil {
+			logger.Error(err, "failed to compress bootstrap data")
+
+			return err
+		}
+		if len(userData) > maxBootstrapDataBytes {
+			err = errors.New("compressed bootstrap data too large")
+			logger.Error(err, "compressed bootstrap data exceeds cloud-init size limit",
+				"limit", maxBootstrapDataBytes,
+			)
+
+			return err
+		}
 		createConfig.Metadata = &linodego.InstanceMetadataOptions{
-			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
+			UserData: b64.StdEncoding.EncodeToString(userData),
 		}
 	} else {
 		logger.Info("using StackScripts for bootstrapping")
