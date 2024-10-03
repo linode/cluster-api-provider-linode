@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -225,17 +226,11 @@ func (r *LinodeClusterReconciler) cleanupVlanConfigmaps(ctx context.Context, log
 		return nil
 	}
 
-	var ipsMap corev1.ConfigMap
-	err := clusterScope.Client.Get(ctx, client.ObjectKey{Namespace: clusterScope.Cluster.Namespace, Name: fmt.Sprintf("%s-ips", clusterScope.Cluster.Name)}, &ipsMap)
-	if err != nil && !apierrors.IsNotFound(err) {
-		logger.Error(err, "failed to get ips configmap")
-		return err
-	}
-	err = clusterScope.Client.Delete(ctx, &ipsMap)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err := clusterScope.Client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-ips", clusterScope.Cluster.Name), Namespace: clusterScope.Cluster.Namespace}}); err != nil && !apierrors.IsNotFound(err) {
 		logger.Error(err, "failed to delete ips configmap")
 		return err
 	}
+
 	return nil
 }
 
