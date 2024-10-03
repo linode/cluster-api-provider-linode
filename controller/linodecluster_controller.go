@@ -221,18 +221,20 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 }
 
 func (r *LinodeClusterReconciler) cleanupVlanConfigmaps(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
-	if clusterScope.LinodeCluster.Spec.Network.UseVlan {
-		var ipsMap corev1.ConfigMap
-		err := clusterScope.Client.Get(ctx, client.ObjectKey{Namespace: clusterScope.Cluster.Namespace, Name: fmt.Sprintf("%s-ips", clusterScope.Cluster.Name)}, &ipsMap)
-		if err != nil && !apierrors.IsNotFound(err) {
-			logger.Error(err, "failed to get ips configmap")
-			return err
-		}
-		err = clusterScope.Client.Delete(ctx, &ipsMap)
-		if err != nil && !apierrors.IsNotFound(err) {
-			logger.Error(err, "failed to delete ips configmap")
-			return err
-		}
+	if !clusterScope.LinodeCluster.Spec.Network.UseVlan {
+		return nil
+	}
+
+	var ipsMap corev1.ConfigMap
+	err := clusterScope.Client.Get(ctx, client.ObjectKey{Namespace: clusterScope.Cluster.Namespace, Name: fmt.Sprintf("%s-ips", clusterScope.Cluster.Name)}, &ipsMap)
+	if err != nil && !apierrors.IsNotFound(err) {
+		logger.Error(err, "failed to get ips configmap")
+		return err
+	}
+	err = clusterScope.Client.Delete(ctx, &ipsMap)
+	if err != nil && !apierrors.IsNotFound(err) {
+		logger.Error(err, "failed to delete ips configmap")
+		return err
 	}
 	return nil
 }
