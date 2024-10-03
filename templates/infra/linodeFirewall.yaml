@@ -37,18 +37,16 @@ spec:
     - action: ACCEPT
       addresses:
         ipv4:
-          - 0.0.0.0/0
-        ipv6:
-          - ::/0
-      ports: 6443, 8132
+          - 192.168.255.0/24
+      ports: "6443"
       protocol: TCP
       label: inbound-api-server
-      description: accept all api server and Konnectivity related traffic
+      description: accept all api server related traffic from nodebalancers
     - action: ACCEPT
       addresses:
         ipv4:
           - 192.168.255.0/24
-      ports: 30000-30100
+      ports: 30000-32767
       protocol: TCP
       label: accept-NodeBalancer
       description: accept traffic from the entire NodeBalancer CIDR to the NodePort service range
