@@ -26,7 +26,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -221,19 +220,6 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 	return nil
 }
 
-func (r *LinodeClusterReconciler) cleanupVlanConfigmaps(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
-	if !clusterScope.LinodeCluster.Spec.Network.UseVlan {
-		return nil
-	}
-
-	if err := clusterScope.Client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("%s-ips", clusterScope.Cluster.Name), Namespace: clusterScope.Cluster.Namespace}}); err != nil && !apierrors.IsNotFound(err) {
-		logger.Error(err, "failed to delete ips configmap")
-		return err
-	}
-
-	return nil
-}
-
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
 	switch {
@@ -276,9 +262,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		return errors.New("waiting for associated LinodeMachine objects to be deleted")
 	}
 
-	if err := r.cleanupVlanConfigmaps(ctx, logger, clusterScope); err != nil {
-		return err
-	}
+	util.DeleteClusterIPs(clusterScope.Cluster.Name, clusterScope.Cluster.Namespace)
 
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")
