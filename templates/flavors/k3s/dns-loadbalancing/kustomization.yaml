@@ -63,7 +63,7 @@ patches:
             ports: "${APISERVER_PORT:=6443}"
             protocol: TCP
             label: inbound-api-server
-            description: accept all api server and konnectivity related traffic from nodebalancers
+            description: accept all api server related traffic from nodebalancers
           - action: ACCEPT
             addresses:
               ipv4:
