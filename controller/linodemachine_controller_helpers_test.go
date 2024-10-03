@@ -17,7 +17,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -395,7 +394,7 @@ func TestGetVlanInterfaceConfig(t *testing.T) {
 		name: "No errors - getVlanInterfaceConfig gets ip",
 		machineScope: &scope.MachineScope{
 			Cluster: &v1beta1.Cluster{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
 			},
@@ -444,7 +443,7 @@ func TestGetVlanInterfaceConfig(t *testing.T) {
 		name: "No config map exists previously - getVlanInterfaceConfig creates one",
 		machineScope: &scope.MachineScope{
 			Cluster: &v1beta1.Cluster{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
 			},
@@ -481,7 +480,7 @@ func TestGetVlanInterfaceConfig(t *testing.T) {
 		name: "configmap exists, get a conflict",
 		machineScope: &scope.MachineScope{
 			Cluster: &v1beta1.Cluster{
-				ObjectMeta: v1.ObjectMeta{
+				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
 			},
@@ -544,7 +543,7 @@ func TestGetVlanInterfaceConfig(t *testing.T) {
 			logger := logr.Logger{}
 
 			config, err := getVlanInterfaceConfig(context.Background(), testcase.machineScope, logger)
-			assert.Nil(t, err)
+			require.NoError(t, err, "Failed to get VlanInterfaceConfig")
 			assert.Equal(t, testcase.wantIfaceConfig.IPAMAddress, config.IPAMAddress)
 			assert.Equal(t, testcase.wantIfaceConfig.Label, config.Label)
 			assert.Equal(t, testcase.wantIfaceConfig.Purpose, config.Purpose)
