@@ -38,7 +38,7 @@ spec:
       addresses:
         ipv4:
           - 192.168.255.0/24
-      ports: "${APISERVER_PORT:=6443}"
+      ports: ${APISERVER_PORT:="6443"}
       protocol: TCP
       label: inbound-api-server
       description: accept all api server related traffic from nodebalancers
