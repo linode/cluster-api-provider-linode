@@ -14,12 +14,12 @@ func TestIgnoreLinodeAPIError(t *testing.T) {
 	tests := []struct {
 		name         string
 		err          error
-		code         int
+		code         []int
 		shouldFilter bool
 	}{{
 		name:         "Not Linode API error",
 		err:          errors.New("foo"),
-		code:         0,
+		code:         []int{0},
 		shouldFilter: false,
 	}, {
 		name: "Ignore not found Linode API error",
@@ -28,7 +28,7 @@ func TestIgnoreLinodeAPIError(t *testing.T) {
 			Code:     400,
 			Message:  "not found",
 		},
-		code:         400,
+		code:         []int{400},
 		shouldFilter: true,
 	}, {
 		name: "Don't ignore not found Linode API error",
@@ -37,14 +37,32 @@ func TestIgnoreLinodeAPIError(t *testing.T) {
 			Code:     400,
 			Message:  "not found",
 		},
-		code:         500,
+		code:         []int{500},
 		shouldFilter: false,
+	}, {
+		name: "Don't ignore with 2+ API errors",
+		err: linodego.Error{
+			Response: nil,
+			Code:     400,
+			Message:  "not found",
+		},
+		code:         []int{500, 418},
+		shouldFilter: false,
+	}, {
+		name: "Ignore with 2+ API errors",
+		err: linodego.Error{
+			Response: nil,
+			Code:     418,
+			Message:  "not found",
+		},
+		code:         []int{500, 418},
+		shouldFilter: true,
 	}}
 	for _, tt := range tests {
 		testcase := tt
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
-			err := IgnoreLinodeAPIError(testcase.err, testcase.code)
+			err := IgnoreLinodeAPIError(testcase.err, testcase.code...)
 			if testcase.shouldFilter && err != nil {
 				t.Error("expected err but got nil")
 			}
