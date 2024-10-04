@@ -24,46 +24,56 @@ import (
 )
 
 var (
-	vlanIPsMu sync.Mutex
+	vlanIPsMu sync.RWMutex
 	// vlanIPsMap stores clusterName and a list of VlanIPs assigned to that cluster
-	vlanIPsMap  = make(map[string][]string, 0)
+	vlanIPsMap  = make(map[string]*ClusterIPs, 0)
 	vlanIPRange = "10.0.0.0/8"
 )
 
-// GetNextVlanIP returns the next available IP for a cluster
-func GetNextVlanIP(clusterName, namespace string) string {
+type ClusterIPs struct {
+	mu  sync.RWMutex
+	ips []string
+}
+
+func getClusterIPs(key string) *ClusterIPs {
 	vlanIPsMu.Lock()
 	defer vlanIPsMu.Unlock()
-
-	key := fmt.Sprintf("%s.%s", namespace, clusterName)
 	ips, exists := vlanIPsMap[key]
 	if !exists {
-		ips = []string{}
+		ips = &ClusterIPs{
+			ips: []string{},
+		}
 	}
-	nextIP := getNextIP(ips)
-	ips = append(ips, nextIP)
-	vlanIPsMap[key] = ips
+	return ips
+}
 
-	return nextIP
+func (c *ClusterIPs) getNextIP() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	prefix := netip.MustParsePrefix(vlanIPRange)
+	currentIp := prefix.Addr().Next()
+
+	ipString := currentIp.String()
+	for {
+		if !slices.Contains(c.ips, ipString) {
+			break
+		}
+		currentIp = currentIp.Next()
+		ipString = currentIp.String()
+	}
+	c.ips = append(c.ips, ipString)
+	return ipString
+}
+
+// GetNextVlanIP returns the next available IP for a cluster
+func GetNextVlanIP(clusterName, namespace string) string {
+	key := fmt.Sprintf("%s.%s", namespace, clusterName)
+	clusterIPs := getClusterIPs(key)
+	return clusterIPs.getNextIP()
 }
 
 func DeleteClusterIPs(clusterName, namespace string) {
 	vlanIPsMu.Lock()
 	defer vlanIPsMu.Unlock()
 	delete(vlanIPsMap, fmt.Sprintf("%s.%s", namespace, clusterName))
-}
-
-func getNextIP(ips []string) string {
-	prefix := netip.MustParsePrefix(vlanIPRange)
-	currentIp := prefix.Addr().Next()
-
-	ipString := currentIp.String()
-	for {
-		if !slices.Contains(ips, ipString) {
-			break
-		}
-		currentIp = currentIp.Next()
-		ipString = currentIp.String()
-	}
-	return ipString
 }
