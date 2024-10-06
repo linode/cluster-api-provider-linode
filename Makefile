@@ -208,7 +208,7 @@ endif
 .PHONY: tilt-cluster
 tilt-cluster: ctlptl tilt kind clusterctl
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
-	$(TILT) up --stream
+	$(TILT) up
 
 ## --------------------------------------
 ## Release
