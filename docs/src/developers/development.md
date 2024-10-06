@@ -37,6 +37,19 @@ There are no requirements since development dependencies are fetched as
 needed via the make targets, but a recommendation is to
 [install Devbox](https://jetpack.io/devbox/docs/installing_devbox/)
 
+#### Optional Environment Variables
+```bash
+export LINODE_URL= # Default unset. Set this to talk to a specific linode api endpoint
+export LINODE_CA= # Default unset. Set this to use a specific CA when talking to the linode API
+export CAPL_DEBUG=false # Default false. Set this to true to enable delve integration
+export INSTALL_K3S_PROVIDER=false # Default false. Set this to true to enable k3s capi provider installation
+export INSTALL_RKE2_PROVIDER=false # Default false. Set this to true to enable the RKE2 capi provider installation
+export INSTALL_HELM_PROVIDER=true # Default true. Set this to true to enable CAAPH provider installation
+export INSTALL_KUBEADM_PROVIDER=true # Default true. Set this to true to enable kubeadm CAPI provider installation
+export SKIP_DOCKER_BUILD=false # Default false. Set this to true to skip local docker builds of CAPL images
+export CAPL_MONITORING=false # Default false. Set this to true to install the kube-prometheus-stack and capl serviceMonitor
+```
+
 ### Clone the source code
 
 ```sh

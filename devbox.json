@@ -9,7 +9,7 @@
     "govulncheck@latest",
     "husky@latest",
     "kind@latest",
-    "kubernetes-controller-tools@latest",
+    "kubernetes-controller-tools@0.14.0",
     "kustomize@latest",
     "kuttl@latest",
     "nilaway@latest",
