@@ -262,6 +262,8 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		return errors.New("waiting for associated LinodeMachine objects to be deleted")
 	}
 
+	util.DeleteClusterIPs(clusterScope.Cluster.Name, clusterScope.Cluster.Namespace)
+
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")
 		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)

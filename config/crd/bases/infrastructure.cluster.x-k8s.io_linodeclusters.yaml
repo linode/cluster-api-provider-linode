@@ -403,6 +403,13 @@ spec:
                   nodeBalancerID:
                     description: NodeBalancerID is the id of NodeBalancer.
                     type: integer
+                  useVlan:
+                    description: UseVlan provisions a cluster that uses VLANs instead
+                      of VPCs. IPAM is managed internally.
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
                 type: object
               region:
                 description: The Linode Region the LinodeCluster lives in.

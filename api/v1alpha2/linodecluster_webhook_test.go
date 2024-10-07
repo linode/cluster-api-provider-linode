@@ -225,3 +225,65 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 		}),
 	)
 }
+
+func TestValidateVlanAndVPC(t *testing.T) {
+	t.Parallel()
+
+	var (
+		validCluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "us-ord",
+				Network: NetworkSpec{
+					UseVlan: true,
+				},
+			},
+		}
+		inValidCluster = LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: LinodeClusterSpec{
+				Region: "us-ord",
+				Network: NetworkSpec{
+					UseVlan: true,
+				},
+				VPCRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeVPC",
+				},
+			},
+		}
+		validator = &linodeClusterValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validCluster.Spec)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(Call("vlan and VPC set", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			})),
+		),
+		Result("error", func(ctx context.Context, mck Mock) {
+			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, inValidCluster.Spec)
+			for _, err := range errs {
+				require.Contains(t, err.Error(), "Cannot use VLANs and VPCs together")
+			}
+		}),
+	)
+}
