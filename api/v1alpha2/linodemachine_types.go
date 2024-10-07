@@ -64,9 +64,8 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	BackupsEnabled bool `json:"backupsEnabled,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	PrivateIP *bool `json:"privateIP,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Tags []string `json:"tags,omitempty"`
+	PrivateIP *bool    `json:"privateIP,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallID,omitempty"`
 	// OSDisk is configuration for the root disk that includes the OS,
