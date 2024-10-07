@@ -19,6 +19,7 @@ package util
 import (
 	"net/http"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -210,6 +211,23 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "correct headers in response",
+			fields: &PostRequestCounter{
+				ReqRemaining: 8,
+				RefreshTime:  int(time.Now().Unix()),
+			},
+			args: &resty.Response{
+				Request: &resty.Request{
+					Method: http.MethodPost,
+					URL:    "/v4/linode/instances",
+				},
+				RawResponse: &http.Response{
+					Header: http.Header{"X-Ratelimit-Remaining": []string{"10"}, "X-Ratelimit-Reset": []string{strconv.Itoa(int(time.Now().Unix()) + 100)}},
+				},
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -220,6 +238,45 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			}
 			if err := c.ApiResponseRatelimitCounter(tt.args); (err != nil) != tt.wantErr {
 				t.Errorf("PostRequestCounter.ApiResponseRatelimitCounter() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestPostRequestCounter_RetryAfter(t *testing.T) {
+	t.Parallel()
+	currTime := time.Now().Unix()
+	tests := []struct {
+		name   string
+		fields *PostRequestCounter
+		want   time.Duration
+	}{
+		{
+			name: "when current time is greater than refreshTime",
+			fields: &PostRequestCounter{
+				ReqRemaining: 7,
+				RefreshTime:  int(currTime - 100),
+			},
+			want: 0,
+		},
+		{
+			name: "when refreshTime is not yet reached",
+			fields: &PostRequestCounter{
+				ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
+				RefreshTime:  int(currTime + 100),
+			},
+			want: 101 * time.Second,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := &PostRequestCounter{
+				ReqRemaining: tt.fields.ReqRemaining,
+				RefreshTime:  tt.fields.RefreshTime,
+			}
+			if got := c.RetryAfter(); got != tt.want {
+				t.Errorf("PostRequestCounter.RetryAfter() = %v, want %v", got, tt.want)
 			}
 		})
 	}

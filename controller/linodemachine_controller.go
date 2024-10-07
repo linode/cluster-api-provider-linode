@@ -321,9 +321,9 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		return retryIfTransient(err)
 	}
 
-	linodeInstance, err := createInstance(ctx, logger, machineScope, createOpts)
+	linodeInstance, retryAfter, err := createInstance(ctx, logger, machineScope, createOpts)
 	if errors.Is(err, util.ErrRateLimit) {
-		return ctrl.Result{RequeueAfter: reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
+		return ctrl.Result{RequeueAfter: retryAfter}, nil
 	}
 
 	if err != nil {

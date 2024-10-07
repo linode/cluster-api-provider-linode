@@ -58,6 +58,13 @@ func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) e
 	if err != nil {
 		return err
 	}
+
+	// TODO: remove when rate-limits are simplified
+	currTime := time.Now().Unix()
+	secondaryLimitRefreshTime := c.RefreshTime - int(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds())
+	if c.ReqRemaining >= reconciler.SecondaryPOSTRequestLimit && currTime <= int64(secondaryLimitRefreshTime) {
+		c.RefreshTime = secondaryLimitRefreshTime
+	}
 	return nil
 }
 
@@ -65,18 +72,16 @@ func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) e
 func (c *PostRequestCounter) IsPOSTLimitReached() bool {
 	// TODO: Once linode API adjusts rate-limits, remove secondary rate limit and simplify accordingly
 	currTime := time.Now().Unix()
+	return currTime <= int64(c.RefreshTime) && (c.ReqRemaining == 0 || c.ReqRemaining == reconciler.SecondaryPOSTRequestLimit)
+}
 
-	if c.ReqRemaining == 0 {
-		if currTime <= int64(c.RefreshTime) {
-			return true
-		}
+// RetryAfter returns how long to wait in seconds for rate-limit to reset
+func (c *PostRequestCounter) RetryAfter() time.Duration {
+	currTime := time.Now().Unix()
+	if currTime > int64(c.RefreshTime) {
+		return 0
 	}
-
-	secondaryLimitRefreshTime := c.RefreshTime - int(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds())
-	if c.ReqRemaining <= reconciler.SecondaryPOSTRequestLimit && currTime <= int64(secondaryLimitRefreshTime) {
-		return true
-	}
-	return false
+	return time.Duration(c.RefreshTime-int(currTime)+1) * time.Second
 }
 
 // GetPostReqCounter returns pointer to PostRequestCounter for a given token hash
