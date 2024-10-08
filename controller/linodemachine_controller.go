@@ -231,7 +231,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	return r.reconcileCreate(ctx, logger, machineScope)
 }
 
-//nolint:cyclop // can't make it simpler with existing API
+//nolint:cyclop,gocognit // can't make it simpler with existing API
 func (r *LinodeMachineReconciler) reconcileCreate(
 	ctx context.Context,
 	logger logr.Logger,
@@ -245,11 +245,15 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady) && machineScope.LinodeMachine.Spec.ProviderID == nil {
-		res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, machineScope)
-		if err != nil || !res.IsZero() {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, string("linode firewall not yet available"), clusterv1.ConditionSeverityError, "")
-			return res, err
+		if machineScope.LinodeMachine.Spec.FirewallRef != nil {
+			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, machineScope)
+			if err != nil || !res.IsZero() {
+				conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, string("linode firewall not yet available"), clusterv1.ConditionSeverityError, "")
+				return res, err
+			}
 		}
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady)
+		return ctrl.Result{}, nil
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured) && machineScope.LinodeMachine.Spec.ProviderID == nil {
@@ -298,32 +302,29 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
-	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
-		name := machineScope.LinodeMachine.Spec.FirewallRef.Name
-		namespace := machineScope.LinodeMachine.Spec.FirewallRef.Namespace
-		if namespace == "" {
-			namespace = machineScope.LinodeMachine.Namespace
-		}
-		linodeFirewall := infrav1alpha2.LinodeFirewall{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-				Name:      name,
-			},
-		}
-		if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeFirewall), &linodeFirewall); err != nil {
-			logger.Error(err, "Failed to find linode Firewall")
-			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-				ConditionPreflightLinodeFirewallReady, string(cerrs.CreateMachineError), err.Error(),
-				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-		} else if !linodeFirewall.Status.Ready || linodeFirewall.Spec.FirewallID == nil {
-			logger.Info("Linode firewall's status not ready or missing firewall id")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-		}
+	name := machineScope.LinodeMachine.Spec.FirewallRef.Name
+	namespace := machineScope.LinodeMachine.Spec.FirewallRef.Namespace
+	if namespace == "" {
+		namespace = machineScope.LinodeMachine.Namespace
 	}
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady)
+	linodeFirewall := infrav1alpha2.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeFirewall), &linodeFirewall); err != nil {
+		logger.Error(err, "Failed to find linode Firewall")
+		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+			ConditionPreflightLinodeFirewallReady, string(cerrs.CreateMachineError), err.Error(),
+			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+	} else if !linodeFirewall.Status.Ready || linodeFirewall.Spec.FirewallID == nil {
+		logger.Info("Linode firewall's status not ready or missing firewall id")
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+	}
 	return ctrl.Result{}, nil
 }
 

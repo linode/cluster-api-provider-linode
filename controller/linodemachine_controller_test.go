@@ -202,7 +202,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
+		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+		Expect(err).NotTo(HaveOccurred())
 
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
@@ -263,11 +266,14 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			reconciler.ReconcileTimeout = time.Nanosecond
 
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(res).NotTo(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("time is up"))
 
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
 			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Severity).To(Equal(clusterv1.ConditionSeverityError))
@@ -307,6 +313,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			mScope.PatchHelper = patchHelper
 
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
@@ -443,7 +451,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
 
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
@@ -531,10 +542,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			mScope.PatchHelper = patchHelper
 
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
 			Expect(err).ToNot(HaveOccurred())
 
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
@@ -628,6 +642,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
@@ -794,7 +809,10 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
+		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+		Expect(err).NotTo(HaveOccurred())
 
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
@@ -936,6 +954,8 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						GetImage(ctx, gomock.Any()).
 						After(getRegion).
 						Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
+					_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
 					res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))

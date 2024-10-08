@@ -92,6 +92,13 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 	ctlrSuite.Run(
 		OneOf(
 			Path(
+				Call("vpcReady set", func(ctx context.Context, mck Mock) {
+				}),
+				Path(Result("no error when checking if vpc is configured", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).NotTo(HaveOccurred())
+				})),
 				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
@@ -207,8 +214,9 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
 					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeVPCReady))
 
 					By("checking NB id")
 					Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
@@ -293,6 +301,13 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 	ctlrSuite.Run(
 		OneOf(
 			Path(
+				Call("vpcReady set", func(ctx context.Context, mck Mock) {
+				}),
+				Path(Result("no error when checking if vpc is configured", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).NotTo(HaveOccurred())
+				})),
 				Call("cluster with dns loadbalancing is created", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.LinodeDomainsClient = mck.LinodeClient
@@ -321,8 +336,9 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
 					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeVPCReady))
 
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
@@ -556,6 +572,13 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 	ctlrSuite.Run(
 		OneOf(
 			Path(
+				Call("vpcReady set", func(ctx context.Context, mck Mock) {
+				}),
+				Path(Result("no error when checking if vpc is configured", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).NotTo(HaveOccurred())
+				})),
 				Call("cluster with dns loadbalancing is created", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.LinodeDomainsClient = mck.LinodeClient
@@ -590,8 +613,9 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
 					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeVPCReady))
 
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
