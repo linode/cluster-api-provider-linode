@@ -312,6 +312,11 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 		}
 		if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeFirewall), &linodeFirewall); err != nil {
 			logger.Error(err, "Failed to find linode Firewall")
+			if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+				ConditionPreflightLinodeFirewallReady, string(cerrs.CreateMachineError), err.Error(),
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 		} else if !linodeFirewall.Status.Ready || linodeFirewall.Spec.FirewallID == nil {
 			logger.Info("Linode firewall's status not ready or missing firewall id")

@@ -117,6 +117,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, clusterScope, logger)
 }
 
+//nolint:cyclop // can't make it simpler with existing API
 func (r *LinodeClusterReconciler) reconcile(
 	ctx context.Context,
 	clusterScope *scope.ClusterScope,
@@ -220,6 +221,11 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		}
 		if err := clusterScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
 			logger.Error(err, "Failed to fetch LinodeVPC")
+			if reconciler.RecordDecayingCondition(clusterScope.LinodeCluster,
+				ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), err.Error(),
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
+				return ctrl.Result{}, err
+			}
 			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 		} else if !linodeVPC.Status.Ready || linodeVPC.Spec.VPCID == nil {
 			logger.Info("LinodeVPC is not yet available")
