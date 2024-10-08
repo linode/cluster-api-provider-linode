@@ -29,6 +29,7 @@ import (
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -59,6 +60,7 @@ const (
 	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
+	ConditionPreflightLinodeFirewallReady       clusterv1.ConditionType = "PreflightLinodeFirewallReady"
 	ConditionPreflightMetadataSupportConfigured clusterv1.ConditionType = "PreflightMetadataSupportConfigured"
 	ConditionPreflightCreated                   clusterv1.ConditionType = "PreflightCreated"
 	ConditionPreflightRootDiskResizing          clusterv1.ConditionType = "PreflightRootDiskResizing"
@@ -214,7 +216,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	// Make sure bootstrap data is available and populated.
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap data secret is not yet available")
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured, WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
 	}
 
@@ -240,6 +242,14 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	if err := machineScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
 		return ctrl.Result{}, err
+	}
+
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+		res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, machineScope)
+		if err != nil || !res.IsZero() {
+			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, string("linode firewall not yet available"), clusterv1.ConditionSeverityError, "")
+			return res, err
+		}
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured) && machineScope.LinodeMachine.Spec.ProviderID == nil {
@@ -284,6 +294,31 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
+	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
+		name := machineScope.LinodeMachine.Spec.FirewallRef.Name
+		namespace := machineScope.LinodeMachine.Spec.FirewallRef.Namespace
+		if namespace == "" {
+			namespace = machineScope.LinodeMachine.Namespace
+		}
+		linodeFirewall := infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      name,
+			},
+		}
+		if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeFirewall), &linodeFirewall); err != nil {
+			logger.Error(err, "Failed to find linode Firewall")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+		} else if !linodeFirewall.Status.Ready || linodeFirewall.Spec.FirewallID == nil {
+			logger.Info("Linode firewall's status not ready or missing firewall id")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+		}
+	}
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady)
 	return ctrl.Result{}, nil
 }
 

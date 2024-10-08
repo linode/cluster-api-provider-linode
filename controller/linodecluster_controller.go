@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -49,7 +50,11 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-const lbTypeDNS string = "dns"
+const (
+	lbTypeDNS string = "dns"
+
+	ConditionPreflightLinodeVPCReady clusterv1.ConditionType = "PreflightLinodeVPCReady"
+)
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
 type LinodeClusterReconciler struct {
@@ -163,6 +168,14 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	// Create
+	if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
+		res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
+		if err != nil || !res.IsZero() {
+			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, string("linode vpc not yet available"), clusterv1.ConditionSeverityError, "")
+			return res, err
+		}
+	}
+
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
 			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
@@ -190,6 +203,32 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	return res, nil
+}
+
+func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
+	if clusterScope.LinodeCluster.Spec.VPCRef != nil {
+		name := clusterScope.LinodeCluster.Spec.VPCRef.Name
+		namespace := clusterScope.LinodeCluster.Spec.VPCRef.Namespace
+		if namespace == "" {
+			namespace = clusterScope.LinodeCluster.Namespace
+		}
+		linodeVPC := infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      name,
+			},
+		}
+		if err := clusterScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
+			logger.Error(err, "Failed to fetch LinodeVPC")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		} else if !linodeVPC.Status.Ready || linodeVPC.Spec.VPCID == nil {
+			logger.Info("LinodeVPC is not yet available")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		}
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "LinodeVPC is now available")
+	}
+	conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady)
+	return ctrl.Result{}, nil
 }
 
 func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.ClusterStatusError, err error, lcr *LinodeClusterReconciler) {
