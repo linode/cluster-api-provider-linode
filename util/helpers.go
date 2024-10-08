@@ -17,10 +17,12 @@ func Pointer[T any](t T) *T {
 }
 
 // IgnoreLinodeAPIError returns the error except matches to status code
-func IgnoreLinodeAPIError(err error, code int) error {
-	apiErr := linodego.Error{Code: code}
-	if apiErr.Is(err) {
-		err = nil
+func IgnoreLinodeAPIError(err error, codes ...int) error {
+	for _, code := range codes {
+		apiErr := linodego.Error{Code: code}
+		if apiErr.Is(err) {
+			return nil
+		}
 	}
 
 	return err
