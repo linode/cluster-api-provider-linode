@@ -29,6 +29,7 @@ import (
 )
 
 func TestGetPostReqCounter(t *testing.T) {
+	now := time.Now()
 	t.Parallel()
 	tests := []struct {
 		name      string
@@ -40,7 +41,7 @@ func TestGetPostReqCounter(t *testing.T) {
 			tokenHash: "abcdef",
 			want: &PostRequestCounter{
 				ReqRemaining: 5,
-				RefreshTime:  3,
+				RefreshTime:  now.Add(-100 * time.Second),
 			},
 		},
 		{
@@ -48,14 +49,14 @@ func TestGetPostReqCounter(t *testing.T) {
 			tokenHash: "uvwxyz",
 			want: &PostRequestCounter{
 				ReqRemaining: reconciler.DefaultPOSTRequestLimit,
-				RefreshTime:  0,
+				RefreshTime:  time.Time{},
 			},
 		},
 	}
 	for _, tt := range tests {
 		postRequestCounters["abcdef"] = &PostRequestCounter{
 			ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
-			RefreshTime:  3,
+			RefreshTime:  now.Add(-100 * time.Second),
 		}
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -67,6 +68,7 @@ func TestGetPostReqCounter(t *testing.T) {
 }
 
 func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
+	now := time.Now()
 	t.Parallel()
 	tests := []struct {
 		name   string
@@ -77,7 +79,7 @@ func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
 			name: "not reached rate limits",
 			fields: &PostRequestCounter{
 				ReqRemaining: 7,
-				RefreshTime:  int(time.Now().Unix()),
+				RefreshTime:  now,
 			},
 			want: false,
 		},
@@ -85,7 +87,7 @@ func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
 			name: "reached token rate limit",
 			fields: &PostRequestCounter{
 				ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
-				RefreshTime:  int(time.Now().Unix() + 100),
+				RefreshTime:  now.Add(100 * time.Second),
 			},
 			want: true,
 		},
@@ -93,7 +95,7 @@ func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
 			name: "reached account rate limits",
 			fields: &PostRequestCounter{
 				ReqRemaining: 0,
-				RefreshTime:  int(time.Now().Unix() + 100),
+				RefreshTime:  now.Add(100 * time.Second),
 			},
 			want: true,
 		},
@@ -101,7 +103,7 @@ func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
 			name: "refresh time smaller than current time",
 			fields: &PostRequestCounter{
 				ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
-				RefreshTime:  int(time.Now().Unix() - 100),
+				RefreshTime:  now.Add(-100 * time.Second),
 			},
 			want: false,
 		},
@@ -109,7 +111,7 @@ func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
 			name: "refresh time smaller than current time",
 			fields: &PostRequestCounter{
 				ReqRemaining: 0,
-				RefreshTime:  int(time.Now().Unix() - 100),
+				RefreshTime:  now.Add(-100 * time.Second),
 			},
 			want: false,
 		},
@@ -129,6 +131,7 @@ func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
 }
 
 func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
+	now := time.Now()
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -140,7 +143,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			name: "not a POST call",
 			fields: &PostRequestCounter{
 				ReqRemaining: 6,
-				RefreshTime:  int(time.Now().Unix()),
+				RefreshTime:  now,
 			},
 			args: &resty.Response{
 				Request: &resty.Request{
@@ -153,7 +156,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			name: "endpoint different than /linode/instances",
 			fields: &PostRequestCounter{
 				ReqRemaining: 6,
-				RefreshTime:  int(time.Now().Unix()),
+				RefreshTime:  now,
 			},
 			args: &resty.Response{
 				Request: &resty.Request{
@@ -167,7 +170,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			name: "no headers in response",
 			fields: &PostRequestCounter{
 				ReqRemaining: 6,
-				RefreshTime:  int(time.Now().Unix()),
+				RefreshTime:  now,
 			},
 			args: &resty.Response{
 				Request: &resty.Request{
@@ -181,7 +184,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			name: "missing one value in response header",
 			fields: &PostRequestCounter{
 				ReqRemaining: 6,
-				RefreshTime:  int(time.Now().Unix()),
+				RefreshTime:  now,
 			},
 			args: &resty.Response{
 				Request: &resty.Request{
@@ -198,7 +201,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			name: "correct headers in response",
 			fields: &PostRequestCounter{
 				ReqRemaining: 6,
-				RefreshTime:  int(time.Now().Unix()),
+				RefreshTime:  now,
 			},
 			args: &resty.Response{
 				Request: &resty.Request{
@@ -215,7 +218,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			name: "correct headers in response",
 			fields: &PostRequestCounter{
 				ReqRemaining: 8,
-				RefreshTime:  int(time.Now().Unix()),
+				RefreshTime:  now,
 			},
 			args: &resty.Response{
 				Request: &resty.Request{
@@ -245,7 +248,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 
 func TestPostRequestCounter_RetryAfter(t *testing.T) {
 	t.Parallel()
-	currTime := time.Now().Unix()
+	currTime := time.Now()
 	tests := []struct {
 		name   string
 		fields *PostRequestCounter
@@ -255,7 +258,7 @@ func TestPostRequestCounter_RetryAfter(t *testing.T) {
 			name: "when current time is greater than refreshTime",
 			fields: &PostRequestCounter{
 				ReqRemaining: 7,
-				RefreshTime:  int(currTime - 100),
+				RefreshTime:  currTime.Add(-100 * time.Second),
 			},
 			want: 0,
 		},
@@ -263,7 +266,7 @@ func TestPostRequestCounter_RetryAfter(t *testing.T) {
 			name: "when refreshTime is not yet reached",
 			fields: &PostRequestCounter{
 				ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
-				RefreshTime:  int(currTime + 100),
+				RefreshTime:  currTime.Add(100 * time.Second),
 			},
 			want: 101 * time.Second,
 		},
@@ -275,7 +278,7 @@ func TestPostRequestCounter_RetryAfter(t *testing.T) {
 				ReqRemaining: tt.fields.ReqRemaining,
 				RefreshTime:  tt.fields.RefreshTime,
 			}
-			if got := c.RetryAfter(); got != tt.want {
+			if got := c.RetryAfter(); got.Round(time.Second) != tt.want {
 				t.Errorf("PostRequestCounter.RetryAfter() = %v, want %v", got, tt.want)
 			}
 		})
