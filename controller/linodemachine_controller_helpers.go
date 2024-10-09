@@ -695,7 +695,11 @@ func getDefaultInstanceConfig(ctx context.Context, machineScope *scope.MachineSc
 }
 
 // createInstance provisions linode instance after checking if the request will be within the rate-limits
-// Note: it takes a lock before checking for the rate limits and releases it after making request to linode API or when returning from function
+// Note:
+//  1. this method represents the critical section. It takes a lock before checking for the rate limits and releases it after making request to linode API or when returning from function
+//  2. returned time duration here is not always used.
+//     a) In case of an error, we calculate for how long to requeue in method which checks if its a transient error or not.
+//     b) If POST limit is reached, only then the returned time duration is used to retry after that time has elapsed.
 func createInstance(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, createOpts *linodego.InstanceCreateOptions) (*linodego.Instance, time.Duration, error) {
 	ctr := util.GetPostReqCounter(machineScope.TokenHash)
 	ctr.Mu.Lock()

@@ -72,6 +72,7 @@ func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) e
 func (c *PostRequestCounter) IsPOSTLimitReached() bool {
 	// TODO: Once linode API adjusts rate-limits, remove secondary rate limit and simplify accordingly
 	currTime := time.Now().Unix()
+	// if we have made 5 requests (5 remaining) or 10 requests (0 remaining), then we want to wait until refresh time has passed for that window
 	return currTime <= int64(c.RefreshTime) && (c.ReqRemaining == 0 || c.ReqRemaining == reconciler.SecondaryPOSTRequestLimit)
 }
 
