@@ -2,7 +2,9 @@ package controller
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
+	"crypto/rand"
 	b64 "encoding/base64"
 	"encoding/gob"
 	"fmt"
@@ -79,6 +81,17 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 func TestSetUserData(t *testing.T) {
 	t.Parallel()
 
+	var userDataBuff bytes.Buffer
+	gz := gzip.NewWriter(&userDataBuff)
+	_, err = gz.Write([]byte("test-data"))
+	err = gz.Close()
+	require.NoError(t, err, "Failed to compress bootstrap data")
+	userData := userDataBuff.Bytes()
+
+	largeData := make([]byte, maxBootstrapDataBytes*10)
+	_, err = rand.Read(largeData)
+	require.NoError(t, err, "Failed to create bootstrap data")
+
 	tests := []struct {
 		name          string
 		machineScope  *scope.MachineScope
@@ -107,7 +120,7 @@ func TestSetUserData(t *testing.T) {
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
-				UserData: b64.StdEncoding.EncodeToString([]byte("test-data")),
+				UserData: b64.StdEncoding.EncodeToString(userData),
 			}},
 			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -176,7 +189,7 @@ func TestSetUserData(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{},
+				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
@@ -184,7 +197,7 @@ func TestSetUserData(t *testing.T) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
-							"value": make([]byte, maxBootstrapDataBytes+1),
+							"value": largeData,
 						},
 					}
 					*obj = cred
