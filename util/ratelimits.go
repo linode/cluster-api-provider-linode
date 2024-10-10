@@ -32,7 +32,7 @@ import (
 type PostRequestCounter struct {
 	Mu           sync.RWMutex
 	ReqRemaining int
-	RefreshTime  int
+	RefreshTime  time.Time
 }
 
 var (
@@ -54,9 +54,18 @@ func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) e
 		return err
 	}
 
-	c.RefreshTime, err = strconv.Atoi(resp.Header().Get("X-Ratelimit-Reset"))
+	epochTime, err := strconv.ParseInt(resp.Header().Get("X-Ratelimit-Reset"), 10, 64)
 	if err != nil {
 		return err
+	}
+	c.RefreshTime = time.Unix(epochTime, 0)
+	// We Add a negative number as secondary refresh time is smaller than refresh time
+	secondaryRefreshTime := time.Unix(epochTime, 0).Add(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay * -1)
+
+	// TODO: remove when rate-limits are simplified
+	currTime := time.Now()
+	if c.ReqRemaining >= reconciler.SecondaryPOSTRequestLimit && currTime.Before(secondaryRefreshTime) {
+		c.RefreshTime = secondaryRefreshTime
 	}
 	return nil
 }
@@ -64,19 +73,17 @@ func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) e
 // IsPOSTLimitReached checks whether POST limits have been reached.
 func (c *PostRequestCounter) IsPOSTLimitReached() bool {
 	// TODO: Once linode API adjusts rate-limits, remove secondary rate limit and simplify accordingly
-	currTime := time.Now().Unix()
+	// if we have made 5 requests (5 remaining) or 10 requests (0 remaining), then we want to wait until refresh time has passed for that window
+	return time.Now().Before(c.RefreshTime) && (c.ReqRemaining == 0 || c.ReqRemaining == reconciler.SecondaryPOSTRequestLimit)
+}
 
-	if c.ReqRemaining == 0 {
-		if currTime <= int64(c.RefreshTime) {
-			return true
-		}
+// RetryAfter returns how long to wait in seconds for rate-limit to reset
+func (c *PostRequestCounter) RetryAfter() time.Duration {
+	currTime := time.Now()
+	if currTime.After(c.RefreshTime) {
+		return 0
 	}
-
-	secondaryLimitRefreshTime := c.RefreshTime - int(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds())
-	if c.ReqRemaining <= reconciler.SecondaryPOSTRequestLimit && currTime <= int64(secondaryLimitRefreshTime) {
-		return true
-	}
-	return false
+	return c.RefreshTime.Sub(currTime) + (1 * time.Second)
 }
 
 // GetPostReqCounter returns pointer to PostRequestCounter for a given token hash
@@ -88,7 +95,7 @@ func GetPostReqCounter(tokenHash string) *PostRequestCounter {
 	if !exists {
 		ctr = &PostRequestCounter{
 			ReqRemaining: reconciler.DefaultPOSTRequestLimit,
-			RefreshTime:  0,
+			RefreshTime:  time.Time{},
 		}
 		postRequestCounters[tokenHash] = ctr
 	}
