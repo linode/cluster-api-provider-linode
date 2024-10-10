@@ -60,6 +60,7 @@ const (
 	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
+	ConditionPreflightBootstrapDataSecretReady  clusterv1.ConditionType = "PreflightBootstrapDataSecretReady"
 	ConditionPreflightLinodeFirewallReady       clusterv1.ConditionType = "PreflightLinodeFirewallReady"
 	ConditionPreflightMetadataSupportConfigured clusterv1.ConditionType = "PreflightMetadataSupportConfigured"
 	ConditionPreflightCreated                   clusterv1.ConditionType = "PreflightCreated"
@@ -214,10 +215,12 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	}
 
 	// Make sure bootstrap data is available and populated.
-	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootstrapDataSecretReady) && machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap data secret is not yet available")
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightBootstrapDataSecretReady, WaitingForBootstrapDataReason, clusterv1.ConditionSeverityInfo, "")
 		return ctrl.Result{}, nil
+	} else {
+		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootstrapDataSecretReady)
 	}
 
 	// Update
@@ -244,16 +247,14 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		return ctrl.Result{}, err
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady) && machineScope.LinodeMachine.Spec.ProviderID == nil {
-		if machineScope.LinodeMachine.Spec.FirewallRef != nil {
+	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
+		if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, machineScope)
 			if err != nil || !res.IsZero() {
 				conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, string("linode firewall not yet available"), clusterv1.ConditionSeverityError, "")
 				return res, err
 			}
 		}
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady)
-		return ctrl.Result{}, nil
 	}
 
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured) && machineScope.LinodeMachine.Spec.ProviderID == nil {
@@ -321,10 +322,11 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
-	} else if !linodeFirewall.Status.Ready || linodeFirewall.Spec.FirewallID == nil {
-		logger.Info("Linode firewall's status not ready or missing firewall id")
+	} else if !linodeFirewall.Status.Ready {
+		logger.Info("Linode firewall not yet ready")
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady)
 	return ctrl.Result{}, nil
 }
 

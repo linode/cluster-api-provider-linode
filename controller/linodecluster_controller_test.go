@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -63,6 +64,19 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
+			VPCRef: &corev1.ObjectReference{Name: "vpctest"},
+		},
+	}
+	linodeVPC := infrav1alpha2.LinodeVPC{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpctest",
+			Namespace: defaultNamespace,
+		},
+		Spec: infrav1alpha2.LinodeVPCSpec{
+			Region: "us-ord",
+			Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+				{Label: "subnet1", IPv4: "10.0.0.0/8"},
+			},
 		},
 	}
 
@@ -92,15 +106,37 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 	ctlrSuite.Run(
 		OneOf(
 			Path(
-				Call("vpcReady set", func(ctx context.Context, mck Mock) {
+				Call("vpc doesn't exist", func(ctx context.Context, mck Mock) {
 				}),
-				Path(Result("no error when checking if vpc is configured", func(ctx context.Context, mck Mock) {
-					reconciler.Client = k8sClient
-					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-					Expect(err).NotTo(HaveOccurred())
-				})),
+				OneOf(
+					Path(Result("", func(ctx context.Context, mck Mock) {
+						reconciler.Client = k8sClient
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+					})),
+				),
+			),
+			Path(
+				Call("vpc present but not ready", func(ctx context.Context, mck Mock) {
+					Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
+					linodeVPC.Status.Ready = false
+					k8sClient.Status().Update(ctx, &linodeVPC)
+				}),
+				OneOf(
+					Path(Result("", func(ctx context.Context, mck Mock) {
+						reconciler.Client = k8sClient
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+					})),
+				),
+			),
+			Path(
 				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
+					linodeVPC.Status.Ready = true
+					k8sClient.Status().Update(ctx, &linodeVPC)
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(nil, errors.New("failed to ensure nodebalancer"))
 				}),
@@ -301,13 +337,6 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 	ctlrSuite.Run(
 		OneOf(
 			Path(
-				Call("vpcReady set", func(ctx context.Context, mck Mock) {
-				}),
-				Path(Result("no error when checking if vpc is configured", func(ctx context.Context, mck Mock) {
-					reconciler.Client = k8sClient
-					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-					Expect(err).NotTo(HaveOccurred())
-				})),
 				Call("cluster with dns loadbalancing is created", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.LinodeDomainsClient = mck.LinodeClient
@@ -336,9 +365,8 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
 					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
-					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeVPCReady))
 
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
@@ -572,13 +600,6 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 	ctlrSuite.Run(
 		OneOf(
 			Path(
-				Call("vpcReady set", func(ctx context.Context, mck Mock) {
-				}),
-				Path(Result("no error when checking if vpc is configured", func(ctx context.Context, mck Mock) {
-					reconciler.Client = k8sClient
-					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-					Expect(err).NotTo(HaveOccurred())
-				})),
 				Call("cluster with dns loadbalancing is created", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.LinodeDomainsClient = mck.LinodeClient
@@ -613,9 +634,8 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
 					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
-					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeVPCReady))
 
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))

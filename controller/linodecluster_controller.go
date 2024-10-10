@@ -169,8 +169,8 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	// Create
-	if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
-		if clusterScope.LinodeCluster.Spec.VPCRef != nil {
+	if clusterScope.LinodeCluster.Spec.VPCRef != nil {
+		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
 			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, string("linode vpc not yet available"), clusterv1.ConditionSeverityError, "")
@@ -178,7 +178,6 @@ func (r *LinodeClusterReconciler) reconcile(
 			}
 		}
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady)
-		return ctrl.Result{}, nil
 	}
 
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
@@ -230,7 +229,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
-	} else if !linodeVPC.Status.Ready || linodeVPC.Spec.VPCID == nil {
+	} else if !linodeVPC.Status.Ready {
 		logger.Info("LinodeVPC is not yet available")
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	}
