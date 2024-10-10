@@ -474,10 +474,12 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 	}
 
 	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
-		if len(bootstrapData) > maxBootstrapDataBytesCloudInit {
+		bootstrapSize := len(bootstrapData)
+		if bootstrapSize > maxBootstrapDataBytesCloudInit {
 			err = errors.New("bootstrap data too large")
 			logger.Error(err, "decoded bootstrap data exceeds size limit",
 				"limit", maxBootstrapDataBytesCloudInit,
+				"size", bootstrapSize,
 			)
 
 			return err
@@ -487,10 +489,12 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		}
 	} else {
 		logger.Info("using StackScripts for bootstrapping")
-		if len(bootstrapData) > maxBootstrapDataBytesStackscript {
+		bootstrapSize := len(bootstrapData)
+		if bootstrapSize > maxBootstrapDataBytesStackscript {
 			err = errors.New("bootstrap data too large")
 			logger.Error(err, "decoded bootstrap data exceeds size limit",
 				"limit", maxBootstrapDataBytesStackscript,
+				"size", bootstrapSize,
 			)
 
 			return err
