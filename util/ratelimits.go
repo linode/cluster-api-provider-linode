@@ -54,12 +54,13 @@ func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) e
 		return err
 	}
 
-	epochTime, err := strconv.Atoi(resp.Header().Get("X-Ratelimit-Reset"))
+	epochTime, err := strconv.ParseInt(resp.Header().Get("X-Ratelimit-Reset"), 10, 64)
 	if err != nil {
 		return err
 	}
-	c.RefreshTime = time.Unix(int64(epochTime), 0)
-	secondaryRefreshTime := time.Unix(int64(epochTime)-int64(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds()), 0)
+	c.RefreshTime = time.Unix(epochTime, 0)
+	// We Add a negative number as secondary refresh time is smaller than refresh time
+	secondaryRefreshTime := time.Unix(epochTime, 0).Add(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay * -1)
 
 	// TODO: remove when rate-limits are simplified
 	currTime := time.Now()
