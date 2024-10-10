@@ -490,27 +490,26 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		}
 	} else {
 		logger.Info("using StackScripts for bootstrapping")
-		bootstrapSize := len(bootstrapData)
-		if bootstrapSize > maxBootstrapDataBytesStackscript {
-			err = errors.New("bootstrap data too large")
-			logger.Error(err, "decoded bootstrap data exceeds size limit",
-				"limit", maxBootstrapDataBytesStackscript,
-				"size", bootstrapSize,
-			)
-
-			return err
-		}
-		capiStackScriptID, err := services.EnsureStackscript(ctx, machineScope)
-		if err != nil {
-			return fmt.Errorf("ensure stackscript: %w", err)
-		}
-		createConfig.StackScriptID = capiStackScriptID
 		// WARNING: label, region and type are currently supported as cloud-init variables,
 		// any changes to this could be potentially backwards incompatible and should be noted through a backwards incompatible version update
 		instanceData := fmt.Sprintf("label: %s\nregion: %s\ntype: %s", machineScope.LinodeMachine.Name, machineScope.LinodeMachine.Spec.Region, machineScope.LinodeMachine.Spec.Type)
 		createConfig.StackScriptData = map[string]string{
 			"instancedata": b64.StdEncoding.EncodeToString([]byte(instanceData)),
 			"userdata":     b64.StdEncoding.EncodeToString(bootstrapData),
+		}
+		stackscriptSize := len(fmt.Sprint(createConfig.StackScriptData))
+		if stackscriptSize > maxBootstrapDataBytesStackscript {
+			err = errors.New("bootstrap data too large")
+			logger.Error(err, "decoded bootstrap data exceeds size limit",
+				"limit", maxBootstrapDataBytesStackscript,
+				"size", stackscriptSize,
+			)
+
+			return err
+		}
+		createConfig.StackScriptID, err = services.EnsureStackscript(ctx, machineScope)
+		if err != nil {
+			return fmt.Errorf("ensure stackscript: %w", err)
 		}
 	}
 	return nil
