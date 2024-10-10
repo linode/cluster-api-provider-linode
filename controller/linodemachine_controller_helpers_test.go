@@ -161,7 +161,7 @@ func TestSetUserData(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - SetUserData large bootstrap data",
+			name: "Error - SetUserData large bootstrap data for cloud-init",
 			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
 				Spec: v1beta1.MachineSpec{
 					ClusterName: "",
@@ -176,7 +176,7 @@ func TestSetUserData(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{},
+				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
@@ -184,7 +184,40 @@ func TestSetUserData(t *testing.T) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
-							"value": make([]byte, maxBootstrapDataBytes+1),
+							"value": make([]byte, maxBootstrapDataBytesCloudInit+1),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+			},
+			expectedError: fmt.Errorf("bootstrap data too large"),
+		},
+		{
+			name: "Error - SetUserData large bootstrap data for stackscript",
+			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
+				Spec: v1beta1.MachineSpec{
+					ClusterName: "",
+					Bootstrap: v1beta1.Bootstrap{
+						DataSecretName: ptr.To("test-data"),
+					},
+					InfrastructureRef: corev1.ObjectReference{},
+				},
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cluster",
+					Namespace: "default",
+				},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: false},
+			}},
+			createConfig: &linodego.InstanceCreateOptions{},
+			wantConfig:   &linodego.InstanceCreateOptions{},
+			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"value": make([]byte, maxBootstrapDataBytesStackscript+1),
 						},
 					}
 					*obj = cred
