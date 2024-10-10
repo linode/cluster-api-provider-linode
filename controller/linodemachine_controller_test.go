@@ -139,6 +139,137 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		}
 	})
 
+	Context("create machine with firewall", func() {
+		It("firewall is not yet present", func(ctx SpecContext) {
+			linodeMachine.Spec.FirewallRef = &corev1.ObjectReference{Name: "fwnone", Namespace: defaultNamespace, Kind: "LinodeFirewall", APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha2"}
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.PatchHelper = patchHelper
+
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeFalse())
+		})
+
+		It("firewall present but status is not yet ready", func(ctx SpecContext) {
+			linodeFirewall := &infrav1alpha2.LinodeFirewall{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fw1",
+					Namespace: defaultNamespace,
+				},
+				Spec: infrav1alpha2.LinodeFirewallSpec{
+					Enabled:    false,
+					FirewallID: ptr.To(1),
+				},
+			}
+			Expect(k8sClient.Create(ctx, linodeFirewall)).To(Succeed())
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+			linodeMachine.Spec.FirewallRef = &corev1.ObjectReference{Name: "fw1"}
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.PatchHelper = patchHelper
+
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeFalse())
+		})
+
+		It("firewall present and status is ready", func(ctx SpecContext) {
+			linodeFirewall := &infrav1alpha2.LinodeFirewall{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fw2",
+					Namespace: defaultNamespace,
+				},
+				Spec: infrav1alpha2.LinodeFirewallSpec{
+					Enabled:    false,
+					FirewallID: ptr.To(1),
+				},
+			}
+			Expect(k8sClient.Create(ctx, linodeFirewall)).To(Succeed())
+			linodeFirewall.Status.Ready = true
+			Expect(k8sClient.Status().Update(ctx, linodeFirewall)).To(Succeed())
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+			getRegion := mockLinodeClient.EXPECT().
+				GetRegion(ctx, gomock.Any()).
+				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+			getImage := mockLinodeClient.EXPECT().
+				GetImage(ctx, gomock.Any()).
+				After(getRegion).
+				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+			mockLinodeClient.EXPECT().
+				CreateInstance(ctx, gomock.Any()).
+				After(getImage).
+				Return(&linodego.Instance{
+					ID:     123,
+					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					IPv6:   "fd00::",
+					Status: linodego.InstanceOffline,
+				}, nil)
+			createInst := mockLinodeClient.EXPECT().
+				OnAfterResponse(gomock.Any()).
+				Return()
+			bootInst := mockLinodeClient.EXPECT().
+				BootInstance(ctx, 123, 0).
+				After(createInst).
+				Return(nil)
+			getAddrs := mockLinodeClient.EXPECT().
+				GetInstanceIPAddresses(ctx, 123).
+				After(bootInst).
+				Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
+				}, nil)
+			mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(getAddrs).
+				Return([]linodego.InstanceConfig{{
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+					},
+				}}, nil)
+			linodeMachine.Spec.FirewallRef = &corev1.ObjectReference{Name: "fw2", Namespace: defaultNamespace, Kind: "LinodeFirewall", APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha2"}
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.PatchHelper = patchHelper
+
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeTrue())
+		})
+	})
+
 	It("creates a worker instance", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		getRegion := mockLinodeClient.EXPECT().
@@ -200,6 +331,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		Expect(err).NotTo(HaveOccurred())
 		mScope.PatchHelper = patchHelper
 
+		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+		Expect(err).NotTo(HaveOccurred())
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -982,10 +1115,10 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 					conditions.MarkTrue(mScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured)
 				}),
 				OneOf(
-					Path(Result("create fails when failing to get referenced firewall", func(ctx context.Context, mck Mock) {
+					Path(Result("firewall ready condition is not set", func(ctx context.Context, mck Mock) {
 						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
-						Expect(err).To(HaveOccurred())
-						Expect(mck.Logs()).To(ContainSubstring("nil firewallID"))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(rutil.ConditionTrue(mScope.LinodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeFalse())
 					})),
 				),
 			),
