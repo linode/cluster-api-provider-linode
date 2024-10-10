@@ -50,11 +50,10 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
-// Size limit in bytes on the decoded metadata.user_data for cloud-init
-// The decoded user_data must not exceed 16384 bytes per the Linode API
 const (
-	maxBootstrapDataBytes = 16384
-	vlanIPFormat          = "%s/11"
+	maxBootstrapDataBytesCloudInit   = 16384
+	maxBootstrapDataBytesStackscript = 65535
+	vlanIPFormat                     = "%s/11"
 )
 
 var (
@@ -473,21 +472,33 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 
 		return err
 	}
-	if len(bootstrapData) > maxBootstrapDataBytes {
-		err = errors.New("bootstrap data too large")
-		logger.Error(err, "decoded bootstrap data exceeds size limit",
-			"limit", maxBootstrapDataBytes,
-		)
-
-		return err
-	}
 
 	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
+		bootstrapSize := len(bootstrapData)
+		if bootstrapSize > maxBootstrapDataBytesCloudInit {
+			err = errors.New("bootstrap data too large")
+			logger.Error(err, "decoded bootstrap data exceeds size limit",
+				"limit", maxBootstrapDataBytesCloudInit,
+				"size", bootstrapSize,
+			)
+
+			return err
+		}
 		createConfig.Metadata = &linodego.InstanceMetadataOptions{
 			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
 		}
 	} else {
 		logger.Info("using StackScripts for bootstrapping")
+		bootstrapSize := len(bootstrapData)
+		if bootstrapSize > maxBootstrapDataBytesStackscript {
+			err = errors.New("bootstrap data too large")
+			logger.Error(err, "decoded bootstrap data exceeds size limit",
+				"limit", maxBootstrapDataBytesStackscript,
+				"size", bootstrapSize,
+			)
+
+			return err
+		}
 		capiStackScriptID, err := services.EnsureStackscript(ctx, machineScope)
 		if err != nil {
 			return fmt.Errorf("ensure stackscript: %w", err)
