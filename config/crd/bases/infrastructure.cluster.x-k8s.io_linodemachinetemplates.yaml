@@ -606,9 +606,6 @@ spec:
                         items:
                           type: string
                         type: array
-                        x-kubernetes-validations:
-                        - message: Value is immutable
-                          rule: self == oldSelf
                       type:
                         type: string
                         x-kubernetes-validations:
