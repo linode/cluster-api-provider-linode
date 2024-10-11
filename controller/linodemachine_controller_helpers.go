@@ -705,11 +705,11 @@ func createInstance(ctx context.Context, logger logr.Logger, machineScope *scope
 	defer ctr.Mu.Unlock()
 
 	if ctr.IsPOSTLimitReached() {
-		logger.Info(fmt.Sprintf("Cannot make more POST requests as rate-limit is reached (%d per %v seconds). Waiting and retrying after %v seconds", reconciler.SecondaryPOSTRequestLimit, reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay, reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay))
+		logger.Info(fmt.Sprintf("Cannot make more POST requests as rate-limit is reached (%d per %v seconds). Waiting and retrying after %v seconds", reconciler.DefaultPOSTRequestLimit, reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay, ctr.RetryAfter()))
 		return nil, ctr.RetryAfter(), util.ErrRateLimit
 	}
 
 	machineScope.LinodeClient.OnAfterResponse(ctr.ApiResponseRatelimitCounter)
 	inst, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-	return inst, time.Duration(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds()), err
+	return inst, time.Duration(reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds()), err
 }
