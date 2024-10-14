@@ -63,21 +63,10 @@ var (
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
 )
 
-func handleTooManyRequestsError(err error) (ctrl.Result, error) {
-	newErr := linodego.NewError(err)
-	if newErr.Response == nil {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
-	}
-	if newErr.Response.Request.Method != http.MethodPost {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
-	}
-	return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
-}
-
 func retryIfTransient(err error) (ctrl.Result, error) {
 	if util.IsRetryableError(err) {
 		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
-			return handleTooManyRequestsError(err)
+			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
@@ -705,11 +694,11 @@ func createInstance(ctx context.Context, logger logr.Logger, machineScope *scope
 	defer ctr.Mu.Unlock()
 
 	if ctr.IsPOSTLimitReached() {
-		logger.Info(fmt.Sprintf("Cannot make more POST requests as rate-limit is reached (%d per %v seconds). Waiting and retrying after %v seconds", reconciler.DefaultPOSTRequestLimit, reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay, ctr.RetryAfter()))
+		logger.Info(fmt.Sprintf("Cannot make more POST requests as rate-limit is reached. Waiting and retrying after %v seconds", ctr.RetryAfter()))
 		return nil, ctr.RetryAfter(), util.ErrRateLimit
 	}
 
 	machineScope.LinodeClient.OnAfterResponse(ctr.ApiResponseRatelimitCounter)
 	inst, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-	return inst, time.Duration(reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds()), err
+	return inst, time.Duration(reconciler.DefaultMachineControllerRetryDelay.Seconds()), err
 }

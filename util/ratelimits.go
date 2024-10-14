@@ -24,8 +24,6 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-
-	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
 // PostRequestCounter keeps track of rate limits for POST to /linode/instances
@@ -84,7 +82,9 @@ func GetPostReqCounter(tokenHash string) *PostRequestCounter {
 	ctr, exists := postRequestCounters[tokenHash]
 	if !exists {
 		ctr = &PostRequestCounter{
-			ReqRemaining: reconciler.DefaultPOSTRequestLimit,
+			// Set remaining requests to a number greater than 0.
+			// It gets updated to correct value once first POST request is made using the token.
+			ReqRemaining: 1,
 			RefreshTime:  time.Time{},
 		}
 		postRequestCounters[tokenHash] = ctr

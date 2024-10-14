@@ -24,8 +24,6 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-
-	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
 func TestGetPostReqCounter(t *testing.T) {
@@ -48,7 +46,7 @@ func TestGetPostReqCounter(t *testing.T) {
 			name:      "provide hash which doesn't exist",
 			tokenHash: "uvwxyz",
 			want: &PostRequestCounter{
-				ReqRemaining: reconciler.DefaultPOSTRequestLimit,
+				ReqRemaining: 1,
 				RefreshTime:  time.Time{},
 			},
 		},
