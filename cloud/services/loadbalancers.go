@@ -48,10 +48,23 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	if clusterScope.LinodeCluster.Spec.FirewallRef != nil {
 		firewallID, err := getFirewallID(ctx, clusterScope, logger)
 		if err != nil {
+			logger.Error(err, "Failed to fetch LinodeFirewall ID")
 			return nil, err
 		}
 		createConfig.FirewallID = firewallID
 		clusterScope.LinodeCluster.Spec.Network.FirewallID = &firewallID
+	}
+
+	// Use a firewall created outside of the CAPL ecosystem
+	// get & validate firewall ID from .Spec.Network.FirewallID if it exists
+	if clusterScope.LinodeCluster.Spec.Network.FirewallID != nil {
+		firewallID := *clusterScope.LinodeCluster.Spec.Network.FirewallID
+		firewall, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
+		if err != nil {
+			logger.Error(err, "Failed to fetch Linode Firewall from the Linode API")
+			return nil, err
+		}
+		createConfig.FirewallID = firewall.ID
 	}
 
 	return clusterScope.LinodeClient.CreateNodeBalancer(ctx, createConfig)
