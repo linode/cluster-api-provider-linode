@@ -50,3 +50,26 @@ spec:
       protocol: TCP
       label: accept-NodeBalancer
       description: accept traffic from the entire NodeBalancer CIDR to the NodePort service range
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeFirewall
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  name: ${CLUSTER_NAME}-nb-firewall
+spec:
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
+  enabled: ${LINODE_FIREWALL_ENABLED:=false}
+  inboundPolicy: DROP
+  inboundRules:
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 0.0.0.0/0
+        ipv6:
+          - ::/0
+      ports: ${APISERVER_PORT:="6443"}
+      protocol: TCP
+      label: inbound-api-server
+      description: accept all api server related traffic from nodebalancers
