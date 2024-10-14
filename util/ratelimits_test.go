@@ -24,8 +24,6 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-
-	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
 func TestGetPostReqCounter(t *testing.T) {
@@ -40,7 +38,7 @@ func TestGetPostReqCounter(t *testing.T) {
 			name:      "provide hash which exists in map",
 			tokenHash: "abcdef",
 			want: &PostRequestCounter{
-				ReqRemaining: 5,
+				ReqRemaining: 4,
 				RefreshTime:  now.Add(-100 * time.Second),
 			},
 		},
@@ -48,14 +46,14 @@ func TestGetPostReqCounter(t *testing.T) {
 			name:      "provide hash which doesn't exist",
 			tokenHash: "uvwxyz",
 			want: &PostRequestCounter{
-				ReqRemaining: reconciler.DefaultPOSTRequestLimit,
+				ReqRemaining: 1,
 				RefreshTime:  time.Time{},
 			},
 		},
 	}
 	for _, tt := range tests {
 		postRequestCounters["abcdef"] = &PostRequestCounter{
-			ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
+			ReqRemaining: 4,
 			RefreshTime:  now.Add(-100 * time.Second),
 		}
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,18 +76,10 @@ func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
 		{
 			name: "not reached rate limits",
 			fields: &PostRequestCounter{
-				ReqRemaining: 7,
+				ReqRemaining: 3,
 				RefreshTime:  now,
 			},
 			want: false,
-		},
-		{
-			name: "reached token rate limit",
-			fields: &PostRequestCounter{
-				ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
-				RefreshTime:  now.Add(100 * time.Second),
-			},
-			want: true,
 		},
 		{
 			name: "reached account rate limits",
@@ -98,14 +88,6 @@ func TestPostRequestCounter_IsPOSTLimitReached(t *testing.T) {
 				RefreshTime:  now.Add(100 * time.Second),
 			},
 			want: true,
-		},
-		{
-			name: "refresh time smaller than current time",
-			fields: &PostRequestCounter{
-				ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
-				RefreshTime:  now.Add(-100 * time.Second),
-			},
-			want: false,
 		},
 		{
 			name: "refresh time smaller than current time",
@@ -142,7 +124,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 		{
 			name: "not a POST call",
 			fields: &PostRequestCounter{
-				ReqRemaining: 6,
+				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
 			args: &resty.Response{
@@ -155,7 +137,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 		{
 			name: "endpoint different than /linode/instances",
 			fields: &PostRequestCounter{
-				ReqRemaining: 6,
+				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
 			args: &resty.Response{
@@ -169,7 +151,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 		{
 			name: "no headers in response",
 			fields: &PostRequestCounter{
-				ReqRemaining: 6,
+				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
 			args: &resty.Response{
@@ -183,7 +165,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 		{
 			name: "missing one value in response header",
 			fields: &PostRequestCounter{
-				ReqRemaining: 6,
+				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
 			args: &resty.Response{
@@ -192,7 +174,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 					URL:    "/v4/linode/instances",
 				},
 				RawResponse: &http.Response{
-					Header: http.Header{"X-Ratelimit-Remaining": []string{"10"}},
+					Header: http.Header{"X-Ratelimit-Remaining": []string{"5"}},
 				},
 			},
 			wantErr: true,
@@ -200,7 +182,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 		{
 			name: "correct headers in response",
 			fields: &PostRequestCounter{
-				ReqRemaining: 6,
+				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
 			args: &resty.Response{
@@ -209,7 +191,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 					URL:    "/v4/linode/instances",
 				},
 				RawResponse: &http.Response{
-					Header: http.Header{"X-Ratelimit-Remaining": []string{"10"}, "X-Ratelimit-Reset": []string{"10"}},
+					Header: http.Header{"X-Ratelimit-Remaining": []string{"5"}, "X-Ratelimit-Reset": []string{"10"}},
 				},
 			},
 			wantErr: false,
@@ -217,7 +199,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 		{
 			name: "correct headers in response",
 			fields: &PostRequestCounter{
-				ReqRemaining: 8,
+				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
 			args: &resty.Response{
@@ -226,7 +208,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 					URL:    "/v4/linode/instances",
 				},
 				RawResponse: &http.Response{
-					Header: http.Header{"X-Ratelimit-Remaining": []string{"10"}, "X-Ratelimit-Reset": []string{strconv.Itoa(int(time.Now().Unix()) + 100)}},
+					Header: http.Header{"X-Ratelimit-Remaining": []string{"4"}, "X-Ratelimit-Reset": []string{strconv.Itoa(int(time.Now().Unix()) + 100)}},
 				},
 			},
 			wantErr: false,
@@ -257,7 +239,7 @@ func TestPostRequestCounter_RetryAfter(t *testing.T) {
 		{
 			name: "when current time is greater than refreshTime",
 			fields: &PostRequestCounter{
-				ReqRemaining: 7,
+				ReqRemaining: 3,
 				RefreshTime:  currTime.Add(-100 * time.Second),
 			},
 			want: 0,
@@ -265,7 +247,7 @@ func TestPostRequestCounter_RetryAfter(t *testing.T) {
 		{
 			name: "when refreshTime is not yet reached",
 			fields: &PostRequestCounter{
-				ReqRemaining: reconciler.SecondaryPOSTRequestLimit,
+				ReqRemaining: 4,
 				RefreshTime:  currTime.Add(100 * time.Second),
 			},
 			want: 101 * time.Second,
