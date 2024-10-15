@@ -76,14 +76,3 @@ patches:
             protocol: TCP
             label: accept-NodeBalancer
             description: accept traffic from the entire NodeBalancer CIDR to the NodePort service range
-
-  # - target:
-  #     kind: LinodeFirewall
-  #     name: ${CLUSTER_NAME}-nb-firewall
-  #   patch: |-
-  #     $patch: delete
-  #     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-  #     kind: LinodeFirewall
-  #     metadata:
-  #       name: ${CLUSTER_NAME}-nb-firewall
-  #     $patch: delete
