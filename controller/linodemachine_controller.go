@@ -173,7 +173,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	failureReason := cerrs.MachineStatusError("UnknownError")
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
-		if err != nil {
+		if err != nil && !util.IsRetryableError(err) {
 			machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
 			machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
 
