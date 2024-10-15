@@ -63,21 +63,10 @@ var (
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
 )
 
-func handleTooManyRequestsError(err error) (ctrl.Result, error) {
-	newErr := linodego.NewError(err)
-	if newErr.Response == nil {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
-	}
-	if newErr.Response.Request.Method != http.MethodPost {
-		return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
-	}
-	return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyPOSTRequestsErrorRetryDelay}, nil
-}
-
 func retryIfTransient(err error) (ctrl.Result, error) {
 	if util.IsRetryableError(err) {
 		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
-			return handleTooManyRequestsError(err)
+			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
@@ -490,27 +479,26 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		}
 	} else {
 		logger.Info("using StackScripts for bootstrapping")
-		bootstrapSize := len(bootstrapData)
-		if bootstrapSize > maxBootstrapDataBytesStackscript {
-			err = errors.New("bootstrap data too large")
-			logger.Error(err, "decoded bootstrap data exceeds size limit",
-				"limit", maxBootstrapDataBytesStackscript,
-				"size", bootstrapSize,
-			)
-
-			return err
-		}
-		capiStackScriptID, err := services.EnsureStackscript(ctx, machineScope)
-		if err != nil {
-			return fmt.Errorf("ensure stackscript: %w", err)
-		}
-		createConfig.StackScriptID = capiStackScriptID
 		// WARNING: label, region and type are currently supported as cloud-init variables,
 		// any changes to this could be potentially backwards incompatible and should be noted through a backwards incompatible version update
 		instanceData := fmt.Sprintf("label: %s\nregion: %s\ntype: %s", machineScope.LinodeMachine.Name, machineScope.LinodeMachine.Spec.Region, machineScope.LinodeMachine.Spec.Type)
 		createConfig.StackScriptData = map[string]string{
 			"instancedata": b64.StdEncoding.EncodeToString([]byte(instanceData)),
 			"userdata":     b64.StdEncoding.EncodeToString(bootstrapData),
+		}
+		stackscriptSize := len(fmt.Sprint(createConfig.StackScriptData))
+		if stackscriptSize > maxBootstrapDataBytesStackscript {
+			err = errors.New("bootstrap data too large")
+			logger.Error(err, "decoded bootstrap data exceeds size limit",
+				"limit", maxBootstrapDataBytesStackscript,
+				"size", stackscriptSize,
+			)
+
+			return err
+		}
+		createConfig.StackScriptID, err = services.EnsureStackscript(ctx, machineScope)
+		if err != nil {
+			return fmt.Errorf("ensure stackscript: %w", err)
 		}
 	}
 	return nil
@@ -706,11 +694,11 @@ func createInstance(ctx context.Context, logger logr.Logger, machineScope *scope
 	defer ctr.Mu.Unlock()
 
 	if ctr.IsPOSTLimitReached() {
-		logger.Info(fmt.Sprintf("Cannot make more POST requests as rate-limit is reached (%d per %v seconds). Waiting and retrying after %v seconds", reconciler.SecondaryPOSTRequestLimit, reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay, reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay))
+		logger.Info(fmt.Sprintf("Cannot make more POST requests as rate-limit is reached. Waiting and retrying after %v seconds", ctr.RetryAfter()))
 		return nil, ctr.RetryAfter(), util.ErrRateLimit
 	}
 
 	machineScope.LinodeClient.OnAfterResponse(ctr.ApiResponseRatelimitCounter)
 	inst, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-	return inst, time.Duration(reconciler.SecondaryLinodeTooManyPOSTRequestsErrorRetryDelay.Seconds()), err
+	return inst, time.Duration(reconciler.DefaultMachineControllerRetryDelay.Seconds()), err
 }
