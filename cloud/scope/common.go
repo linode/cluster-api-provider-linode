@@ -18,7 +18,6 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/session"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -134,42 +133,29 @@ func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentia
 }
 
 func addCredentialsFinalizer(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
-	// Retry on conflict to handle the case where the secret is being updated concurrently
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
-		if err != nil {
-			return err
-		}
+	secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
+	if err != nil {
+		return err
+	}
 
-		if controllerutil.ContainsFinalizer(secret, finalizer) {
-			return nil // Finalizer already exists, nothing to do
-		}
-
-		controllerutil.AddFinalizer(secret, finalizer)
-		if err := crClient.Update(ctx, secret); err != nil {
-			return fmt.Errorf("add finalizer to credentials secret %s/%s: %w", secret.Namespace, secret.Name, err)
-		}
-		return nil
-	})
+	controllerutil.AddFinalizer(secret, finalizer)
+	if err := crClient.Update(ctx, secret); err != nil {
+		return fmt.Errorf("add finalizer to credentials secret %s/%s: %w", secret.Namespace, secret.Name, err)
+	}
+	return nil
 }
 
 func removeCredentialsFinalizer(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
-		if err != nil {
-			return client.IgnoreNotFound(err)
-		}
+	secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
+	if err != nil {
+		return client.IgnoreNotFound(err)
+	}
 
-		if !controllerutil.ContainsFinalizer(secret, finalizer) {
-			return nil // Finalizer already removed, nothing to do
-		}
-
-		controllerutil.RemoveFinalizer(secret, finalizer)
-		if err := crClient.Update(ctx, secret); err != nil {
-			return fmt.Errorf("remove finalizer from credentials secret %s/%s: %w", secret.Namespace, secret.Name, err)
-		}
-		return nil
-	})
+	controllerutil.RemoveFinalizer(secret, finalizer)
+	if err := crClient.Update(ctx, secret); err != nil {
+		return fmt.Errorf("remove finalizer from credentials secret %s/%s: %w", secret.Namespace, secret.Name, err)
+	}
+	return nil
 }
 
 func getCredentials(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
