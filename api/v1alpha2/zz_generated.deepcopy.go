@@ -230,8 +230,8 @@ func (in *LinodeClusterSpec) DeepCopyInto(out *LinodeClusterSpec) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
-	if in.FirewallRef != nil {
-		in, out := &in.FirewallRef, &out.FirewallRef
+	if in.NodeBalancerFirewallRef != nil {
+		in, out := &in.NodeBalancerFirewallRef, &out.NodeBalancerFirewallRef
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
@@ -1334,8 +1334,8 @@ func (in *NetworkSpec) DeepCopyInto(out *NetworkSpec) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.FirewallID != nil {
-		in, out := &in.FirewallID, &out.FirewallID
+	if in.NodeBalancerFirewallID != nil {
+		in, out := &in.NodeBalancerFirewallID, &out.NodeBalancerFirewallID
 		*out = new(int)
 		**out = **in
 	}

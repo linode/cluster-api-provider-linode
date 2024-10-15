@@ -4,6 +4,7 @@ resources:
   - ../default
 
 patches:
+  - path: remove-nb-firewall.yaml
   - target:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
@@ -14,6 +15,7 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}
       spec:
+        nodeBalancerFirewallRef: null
         network:
           loadBalancerType: dns
           dnsRootDomain: ${DNS_ROOT_DOMAIN}

@@ -4,6 +4,7 @@ resources:
   - ../default
 
 patches:
+  - path: remove-nb-firewall.yaml
   - target:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
@@ -14,16 +15,19 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}
       spec:
+        nodeBalancerFirewallRef: null
         network:
           loadBalancerType: dns
           dnsRootDomain: ${DNS_ROOT_DOMAIN}
           dnsUniqueIdentifier: ${DNS_UNIQUE_ID}
           dnsProvider: ${DNS_PROVIDER:-"linode"}
           dnsSubDomainOverride: ${DNS_SUBDOMAIN_OVERRIDE:-""}
+
   - target:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
       kind: LinodeFirewall
+      name: ${CLUSTER_NAME}
     patch: |-
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeFirewall
@@ -72,3 +76,14 @@ patches:
             protocol: TCP
             label: accept-NodeBalancer
             description: accept traffic from the entire NodeBalancer CIDR to the NodePort service range
+
+  # - target:
+  #     kind: LinodeFirewall
+  #     name: ${CLUSTER_NAME}-nb-firewall
+  #   patch: |-
+  #     $patch: delete
+  #     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+  #     kind: LinodeFirewall
+  #     metadata:
+  #       name: ${CLUSTER_NAME}-nb-firewall
+  #     $patch: delete

@@ -518,7 +518,7 @@ func autoConvert_v1alpha2_LinodeClusterSpec_To_v1alpha1_LinodeClusterSpec(in *v1
 		return err
 	}
 	out.VPCRef = (*v1.ObjectReference)(unsafe.Pointer(in.VPCRef))
-	// WARNING: in.FirewallRef requires manual conversion: does not exist in peer-type
+	// WARNING: in.NodeBalancerFirewallRef requires manual conversion: does not exist in peer-type
 	out.CredentialsRef = (*v1.SecretReference)(unsafe.Pointer(in.CredentialsRef))
 	return nil
 }
@@ -1165,7 +1165,7 @@ func autoConvert_v1alpha2_NetworkSpec_To_v1alpha1_NetworkSpec(in *v1alpha2.Netwo
 	// WARNING: in.DNSSubDomainOverride requires manual conversion: does not exist in peer-type
 	// WARNING: in.ApiserverLoadBalancerPort requires manual conversion: does not exist in peer-type
 	out.NodeBalancerID = (*int)(unsafe.Pointer(in.NodeBalancerID))
-	// WARNING: in.FirewallID requires manual conversion: does not exist in peer-type
+	// WARNING: in.NodeBalancerFirewallID requires manual conversion: does not exist in peer-type
 	// WARNING: in.ApiserverNodeBalancerConfigID requires manual conversion: does not exist in peer-type
 	// WARNING: in.AdditionalPorts requires manual conversion: does not exist in peer-type
 	// WARNING: in.UseVlan requires manual conversion: does not exist in peer-type

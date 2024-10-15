@@ -14,6 +14,7 @@ patches:
       metadata:
         name: ${CLUSTER_NAME}
       spec:
+        nodeBalancerFirewallRef: null
         network:
           loadBalancerType: dns
           dnsRootDomain: ${DNS_ROOT_DOMAIN}

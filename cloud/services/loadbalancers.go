@@ -45,20 +45,20 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	}
 
 	// get firewall ID from firewallRef if it exists
-	if clusterScope.LinodeCluster.Spec.FirewallRef != nil {
+	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
 		firewallID, err := getFirewallID(ctx, clusterScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to fetch LinodeFirewall ID")
 			return nil, err
 		}
 		createConfig.FirewallID = firewallID
-		clusterScope.LinodeCluster.Spec.Network.FirewallID = &firewallID
+		clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID = &firewallID
 	}
 
 	// Use a firewall created outside of the CAPL ecosystem
 	// get & validate firewall ID from .Spec.Network.FirewallID if it exists
-	if clusterScope.LinodeCluster.Spec.Network.FirewallID != nil {
-		firewallID := *clusterScope.LinodeCluster.Spec.Network.FirewallID
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
+		firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
 		firewall, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
 		if err != nil {
 			logger.Error(err, "Failed to fetch Linode Firewall from the Linode API")
@@ -71,8 +71,8 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 }
 
 func getFirewallID(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (int, error) {
-	name := clusterScope.LinodeCluster.Spec.FirewallRef.Name
-	namespace := clusterScope.LinodeCluster.Spec.FirewallRef.Namespace
+	name := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Name
+	namespace := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Namespace
 	if namespace == "" {
 		namespace = clusterScope.LinodeCluster.Namespace
 	}

@@ -49,8 +49,8 @@ type LinodeClusterSpec struct {
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
-	// FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall.
-	FirewallRef *corev1.ObjectReference `json:"firewallRef,omitempty"`
+	// NodeBalancerFirewallRef is a reference to a NodeBalancer Firewall object. This makes the linode use the specified NodeBalancer Firewall.
+	NodeBalancerFirewallRef *corev1.ObjectReference `json:"nodeBalancerFirewallRef,omitempty"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
 	// supplied then the credentials of the controller will be used.
@@ -147,9 +147,9 @@ type NetworkSpec struct {
 	// NodeBalancerID is the id of NodeBalancer.
 	// +optional
 	NodeBalancerID *int `json:"nodeBalancerID,omitempty"`
-	// FirewallID is the id of Firewall.
+	// NodeBalancerFirewallID is the id of NodeBalancer Firewall.
 	// +optional
-	FirewallID *int `json:"firewallID,omitempty"`
+	NodeBalancerFirewallID *int `json:"nodeBalancerFirewallID,omitempty"`
 	// apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer config.
 	// +optional
 	ApiserverNodeBalancerConfigID *int `json:"apiserverNodeBalancerConfigID,omitempty"`
