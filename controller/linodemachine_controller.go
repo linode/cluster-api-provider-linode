@@ -174,11 +174,14 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
-			machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
-			machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
+			// Only set failure reason if the error is not retryable.
+			if linodego.ErrHasStatus(err, http.StatusBadRequest) {
+				machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
+				machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
+				conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
+			}
 
-			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
-
+			// Record the event regardless of whether the error is retryable or not for visibility.
 			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
