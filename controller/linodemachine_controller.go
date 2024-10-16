@@ -62,7 +62,6 @@ const (
 	// conditions for preflight instance creation
 	ConditionPreflightBootstrapDataSecretReady  clusterv1.ConditionType = "PreflightBootstrapDataSecretReady"
 	ConditionPreflightLinodeFirewallReady       clusterv1.ConditionType = "PreflightLinodeFirewallReady"
-	ConditionPreflightLinodeNBFirewallReady     clusterv1.ConditionType = "PreflightLinodeNBFirewallReady"
 	ConditionPreflightMetadataSupportConfigured clusterv1.ConditionType = "PreflightMetadataSupportConfigured"
 	ConditionPreflightCreated                   clusterv1.ConditionType = "PreflightCreated"
 	ConditionPreflightRootDiskResizing          clusterv1.ConditionType = "PreflightRootDiskResizing"

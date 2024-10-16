@@ -53,7 +53,8 @@ import (
 const (
 	lbTypeDNS string = "dns"
 
-	ConditionPreflightLinodeVPCReady clusterv1.ConditionType = "PreflightLinodeVPCReady"
+	ConditionPreflightLinodeVPCReady        clusterv1.ConditionType = "PreflightLinodeVPCReady"
+	ConditionPreflightLinodeNBFirewallReady clusterv1.ConditionType = "PreflightLinodeNBFirewallReady"
 )
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
