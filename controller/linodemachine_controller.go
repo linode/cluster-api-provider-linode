@@ -175,7 +175,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	defer func() {
 		if err != nil {
 			// Only set failure reason if the error is not retryable.
-			if !util.IsRetryableError(err) {
+			if linodego.ErrHasStatus(err, http.StatusBadRequest) {
 				machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
 				machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
 				conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
