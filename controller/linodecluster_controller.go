@@ -169,7 +169,8 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	// Perform preflight checks - check if the NB firewall and VPC are created successfully
-	if err := r.performPreflightChecks(ctx, logger, clusterScope); err != nil {
+	res, err := r.performPreflightChecks(ctx, logger, clusterScope)
+	if err != nil {
 		return res, err
 	}
 
@@ -194,7 +195,7 @@ func (r *LinodeClusterReconciler) reconcile(
 		}
 	}
 
-	err := addMachineToLB(ctx, clusterScope)
+	err = addMachineToLB(ctx, clusterScope)
 	if err != nil {
 		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
 		return retryIfTransient(err)
@@ -203,13 +204,13 @@ func (r *LinodeClusterReconciler) reconcile(
 	return res, nil
 }
 
-func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
+func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
 	if clusterScope.LinodeCluster.Spec.VPCRef != nil {
 		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
 			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, "linode vpc not yet available", clusterv1.ConditionSeverityError, "")
-				return err
+				return res, err
 			}
 		}
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady)
@@ -220,13 +221,13 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, "linode firewall not yet available", clusterv1.ConditionSeverityError, "")
-				return err
+				return res, err
 			}
 		}
 		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady)
 	}
 
-	return nil
+	return ctrl.Result{}, nil
 }
 
 func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
