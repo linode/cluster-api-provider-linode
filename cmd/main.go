@@ -271,12 +271,18 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 		os.Exit(1)
 	}
 
+	useGzip, err := strconv.ParseBool(os.Getenv("GZIP_COMPRESSION_ENABLED"))
+	if err != nil {
+		setupLog.Error(err, "proceeding without gzip compression for cloud-init data")
+	}
+
 	// LinodeMachine Controller
 	if err := (&controller.LinodeMachineReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeMachineReconciler"),
-		WatchFilterValue:   flags.machineWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
+		Client:                 mgr.GetClient(),
+		Recorder:               mgr.GetEventRecorderFor("LinodeMachineReconciler"),
+		WatchFilterValue:       flags.machineWatchFilter,
+		LinodeClientConfig:     linodeClientConfig,
+		GzipCompressionEnabled: useGzip,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)

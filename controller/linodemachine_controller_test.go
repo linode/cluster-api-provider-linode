@@ -49,7 +49,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const defaultNamespace = "default"
+const (
+	defaultNamespace    = "default"
+	gzipCompressionFlag = false
+)
 
 var _ = Describe("create", Label("machine", "create"), func() {
 	var machine clusterv1.Machine
@@ -1820,7 +1823,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		Expect(err).NotTo(HaveOccurred())
 		mScope.PatchHelper = patchHelper
 
-		createOpts, err := newCreateConfig(ctx, &mScope, logger)
+		createOpts, err := newCreateConfig(ctx, &mScope, gzipCompressionFlag, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
 		Expect(createOpts.PlacementGroup.ID).To(Equal(1))
@@ -1997,7 +2000,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 		mScope.PatchHelper = patchHelper
 
-		createOpts, err := newCreateConfig(ctx, &mScope, logger)
+		createOpts, err := newCreateConfig(ctx, &mScope, gzipCompressionFlag, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
 		Expect(createOpts.Interfaces).To(Equal([]linodego.InstanceConfigInterfaceCreateOptions{
@@ -2073,7 +2076,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 		Expect(err).NotTo(HaveOccurred())
 		mScope.PatchHelper = patchHelper
 
-		createOpts, err := newCreateConfig(ctx, &mScope, logger)
+		createOpts, err := newCreateConfig(ctx, &mScope, gzipCompressionFlag, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
 		Expect(createOpts.Interfaces).To(Equal([]linodego.InstanceConfigInterfaceCreateOptions{

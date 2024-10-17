@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"crypto/rand"
 	b64 "encoding/base64"
 	"fmt"
 	"testing"
@@ -9,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -64,6 +68,20 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 func TestSetUserData(t *testing.T) {
 	t.Parallel()
 
+	userData := []byte("test-data")
+	if gzipCompressionFlag {
+		var userDataBuff bytes.Buffer
+		gz := gzip.NewWriter(&userDataBuff)
+		_, err = gz.Write([]byte("test-data"))
+		err = gz.Close()
+		require.NoError(t, err, "Failed to compress bootstrap data")
+		userData = userDataBuff.Bytes()
+	}
+
+	largeData := make([]byte, maxBootstrapDataBytesCloudInit*10)
+	_, err = rand.Read(largeData)
+	require.NoError(t, err, "Failed to create bootstrap data")
+
 	tests := []struct {
 		name          string
 		machineScope  *scope.MachineScope
@@ -92,7 +110,7 @@ func TestSetUserData(t *testing.T) {
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
-				UserData: b64.StdEncoding.EncodeToString([]byte("test-data")),
+				UserData: b64.StdEncoding.EncodeToString(userData),
 			}},
 			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -169,7 +187,7 @@ func TestSetUserData(t *testing.T) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
-							"value": make([]byte, maxBootstrapDataBytesCloudInit+1),
+							"value": largeData,
 						},
 					}
 					*obj = cred
@@ -289,7 +307,7 @@ func TestSetUserData(t *testing.T) {
 			testcase.expects(mockClient, mockK8sClient)
 			logger := logr.Logger{}
 
-			err := setUserData(context.Background(), testcase.machineScope, testcase.createConfig, logger)
+			err := setUserData(context.Background(), testcase.machineScope, testcase.createConfig, gzipCompressionFlag, logger)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
