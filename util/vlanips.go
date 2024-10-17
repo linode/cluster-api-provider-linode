@@ -17,10 +17,18 @@ limitations under the License.
 package util
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/netip"
 	"slices"
 	"sync"
+
+	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -35,16 +43,54 @@ type ClusterIPs struct {
 	ips []string
 }
 
-func getClusterIPs(key string) *ClusterIPs {
-	vlanIPsMu.Lock()
-	defer vlanIPsMu.Unlock()
-	ips, exists := vlanIPsMap[key]
-	if !exists {
-		ips = &ClusterIPs{
-			ips: []string{},
+func getExistingIPsForCluster(ctx context.Context, clusterName, namespace string, kubeclient client.Client) ([]string, error) {
+	clusterReq, err := labels.NewRequirement("cluster.x-k8s.io/cluster-name", selection.Equals, []string{clusterName})
+	if err != nil {
+		return nil, fmt.Errorf("building label selector: %w", err)
+	}
+
+	selector := labels.NewSelector()
+	selector = selector.Add(*clusterReq)
+	var linodeMachineList v1alpha2.LinodeMachineList
+	err = kubeclient.List(ctx, &linodeMachineList, &client.ListOptions{Namespace: namespace, LabelSelector: selector})
+	if err != nil {
+		return nil, fmt.Errorf("listing all linodeMachines %w", err)
+	}
+
+	_, ipnet, err := net.ParseCIDR(vlanIPRange)
+	if err != nil {
+		return nil, fmt.Errorf("parsing vlanIPRange: %w", err)
+	}
+
+	existingIPs := []string{}
+	for _, lm := range linodeMachineList.Items {
+		for _, addr := range lm.Status.Addresses {
+			if addr.Type == clusterv1.MachineInternalIP {
+				if ipnet.Contains(net.ParseIP(addr.Address)) {
+					existingIPs = append(existingIPs, addr.Address)
+				}
+			}
 		}
 	}
-	return ips
+	return existingIPs, nil
+}
+
+func getClusterIPs(ctx context.Context, clusterName, namespace string, kubeclient client.Client) (*ClusterIPs, error) {
+	key := fmt.Sprintf("%s.%s", namespace, clusterName)
+	vlanIPsMu.Lock()
+	defer vlanIPsMu.Unlock()
+	clusterIps, exists := vlanIPsMap[key]
+	if !exists {
+		ips, err := getExistingIPsForCluster(ctx, clusterName, namespace, kubeclient)
+		if err != nil {
+			return nil, fmt.Errorf("getting existingIPs for a cluster: %w", err)
+		}
+		clusterIps = &ClusterIPs{
+			ips: ips,
+		}
+		vlanIPsMap[key] = clusterIps
+	}
+	return clusterIps, nil
 }
 
 func (c *ClusterIPs) getNextIP() string {
@@ -66,10 +112,12 @@ func (c *ClusterIPs) getNextIP() string {
 }
 
 // GetNextVlanIP returns the next available IP for a cluster
-func GetNextVlanIP(clusterName, namespace string) string {
-	key := fmt.Sprintf("%s.%s", namespace, clusterName)
-	clusterIPs := getClusterIPs(key)
-	return clusterIPs.getNextIP()
+func GetNextVlanIP(ctx context.Context, clusterName, namespace string, kubeclient client.Client) (string, error) {
+	clusterIPs, err := getClusterIPs(ctx, clusterName, namespace, kubeclient)
+	if err != nil {
+		return "", err
+	}
+	return clusterIPs.getNextIP(), nil
 }
 
 func DeleteClusterIPs(clusterName, namespace string) {
