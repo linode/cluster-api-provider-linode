@@ -61,6 +61,7 @@ func TestGetNextVlanIP(t *testing.T) {
 			ips: []string{"10.0.0.1", "10.0.0.2"},
 		}
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tt.expects(mockK8sClient)
 			got, err := GetNextVlanIP(context.Background(), tt.clusterName, tt.clusterNamespace, mockK8sClient)
 			if err != nil {
