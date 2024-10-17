@@ -56,7 +56,7 @@ kind: LinodeFirewall
 metadata:
   labels:
     cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
-  name: ${CLUSTER_NAME}-nb-firewall
+  name: ${CLUSTER_NAME}-nb
 spec:
   credentialsRef:
     name: ${CLUSTER_NAME}-credentials

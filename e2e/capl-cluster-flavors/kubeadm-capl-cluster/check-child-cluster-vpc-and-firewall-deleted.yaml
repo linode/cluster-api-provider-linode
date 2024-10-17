@@ -17,4 +17,4 @@ metadata:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeFirewall
 metadata:
-  name: ($cluster)-nb-firewall
+  name: ($cluster)-nb
