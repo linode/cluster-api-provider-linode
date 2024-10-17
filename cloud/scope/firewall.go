@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -102,9 +103,12 @@ func (s *FirewallScope) AddCredentialsRefFinalizer(ctx context.Context) error {
 		return nil
 	}
 
-	return addCredentialsFinalizer(ctx, s.Client,
-		*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
-		toFinalizer(s.LinodeFirewall))
+	// Retry on conflict to handle the case where the secret is being updated concurrently.
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return addCredentialsFinalizer(ctx, s.Client,
+			*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
+			toFinalizer(s.LinodeFirewall))
+	})
 }
 
 func (s *FirewallScope) RemoveCredentialsRefFinalizer(ctx context.Context) error {
@@ -112,9 +116,12 @@ func (s *FirewallScope) RemoveCredentialsRefFinalizer(ctx context.Context) error
 		return nil
 	}
 
-	return removeCredentialsFinalizer(ctx, s.Client,
-		*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
-		toFinalizer(s.LinodeFirewall))
+	// Retry on conflict to handle the case where the secret is being updated concurrently.
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return removeCredentialsFinalizer(ctx, s.Client,
+			*s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(),
+			toFinalizer(s.LinodeFirewall))
+	})
 }
 
 func (s *FirewallScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {

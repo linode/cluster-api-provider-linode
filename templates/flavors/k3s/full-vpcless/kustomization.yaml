@@ -37,6 +37,8 @@ patches:
     patch: |-
       - op: remove
         path: /spec/vpcRef
+      - op: remove
+        path: /spec/nodeBalancerFirewallRef
   - target:
       group: cluster.x-k8s.io
       version: v1beta1

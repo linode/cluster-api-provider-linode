@@ -5,6 +5,17 @@ resources:
 
 patches:
   - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeCluster
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeCluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        nodeBalancerFirewallRef: null
+  - target:
       group: cluster.x-k8s.io
       version: v1beta1
       kind: Cluster

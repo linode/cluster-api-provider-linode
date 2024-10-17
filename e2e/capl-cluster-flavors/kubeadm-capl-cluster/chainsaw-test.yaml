@@ -141,6 +141,11 @@ spec:
               apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
               kind: LinodeFirewall
               name: ($cluster)
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeFirewall
+              name: ($cluster)-nb
         - error:
             file: check-child-cluster-vpc-and-firewall-deleted.yaml
     - name: Check if the linodes are deleted

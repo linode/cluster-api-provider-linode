@@ -1,0 +1,10 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeCluster
+metadata:
+  name: ($cluster)
+  finalizers:
+    - linodecluster.infrastructure.cluster.x-k8s.io
+spec:
+  region: us-sea
+status:
+  ready: true

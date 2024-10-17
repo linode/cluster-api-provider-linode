@@ -148,7 +148,7 @@ func addCredentialsFinalizer(ctx context.Context, crClient K8sClient, credential
 func removeCredentialsFinalizer(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
 	secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
-		return err
+		return client.IgnoreNotFound(err)
 	}
 
 	controllerutil.RemoveFinalizer(secret, finalizer)
