@@ -39,7 +39,7 @@ spec:
           - 192.168.255.0/24
       description: accept all api server related traffic from nodebalancers
       label: inbound-api-server
-      ports: ${APISERVER_PORT:="6443"}, ${KONNECTIVITY_PORT:=8132}
+      ports: ${APISERVER_PORT:="6443"}, ${KONNECTIVITY_PORT:="8132"}
       protocol: TCP
     - action: ACCEPT
       addresses:
@@ -70,5 +70,5 @@ spec:
           - ::/0
       description: accept all api server related traffic from nodebalancers
       label: inbound-api-server
-      ports: ${APISERVER_PORT:="6443"}, ${KONNECTIVITY_PORT:=8132}
+      ports: ${APISERVER_PORT:="6443"}, ${KONNECTIVITY_PORT:="8132"}
       protocol: TCP
