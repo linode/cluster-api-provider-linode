@@ -22,6 +22,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -83,6 +84,9 @@ func main() {
 		linodeDNSToken = os.Getenv("LINODE_DNS_TOKEN")
 		linodeDNSURL   = os.Getenv("LINODE_DNS_URL")
 		linodeDNSCA    = os.Getenv("LINODE_DNS_CA")
+
+		// Feature flags
+		gzipCompressionEnabled = os.Getenv("GZIP_COMPRESSION_ENABLED")
 
 		machineWatchFilter             string
 		clusterWatchFilter             string
@@ -185,11 +189,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	useGzip, err := strconv.ParseBool(gzipCompressionEnabled)
+	if err != nil {
+		setupLog.Error(err, "proceeding without gzip compression for cloud-init data")
+	}
+
 	if err = (&controller.LinodeMachineReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeMachineReconciler"),
-		WatchFilterValue:   machineWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
+		Client:                 mgr.GetClient(),
+		Recorder:               mgr.GetEventRecorderFor("LinodeMachineReconciler"),
+		WatchFilterValue:       machineWatchFilter,
+		LinodeClientConfig:     linodeClientConfig,
+		GzipCompressionEnabled: useGzip,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
