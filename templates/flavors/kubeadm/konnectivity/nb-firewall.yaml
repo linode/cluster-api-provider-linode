@@ -10,46 +10,45 @@ spec:
   enabled: ${LINODE_FIREWALL_ENABLED:=false}
   inboundPolicy: DROP
   inboundRules:
-  - action: ACCEPT
-    addresses:
-      ipv4:
-      - 10.0.0.0/8
-    description: accept all tcp traffic within the vpc
-    label: intra-cluster-tcp
-    ports: 1-65535
-    protocol: TCP
-  - action: ACCEPT
-    addresses:
-      ipv4:
-      - 10.0.0.0/8
-    description: accept all udp traffic within the vpc
-    label: intra-cluster-udp
-    ports: 1-65535
-    protocol: UDP
-  - action: ACCEPT
-    addresses:
-      ipv4:
-      - 10.0.0.0/8
-    description: accept all icmp traffic within the vpc
-    label: intra-cluster-icmp
-    protocol: ICMP
-  - action: ACCEPT
-    addresses:
-      ipv4:
-      - 192.168.255.0/24
-    description: accept all api server related traffic from nodebalancers
-    label: inbound-api-server
-    ports: ${APISERVER_PORT:="6443"}, ${KONNECTIVITY_PORT:=8132}
-    protocol: TCP
-  - action: ACCEPT
-    addresses:
-      ipv4:
-      - 192.168.255.0/24
-    description: accept traffic from the entire NodeBalancer CIDR to the NodePort
-      service range
-    label: accept-NodeBalancer
-    ports: 30000-32767
-    protocol: TCP
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 10.0.0.0/8
+      description: accept all tcp traffic within the vpc
+      label: intra-cluster-tcp
+      ports: 1-65535
+      protocol: TCP
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 10.0.0.0/8
+      description: accept all udp traffic within the vpc
+      label: intra-cluster-udp
+      ports: 1-65535
+      protocol: UDP
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 10.0.0.0/8
+      description: accept all icmp traffic within the vpc
+      label: intra-cluster-icmp
+      protocol: ICMP
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 192.168.255.0/24
+      description: accept all api server related traffic from nodebalancers
+      label: inbound-api-server
+      ports: ${APISERVER_PORT:="6443"}, ${KONNECTIVITY_PORT:=8132}
+      protocol: TCP
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 192.168.255.0/24
+      description: accept traffic from the entire NodeBalancer CIDR to the NodePort service range
+      label: accept-NodeBalancer
+      ports: 30000-32767
+      protocol: TCP
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeFirewall
@@ -63,13 +62,13 @@ spec:
   enabled: ${LINODE_FIREWALL_ENABLED:=false}
   inboundPolicy: DROP
   inboundRules:
-  - action: ACCEPT
-    addresses:
-      ipv4:
-      - 0.0.0.0/0
-      ipv6:
-      - ::/0
-    description: accept all api server related traffic from nodebalancers
-    label: inbound-api-server
-    ports: ${APISERVER_PORT:="6443"}, ${KONNECTIVITY_PORT:=8132}
-    protocol: TCP
+    - action: ACCEPT
+      addresses:
+        ipv4:
+          - 0.0.0.0/0
+        ipv6:
+          - ::/0
+      description: accept all api server related traffic from nodebalancers
+      label: inbound-api-server
+      ports: ${APISERVER_PORT:="6443"}, ${KONNECTIVITY_PORT:=8132}
+      protocol: TCP
