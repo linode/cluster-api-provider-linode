@@ -21,8 +21,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"go.uber.org/mock/gomock"
+
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 func TestGetNextVlanIP(t *testing.T) {
