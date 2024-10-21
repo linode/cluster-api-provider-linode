@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	b64 "encoding/base64"
 	"encoding/gob"
@@ -97,7 +98,7 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 	}
 }
 
-func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
+func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzipCompressionEnabled bool, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
@@ -110,7 +111,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logg
 	}
 
 	createConfig.Booted = util.Pointer(false)
-	if err := setUserData(ctx, machineScope, createConfig, logger); err != nil {
+	if err := setUserData(ctx, machineScope, createConfig, gzipCompressionEnabled, logger); err != nil {
 		return nil, err
 	}
 
@@ -461,7 +462,21 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 	return &createConfig
 }
 
-func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+func compressUserData(bootstrapData []byte) ([]byte, error) {
+	var userDataBuff bytes.Buffer
+	var err error
+	gz := gzip.NewWriter(&userDataBuff)
+	defer func(gz *gzip.Writer) {
+		err = gz.Close()
+	}(gz)
+	if _, err := gz.Write(bootstrapData); err != nil {
+		return nil, err
+	}
+	err = gz.Close()
+	return userDataBuff.Bytes(), err
+}
+
+func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, gzipCompressionEnabled bool, logger logr.Logger) error {
 	bootstrapData, err := machineScope.GetBootstrapData(ctx)
 	if err != nil {
 		logger.Error(err, "Failed to get bootstrap data")
@@ -469,8 +484,18 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		return err
 	}
 
+	userData := bootstrapData
+	//nolint:nestif // this is a temp flag until cloud-init is updated in cloud-init compatible images
 	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
-		bootstrapSize := len(bootstrapData)
+		if gzipCompressionEnabled {
+			userData, err = compressUserData(bootstrapData)
+			if err != nil {
+				logger.Error(err, "failed to compress bootstrap data")
+
+				return err
+			}
+		}
+		bootstrapSize := len(userData)
 		if bootstrapSize > maxBootstrapDataBytesCloudInit {
 			err = errors.New("bootstrap data too large")
 			logger.Error(err, "decoded bootstrap data exceeds size limit",
@@ -481,7 +506,7 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 			return err
 		}
 		createConfig.Metadata = &linodego.InstanceMetadataOptions{
-			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
+			UserData: b64.StdEncoding.EncodeToString(userData),
 		}
 	} else {
 		logger.Info("using StackScripts for bootstrapping")
