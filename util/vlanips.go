@@ -65,10 +65,8 @@ func getExistingIPsForCluster(ctx context.Context, clusterName, namespace string
 	existingIPs := []string{}
 	for _, lm := range linodeMachineList.Items {
 		for _, addr := range lm.Status.Addresses {
-			if addr.Type == clusterv1.MachineInternalIP {
-				if ipnet.Contains(net.ParseIP(addr.Address)) {
-					existingIPs = append(existingIPs, addr.Address)
-				}
+			if addr.Type == clusterv1.MachineInternalIP && ipnet.Contains(net.ParseIP(addr.Address)) {
+				existingIPs = append(existingIPs, addr.Address)
 			}
 		}
 	}
