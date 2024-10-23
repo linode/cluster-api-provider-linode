@@ -150,8 +150,12 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					// Check type assertion
+					firewall, ok := obj.(*infrav1alpha2.LinodeFirewall)
+					if !ok {
+						return fmt.Errorf("expected *infrav1alpha2.LinodeFirewall, got %T", obj)
+					}
 					// Set the FirewallID in the mock response
-					firewall := obj.(*infrav1alpha2.LinodeFirewall)
 					firewall.Spec.FirewallID = util.Pointer(5678)
 					return nil
 				})
