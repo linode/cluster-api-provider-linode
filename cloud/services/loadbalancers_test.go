@@ -6,11 +6,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-
-	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/mock"
-	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -19,6 +14,11 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/mock"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 func TestEnsureNodeBalancer(t *testing.T) {
