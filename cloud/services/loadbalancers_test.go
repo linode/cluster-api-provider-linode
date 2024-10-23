@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -152,7 +151,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					gomock.Any(),
 				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
 					// Set the FirewallID in the mock response
-					firewall := obj.(*v1alpha2.LinodeFirewall)
+					firewall := obj.(*infrav1alpha2.LinodeFirewall)
 					firewall.Spec.FirewallID = util.Pointer(5678)
 					return nil
 				})
