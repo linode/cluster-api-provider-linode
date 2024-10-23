@@ -79,6 +79,15 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			},
 		},
 	}
+	linodeFirewall := infrav1alpha2.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "firewalltest",
+			Namespace: defaultNamespace,
+		},
+		Spec: infrav1alpha2.LinodeFirewallSpec{
+			FirewallID: util.Pointer(123), // Test firewall ID
+		},
+	}
 
 	ctlrSuite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 	reconciler := LinodeClusterReconciler{}
@@ -105,6 +114,31 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 
 	ctlrSuite.Run(
 		OneOf(
+			Path(
+				Call("firewall doesn't exist", func(ctx context.Context, mck Mock) {
+					cScope.LinodeCluster.Spec.NodeBalancerFirewallRef = &corev1.ObjectReference{Name: "firewalltest"}
+				}),
+				Result("", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeNBFirewallReady)).To(BeFalse())
+				}),
+			),
+			Path(
+				Call("firewall present but not ready", func(ctx context.Context, mck Mock) {
+					cScope.LinodeCluster.Spec.NodeBalancerFirewallRef = &corev1.ObjectReference{Name: "firewalltest"}
+					Expect(k8sClient.Create(ctx, &linodeFirewall)).To(Succeed())
+					linodeFirewall.Spec.FirewallID = nil
+					k8sClient.Update(ctx, &linodeFirewall)
+				}),
+				Result("", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeNBFirewallReady)).To(BeFalse())
+				}),
+			),
 			Path(
 				Call("vpc doesn't exist", func(ctx context.Context, mck Mock) {
 				}),
@@ -135,8 +169,28 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Path(
 				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
+					// Set VPC as ready
 					linodeVPC.Status.Ready = true
 					k8sClient.Status().Update(ctx, &linodeVPC)
+
+					// Create and mark firewall as ready if using firewall ref
+					if cScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
+						linodeFirewall.Spec.FirewallID = util.Pointer(123)
+						k8sClient.Update(ctx, &linodeFirewall)
+
+						// Mock GetFirewall call
+						mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), gomock.Any()).
+							Return(&linodego.Firewall{ID: 123}, nil)
+					}
+
+					// If using direct firewall ID
+					if cScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
+						// Mock GetFirewall call for direct ID reference
+						mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), *cScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID).
+							Return(&linodego.Firewall{ID: *cScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID}, nil)
+					}
+
+					// Mock the NodeBalancer creation failure
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(nil, errors.New("failed to ensure nodebalancer"))
 				}),
@@ -146,13 +200,22 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
+						Expect(mck.Logs()).To(Or(
+							ContainSubstring("re-queuing cluster/load-balancer creation"),
+							ContainSubstring("failed to ensure nodebalancer"),
+						))
 					})),
 				),
 			),
 			Path(
 				Call("cluster is not created because nb was nil", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
+
+					// Mock GetFirewall call
+					mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), gomock.Any()).
+						Return(&linodego.Firewall{ID: 123}, nil)
+
+					// Mock CreateNodeBalancer to return nil
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(nil, nil)
 				}),
@@ -169,6 +232,12 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Path(
 				Call("cluster is not created because nb config was nil", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
+
+					// Mock GetFirewall call
+					mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), gomock.Any()).
+						Return(&linodego.Firewall{ID: 123}, nil)
+
+					// Mock CreateNodeBalancerConfig to return nil
 					mck.LinodeClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(nil, errors.New("nodeBalancer config created was nil"))
 				}),
@@ -250,10 +319,10 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(3))
 					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
-					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeVPCReady))
-
+					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeNBFirewallReady))
+					Expect(linodeCluster.Status.Conditions[2].Type).To(Equal(ConditionPreflightLinodeVPCReady))
 					By("checking NB id")
 					Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
 

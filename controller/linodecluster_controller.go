@@ -53,7 +53,8 @@ import (
 const (
 	lbTypeDNS string = "dns"
 
-	ConditionPreflightLinodeVPCReady clusterv1.ConditionType = "PreflightLinodeVPCReady"
+	ConditionPreflightLinodeVPCReady        clusterv1.ConditionType = "PreflightLinodeVPCReady"
+	ConditionPreflightLinodeNBFirewallReady clusterv1.ConditionType = "PreflightLinodeNBFirewallReady"
 )
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
@@ -168,18 +169,12 @@ func (r *LinodeClusterReconciler) reconcile(
 		return res, err
 	}
 
-	// Create
-	if clusterScope.LinodeCluster.Spec.VPCRef != nil {
-		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
-			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
-			if err != nil || !res.IsZero() {
-				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, string("linode vpc not yet available"), clusterv1.ConditionSeverityError, "")
-				return res, err
-			}
-		}
-		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady)
+	// Perform preflight checks - check if the NB firewall and VPC are created successfully
+	if res, err := r.performPreflightChecks(ctx, logger, clusterScope); err != nil || !res.IsZero() {
+		return res, err
 	}
 
+	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
 			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
@@ -200,13 +195,72 @@ func (r *LinodeClusterReconciler) reconcile(
 		}
 	}
 
-	err := addMachineToLB(ctx, clusterScope)
-	if err != nil {
+	if err := addMachineToLB(ctx, clusterScope); err != nil {
 		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
 		return retryIfTransient(err)
 	}
 
 	return res, nil
+}
+
+func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
+	if clusterScope.LinodeCluster.Spec.VPCRef != nil {
+		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
+			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
+			if err != nil || !res.IsZero() {
+				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, "linode vpc not yet available", clusterv1.ConditionSeverityError, "")
+				return res, err
+			}
+		}
+		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady)
+	}
+
+	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
+		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady) {
+			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, clusterScope)
+			if err != nil || !res.IsZero() {
+				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, "linode firewall not yet available", clusterv1.ConditionSeverityError, "")
+				return res, err
+			}
+		}
+		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
+	name := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Name
+	namespace := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Namespace
+	if namespace == "" {
+		namespace = clusterScope.LinodeCluster.Namespace
+	}
+
+	linodeFirewall := &infrav1alpha2.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	objectKey := client.ObjectKeyFromObject(linodeFirewall)
+	err := clusterScope.Client.Get(ctx, objectKey, linodeFirewall)
+	if err != nil {
+		logger.Error(err, "Failed to fetch LinodeFirewall")
+		if reconciler.RecordDecayingCondition(clusterScope.LinodeCluster,
+			ConditionPreflightLinodeNBFirewallReady, string(cerrs.CreateClusterError), err.Error(),
+			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+	}
+	if linodeFirewall.Spec.FirewallID == nil {
+		logger.Info("Linode firewall not yet available")
+		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+	}
+
+	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Linode firewall is now available")
+
+	return ctrl.Result{}, nil
 }
 
 func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {

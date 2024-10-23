@@ -9,7 +9,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -35,13 +37,67 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	}
 
 	logger.Info(fmt.Sprintf("Creating NodeBalancer %s", clusterScope.LinodeCluster.Name))
+
 	createConfig := linodego.NodeBalancerCreateOptions{
 		Label:  util.Pointer(clusterScope.LinodeCluster.Name),
 		Region: clusterScope.LinodeCluster.Spec.Region,
 		Tags:   []string{string(clusterScope.LinodeCluster.UID)},
 	}
 
+	// get firewall ID from firewallRef if it exists
+	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
+		firewallID, err := getFirewallID(ctx, clusterScope, logger)
+		if err != nil {
+			logger.Error(err, "Failed to fetch LinodeFirewall ID")
+			return nil, err
+		}
+		createConfig.FirewallID = firewallID
+		clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID = &firewallID
+	}
+
+	// Use a firewall created outside of the CAPL ecosystem
+	// get & validate firewall ID from .Spec.Network.FirewallID if it exists
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
+		firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
+		firewall, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
+		if err != nil {
+			logger.Error(err, "Failed to fetch Linode Firewall from the Linode API")
+			return nil, err
+		}
+		createConfig.FirewallID = firewall.ID
+	}
+
 	return clusterScope.LinodeClient.CreateNodeBalancer(ctx, createConfig)
+}
+
+func getFirewallID(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (int, error) {
+	name := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Name
+	namespace := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Namespace
+	if namespace == "" {
+		namespace = clusterScope.LinodeCluster.Namespace
+	}
+
+	logger = logger.WithValues("firewallName", name, "firewallNamespace", namespace)
+
+	linodeFirewall := &v1alpha2.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	objectKey := client.ObjectKeyFromObject(linodeFirewall)
+	err := clusterScope.Client.Get(ctx, objectKey, linodeFirewall)
+	if err != nil {
+		logger.Error(err, "Failed to fetch LinodeFirewall")
+		return -1, err
+	}
+	if linodeFirewall.Spec.FirewallID == nil {
+		err = errors.New("nil firewallID")
+		logger.Error(err, "Failed to fetch LinodeFirewall")
+		return -1, err
+	}
+
+	return *linodeFirewall.Spec.FirewallID, nil
 }
 
 // EnsureNodeBalancerConfigs creates NodeBalancer configs if it does not exist or returns the existing NodeBalancerConfig
