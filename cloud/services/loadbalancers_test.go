@@ -6,16 +6,20 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
+	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
+	"github.com/linode/cluster-api-provider-linode/util"
+	"github.com/linode/linodego"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestEnsureNodeBalancer(t *testing.T) {
@@ -23,7 +27,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 	tests := []struct {
 		name                 string
 		clusterScope         *scope.ClusterScope
-		expects              func(*mock.MockLinodeClient)
+		expects              func(*mock.MockLinodeClient, *mock.MockK8sClient)
 		expectedNodeBalancer *linodego.NodeBalancer
 		expectedError        error
 	}{
@@ -48,7 +52,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mockClient *mock.MockLinodeClient) {
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
 				mockClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancer{
 					ID: 1234,
 				}, nil)
@@ -72,7 +76,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mockClient *mock.MockLinodeClient) {
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
 				mockClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancer{
 					ID:    1234,
 					Label: ptr.To("test"),
@@ -100,7 +104,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					},
 				},
 			},
-			expects: func(mockClient *mock.MockLinodeClient) {
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
 				mockClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Unable to get NodeBalancer"))
 			},
 			expectedError: fmt.Errorf("Unable to get NodeBalancer"),
@@ -116,10 +120,145 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{},
 				},
 			},
-			expects: func(mockClient *mock.MockLinodeClient) {
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
 				mockClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Unable to create NodeBalancer"))
 			},
 			expectedError: fmt.Errorf("Unable to create NodeBalancer"),
+		},
+		{
+			name: "Success - Create NodeBalancer with FirewallRef",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Region: "us-east",
+						NodeBalancerFirewallRef: &corev1.ObjectReference{
+							Name:      "test-firewall",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				// Mock K8s client Get call for FirewallRef
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					// Set the FirewallID in the mock response
+					firewall := obj.(*v1alpha2.LinodeFirewall)
+					firewall.Spec.FirewallID = util.Pointer(5678)
+					return nil
+				})
+
+				// Mock GetFirewall call
+				mockClient.EXPECT().GetFirewall(gomock.Any(), 5678).Return(&linodego.Firewall{
+					ID: 5678,
+				}, nil)
+
+				// Mock CreateNodeBalancer call
+				mockClient.EXPECT().CreateNodeBalancer(
+					gomock.Any(),
+					gomock.Eq(linodego.NodeBalancerCreateOptions{
+						Label:      util.Pointer("test-cluster"),
+						Region:     "us-east",
+						Tags:       []string{"test-uid"},
+						FirewallID: 5678,
+					}),
+				).Return(&linodego.NodeBalancer{
+					ID:    1234,
+					Label: util.Pointer("test-cluster"),
+				}, nil)
+			},
+			expectedNodeBalancer: &linodego.NodeBalancer{
+				ID:    1234,
+				Label: util.Pointer("test-cluster"),
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Success - Create NodeBalancer with direct FirewallID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Region: "us-east",
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerFirewallID: util.Pointer(5678),
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockClient.EXPECT().GetFirewall(gomock.Any(), 5678).Return(&linodego.Firewall{
+					ID: 5678,
+				}, nil)
+				mockClient.EXPECT().CreateNodeBalancer(gomock.Any(), linodego.NodeBalancerCreateOptions{
+					Label:      util.Pointer("test-cluster"),
+					Region:     "us-east",
+					Tags:       []string{"test-uid"},
+					FirewallID: 5678,
+				}).Return(&linodego.NodeBalancer{
+					ID:    1234,
+					Label: util.Pointer("test-cluster"),
+				}, nil)
+			},
+			expectedNodeBalancer: &linodego.NodeBalancer{
+				ID:    1234,
+				Label: util.Pointer("test-cluster"),
+			},
+		},
+		{
+			name: "Error - FirewallRef not found",
+			clusterScope: &scope.ClusterScope{
+				Client: mock.NewMockK8sClient(nil),
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						NodeBalancerFirewallRef: &corev1.ObjectReference{
+							Name:      "non-existent-firewall",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Failed to fetch LinodeFirewall"))
+			},
+			expectedError: fmt.Errorf("Failed to fetch LinodeFirewall"),
+		},
+		{
+			name: "Error - Direct FirewallID not found",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerFirewallID: util.Pointer(9999),
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockClient.EXPECT().GetFirewall(gomock.Any(), 9999).Return(nil, fmt.Errorf("Firewall not found"))
+			},
+			expectedError: fmt.Errorf("Firewall not found"),
 		},
 	}
 	for _, tt := range tests {
@@ -131,10 +270,12 @@ func TestEnsureNodeBalancer(t *testing.T) {
 			defer ctrl.Finish()
 
 			MockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			MockK8sClient := mock.NewMockK8sClient(ctrl)
 
 			testcase.clusterScope.LinodeClient = MockLinodeClient
+			testcase.clusterScope.Client = MockK8sClient
 
-			testcase.expects(MockLinodeClient)
+			testcase.expects(MockLinodeClient, MockK8sClient)
 
 			got, err := EnsureNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
