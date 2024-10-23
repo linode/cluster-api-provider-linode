@@ -706,5 +706,5 @@ func createInstance(ctx context.Context, logger logr.Logger, machineScope *scope
 
 	machineScope.LinodeClient.OnAfterResponse(ctr.ApiResponseRatelimitCounter)
 	inst, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
-	return inst, time.Duration(reconciler.DefaultMachineControllerRetryDelay.Seconds()), err
+	return inst, ctr.RetryAfter(), err
 }
