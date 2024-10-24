@@ -96,3 +96,7 @@ func Convert_v1alpha2_LinodeClusterSpec_To_v1alpha1_LinodeClusterSpec(in *infras
 	// VLAN is not supported in v1alpha1
 	return autoConvert_v1alpha2_LinodeClusterSpec_To_v1alpha1_LinodeClusterSpec(in, out, scope)
 }
+
+func Convert_v1alpha2_VPCSubnetCreateOptions_To_v1alpha1_VPCSubnetCreateOptions(in *infrastructurev1alpha2.VPCSubnetCreateOptions, out *VPCSubnetCreateOptions, scope conversion.Scope) error {
+	return autoConvert_v1alpha2_VPCSubnetCreateOptions_To_v1alpha1_VPCSubnetCreateOptions(in, out, scope)
+}

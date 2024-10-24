@@ -1783,9 +1783,15 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				UID:       "5123122",
 			},
 			Spec: infrav1alpha2.LinodeVPCSpec{
-				VPCID:   ptr.To(1),
-				Region:  "us-ord",
-				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{},
+				VPCID:  ptr.To(1),
+				Region: "us-ord",
+				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+					{
+						IPv4:     "10.0.0.0/8",
+						SubnetID: 1,
+						Label:    "test",
+					},
+				},
 			},
 			Status: infrav1alpha2.LinodeVPCStatus{
 				Ready: true,
@@ -1849,9 +1855,6 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			Return([]linodego.VPC{}, nil)
 		mockLinodeClient.EXPECT().
 			CreateVPC(ctx, gomock.Any()).
-			Return(&linodego.VPC{ID: 1}, nil)
-		mockLinodeClient.EXPECT().
-			GetVPC(ctx, gomock.Any()).
 			Return(&linodego.VPC{ID: 1, Subnets: []linodego.VPCSubnet{{
 				ID:    1,
 				Label: "test",
@@ -1927,9 +1930,6 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			Return([]linodego.VPC{}, nil)
 		mockLinodeClient.EXPECT().
 			CreateVPC(ctx, gomock.Any()).
-			Return(&linodego.VPC{ID: 1}, nil)
-		mockLinodeClient.EXPECT().
-			GetVPC(ctx, gomock.Any()).
 			Return(&linodego.VPC{ID: 1, Subnets: []linodego.VPCSubnet{{
 				ID:    1,
 				Label: "test",
