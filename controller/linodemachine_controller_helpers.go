@@ -465,7 +465,6 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 		DiskEncryption:  linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
 		Group:           machineSpec.Group,
 	}
-
 }
 
 func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {

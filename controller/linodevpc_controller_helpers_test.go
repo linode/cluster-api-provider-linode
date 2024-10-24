@@ -3,8 +3,9 @@ package controller
 import (
 	"testing"
 
-	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/stretchr/testify/assert"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
 func TestLinodeVPCSpecToCreateVPCConfig(t *testing.T) {
