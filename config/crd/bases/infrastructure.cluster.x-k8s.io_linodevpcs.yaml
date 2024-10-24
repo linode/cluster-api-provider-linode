@@ -254,7 +254,7 @@ spec:
                       maxLength: 63
                       minLength: 3
                       type: string
-                    subnetId:
+                    subnetID:
                       description: SubnetID is subnet id for the subnet
                       type: integer
                   type: object
