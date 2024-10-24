@@ -17,9 +17,7 @@ limitations under the License.
 package controller
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"errors"
 
 	"github.com/go-logr/logr"
@@ -94,19 +92,16 @@ func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
 }
 
 func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linodego.VPCCreateOptions {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(vpcSpec)
-	if err != nil {
-		return nil
+	subnets := make([]linodego.VPCSubnetCreateOptions, len(vpcSpec.Subnets))
+	for idx, subnet := range vpcSpec.Subnets {
+		subnets[idx] = linodego.VPCSubnetCreateOptions{
+			Label: subnet.Label,
+			IPv4:  subnet.IPv4,
+		}
 	}
-
-	var createConfig linodego.VPCCreateOptions
-	dec := gob.NewDecoder(&buf)
-	err = dec.Decode(&createConfig)
-	if err != nil {
-		return nil
+	return &linodego.VPCCreateOptions{
+		Description: vpcSpec.Description,
+		Region:      vpcSpec.Region,
+		Subnets:     subnets,
 	}
-
-	return &createConfig
 }
