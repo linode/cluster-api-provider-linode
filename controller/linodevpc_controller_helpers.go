@@ -86,7 +86,7 @@ func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
 	for i, specSubnet := range vpcScope.LinodeVPC.Spec.Subnets {
 		for _, vpcSubnet := range vpc.Subnets {
 			if specSubnet.Label == vpcSubnet.Label {
-				vpcScope.LinodeVPC.Spec.Subnets[i].ID = vpcSubnet.ID
+				vpcScope.LinodeVPC.Spec.Subnets[i].SubnetID = vpcSubnet.ID
 				break
 			}
 		}

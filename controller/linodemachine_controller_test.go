@@ -1787,9 +1787,9 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Region: "us-ord",
 				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 					{
-						IPv4:  "10.0.0.0/8",
-						ID:    1,
-						Label: "test",
+						IPv4:     "10.0.0.0/8",
+						SubnetID: 1,
+						Label:    "test",
 					},
 				},
 			},

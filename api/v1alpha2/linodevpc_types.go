@@ -53,9 +53,9 @@ type VPCSubnetCreateOptions struct {
 	Label string `json:"label,omitempty"`
 	// +optional
 	IPv4 string `json:"ipv4,omitempty"`
-	// ID is subnet id for the subnet
+	// SubnetID is subnet id for the subnet
 	// +optional
-	ID int `json:"id,omitempty"`
+	SubnetID int `json:"subnetId,omitempty"`
 }
 
 // LinodeVPCStatus defines the observed state of LinodeVPC

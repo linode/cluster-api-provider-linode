@@ -408,7 +408,11 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		return nil, errors.New("failed to find subnet")
 	}
 
-	subnetID := linodeVPC.Spec.Subnets[0].ID
+	subnetID := linodeVPC.Spec.Subnets[0].SubnetID
+	if subnetID == 0 {
+		return nil, errors.New("failed to find subnet as subnet id set is 0")
+	}
+
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID

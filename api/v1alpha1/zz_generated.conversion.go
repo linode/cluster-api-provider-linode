@@ -1248,6 +1248,6 @@ func Convert_v1alpha1_VPCSubnetCreateOptions_To_v1alpha2_VPCSubnetCreateOptions(
 func autoConvert_v1alpha2_VPCSubnetCreateOptions_To_v1alpha1_VPCSubnetCreateOptions(in *v1alpha2.VPCSubnetCreateOptions, out *VPCSubnetCreateOptions, s conversion.Scope) error {
 	out.Label = in.Label
 	out.IPv4 = in.IPv4
-	// WARNING: in.ID requires manual conversion: does not exist in peer-type
+	// WARNING: in.SubnetID requires manual conversion: does not exist in peer-type
 	return nil
 }
