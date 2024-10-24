@@ -229,7 +229,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				BootInstance(ctx, 123, 0).
 				After(createInst).
 				Return(nil)
-			getAddrs := mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
 				After(bootInst).
 				Return(&linodego.InstanceIPAddressResponse{
@@ -243,14 +243,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 						},
 					},
 				}, nil)
-			mockLinodeClient.EXPECT().
-				ListInstanceConfigs(ctx, 123, gomock.Any()).
-				After(getAddrs).
-				Return([]linodego.InstanceConfig{{
-					Devices: &linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-					},
-				}}, nil)
 			linodeMachine.Spec.FirewallRef = &corev1.ObjectReference{Name: "fw2", Namespace: defaultNamespace, Kind: "LinodeFirewall", APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha2"}
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -295,7 +287,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			BootInstance(ctx, 123, 0).
 			After(createInst).
 			Return(nil)
-		getAddrs := mockLinodeClient.EXPECT().
+		mockLinodeClient.EXPECT().
 			GetInstanceIPAddresses(ctx, 123).
 			After(bootInst).
 			Return(&linodego.InstanceIPAddressResponse{
@@ -309,14 +301,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					},
 				},
 			}, nil)
-		mockLinodeClient.EXPECT().
-			ListInstanceConfigs(ctx, 123, gomock.Any()).
-			After(getAddrs).
-			Return([]linodego.InstanceConfig{{
-				Devices: &linodego.InstanceConfigDeviceMap{
-					SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-				},
-			}}, nil)
 
 		mScope := scope.MachineScope{
 			Client:        k8sClient,
@@ -536,7 +520,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				}).
 				After(getAddrs).MaxTimes(2).
 				Return(nil, nil)
-			getAddrs = mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
 				After(createNB).
 				Return(&linodego.InstanceIPAddressResponse{
@@ -550,14 +534,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 						},
 					},
 				}, nil).MaxTimes(2)
-			mockLinodeClient.EXPECT().
-				ListInstanceConfigs(ctx, 123, gomock.Any()).
-				After(getAddrs).
-				Return([]linodego.InstanceConfig{{
-					Devices: &linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-					},
-				}}, nil)
 
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -716,6 +692,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
 						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						VPC:     []*linodego.VPCIP{{Address: ptr.To("10.0.0.2")}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -731,13 +708,14 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				}).
 				After(getAddrs).
 				Return(nil, nil).MaxTimes(2)
-			getAddrs = mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				GetInstanceIPAddresses(ctx, 123).
 				After(createNB).
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
 						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						VPC:     []*linodego.VPCIP{{Address: ptr.To("10.0.0.2")}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -745,18 +723,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 						},
 					},
 				}, nil).MaxTimes(2)
-			mockLinodeClient.EXPECT().
-				ListInstanceConfigs(ctx, 123, gomock.Any()).
-				After(getAddrs).
-				Return([]linodego.InstanceConfig{{
-					Devices: &linodego.InstanceConfigDeviceMap{
-						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-					},
-					Interfaces: []linodego.InstanceConfigInterface{{
-						VPCID: ptr.To(1),
-						IPv4:  &linodego.VPCIPv4{VPC: "10.0.0.2"},
-					}},
-				}}, nil)
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
@@ -889,7 +855,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			BootInstance(ctx, 123, 0).
 			After(createInst).
 			Return(nil)
-		getAddrs := mockLinodeClient.EXPECT().
+		mockLinodeClient.EXPECT().
 			GetInstanceIPAddresses(ctx, 123).
 			After(bootInst).
 			Return(&linodego.InstanceIPAddressResponse{
@@ -903,14 +869,6 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 					},
 				},
 			}, nil)
-		mockLinodeClient.EXPECT().
-			ListInstanceConfigs(ctx, 123, gomock.Any()).
-			After(getAddrs).
-			Return([]linodego.InstanceConfig{{
-				Devices: &linodego.InstanceConfigDeviceMap{
-					SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-				},
-			}}, nil)
 
 		mScope := scope.MachineScope{
 			Client:        k8sClient,
