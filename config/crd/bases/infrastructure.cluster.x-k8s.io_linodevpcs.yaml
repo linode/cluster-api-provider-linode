@@ -248,6 +248,9 @@ spec:
                 items:
                   description: VPCSubnetCreateOptions defines subnet options
                   properties:
+                    id:
+                      description: ID is subnet id for the subnet
+                      type: integer
                     ipv4:
                       type: string
                     label:
@@ -256,9 +259,6 @@ spec:
                       type: string
                   type: object
                 type: array
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               vpcID:
                 type: integer
             required:

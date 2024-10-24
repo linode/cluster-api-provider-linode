@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"net/netip"
 	"slices"
-	"sort"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -403,29 +402,13 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		return nil, errors.New("vpc is not available")
 	}
 
-	var subnetID int
-	vpc, err := machineScope.LinodeClient.GetVPC(ctx, *linodeVPC.Spec.VPCID)
-	if err != nil {
-		logger.Error(err, "Failed to fetch LinodeVPC")
-
-		return nil, err
-	}
-	if vpc == nil {
-		logger.Error(nil, "Failed to fetch VPC")
-
-		return nil, errors.New("failed to fetch VPC")
-	}
-	if len(vpc.Subnets) == 0 {
+	if len(linodeVPC.Spec.Subnets) == 0 {
 		logger.Error(nil, "Failed to find subnet")
 
 		return nil, errors.New("failed to find subnet")
 	}
-	// Place node into the least busy subnet
-	sort.Slice(vpc.Subnets, func(i, j int) bool {
-		return len(vpc.Subnets[i].Linodes) > len(vpc.Subnets[j].Linodes)
-	})
 
-	subnetID = vpc.Subnets[0].ID
+	subnetID := linodeVPC.Spec.Subnets[0].ID
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID

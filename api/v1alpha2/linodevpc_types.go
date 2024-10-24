@@ -36,7 +36,6 @@ type LinodeVPCSpec struct {
 	Description string `json:"description,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	Subnets []VPCSubnetCreateOptions `json:"subnets,omitempty"`
 
@@ -54,6 +53,9 @@ type VPCSubnetCreateOptions struct {
 	Label string `json:"label,omitempty"`
 	// +optional
 	IPv4 string `json:"ipv4,omitempty"`
+	// ID is subnet id for the subnet
+	// +optional
+	ID int `json:"id,omitempty"`
 }
 
 // LinodeVPCStatus defines the observed state of LinodeVPC
