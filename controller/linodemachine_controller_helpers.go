@@ -17,10 +17,8 @@ limitations under the License.
 package controller
 
 import (
-	"bytes"
 	"context"
 	b64 "encoding/base64"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"net/http"
@@ -431,21 +429,43 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 }
 
 func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec) *linodego.InstanceCreateOptions {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(machineSpec)
-	if err != nil {
-		return nil
+	interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
+	for idx, iface := range machineSpec.Interfaces {
+		creatOpt := linodego.InstanceConfigInterfaceCreateOptions{
+			IPAMAddress: iface.IPAMAddress,
+			Label:       iface.Label,
+			Purpose:     iface.Purpose,
+			Primary:     iface.Primary,
+			SubnetID:    iface.SubnetID,
+			IPRanges:    iface.IPRanges,
+		}
+		if iface.IPv4 != nil && iface.IPv4.NAT1To1 != "" {
+			creatOpt.IPv4 = &linodego.VPCIPv4{
+				VPC:     iface.IPv4.VPC,
+				NAT1To1: util.Pointer(iface.IPv4.NAT1To1),
+			}
+		}
+		interfaces[idx] = creatOpt
+	}
+	privateIP := false
+	if machineSpec.PrivateIP != nil {
+		privateIP = *machineSpec.PrivateIP
+	}
+	return &linodego.InstanceCreateOptions{
+		Region:          machineSpec.Region,
+		Type:            machineSpec.Type,
+		AuthorizedKeys:  machineSpec.AuthorizedKeys,
+		AuthorizedUsers: machineSpec.AuthorizedUsers,
+		RootPass:        machineSpec.RootPass,
+		Image:           machineSpec.Image,
+		Interfaces:      interfaces,
+		PrivateIP:       privateIP,
+		Tags:            machineSpec.Tags,
+		FirewallID:      machineSpec.FirewallID,
+		DiskEncryption:  linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
+		Group:           machineSpec.Group,
 	}
 
-	var createConfig linodego.InstanceCreateOptions
-	dec := gob.NewDecoder(&buf)
-	err = dec.Decode(&createConfig)
-	if err != nil {
-		return nil
-	}
-
-	return &createConfig
 }
 
 func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
