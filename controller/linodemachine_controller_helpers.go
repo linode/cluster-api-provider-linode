@@ -170,12 +170,6 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 		return nil, fmt.Errorf("get instance ips: %w", err)
 	}
 
-	// get the default instance config
-	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, instanceID, &linodego.ListOptions{})
-	if err != nil || len(configs) == 0 {
-		return nil, fmt.Errorf("list instance configs: %w", err)
-	}
-
 	ips := []clusterv1.MachineAddress{}
 	// check if a node has public ipv4 ip and store it
 	if len(addresses.IPv4.Public) == 0 {
@@ -198,21 +192,32 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 		Type:    clusterv1.MachineExternalIP,
 	})
 
-	// Iterate over interfaces in config and find VPC or VLAN specific ips
-	for _, iface := range configs[0].Interfaces {
-		if iface.VPCID != nil && iface.IPv4.VPC != "" {
+	// check if a node has vpc specific ip and store it
+	for _, vpcIP := range addresses.IPv4.VPC {
+		if *vpcIP.Address != "" {
 			ips = append(ips, clusterv1.MachineAddress{
-				Address: iface.IPv4.VPC,
+				Address: *vpcIP.Address,
 				Type:    clusterv1.MachineInternalIP,
 			})
 		}
+	}
 
-		if iface.Purpose == linodego.InterfacePurposeVLAN {
-			// vlan addresses have a /11 appended to them - we should strip it out.
-			ips = append(ips, clusterv1.MachineAddress{
-				Address: netip.MustParsePrefix(iface.IPAMAddress).Addr().String(),
-				Type:    clusterv1.MachineInternalIP,
-			})
+	if machineScope.LinodeCluster.Spec.Network.UseVlan {
+		// get the default instance config
+		configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, instanceID, &linodego.ListOptions{})
+		if err != nil || len(configs) == 0 {
+			return nil, fmt.Errorf("list instance configs: %w", err)
+		}
+
+		// Iterate over interfaces in config and find VLAN specific ips
+		for _, iface := range configs[0].Interfaces {
+			if iface.Purpose == linodego.InterfacePurposeVLAN {
+				// vlan addresses have a /11 appended to them - we should strip it out.
+				ips = append(ips, clusterv1.MachineAddress{
+					Address: netip.MustParsePrefix(iface.IPAMAddress).Addr().String(),
+					Type:    clusterv1.MachineInternalIP,
+				})
+			}
 		}
 	}
 
