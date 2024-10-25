@@ -193,11 +193,13 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 	})
 
 	// check if a node has vpc specific ip and store it
-	if len(addresses.IPv4.VPC) != 0 {
-		ips = append(ips, clusterv1.MachineAddress{
-			Address: *addresses.IPv4.VPC[0].Address,
-			Type:    clusterv1.MachineInternalIP,
-		})
+	for _, vpcIP := range addresses.IPv4.VPC {
+		if *vpcIP.Address != "" {
+			ips = append(ips, clusterv1.MachineAddress{
+				Address: *vpcIP.Address,
+				Type:    clusterv1.MachineInternalIP,
+			})
+		}
 	}
 
 	if machineScope.LinodeCluster.Spec.Network.UseVlan {
