@@ -3,7 +3,7 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   creationTimestamp: null
-  name: vpc-integration
+  name: linodecluster-vpcref-integration
   # Label to trigger the test on every PR
   labels:
     all:
