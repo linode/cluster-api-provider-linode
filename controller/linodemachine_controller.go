@@ -260,6 +260,16 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		}
 	}
 
+	// Should we check if the VPC ref in LinodeCluster is ready? Or is it enough to check if the VPC exists?
+	if vpcRef := getVPCRefFromScope(machineScope); vpcRef != nil {
+		if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+			res, err := r.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+			if err != nil || !res.IsZero() {
+				return res, err
+			}
+		}
+	}
+
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 		res, err := r.reconcilePreflightMetadataSupportConfigure(ctx, logger, machineScope)
 		if err != nil || !res.IsZero() {
@@ -302,6 +312,35 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 	// Set the instance state to signal preflight process is done
 	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, vpcRef *corev1.ObjectReference) (ctrl.Result, error) {
+	name := vpcRef.Name
+	namespace := vpcRef.Namespace
+	if namespace == "" {
+		namespace = machineScope.LinodeMachine.Namespace
+	}
+	linodeVPC := infrav1alpha2.LinodeVPC{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+	if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
+		logger.Error(err, "Failed to fetch LinodeVPC")
+		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
+			ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), err.Error(),
+			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+	} else if !linodeVPC.Status.Ready {
+		logger.Info("LinodeVPC is not yet available")
+		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+	}
+	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "LinodeVPC is now available")
+	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
 	return ctrl.Result{}, nil
 }
 

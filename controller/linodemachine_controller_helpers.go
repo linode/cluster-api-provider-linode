@@ -32,6 +32,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/linode/linodego"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -116,12 +117,11 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logg
 
 	fillCreateConfig(createConfig, machineScope)
 
-	// if vpc is enabled, attach additional interface as eth0 to linode
-	if machineScope.LinodeCluster.Spec.VPCRef != nil {
-		iface, err := getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
+	// Check for VPC configuration - first machine level, then cluster level
+	if vpcRef := getVPCRefFromScope(machineScope); vpcRef != nil {
+		iface, err := getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger, vpcRef)
 		if err != nil {
 			logger.Error(err, "Failed to get VPC interface config")
-
 			return nil, err
 		}
 		if iface != nil {
@@ -378,12 +378,14 @@ func getVlanInterfaceConfig(ctx context.Context, machineScope *scope.MachineScop
 	}, nil
 }
 
-func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
-	name := machineScope.LinodeCluster.Spec.VPCRef.Name
-	namespace := machineScope.LinodeCluster.Spec.VPCRef.Namespace
+func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger, vpcRef *corev1.ObjectReference) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+	// Get namespace from VPC ref or default to machine namespace
+	namespace := vpcRef.Namespace
 	if namespace == "" {
-		namespace = machineScope.LinodeCluster.Namespace
+		namespace = machineScope.LinodeMachine.Namespace
 	}
+
+	name := vpcRef.Name
 
 	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
 
@@ -707,4 +709,17 @@ func createInstance(ctx context.Context, logger logr.Logger, machineScope *scope
 	machineScope.LinodeClient.OnAfterResponse(ctr.ApiResponseRatelimitCounter)
 	inst, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
 	return inst, ctr.RetryAfter(), err
+}
+
+// getVPCRefFromScope returns the appropriate VPC reference based on priority:
+// 1. Machine-level VPC reference
+// 2. Cluster-level VPC reference
+func getVPCRefFromScope(machineScope *scope.MachineScope) *corev1.ObjectReference {
+	if machineScope.LinodeMachine.Spec.VPCRef != nil {
+		return machineScope.LinodeMachine.Spec.VPCRef
+	}
+	if machineScope.LinodeCluster.Spec.VPCRef != nil {
+		return machineScope.LinodeCluster.Spec.VPCRef
+	}
+	return nil
 }

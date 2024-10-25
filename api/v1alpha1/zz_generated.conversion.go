@@ -784,6 +784,7 @@ func autoConvert_v1alpha2_LinodeMachineSpec_To_v1alpha1_LinodeMachineSpec(in *v1
 	// WARNING: in.Configuration requires manual conversion: does not exist in peer-type
 	// WARNING: in.PlacementGroupRef requires manual conversion: does not exist in peer-type
 	// WARNING: in.FirewallRef requires manual conversion: does not exist in peer-type
+	// WARNING: in.VPCRef requires manual conversion: does not exist in peer-type
 	return nil
 }
 
