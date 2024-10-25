@@ -17,10 +17,8 @@ limitations under the License.
 package controller
 
 import (
-	"bytes"
 	"context"
 	b64 "encoding/base64"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"net/http"
@@ -436,21 +434,35 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 }
 
 func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec) *linodego.InstanceCreateOptions {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(machineSpec)
-	if err != nil {
-		return nil
+	interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
+	for idx, iface := range machineSpec.Interfaces {
+		interfaces[idx] = linodego.InstanceConfigInterfaceCreateOptions{
+			IPAMAddress: iface.IPAMAddress,
+			Label:       iface.Label,
+			Purpose:     iface.Purpose,
+			Primary:     iface.Primary,
+			SubnetID:    iface.SubnetID,
+			IPRanges:    iface.IPRanges,
+		}
 	}
-
-	var createConfig linodego.InstanceCreateOptions
-	dec := gob.NewDecoder(&buf)
-	err = dec.Decode(&createConfig)
-	if err != nil {
-		return nil
+	privateIP := false
+	if machineSpec.PrivateIP != nil {
+		privateIP = *machineSpec.PrivateIP
 	}
-
-	return &createConfig
+	return &linodego.InstanceCreateOptions{
+		Region:          machineSpec.Region,
+		Type:            machineSpec.Type,
+		AuthorizedKeys:  machineSpec.AuthorizedKeys,
+		AuthorizedUsers: machineSpec.AuthorizedUsers,
+		RootPass:        machineSpec.RootPass,
+		Image:           machineSpec.Image,
+		Interfaces:      interfaces,
+		PrivateIP:       privateIP,
+		Tags:            machineSpec.Tags,
+		FirewallID:      machineSpec.FirewallID,
+		DiskEncryption:  linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
+		Group:           machineSpec.Group,
+	}
 }
 
 func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {

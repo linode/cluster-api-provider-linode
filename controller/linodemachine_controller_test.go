@@ -1855,7 +1855,8 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			},
 			{
 				Primary: true,
-			}}))
+			},
+		}))
 	})
 	It("creates a instance with pre defined vpc interface", func(ctx SpecContext) {
 		linodeMachine := infrav1alpha2.LinodeMachine{
