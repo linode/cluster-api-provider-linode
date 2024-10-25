@@ -61,6 +61,18 @@ linters-settings:
     # tokens count to trigger issue, 150 by default
     threshold: 100
 
+  depguard:
+    rules:
+      main:
+        files:
+          - "$all"
+          - "!$test"
+        deny:
+          - pkg: "reflect"
+            desc: "Reflection is never clear."
+          - pkg: "gob"
+            desc: "Please convert types manually"
+
   goconst:
     # minimal length of string constant, 3 by default
     min-len: 3
@@ -132,7 +144,7 @@ linters:
     - contextcheck
     - cyclop
     - decorder
-    # - depguard
+    - depguard
     - dogsled
     # - dupl
     - dupword

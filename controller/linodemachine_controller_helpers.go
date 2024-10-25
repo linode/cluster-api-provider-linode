@@ -17,16 +17,13 @@ limitations under the License.
 package controller
 
 import (
-	"bytes"
 	"context"
 	b64 "encoding/base64"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
 	"slices"
-	"sort"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -171,12 +168,6 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 		return nil, fmt.Errorf("get instance ips: %w", err)
 	}
 
-	// get the default instance config
-	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, instanceID, &linodego.ListOptions{})
-	if err != nil || len(configs) == 0 {
-		return nil, fmt.Errorf("list instance configs: %w", err)
-	}
-
 	ips := []clusterv1.MachineAddress{}
 	// check if a node has public ipv4 ip and store it
 	if len(addresses.IPv4.Public) == 0 {
@@ -199,21 +190,32 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 		Type:    clusterv1.MachineExternalIP,
 	})
 
-	// Iterate over interfaces in config and find VPC or VLAN specific ips
-	for _, iface := range configs[0].Interfaces {
-		if iface.VPCID != nil && iface.IPv4.VPC != "" {
+	// check if a node has vpc specific ip and store it
+	for _, vpcIP := range addresses.IPv4.VPC {
+		if *vpcIP.Address != "" {
 			ips = append(ips, clusterv1.MachineAddress{
-				Address: iface.IPv4.VPC,
+				Address: *vpcIP.Address,
 				Type:    clusterv1.MachineInternalIP,
 			})
 		}
+	}
 
-		if iface.Purpose == linodego.InterfacePurposeVLAN {
-			// vlan addresses have a /11 appended to them - we should strip it out.
-			ips = append(ips, clusterv1.MachineAddress{
-				Address: netip.MustParsePrefix(iface.IPAMAddress).Addr().String(),
-				Type:    clusterv1.MachineInternalIP,
-			})
+	if machineScope.LinodeCluster.Spec.Network.UseVlan {
+		// get the default instance config
+		configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, instanceID, &linodego.ListOptions{})
+		if err != nil || len(configs) == 0 {
+			return nil, fmt.Errorf("list instance configs: %w", err)
+		}
+
+		// Iterate over interfaces in config and find VLAN specific ips
+		for _, iface := range configs[0].Interfaces {
+			if iface.Purpose == linodego.InterfacePurposeVLAN {
+				// vlan addresses have a /11 appended to them - we should strip it out.
+				ips = append(ips, clusterv1.MachineAddress{
+					Address: netip.MustParsePrefix(iface.IPAMAddress).Addr().String(),
+					Type:    clusterv1.MachineInternalIP,
+				})
+			}
 		}
 	}
 
@@ -405,29 +407,17 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		return nil, errors.New("vpc is not available")
 	}
 
-	var subnetID int
-	vpc, err := machineScope.LinodeClient.GetVPC(ctx, *linodeVPC.Spec.VPCID)
-	if err != nil {
-		logger.Error(err, "Failed to fetch LinodeVPC")
-
-		return nil, err
-	}
-	if vpc == nil {
-		logger.Error(nil, "Failed to fetch VPC")
-
-		return nil, errors.New("failed to fetch VPC")
-	}
-	if len(vpc.Subnets) == 0 {
+	if len(linodeVPC.Spec.Subnets) == 0 {
 		logger.Error(nil, "Failed to find subnet")
 
 		return nil, errors.New("failed to find subnet")
 	}
-	// Place node into the least busy subnet
-	sort.Slice(vpc.Subnets, func(i, j int) bool {
-		return len(vpc.Subnets[i].Linodes) > len(vpc.Subnets[j].Linodes)
-	})
 
-	subnetID = vpc.Subnets[0].ID
+	subnetID := linodeVPC.Spec.Subnets[0].SubnetID
+	if subnetID == 0 {
+		return nil, errors.New("failed to find subnet as subnet id set is 0")
+	}
+
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID
@@ -446,21 +436,35 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 }
 
 func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec) *linodego.InstanceCreateOptions {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(machineSpec)
-	if err != nil {
-		return nil
+	interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
+	for idx, iface := range machineSpec.Interfaces {
+		interfaces[idx] = linodego.InstanceConfigInterfaceCreateOptions{
+			IPAMAddress: iface.IPAMAddress,
+			Label:       iface.Label,
+			Purpose:     iface.Purpose,
+			Primary:     iface.Primary,
+			SubnetID:    iface.SubnetID,
+			IPRanges:    iface.IPRanges,
+		}
 	}
-
-	var createConfig linodego.InstanceCreateOptions
-	dec := gob.NewDecoder(&buf)
-	err = dec.Decode(&createConfig)
-	if err != nil {
-		return nil
+	privateIP := false
+	if machineSpec.PrivateIP != nil {
+		privateIP = *machineSpec.PrivateIP
 	}
-
-	return &createConfig
+	return &linodego.InstanceCreateOptions{
+		Region:          machineSpec.Region,
+		Type:            machineSpec.Type,
+		AuthorizedKeys:  machineSpec.AuthorizedKeys,
+		AuthorizedUsers: machineSpec.AuthorizedUsers,
+		RootPass:        machineSpec.RootPass,
+		Image:           machineSpec.Image,
+		Interfaces:      interfaces,
+		PrivateIP:       privateIP,
+		Tags:            machineSpec.Tags,
+		FirewallID:      machineSpec.FirewallID,
+		DiskEncryption:  linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
+		Group:           machineSpec.Group,
+	}
 }
 
 func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {

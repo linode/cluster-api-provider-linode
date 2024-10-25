@@ -17,9 +17,7 @@ limitations under the License.
 package controller
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"errors"
 
 	"github.com/go-logr/logr"
@@ -77,19 +75,9 @@ func (r *LinodePlacementGroupReconciler) reconcilePlacementGroup(ctx context.Con
 }
 
 func linodePlacementGroupSpecToPGCreateConfig(pgSpec infrav1alpha2.LinodePlacementGroupSpec) *linodego.PlacementGroupCreateOptions {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(pgSpec)
-	if err != nil {
-		return nil
+	return &linodego.PlacementGroupCreateOptions{
+		Region:               pgSpec.Region,
+		PlacementGroupType:   linodego.PlacementGroupType(pgSpec.PlacementGroupType),
+		PlacementGroupPolicy: linodego.PlacementGroupPolicy(pgSpec.PlacementGroupPolicy),
 	}
-
-	var createConfig linodego.PlacementGroupCreateOptions
-	dec := gob.NewDecoder(&buf)
-	err = dec.Decode(&createConfig)
-	if err != nil {
-		return nil
-	}
-
-	return &createConfig
 }

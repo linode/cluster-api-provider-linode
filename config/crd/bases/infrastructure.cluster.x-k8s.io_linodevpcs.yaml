@@ -254,11 +254,11 @@ spec:
                       maxLength: 63
                       minLength: 3
                       type: string
+                    subnetID:
+                      description: SubnetID is subnet id for the subnet
+                      type: integer
                   type: object
                 type: array
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               vpcID:
                 type: integer
             required:

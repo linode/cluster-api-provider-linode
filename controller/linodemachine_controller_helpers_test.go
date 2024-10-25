@@ -1,17 +1,14 @@
 package controller
 
 import (
-	"bytes"
 	"context"
 	b64 "encoding/base64"
-	"encoding/gob"
 	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -62,18 +59,6 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineSpec)
 	assert.NotNil(t, createConfig, "Failed to convert LinodeMachineSpec to InstanceCreateOptions")
-
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(createConfig)
-	require.NoError(t, err, "Failed to encode InstanceCreateOptions")
-
-	var actualMachineSpec infrav1alpha2.LinodeMachineSpec
-	dec := gob.NewDecoder(&buf)
-	err = dec.Decode(&actualMachineSpec)
-	require.NoError(t, err, "Failed to decode LinodeMachineSpec")
-
-	assert.Equal(t, machineSpec, actualMachineSpec)
 }
 
 func TestSetUserData(t *testing.T) {

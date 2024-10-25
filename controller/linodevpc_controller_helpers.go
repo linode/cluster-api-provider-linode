@@ -17,9 +17,7 @@ limitations under the License.
 package controller
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"errors"
 
 	"github.com/go-logr/logr"
@@ -57,6 +55,7 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 	} else if len(vpcs) != 0 {
 		// Labels are unique
 		vpcScope.LinodeVPC.Spec.VPCID = &vpcs[0].ID
+		updateVPCSpecSubnets(vpcScope, &vpcs[0])
 
 		return nil
 	}
@@ -75,24 +74,34 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 	}
 
 	vpcScope.LinodeVPC.Spec.VPCID = &vpc.ID
+	updateVPCSpecSubnets(vpcScope, vpc)
 
 	return nil
 }
 
+// updateVPCSpecSubnets updates Subnets in linodeVPC spec and adds linode specific ID to them
+func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
+	for i, specSubnet := range vpcScope.LinodeVPC.Spec.Subnets {
+		for _, vpcSubnet := range vpc.Subnets {
+			if specSubnet.Label == vpcSubnet.Label {
+				vpcScope.LinodeVPC.Spec.Subnets[i].SubnetID = vpcSubnet.ID
+				break
+			}
+		}
+	}
+}
+
 func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linodego.VPCCreateOptions {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(vpcSpec)
-	if err != nil {
-		return nil
+	subnets := make([]linodego.VPCSubnetCreateOptions, len(vpcSpec.Subnets))
+	for idx, subnet := range vpcSpec.Subnets {
+		subnets[idx] = linodego.VPCSubnetCreateOptions{
+			Label: subnet.Label,
+			IPv4:  subnet.IPv4,
+		}
 	}
-
-	var createConfig linodego.VPCCreateOptions
-	dec := gob.NewDecoder(&buf)
-	err = dec.Decode(&createConfig)
-	if err != nil {
-		return nil
+	return &linodego.VPCCreateOptions{
+		Description: vpcSpec.Description,
+		Region:      vpcSpec.Region,
+		Subnets:     subnets,
 	}
-
-	return &createConfig
 }
