@@ -722,8 +722,5 @@ func getVPCRefFromScope(machineScope *scope.MachineScope) *corev1.ObjectReferenc
 	if machineScope.LinodeMachine.Spec.VPCRef != nil {
 		return machineScope.LinodeMachine.Spec.VPCRef
 	}
-	if machineScope.LinodeCluster.Spec.VPCRef != nil {
-		return machineScope.LinodeCluster.Spec.VPCRef
-	}
-	return nil
+	return machineScope.LinodeCluster.Spec.VPCRef
 }
