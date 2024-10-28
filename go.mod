@@ -31,8 +31,14 @@ require (
 )
 
 require (
-	github.com/google/cel-go v0.20.1 // indirect
+	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230305170008-8188dc5388df // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/google/cel-go v0.17.8 // indirect
+	github.com/stoewer/go-strcase v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	k8s.io/apiserver v0.30.3 // indirect
+	k8s.io/component-base v0.30.3 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.3 // indirect
 )
 
