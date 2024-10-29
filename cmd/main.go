@@ -212,7 +212,13 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 		LeaderElectionID:       "3cfd31c3.cluster.x-k8s.io",
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to create manager")
+		os.Exit(1)
+	}
+
+	// Ensure mgr is not nil before proceeding
+	if mgr == nil {
+		setupLog.Error(errors.New("manager creation failed"), "manager is nil")
 		os.Exit(1)
 	}
 
