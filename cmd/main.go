@@ -69,7 +69,7 @@ const (
 	burstDefault       = 30
 )
 
-type flags struct {
+type flagVars struct {
 	machineWatchFilter                   string
 	clusterWatchFilter                   string
 	objectStorageBucketWatchFilter       string
@@ -96,15 +96,14 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-//nolint:gocyclo,cyclop // As simple as possible.
 func main() {
-	f, opts := parseFlags()
+	flags, opts := parseFlags()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	setupLog.Info(fmt.Sprintf("CAPL version: %s", version.GetVersion()))
 
 	linodeClientConfig, dnsClientConfig := validateEnvironment()
-	mgr := setupManager(f, linodeClientConfig, dnsClientConfig)
+	mgr := setupManager(flags, linodeClientConfig, dnsClientConfig)
 
 	ctx := ctrl.SetupSignalHandler()
 	run := func(ctx context.Context) error {
@@ -124,12 +123,12 @@ func main() {
 // parseFlags initializes command-line flags and returns the parsed flags and zap options.
 // It sets up various configuration options for the application, including filters, metrics,
 // health probe addresses, leader election, and concurrency settings.
-func parseFlags() (flags, zap.Options) {
-	f := flags{}
-	flag.StringVar(&f.machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
-	flag.StringVar(&f.clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
-	flag.StringVar(&f.objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
-	flag.StringVar(&f.metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
+func parseFlags() (flags flagVars, opts zap.Options) {
+	flags = flagVars{}
+	flag.StringVar(&flags.machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
+	flag.StringVar(&flags.clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
+	flag.StringVar(&flags.objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
+	flag.StringVar(&flags.metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 
 	// Mitigate CVE-2023-44487 by disabling HTTP2 by default until the Go
@@ -140,28 +139,28 @@ func parseFlags() (flags, zap.Options) {
 	// * https://github.com/kubernetes/kubernetes/pull/121120
 	// * https://github.com/kubernetes/kubernetes/issues/121197
 	// * https://github.com/golang/go/issues/63417#issuecomment-1758858612
-	flag.BoolVar(&f.secureMetrics, "metrics-secure", false, "If set, the metrics endpoint is served securely via HTTPS.")
-	flag.StringVar(&f.probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&f.enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager.")
-	flag.IntVar(&f.restConfigQPS, "kube-api-qps", qpsDefault, "Maximum queries per second from the controller client")
-	flag.IntVar(&f.restConfigBurst, "kube-api-burst", burstDefault, "Maximum number of queries in one burst")
-	flag.IntVar(&f.linodeClusterConcurrency, "linodecluster-concurrency", concurrencyDefault, "Number of LinodeClusters to process simultaneously")
-	flag.IntVar(&f.linodeMachineConcurrency, "linodemachine-concurrency", concurrencyDefault, "Number of LinodeMachines to process simultaneously")
-	flag.IntVar(&f.linodeObjectStorageBucketConcurrency, "linodeobjectstoragebucket-concurrency", concurrencyDefault, "Number of linodeObjectStorageBuckets to process simultaneously")
-	flag.IntVar(&f.linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault, "Number of LinodeVPCs to process simultaneously")
-	flag.IntVar(&f.linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault, "Number of Linode Placement Groups to process simultaneously")
-	flag.IntVar(&f.linodeFirewallConcurrency, "linodefirewall-concurrency", concurrencyDefault, "Number of Linode Firewall to process simultaneously")
+	flag.BoolVar(&flags.secureMetrics, "metrics-secure", false, "If set, the metrics endpoint is served securely via HTTPS.")
+	flag.StringVar(&flags.probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&flags.enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager.")
+	flag.IntVar(&flags.restConfigQPS, "kube-api-qps", qpsDefault, "Maximum queries per second from the controller client")
+	flag.IntVar(&flags.restConfigBurst, "kube-api-burst", burstDefault, "Maximum number of queries in one burst")
+	flag.IntVar(&flags.linodeClusterConcurrency, "linodecluster-concurrency", concurrencyDefault, "Number of LinodeClusters to process simultaneously")
+	flag.IntVar(&flags.linodeMachineConcurrency, "linodemachine-concurrency", concurrencyDefault, "Number of LinodeMachines to process simultaneously")
+	flag.IntVar(&flags.linodeObjectStorageBucketConcurrency, "linodeobjectstoragebucket-concurrency", concurrencyDefault, "Number of linodeObjectStorageBuckets to process simultaneously")
+	flag.IntVar(&flags.linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault, "Number of LinodeVPCs to process simultaneously")
+	flag.IntVar(&flags.linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault, "Number of Linode Placement Groups to process simultaneously")
+	flag.IntVar(&flags.linodeFirewallConcurrency, "linodefirewall-concurrency", concurrencyDefault, "Number of Linode Firewall to process simultaneously")
 
-	opts := zap.Options{Development: true}
+	opts = zap.Options{Development: true}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	return f, opts
+	return flags, opts
 }
 
 // validateEnvironment checks for required environment variables and returns the configuration for Linode and DNS clients.
 // It ensures that LINODE_TOKEN is set and defaults LINODE_DNS_TOKEN to LINODE_TOKEN if not provided.
-func validateEnvironment() (scope.ClientConfig, scope.ClientConfig) {
+func validateEnvironment() (linodeConfig, dnsConfig scope.ClientConfig) {
 	linodeToken := os.Getenv("LINODE_TOKEN")
 	linodeDNSToken := os.Getenv("LINODE_DNS_TOKEN")
 	linodeDNSURL := os.Getenv("LINODE_DNS_URL")
@@ -182,14 +181,14 @@ func validateEnvironment() (scope.ClientConfig, scope.ClientConfig) {
 
 // setupManager initializes and returns a new manager instance with the provided configurations.
 // It sets up the REST configuration, metrics server options, and registers controllers and webhooks.
-func setupManager(f flags, linodeConfig, dnsConfig scope.ClientConfig) manager.Manager {
+func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) manager.Manager {
 	restConfig := ctrl.GetConfigOrDie()
-	restConfig.QPS = float32(f.restConfigQPS)
-	restConfig.Burst = f.restConfigBurst
+	restConfig.QPS = float32(flags.restConfigQPS)
+	restConfig.Burst = flags.restConfigBurst
 	restConfig.UserAgent = fmt.Sprintf("CAPL/%s", version.GetVersion())
 
 	var tlsOpts []func(*tls.Config)
-	if !f.secureMetrics {
+	if !flags.secureMetrics {
 		tlsOpts = append(tlsOpts, func(c *tls.Config) {
 			setupLog.Info("disabling http/2")
 			c.NextProtos = []string{"http/1.2"}
@@ -197,19 +196,19 @@ func setupManager(f flags, linodeConfig, dnsConfig scope.ClientConfig) manager.M
 	}
 
 	metricsServerOptions := metricsserver.Options{
-		BindAddress:   f.metricsAddr,
-		SecureServing: f.secureMetrics,
+		BindAddress:   flags.metricsAddr,
+		SecureServing: flags.secureMetrics,
 		TLSOpts:       tlsOpts,
 	}
-	if f.secureMetrics {
+	if flags.secureMetrics {
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
-		HealthProbeBindAddress: f.probeAddr,
-		LeaderElection:         f.enableLeaderElection,
+		HealthProbeBindAddress: flags.probeAddr,
+		LeaderElection:         flags.enableLeaderElection,
 		LeaderElectionID:       "3cfd31c3.cluster.x-k8s.io",
 	})
 	if err != nil {
@@ -217,7 +216,7 @@ func setupManager(f flags, linodeConfig, dnsConfig scope.ClientConfig) manager.M
 		os.Exit(1)
 	}
 
-	setupControllers(mgr, f, linodeConfig, dnsConfig)
+	setupControllers(mgr, flags, linodeConfig, dnsConfig)
 
 	// Setup webhooks if enabled
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
@@ -244,15 +243,15 @@ func setupHealthChecks(mgr manager.Manager) {
 
 // setupControllers initializes and registers various controllers with the manager.
 // It sets up controllers for Linode resources, configuring each with the appropriate client and options.
-func setupControllers(mgr manager.Manager, f flags, linodeClientConfig, dnsConfig scope.ClientConfig) {
+func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, dnsConfig scope.ClientConfig) {
 	// LinodeCluster Controller
 	if err := (&controller.LinodeClusterReconciler{
 		Client:             mgr.GetClient(),
 		Recorder:           mgr.GetEventRecorderFor("LinodeClusterReconciler"),
-		WatchFilterValue:   f.clusterWatchFilter,
+		WatchFilterValue:   flags.clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
 		DnsClientConfig:    dnsConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: f.linodeClusterConcurrency}); err != nil {
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeClusterConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
 		os.Exit(1)
 	}
@@ -261,9 +260,9 @@ func setupControllers(mgr manager.Manager, f flags, linodeClientConfig, dnsConfi
 	if err := (&controller.LinodeMachineReconciler{
 		Client:             mgr.GetClient(),
 		Recorder:           mgr.GetEventRecorderFor("LinodeMachineReconciler"),
-		WatchFilterValue:   f.machineWatchFilter,
+		WatchFilterValue:   flags.machineWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: f.linodeMachineConcurrency}); err != nil {
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
 		os.Exit(1)
 	}
@@ -272,9 +271,9 @@ func setupControllers(mgr manager.Manager, f flags, linodeClientConfig, dnsConfi
 	if err := (&controller.LinodeVPCReconciler{
 		Client:             mgr.GetClient(),
 		Recorder:           mgr.GetEventRecorderFor("LinodeVPCReconciler"),
-		WatchFilterValue:   f.clusterWatchFilter,
+		WatchFilterValue:   flags.clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: f.linodeVPCConcurrency}); err != nil {
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeVPCConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)
 	}
@@ -284,9 +283,9 @@ func setupControllers(mgr manager.Manager, f flags, linodeClientConfig, dnsConfi
 		Client:             mgr.GetClient(),
 		Logger:             ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
 		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
-		WatchFilterValue:   f.objectStorageBucketWatchFilter,
+		WatchFilterValue:   flags.objectStorageBucketWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: f.linodeObjectStorageBucketConcurrency}); err != nil {
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeObjectStorageBucketConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
@@ -295,9 +294,9 @@ func setupControllers(mgr manager.Manager, f flags, linodeClientConfig, dnsConfi
 	if err := (&controller.LinodePlacementGroupReconciler{
 		Client:             mgr.GetClient(),
 		Recorder:           mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
-		WatchFilterValue:   f.clusterWatchFilter,
+		WatchFilterValue:   flags.clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: f.linodePlacementGroupConcurrency}); err != nil {
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodePlacementGroupConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodePlacementGroup")
 		os.Exit(1)
 	}
@@ -308,9 +307,9 @@ func setupControllers(mgr manager.Manager, f flags, linodeClientConfig, dnsConfi
 		Scheme:             mgr.GetScheme(),
 		Logger:             ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
 		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageKeyReconciler"),
-		WatchFilterValue:   f.objectStorageKeyWatchFilter,
+		WatchFilterValue:   flags.objectStorageKeyWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: f.linodeObjectStorageBucketConcurrency}); err != nil {
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeObjectStorageBucketConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageKey")
 		os.Exit(1)
 	}
@@ -319,9 +318,9 @@ func setupControllers(mgr manager.Manager, f flags, linodeClientConfig, dnsConfi
 	if err := (&controller.LinodeFirewallReconciler{
 		Client:             mgr.GetClient(),
 		Recorder:           mgr.GetEventRecorderFor("LinodeFirewallReconciler"),
-		WatchFilterValue:   f.clusterWatchFilter,
+		WatchFilterValue:   flags.clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: f.linodeFirewallConcurrency}); err != nil {
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeFirewallConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeFirewall")
 		os.Exit(1)
 	}
