@@ -3,7 +3,7 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   creationTimestamp: null
-  name: vpc-integration
+  name: linodemachine-vpcref-integration
   # Label to trigger the test on every PR
   labels:
     all:
@@ -43,7 +43,7 @@ spec:
         - describe:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeVPC
-    - name: Create LinodeMachine resource
+    - name: Create LinodeMachine with VPCRef
       try:
         - apply:
             file: create-linodemachine.yaml

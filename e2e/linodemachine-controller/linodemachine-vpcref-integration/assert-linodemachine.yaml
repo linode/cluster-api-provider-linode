@@ -1,0 +1,23 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachine
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+spec:
+  region: us-sea
+  type: g6-nanode-1
+status:
+  ready: true
+  instanceState: running
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Machine
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+spec:
+  clusterName: ($cluster)
+status:
+  bootstrapReady: true
+  infrastructureReady: true

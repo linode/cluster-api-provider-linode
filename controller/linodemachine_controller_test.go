@@ -262,6 +262,160 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		})
 	})
 
+	Context("create machine with vpc", func() {
+		It("vpc is not yet present", func(ctx SpecContext) {
+			linodeMachine.Spec.VPCRef = &corev1.ObjectReference{
+				Name:       "vpcnone",
+				Namespace:  defaultNamespace,
+				Kind:       "LinodeVPC",
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha2",
+			}
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.PatchHelper = patchHelper
+
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+		})
+
+		It("vpc present but status is not yet ready", func(ctx SpecContext) {
+			linodeVPC := &infrav1alpha2.LinodeVPC{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpc1",
+					Namespace: defaultNamespace,
+				},
+				Spec: infrav1alpha2.LinodeVPCSpec{
+					VPCID: ptr.To(1),
+				},
+				Status: infrav1alpha2.LinodeVPCStatus{
+					Ready: false,
+				},
+			}
+			Expect(k8sClient.Create(ctx, linodeVPC)).To(Succeed())
+
+			linodeMachine.Spec.VPCRef = &corev1.ObjectReference{
+				Name:       "vpc1",
+				Namespace:  defaultNamespace,
+				Kind:       "LinodeVPC",
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha2",
+			}
+
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.PatchHelper = patchHelper
+
+			result, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result.RequeueAfter).To(Equal(rutil.DefaultClusterControllerReconcileDelay))
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+
+			Expect(k8sClient.Delete(ctx, linodeVPC)).To(Succeed())
+		})
+
+		It("vpc is ready and machine creation succeeds", func(ctx SpecContext) {
+			linodeVPC := &infrav1alpha2.LinodeVPC{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpc2",
+					Namespace: defaultNamespace,
+				},
+				Spec: infrav1alpha2.LinodeVPCSpec{
+					VPCID: ptr.To(1),
+					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							SubnetID: 1,
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, linodeVPC)).To(Succeed())
+			linodeVPC.Status.Ready = true
+			Expect(k8sClient.Status().Update(ctx, linodeVPC)).To(Succeed())
+
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+			getRegion := mockLinodeClient.EXPECT().
+				GetRegion(ctx, gomock.Any()).
+				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+			getImage := mockLinodeClient.EXPECT().
+				GetImage(ctx, gomock.Any()).
+				After(getRegion).
+				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+			mockLinodeClient.EXPECT().
+				CreateInstance(ctx, gomock.Any()).
+				After(getImage).
+				Return(&linodego.Instance{
+					ID:     123,
+					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					IPv6:   "fd00::",
+					Status: linodego.InstanceOffline,
+				}, nil)
+			createInst := mockLinodeClient.EXPECT().
+				OnAfterResponse(gomock.Any()).
+				Return()
+			bootInst := mockLinodeClient.EXPECT().
+				BootInstance(ctx, 123, 0).
+				After(createInst).
+				Return(nil)
+			mockLinodeClient.EXPECT().
+				GetInstanceIPAddresses(ctx, 123).
+				After(bootInst).
+				Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{
+							Address: "fd00::",
+						},
+					},
+				}, nil)
+
+			linodeMachine.Spec.VPCRef = &corev1.ObjectReference{
+				Name:       "vpc2",
+				Namespace:  defaultNamespace,
+				Kind:       "LinodeVPC",
+				APIVersion: "infrastructure.cluster.x-k8s.io/v1alpha2",
+			}
+
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.PatchHelper = patchHelper
+
+			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeTrue())
+
+			Expect(k8sClient.Delete(ctx, linodeVPC)).To(Succeed())
+		})
+	})
+
 	It("creates a worker instance", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		getRegion := mockLinodeClient.EXPECT().
