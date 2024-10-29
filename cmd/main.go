@@ -109,8 +109,17 @@ func main() {
 	flag.StringVar(&objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
-	flag.BoolVar(&secureMetrics, "metrics-secure", true,
-		"If set, the metrics endpoint is served securely via HTTPS.")
+
+	// Mitigate CVE-2023-44487 by disabling HTTP2 by default until the Go
+	// standard library and golang.org/x/net are fully fixed.
+	// Right now, it is possible for authenticated and unauthenticated users to
+	// hold open HTTP2 connections and consume huge amounts of memory.
+	// See:
+	// * https://github.com/kubernetes/kubernetes/pull/121120
+	// * https://github.com/kubernetes/kubernetes/issues/121197
+	// * https://github.com/golang/go/issues/63417#issuecomment-1758858612
+	flag.BoolVar(&secureMetrics, "metrics-secure", false, "If set, the metrics endpoint is served securely via HTTPS.")
+
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
@@ -162,7 +171,7 @@ func main() {
 	// HTTP/2 security configuration
 	disableHTTP2 := func(c *tls.Config) {
 		setupLog.Info("disabling http/2")
-		c.NextProtos = []string{"http/1.1"}
+		c.NextProtos = []string{"http/1.2"}
 	}
 
 	if !secureMetrics {
