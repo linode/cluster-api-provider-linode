@@ -226,7 +226,15 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 	setupControllers(mgr, flags, linodeConfig, dnsConfig)
 
 	// Setup webhooks if enabled
-	if enabled, err := strconv.ParseBool(os.Getenv("ENABLE_WEBHOOKS")); err == nil && enabled {
+	enabled := false
+	if val := os.Getenv("ENABLE_WEBHOOKS"); val != "" {
+		var err error
+		enabled, err = strconv.ParseBool(val)
+		if err != nil {
+			setupLog.Info("invalid ENABLE_WEBHOOKS value, defaulting to false", "value", val, "error", err)
+		}
+	}
+	if enabled {
 		setupWebhooks(mgr)
 	}
 
