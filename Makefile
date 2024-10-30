@@ -91,7 +91,8 @@ generate-code: controller-gen gowrap ## Generate code containing DeepCopy, DeepC
 
 .PHONY: generate-conversion
 generate-conversion: conversion-gen
-	$(CONVERSION_GEN) ./api/v1alpha1 --go-header-file=./hack/boilerplate.go.txt --output-file=zz_generated.conversion.go
+	$(CONVERSION_GEN) ./api/v1alpha1 --extra-peer-dirs=github.com/linode/cluster-api-provider-linode/api/v1alpha2 \
+		--go-header-file=./hack/boilerplate.go.txt --output-file=zz_generated.conversion.go -v 5
 
 .PHONY: generate-mock
 generate-mock: mockgen ## Generate mocks for the Linode API client.
@@ -336,6 +337,9 @@ MOCKGEN_VERSION          ?= v0.4.0
 GOWRAP_VERSION           ?= v1.4.0
 S5CMD_VERSION            ?= v2.2.2
 
+# v0.31.xxx is not supported by go 1.23. Use v0.32.0-alpha.3 instead. Update this version when the next release is available.
+CONVERSION_GEN_VERSION   ?= v0.32.0-alpha.3
+
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
 
@@ -376,7 +380,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: conversion-gen
 conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary.
 $(CONVERSION_GEN): $(LOCALBIN)
-	GOBIN=$(CACHE_BIN) go install k8s.io/code-generator/cmd/conversion-gen@latest
+	GOBIN=$(CACHE_BIN) go install k8s.io/code-generator/cmd/conversion-gen@$(CONVERSION_GEN_VERSION)
 
 .PHONY: tilt
 tilt: $(TILT) ## Download tilt locally if necessary.
