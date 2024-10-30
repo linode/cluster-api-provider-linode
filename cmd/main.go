@@ -23,6 +23,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -225,7 +226,7 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 	setupControllers(mgr, flags, linodeConfig, dnsConfig)
 
 	// Setup webhooks if enabled
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+	if enabled, err := strconv.ParseBool(os.Getenv("ENABLE_WEBHOOKS")); err == nil && enabled {
 		setupWebhooks(mgr)
 	}
 
