@@ -91,8 +91,7 @@ generate-code: controller-gen gowrap ## Generate code containing DeepCopy, DeepC
 
 .PHONY: generate-conversion
 generate-conversion: conversion-gen
-	$(CONVERSION_GEN) ./api/v1alpha1 --extra-peer-dirs=github.com/linode/cluster-api-provider-linode/api/v1alpha2 \
-		--go-header-file=./hack/boilerplate.go.txt --output-file=zz_generated.conversion.go -v 5
+	$(CONVERSION_GEN) ./api/v1alpha1 --go-header-file=./hack/boilerplate.go.txt --output-file=zz_generated.conversion.go
 
 .PHONY: generate-mock
 generate-mock: mockgen ## Generate mocks for the Linode API client.
