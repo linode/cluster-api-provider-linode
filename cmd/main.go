@@ -107,7 +107,7 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 	run := func(ctx context.Context) error {
-		o11yShutdown := setupObservabillity(ctx)
+		o11yShutdown := setupObservability(ctx)
 		defer o11yShutdown()
 
 		setupLog.Info("starting manager")
@@ -370,9 +370,9 @@ func setupWebhooks(mgr manager.Manager) {
 	}
 }
 
-// setupObservabillity configures observability features and returns a cleanup function.
+// setup configures observability features and returns a cleanup function.
 // It sets up OpenTelemetry tracing and logs the configuration applied, returning a function to clean up resources.
-func setupObservabillity(ctx context.Context) func() {
+func setupObservability(ctx context.Context) func() {
 	node := os.Getenv(envK8sNodeName)
 	pod := os.Getenv(envK8sPodName)
 
