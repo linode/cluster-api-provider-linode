@@ -325,7 +325,7 @@ CTLPTL_VERSION           ?= v0.8.29
 CLUSTERCTL_VERSION       ?= v1.7.2
 KUBECTL_VERSION          ?= v1.28.0
 KUBEBUILDER_VERSION      ?= v3.15.1
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.5
 TILT_VERSION             ?= 0.33.10
 KIND_VERSION             ?= 0.23.0
 CHAINSAW_VERSION         ?= v0.2.2
@@ -333,7 +333,7 @@ HUSKY_VERSION            ?= v0.2.16
 NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
-GOWRAP_VERSION           ?= v1.3.7
+GOWRAP_VERSION           ?= v1.4.0
 S5CMD_VERSION            ?= v2.2.2
 
 .PHONY: tools

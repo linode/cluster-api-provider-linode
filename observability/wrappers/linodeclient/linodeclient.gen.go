@@ -9,21 +9,21 @@ package linodeclient
 import (
 	"context"
 
-	"github.com/linode/cluster-api-provider-linode/clients"
+	_sourceClients "github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 	"github.com/linode/linodego"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// LinodeClientWithTracing implements clients.LinodeClient interface instrumented with opentracing spans
+// LinodeClientWithTracing implements _sourceClients.LinodeClient interface instrumented with opentracing spans
 type LinodeClientWithTracing struct {
-	clients.LinodeClient
+	_sourceClients.LinodeClient
 	_spanDecorator func(span trace.Span, params, results map[string]interface{})
 }
 
 // NewLinodeClientWithTracing returns LinodeClientWithTracing
-func NewLinodeClientWithTracing(base clients.LinodeClient, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) LinodeClientWithTracing {
+func NewLinodeClientWithTracing(base _sourceClients.LinodeClient, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) LinodeClientWithTracing {
 	d := LinodeClientWithTracing{
 		LinodeClient: base,
 	}
@@ -35,9 +35,9 @@ func NewLinodeClientWithTracing(base clients.LinodeClient, spanDecorator ...func
 	return d
 }
 
-// AssignPlacementGroupLinodes implements clients.LinodeClient
+// AssignPlacementGroupLinodes implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) AssignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupAssignOptions) (pp1 *linodego.PlacementGroup, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.AssignPlacementGroupLinodes")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.AssignPlacementGroupLinodes")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -61,9 +61,9 @@ func (_d LinodeClientWithTracing) AssignPlacementGroupLinodes(ctx context.Contex
 	return _d.LinodeClient.AssignPlacementGroupLinodes(ctx, id, options)
 }
 
-// BootInstance implements clients.LinodeClient
+// BootInstance implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int, configID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.BootInstance")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.BootInstance")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -86,9 +86,9 @@ func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int
 	return _d.LinodeClient.BootInstance(ctx, linodeID, configID)
 }
 
-// CreateDomainRecord implements clients.LinodeClient
+// CreateDomainRecord implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateDomainRecord(ctx context.Context, domainID int, recordReq linodego.DomainRecordCreateOptions) (dp1 *linodego.DomainRecord, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateDomainRecord")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateDomainRecord")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -112,9 +112,9 @@ func (_d LinodeClientWithTracing) CreateDomainRecord(ctx context.Context, domain
 	return _d.LinodeClient.CreateDomainRecord(ctx, domainID, recordReq)
 }
 
-// CreateFirewall implements clients.LinodeClient
+// CreateFirewall implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateFirewall(ctx context.Context, opts linodego.FirewallCreateOptions) (fp1 *linodego.Firewall, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateFirewall")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateFirewall")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -137,9 +137,9 @@ func (_d LinodeClientWithTracing) CreateFirewall(ctx context.Context, opts linod
 	return _d.LinodeClient.CreateFirewall(ctx, opts)
 }
 
-// CreateInstance implements clients.LinodeClient
+// CreateInstance implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (ip1 *linodego.Instance, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateInstance")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateInstance")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -162,9 +162,9 @@ func (_d LinodeClientWithTracing) CreateInstance(ctx context.Context, opts linod
 	return _d.LinodeClient.CreateInstance(ctx, opts)
 }
 
-// CreateInstanceDisk implements clients.LinodeClient
+// CreateInstanceDisk implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateInstanceDisk(ctx context.Context, linodeID int, opts linodego.InstanceDiskCreateOptions) (ip1 *linodego.InstanceDisk, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateInstanceDisk")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateInstanceDisk")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -188,9 +188,9 @@ func (_d LinodeClientWithTracing) CreateInstanceDisk(ctx context.Context, linode
 	return _d.LinodeClient.CreateInstanceDisk(ctx, linodeID, opts)
 }
 
-// CreateNodeBalancer implements clients.LinodeClient
+// CreateNodeBalancer implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateNodeBalancer(ctx context.Context, opts linodego.NodeBalancerCreateOptions) (np1 *linodego.NodeBalancer, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateNodeBalancer")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateNodeBalancer")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -213,9 +213,9 @@ func (_d LinodeClientWithTracing) CreateNodeBalancer(ctx context.Context, opts l
 	return _d.LinodeClient.CreateNodeBalancer(ctx, opts)
 }
 
-// CreateNodeBalancerConfig implements clients.LinodeClient
+// CreateNodeBalancerConfig implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateNodeBalancerConfig(ctx context.Context, nodebalancerID int, opts linodego.NodeBalancerConfigCreateOptions) (np1 *linodego.NodeBalancerConfig, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateNodeBalancerConfig")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateNodeBalancerConfig")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -239,9 +239,9 @@ func (_d LinodeClientWithTracing) CreateNodeBalancerConfig(ctx context.Context, 
 	return _d.LinodeClient.CreateNodeBalancerConfig(ctx, nodebalancerID, opts)
 }
 
-// CreateNodeBalancerNode implements clients.LinodeClient
+// CreateNodeBalancerNode implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, opts linodego.NodeBalancerNodeCreateOptions) (np1 *linodego.NodeBalancerNode, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateNodeBalancerNode")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateNodeBalancerNode")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -266,9 +266,9 @@ func (_d LinodeClientWithTracing) CreateNodeBalancerNode(ctx context.Context, no
 	return _d.LinodeClient.CreateNodeBalancerNode(ctx, nodebalancerID, configID, opts)
 }
 
-// CreateObjectStorageBucket implements clients.LinodeClient
+// CreateObjectStorageBucket implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateObjectStorageBucket(ctx context.Context, opts linodego.ObjectStorageBucketCreateOptions) (op1 *linodego.ObjectStorageBucket, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateObjectStorageBucket")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateObjectStorageBucket")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -291,9 +291,9 @@ func (_d LinodeClientWithTracing) CreateObjectStorageBucket(ctx context.Context,
 	return _d.LinodeClient.CreateObjectStorageBucket(ctx, opts)
 }
 
-// CreateObjectStorageKey implements clients.LinodeClient
+// CreateObjectStorageKey implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (op1 *linodego.ObjectStorageKey, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateObjectStorageKey")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateObjectStorageKey")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -316,9 +316,9 @@ func (_d LinodeClientWithTracing) CreateObjectStorageKey(ctx context.Context, op
 	return _d.LinodeClient.CreateObjectStorageKey(ctx, opts)
 }
 
-// CreatePlacementGroup implements clients.LinodeClient
+// CreatePlacementGroup implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreatePlacementGroup(ctx context.Context, opts linodego.PlacementGroupCreateOptions) (pp1 *linodego.PlacementGroup, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreatePlacementGroup")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreatePlacementGroup")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -341,9 +341,9 @@ func (_d LinodeClientWithTracing) CreatePlacementGroup(ctx context.Context, opts
 	return _d.LinodeClient.CreatePlacementGroup(ctx, opts)
 }
 
-// CreateStackscript implements clients.LinodeClient
+// CreateStackscript implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (sp1 *linodego.Stackscript, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateStackscript")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateStackscript")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -366,9 +366,9 @@ func (_d LinodeClientWithTracing) CreateStackscript(ctx context.Context, opts li
 	return _d.LinodeClient.CreateStackscript(ctx, opts)
 }
 
-// CreateVPC implements clients.LinodeClient
+// CreateVPC implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (vp1 *linodego.VPC, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.CreateVPC")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateVPC")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -391,9 +391,9 @@ func (_d LinodeClientWithTracing) CreateVPC(ctx context.Context, opts linodego.V
 	return _d.LinodeClient.CreateVPC(ctx, opts)
 }
 
-// DeleteDomainRecord implements clients.LinodeClient
+// DeleteDomainRecord implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteDomainRecord(ctx context.Context, domainID int, domainRecordID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteDomainRecord")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteDomainRecord")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -416,9 +416,9 @@ func (_d LinodeClientWithTracing) DeleteDomainRecord(ctx context.Context, domain
 	return _d.LinodeClient.DeleteDomainRecord(ctx, domainID, domainRecordID)
 }
 
-// DeleteFirewall implements clients.LinodeClient
+// DeleteFirewall implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteFirewall(ctx context.Context, firewallID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteFirewall")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteFirewall")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -440,9 +440,9 @@ func (_d LinodeClientWithTracing) DeleteFirewall(ctx context.Context, firewallID
 	return _d.LinodeClient.DeleteFirewall(ctx, firewallID)
 }
 
-// DeleteFirewallDevice implements clients.LinodeClient
+// DeleteFirewallDevice implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteFirewallDevice(ctx context.Context, firewallID int, deviceID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteFirewallDevice")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteFirewallDevice")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -465,9 +465,9 @@ func (_d LinodeClientWithTracing) DeleteFirewallDevice(ctx context.Context, fire
 	return _d.LinodeClient.DeleteFirewallDevice(ctx, firewallID, deviceID)
 }
 
-// DeleteInstance implements clients.LinodeClient
+// DeleteInstance implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteInstance(ctx context.Context, linodeID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteInstance")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteInstance")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -489,9 +489,9 @@ func (_d LinodeClientWithTracing) DeleteInstance(ctx context.Context, linodeID i
 	return _d.LinodeClient.DeleteInstance(ctx, linodeID)
 }
 
-// DeleteNodeBalancer implements clients.LinodeClient
+// DeleteNodeBalancer implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteNodeBalancer(ctx context.Context, nodebalancerID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteNodeBalancer")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteNodeBalancer")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -513,9 +513,9 @@ func (_d LinodeClientWithTracing) DeleteNodeBalancer(ctx context.Context, nodeba
 	return _d.LinodeClient.DeleteNodeBalancer(ctx, nodebalancerID)
 }
 
-// DeleteNodeBalancerNode implements clients.LinodeClient
+// DeleteNodeBalancerNode implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteNodeBalancerNode(ctx context.Context, nodebalancerID int, configID int, nodeID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteNodeBalancerNode")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteNodeBalancerNode")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -539,9 +539,9 @@ func (_d LinodeClientWithTracing) DeleteNodeBalancerNode(ctx context.Context, no
 	return _d.LinodeClient.DeleteNodeBalancerNode(ctx, nodebalancerID, configID, nodeID)
 }
 
-// DeleteObjectStorageKey implements clients.LinodeClient
+// DeleteObjectStorageKey implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteObjectStorageKey(ctx context.Context, keyID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteObjectStorageKey")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteObjectStorageKey")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -563,9 +563,9 @@ func (_d LinodeClientWithTracing) DeleteObjectStorageKey(ctx context.Context, ke
 	return _d.LinodeClient.DeleteObjectStorageKey(ctx, keyID)
 }
 
-// DeletePlacementGroup implements clients.LinodeClient
+// DeletePlacementGroup implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeletePlacementGroup(ctx context.Context, id int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeletePlacementGroup")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeletePlacementGroup")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -587,9 +587,9 @@ func (_d LinodeClientWithTracing) DeletePlacementGroup(ctx context.Context, id i
 	return _d.LinodeClient.DeletePlacementGroup(ctx, id)
 }
 
-// DeleteVPC implements clients.LinodeClient
+// DeleteVPC implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteVPC(ctx context.Context, vpcID int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.DeleteVPC")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteVPC")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -611,9 +611,9 @@ func (_d LinodeClientWithTracing) DeleteVPC(ctx context.Context, vpcID int) (err
 	return _d.LinodeClient.DeleteVPC(ctx, vpcID)
 }
 
-// GetFirewall implements clients.LinodeClient
+// GetFirewall implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetFirewall(ctx context.Context, firewallID int) (fp1 *linodego.Firewall, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetFirewall")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetFirewall")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -636,9 +636,9 @@ func (_d LinodeClientWithTracing) GetFirewall(ctx context.Context, firewallID in
 	return _d.LinodeClient.GetFirewall(ctx, firewallID)
 }
 
-// GetFirewallDevice implements clients.LinodeClient
+// GetFirewallDevice implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetFirewallDevice(ctx context.Context, firewallID int, deviceID int) (fp1 *linodego.FirewallDevice, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetFirewallDevice")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetFirewallDevice")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -662,9 +662,9 @@ func (_d LinodeClientWithTracing) GetFirewallDevice(ctx context.Context, firewal
 	return _d.LinodeClient.GetFirewallDevice(ctx, firewallID, deviceID)
 }
 
-// GetFirewallRules implements clients.LinodeClient
+// GetFirewallRules implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetFirewallRules(ctx context.Context, firewallID int) (fp1 *linodego.FirewallRuleSet, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetFirewallRules")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetFirewallRules")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -687,9 +687,9 @@ func (_d LinodeClientWithTracing) GetFirewallRules(ctx context.Context, firewall
 	return _d.LinodeClient.GetFirewallRules(ctx, firewallID)
 }
 
-// GetImage implements clients.LinodeClient
+// GetImage implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetImage(ctx context.Context, imageID string) (ip1 *linodego.Image, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetImage")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetImage")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -712,9 +712,9 @@ func (_d LinodeClientWithTracing) GetImage(ctx context.Context, imageID string) 
 	return _d.LinodeClient.GetImage(ctx, imageID)
 }
 
-// GetInstance implements clients.LinodeClient
+// GetInstance implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetInstance(ctx context.Context, linodeID int) (ip1 *linodego.Instance, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetInstance")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetInstance")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -737,9 +737,9 @@ func (_d LinodeClientWithTracing) GetInstance(ctx context.Context, linodeID int)
 	return _d.LinodeClient.GetInstance(ctx, linodeID)
 }
 
-// GetInstanceDisk implements clients.LinodeClient
+// GetInstanceDisk implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (ip1 *linodego.InstanceDisk, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetInstanceDisk")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetInstanceDisk")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -763,9 +763,9 @@ func (_d LinodeClientWithTracing) GetInstanceDisk(ctx context.Context, linodeID 
 	return _d.LinodeClient.GetInstanceDisk(ctx, linodeID, diskID)
 }
 
-// GetInstanceIPAddresses implements clients.LinodeClient
+// GetInstanceIPAddresses implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetInstanceIPAddresses(ctx context.Context, linodeID int) (ip1 *linodego.InstanceIPAddressResponse, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetInstanceIPAddresses")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetInstanceIPAddresses")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -788,9 +788,9 @@ func (_d LinodeClientWithTracing) GetInstanceIPAddresses(ctx context.Context, li
 	return _d.LinodeClient.GetInstanceIPAddresses(ctx, linodeID)
 }
 
-// GetNodeBalancer implements clients.LinodeClient
+// GetNodeBalancer implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetNodeBalancer(ctx context.Context, nodebalancerID int) (np1 *linodego.NodeBalancer, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetNodeBalancer")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetNodeBalancer")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -813,9 +813,9 @@ func (_d LinodeClientWithTracing) GetNodeBalancer(ctx context.Context, nodebalan
 	return _d.LinodeClient.GetNodeBalancer(ctx, nodebalancerID)
 }
 
-// GetNodeBalancerConfig implements clients.LinodeClient
+// GetNodeBalancerConfig implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetNodeBalancerConfig(ctx context.Context, nodebalancerID int, configID int) (np1 *linodego.NodeBalancerConfig, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetNodeBalancerConfig")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetNodeBalancerConfig")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -839,9 +839,9 @@ func (_d LinodeClientWithTracing) GetNodeBalancerConfig(ctx context.Context, nod
 	return _d.LinodeClient.GetNodeBalancerConfig(ctx, nodebalancerID, configID)
 }
 
-// GetObjectStorageBucket implements clients.LinodeClient
+// GetObjectStorageBucket implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, regionID string, label string) (op1 *linodego.ObjectStorageBucket, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageBucket")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetObjectStorageBucket")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -865,9 +865,9 @@ func (_d LinodeClientWithTracing) GetObjectStorageBucket(ctx context.Context, re
 	return _d.LinodeClient.GetObjectStorageBucket(ctx, regionID, label)
 }
 
-// GetObjectStorageBucketAccess implements clients.LinodeClient
+// GetObjectStorageBucketAccess implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID string, label string) (op1 *linodego.ObjectStorageBucketAccess, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageBucketAccess")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetObjectStorageBucketAccess")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -891,9 +891,9 @@ func (_d LinodeClientWithTracing) GetObjectStorageBucketAccess(ctx context.Conte
 	return _d.LinodeClient.GetObjectStorageBucketAccess(ctx, clusterOrRegionID, label)
 }
 
-// GetObjectStorageKey implements clients.LinodeClient
+// GetObjectStorageKey implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetObjectStorageKey(ctx context.Context, keyID int) (op1 *linodego.ObjectStorageKey, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetObjectStorageKey")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetObjectStorageKey")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -916,9 +916,9 @@ func (_d LinodeClientWithTracing) GetObjectStorageKey(ctx context.Context, keyID
 	return _d.LinodeClient.GetObjectStorageKey(ctx, keyID)
 }
 
-// GetPlacementGroup implements clients.LinodeClient
+// GetPlacementGroup implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetPlacementGroup(ctx context.Context, id int) (pp1 *linodego.PlacementGroup, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetPlacementGroup")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetPlacementGroup")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -941,9 +941,9 @@ func (_d LinodeClientWithTracing) GetPlacementGroup(ctx context.Context, id int)
 	return _d.LinodeClient.GetPlacementGroup(ctx, id)
 }
 
-// GetRegion implements clients.LinodeClient
+// GetRegion implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetRegion(ctx context.Context, regionID string) (rp1 *linodego.Region, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetRegion")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetRegion")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -966,9 +966,9 @@ func (_d LinodeClientWithTracing) GetRegion(ctx context.Context, regionID string
 	return _d.LinodeClient.GetRegion(ctx, regionID)
 }
 
-// GetType implements clients.LinodeClient
+// GetType implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetType(ctx context.Context, typeID string) (lp1 *linodego.LinodeType, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetType")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetType")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -991,9 +991,9 @@ func (_d LinodeClientWithTracing) GetType(ctx context.Context, typeID string) (l
 	return _d.LinodeClient.GetType(ctx, typeID)
 }
 
-// GetVPC implements clients.LinodeClient
+// GetVPC implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetVPC(ctx context.Context, vpcID int) (vp1 *linodego.VPC, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.GetVPC")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetVPC")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1016,9 +1016,9 @@ func (_d LinodeClientWithTracing) GetVPC(ctx context.Context, vpcID int) (vp1 *l
 	return _d.LinodeClient.GetVPC(ctx, vpcID)
 }
 
-// ListDomainRecords implements clients.LinodeClient
+// ListDomainRecords implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListDomainRecords(ctx context.Context, domainID int, opts *linodego.ListOptions) (da1 []linodego.DomainRecord, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListDomainRecords")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListDomainRecords")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1042,9 +1042,9 @@ func (_d LinodeClientWithTracing) ListDomainRecords(ctx context.Context, domainI
 	return _d.LinodeClient.ListDomainRecords(ctx, domainID, opts)
 }
 
-// ListDomains implements clients.LinodeClient
+// ListDomains implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListDomains(ctx context.Context, opts *linodego.ListOptions) (da1 []linodego.Domain, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListDomains")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListDomains")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1067,9 +1067,9 @@ func (_d LinodeClientWithTracing) ListDomains(ctx context.Context, opts *linodeg
 	return _d.LinodeClient.ListDomains(ctx, opts)
 }
 
-// ListInstanceConfigs implements clients.LinodeClient
+// ListInstanceConfigs implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) (ia1 []linodego.InstanceConfig, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListInstanceConfigs")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListInstanceConfigs")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1093,9 +1093,9 @@ func (_d LinodeClientWithTracing) ListInstanceConfigs(ctx context.Context, linod
 	return _d.LinodeClient.ListInstanceConfigs(ctx, linodeID, opts)
 }
 
-// ListInstances implements clients.LinodeClient
+// ListInstances implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListInstances(ctx context.Context, opts *linodego.ListOptions) (ia1 []linodego.Instance, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListInstances")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListInstances")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1118,9 +1118,9 @@ func (_d LinodeClientWithTracing) ListInstances(ctx context.Context, opts *linod
 	return _d.LinodeClient.ListInstances(ctx, opts)
 }
 
-// ListNodeBalancerNodes implements clients.LinodeClient
+// ListNodeBalancerNodes implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListNodeBalancerNodes(ctx context.Context, nodebalancerID int, configID int, opts *linodego.ListOptions) (na1 []linodego.NodeBalancerNode, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListNodeBalancerNodes")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListNodeBalancerNodes")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1145,9 +1145,9 @@ func (_d LinodeClientWithTracing) ListNodeBalancerNodes(ctx context.Context, nod
 	return _d.LinodeClient.ListNodeBalancerNodes(ctx, nodebalancerID, configID, opts)
 }
 
-// ListPlacementGroups implements clients.LinodeClient
+// ListPlacementGroups implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListPlacementGroups(ctx context.Context, options *linodego.ListOptions) (pa1 []linodego.PlacementGroup, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListPlacementGroups")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListPlacementGroups")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1170,9 +1170,9 @@ func (_d LinodeClientWithTracing) ListPlacementGroups(ctx context.Context, optio
 	return _d.LinodeClient.ListPlacementGroups(ctx, options)
 }
 
-// ListStackscripts implements clients.LinodeClient
+// ListStackscripts implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListStackscripts(ctx context.Context, opts *linodego.ListOptions) (sa1 []linodego.Stackscript, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListStackscripts")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListStackscripts")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1195,9 +1195,9 @@ func (_d LinodeClientWithTracing) ListStackscripts(ctx context.Context, opts *li
 	return _d.LinodeClient.ListStackscripts(ctx, opts)
 }
 
-// ListVPCs implements clients.LinodeClient
+// ListVPCs implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListVPCs(ctx context.Context, opts *linodego.ListOptions) (va1 []linodego.VPC, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ListVPCs")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListVPCs")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1220,9 +1220,9 @@ func (_d LinodeClientWithTracing) ListVPCs(ctx context.Context, opts *linodego.L
 	return _d.LinodeClient.ListVPCs(ctx, opts)
 }
 
-// ResizeInstanceDisk implements clients.LinodeClient
+// ResizeInstanceDisk implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ResizeInstanceDisk(ctx context.Context, linodeID int, diskID int, size int) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.ResizeInstanceDisk")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ResizeInstanceDisk")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1246,9 +1246,9 @@ func (_d LinodeClientWithTracing) ResizeInstanceDisk(ctx context.Context, linode
 	return _d.LinodeClient.ResizeInstanceDisk(ctx, linodeID, diskID, size)
 }
 
-// UnassignPlacementGroupLinodes implements clients.LinodeClient
+// UnassignPlacementGroupLinodes implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UnassignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupUnAssignOptions) (pp1 *linodego.PlacementGroup, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UnassignPlacementGroupLinodes")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UnassignPlacementGroupLinodes")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1272,9 +1272,9 @@ func (_d LinodeClientWithTracing) UnassignPlacementGroupLinodes(ctx context.Cont
 	return _d.LinodeClient.UnassignPlacementGroupLinodes(ctx, id, options)
 }
 
-// UpdateDomainRecord implements clients.LinodeClient
+// UpdateDomainRecord implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UpdateDomainRecord(ctx context.Context, domainID int, domainRecordID int, recordReq linodego.DomainRecordUpdateOptions) (dp1 *linodego.DomainRecord, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateDomainRecord")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateDomainRecord")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1299,9 +1299,9 @@ func (_d LinodeClientWithTracing) UpdateDomainRecord(ctx context.Context, domain
 	return _d.LinodeClient.UpdateDomainRecord(ctx, domainID, domainRecordID, recordReq)
 }
 
-// UpdateFirewall implements clients.LinodeClient
+// UpdateFirewall implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UpdateFirewall(ctx context.Context, firewallID int, opts linodego.FirewallUpdateOptions) (fp1 *linodego.Firewall, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateFirewall")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateFirewall")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1325,9 +1325,9 @@ func (_d LinodeClientWithTracing) UpdateFirewall(ctx context.Context, firewallID
 	return _d.LinodeClient.UpdateFirewall(ctx, firewallID, opts)
 }
 
-// UpdateFirewallRules implements clients.LinodeClient
+// UpdateFirewallRules implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRuleSet) (fp1 *linodego.FirewallRuleSet, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateFirewallRules")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateFirewallRules")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1351,9 +1351,9 @@ func (_d LinodeClientWithTracing) UpdateFirewallRules(ctx context.Context, firew
 	return _d.LinodeClient.UpdateFirewallRules(ctx, firewallID, rules)
 }
 
-// UpdateInstanceConfig implements clients.LinodeClient
+// UpdateInstanceConfig implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, linodeID int, configID int, opts linodego.InstanceConfigUpdateOptions) (ip1 *linodego.InstanceConfig, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateInstanceConfig")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateInstanceConfig")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1378,9 +1378,9 @@ func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, lino
 	return _d.LinodeClient.UpdateInstanceConfig(ctx, linodeID, configID, opts)
 }
 
-// UpdateObjectStorageBucketAccess implements clients.LinodeClient
+// UpdateObjectStorageBucketAccess implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UpdateObjectStorageBucketAccess(ctx context.Context, clusterOrRegionID string, label string, opts linodego.ObjectStorageBucketUpdateAccessOptions) (err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdateObjectStorageBucketAccess")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateObjectStorageBucketAccess")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -1404,9 +1404,9 @@ func (_d LinodeClientWithTracing) UpdateObjectStorageBucketAccess(ctx context.Co
 	return _d.LinodeClient.UpdateObjectStorageBucketAccess(ctx, clusterOrRegionID, label, opts)
 }
 
-// UpdatePlacementGroup implements clients.LinodeClient
+// UpdatePlacementGroup implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UpdatePlacementGroup(ctx context.Context, id int, options linodego.PlacementGroupUpdateOptions) (pp1 *linodego.PlacementGroup, err error) {
-	ctx, _span := tracing.Start(ctx, "clients.LinodeClient.UpdatePlacementGroup")
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdatePlacementGroup")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{

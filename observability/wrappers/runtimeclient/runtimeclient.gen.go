@@ -10,20 +10,20 @@ import (
 	"context"
 
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
-	"github.com/linode/cluster-api-provider-linode/observability/wrappers"
+	_sourceWrappers "github.com/linode/cluster-api-provider-linode/observability/wrappers"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// RuntimeClientWithTracing implements wrappers.RuntimeClient interface instrumented with opentracing spans
+// RuntimeClientWithTracing implements _sourceWrappers.RuntimeClient interface instrumented with opentracing spans
 type RuntimeClientWithTracing struct {
-	wrappers.RuntimeClient
+	_sourceWrappers.RuntimeClient
 	_spanDecorator func(span trace.Span, params, results map[string]interface{})
 }
 
 // NewRuntimeClientWithTracing returns RuntimeClientWithTracing
-func NewRuntimeClientWithTracing(base wrappers.RuntimeClient, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) RuntimeClientWithTracing {
+func NewRuntimeClientWithTracing(base _sourceWrappers.RuntimeClient, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) RuntimeClientWithTracing {
 	d := RuntimeClientWithTracing{
 		RuntimeClient: base,
 	}
@@ -35,9 +35,9 @@ func NewRuntimeClientWithTracing(base wrappers.RuntimeClient, spanDecorator ...f
 	return d
 }
 
-// Create implements wrappers.RuntimeClient
+// Create implements _sourceWrappers.RuntimeClient
 func (_d RuntimeClientWithTracing) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Create")
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeClient.Create")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -60,9 +60,9 @@ func (_d RuntimeClientWithTracing) Create(ctx context.Context, obj client.Object
 	return _d.RuntimeClient.Create(ctx, obj, opts...)
 }
 
-// Delete implements wrappers.RuntimeClient
+// Delete implements _sourceWrappers.RuntimeClient
 func (_d RuntimeClientWithTracing) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Delete")
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeClient.Delete")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -85,9 +85,9 @@ func (_d RuntimeClientWithTracing) Delete(ctx context.Context, obj client.Object
 	return _d.RuntimeClient.Delete(ctx, obj, opts...)
 }
 
-// DeleteAllOf implements wrappers.RuntimeClient
+// DeleteAllOf implements _sourceWrappers.RuntimeClient
 func (_d RuntimeClientWithTracing) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.DeleteAllOf")
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeClient.DeleteAllOf")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -110,9 +110,9 @@ func (_d RuntimeClientWithTracing) DeleteAllOf(ctx context.Context, obj client.O
 	return _d.RuntimeClient.DeleteAllOf(ctx, obj, opts...)
 }
 
-// Get implements wrappers.RuntimeClient
+// Get implements _sourceWrappers.RuntimeClient
 func (_d RuntimeClientWithTracing) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Get")
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeClient.Get")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -136,9 +136,9 @@ func (_d RuntimeClientWithTracing) Get(ctx context.Context, key client.ObjectKey
 	return _d.RuntimeClient.Get(ctx, key, obj, opts...)
 }
 
-// List implements wrappers.RuntimeClient
+// List implements _sourceWrappers.RuntimeClient
 func (_d RuntimeClientWithTracing) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.List")
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeClient.List")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -161,9 +161,9 @@ func (_d RuntimeClientWithTracing) List(ctx context.Context, list client.ObjectL
 	return _d.RuntimeClient.List(ctx, list, opts...)
 }
 
-// Patch implements wrappers.RuntimeClient
+// Patch implements _sourceWrappers.RuntimeClient
 func (_d RuntimeClientWithTracing) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Patch")
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeClient.Patch")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
@@ -187,9 +187,9 @@ func (_d RuntimeClientWithTracing) Patch(ctx context.Context, obj client.Object,
 	return _d.RuntimeClient.Patch(ctx, obj, patch, opts...)
 }
 
-// Update implements wrappers.RuntimeClient
+// Update implements _sourceWrappers.RuntimeClient
 func (_d RuntimeClientWithTracing) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) (err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeClient.Update")
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeClient.Update")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
