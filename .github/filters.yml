@@ -25,6 +25,8 @@ kubeadm-cilium-bgp-lb:
   - templates/flavors/kubeadm/cilium-bgp-lb/*
 kubeadm-konnectivity:
   - templates/flavors/kubeadm/konnectivity/*
+kubeadm-flatcar:
+ - templates/flavors/kubeadm/flatcar/*
 
 k3s:
   - templates/flavors/k3s/default/*
