@@ -18,10 +18,12 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
@@ -67,6 +70,25 @@ const (
 	burstDefault       = 30
 )
 
+type flagVars struct {
+	machineWatchFilter                   string
+	clusterWatchFilter                   string
+	objectStorageBucketWatchFilter       string
+	objectStorageKeyWatchFilter          string
+	metricsAddr                          string
+	secureMetrics                        bool
+	enableLeaderElection                 bool
+	probeAddr                            string
+	restConfigQPS                        int
+	restConfigBurst                      int
+	linodeClusterConcurrency             int
+	linodeMachineConcurrency             int
+	linodeObjectStorageBucketConcurrency int
+	linodeVPCConcurrency                 int
+	linodePlacementGroupConcurrency      int
+	linodeFirewallConcurrency            int
+}
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
@@ -75,198 +97,18 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-//nolint:gocyclo,cyclop // As simple as possible.
 func main() {
-	var (
-		// Environment variables
-		linodeToken    = os.Getenv("LINODE_TOKEN")
-		linodeDNSToken = os.Getenv("LINODE_DNS_TOKEN")
-		linodeDNSURL   = os.Getenv("LINODE_DNS_URL")
-		linodeDNSCA    = os.Getenv("LINODE_DNS_CA")
-
-		machineWatchFilter             string
-		clusterWatchFilter             string
-		objectStorageBucketWatchFilter string
-		objectStorageKeyWatchFilter    string
-		metricsAddr                    string
-		enableLeaderElection           bool
-		probeAddr                      string
-
-		restConfigQPS                        int
-		restConfigBurst                      int
-		linodeClusterConcurrency             int
-		linodeMachineConcurrency             int
-		linodeObjectStorageBucketConcurrency int
-		linodeVPCConcurrency                 int
-		linodePlacementGroupConcurrency      int
-		linodeFirewallConcurrency            int
-	)
-	flag.StringVar(&machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
-	flag.StringVar(&clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
-	flag.StringVar(&objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.IntVar(&restConfigQPS, "kube-api-qps", qpsDefault,
-		"Maximum queries per second from the controller client to the Kubernetes API server. Defaults to 20")
-	flag.IntVar(&restConfigBurst, "kube-api-burst", burstDefault,
-		"Maximum number of queries that should be allowed in one burst from the controller client to the Kubernetes API server. Default 30")
-	flag.IntVar(&linodeClusterConcurrency, "linodecluster-concurrency", concurrencyDefault,
-		"Number of LinodeClusters to process simultaneously. Default 10")
-	flag.IntVar(&linodeMachineConcurrency, "linodemachine-concurrency", concurrencyDefault,
-		"Number of LinodeMachines to process simultaneously. Default 10")
-	flag.IntVar(&linodeObjectStorageBucketConcurrency, "linodeobjectstoragebucket-concurrency", concurrencyDefault,
-		"Number of linodeObjectStorageBuckets to process simultaneously. Default 10")
-	flag.IntVar(&linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault,
-		"Number of LinodeVPCs to process simultaneously. Default 10")
-	flag.IntVar(&linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault,
-		"Number of Linode Placement Groups to process simultaneously. Default 10")
-	flag.IntVar(&linodeFirewallConcurrency, "linodefirewall-concurrency", concurrencyDefault,
-		"Number of Linode Firewall to process simultaneously. Default 10")
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
-
+	flags, opts := parseFlags()
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
 	setupLog.Info(fmt.Sprintf("CAPL version: %s", version.GetVersion()))
-	// Check environment variables
-	if linodeToken == "" {
-		setupLog.Error(errors.New("failed to get LINODE_TOKEN environment variable"), "unable to start operator")
-		os.Exit(1)
-	}
-	if linodeDNSToken == "" {
-		setupLog.Info("LINODE_DNS_TOKEN not provided, defaulting to the value of LINODE_TOKEN")
-		linodeDNSToken = linodeToken
-	}
 
-	linodeClientConfig := scope.ClientConfig{Token: linodeToken}
-	dnsClientConfig := scope.ClientConfig{Token: linodeDNSToken, BaseUrl: linodeDNSURL, RootCertificatePath: linodeDNSCA}
-
-	restConfig := ctrl.GetConfigOrDie()
-	restConfig.QPS = float32(restConfigQPS)
-	restConfig.Burst = restConfigBurst
-	restConfig.UserAgent = fmt.Sprintf("CAPL/%s", version.GetVersion())
-
-	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
-		Scheme:                 scheme,
-		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "3cfd31c3.cluster.x-k8s.io",
-		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
-		// when the Manager ends. This requires the binary to immediately end when the
-		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
-		// speeds up voluntary leader transitions as the new leader don't have to wait
-		// LeaseDuration time first.
-		//
-		// In the default scaffold provided, the program ends immediately after
-		// the manager stops, so would be fine to enable this option. However,
-		// if you are doing or is intended to do any operation such as perform cleanups
-		// after the manager stops then its usage might be unsafe.
-		// LeaderElectionReleaseOnCancel: true,
-	})
-	if mgr == nil || err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
-	}
-
-	if err = (&controller.LinodeClusterReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeClusterReconciler"),
-		WatchFilterValue:   clusterWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
-		DnsClientConfig:    dnsClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeClusterConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
-		os.Exit(1)
-	}
-
-	if err = (&controller.LinodeMachineReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeMachineReconciler"),
-		WatchFilterValue:   machineWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeMachineConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
-		os.Exit(1)
-	}
-
-	if err = (&controller.LinodeVPCReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeVPCReconciler"),
-		WatchFilterValue:   clusterWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeVPCConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
-		os.Exit(1)
-	}
-
-	if err = (&controller.LinodeObjectStorageBucketReconciler{
-		Client:             mgr.GetClient(),
-		Logger:             ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
-		WatchFilterValue:   objectStorageBucketWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeObjectStorageBucketConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
-		os.Exit(1)
-	}
-
-	if err = (&controller.LinodePlacementGroupReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
-		WatchFilterValue:   clusterWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodePlacementGroupConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodePlacementGroup")
-		os.Exit(1)
-	}
-
-	if err = (&controller.LinodeObjectStorageKeyReconciler{
-		Client:             mgr.GetClient(),
-		Scheme:             mgr.GetScheme(),
-		Logger:             ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
-		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageKeyReconciler"),
-		WatchFilterValue:   objectStorageKeyWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeObjectStorageBucketConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageKey")
-		os.Exit(1)
-	}
-
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		setupWebhooks(mgr)
-	}
-
-	if err = (&controller.LinodeFirewallReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeFirewallReconciler"),
-		WatchFilterValue:   clusterWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
-	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: linodeFirewallConcurrency}); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "LinodeFirewall")
-		os.Exit(1)
-	}
-	// +kubebuilder:scaffold:builder
-
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
-	}
+	linodeClientConfig, dnsClientConfig := validateEnvironment()
+	mgr := setupManager(flags, linodeClientConfig, dnsClientConfig)
 
 	ctx := ctrl.SetupSignalHandler()
-
-	// closure for mgr.Start, so we defers are running
 	run := func(ctx context.Context) error {
-		o11yShutdown := setupObservabillity(ctx)
+		o11yShutdown := setupObservability(ctx)
 		defer o11yShutdown()
 
 		setupLog.Info("starting manager")
@@ -279,6 +121,228 @@ func main() {
 	}
 }
 
+// parseFlags initializes command-line flags and returns the parsed flags and zap options.
+// It sets up various configuration options for the application, including filters, metrics,
+// health probe addresses, leader election, and concurrency settings.
+func parseFlags() (flags flagVars, opts zap.Options) {
+	flags = flagVars{}
+	flag.StringVar(&flags.machineWatchFilter, "machine-watch-filter", "", "The machines to watch by label.")
+	flag.StringVar(&flags.clusterWatchFilter, "cluster-watch-filter", "", "The clusters to watch by label.")
+	flag.StringVar(&flags.objectStorageBucketWatchFilter, "object-storage-bucket-watch-filter", "", "The object bucket storages to watch by label.")
+	flag.StringVar(&flags.metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
+		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
+
+	// Mitigate CVE-2023-44487 by disabling HTTP2 by default until the Go
+	// standard library and golang.org/x/net are fully fixed.
+	// Right now, it is possible for authenticated and unauthenticated users to
+	// hold open HTTP2 connections and consume huge amounts of memory.
+	// See:
+	// * https://github.com/kubernetes/kubernetes/pull/121120
+	// * https://github.com/kubernetes/kubernetes/issues/121197
+	// * https://github.com/golang/go/issues/63417#issuecomment-1758858612
+	flag.BoolVar(&flags.secureMetrics, "metrics-secure", false, "If set, the metrics endpoint is served securely via HTTPS.")
+	flag.StringVar(&flags.probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&flags.enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager.")
+	flag.IntVar(&flags.restConfigQPS, "kube-api-qps", qpsDefault, "Maximum queries per second from the controller client")
+	flag.IntVar(&flags.restConfigBurst, "kube-api-burst", burstDefault, "Maximum number of queries in one burst")
+	flag.IntVar(&flags.linodeClusterConcurrency, "linodecluster-concurrency", concurrencyDefault, "Number of LinodeClusters to process simultaneously")
+	flag.IntVar(&flags.linodeMachineConcurrency, "linodemachine-concurrency", concurrencyDefault, "Number of LinodeMachines to process simultaneously")
+	flag.IntVar(&flags.linodeObjectStorageBucketConcurrency, "linodeobjectstoragebucket-concurrency", concurrencyDefault, "Number of linodeObjectStorageBuckets to process simultaneously")
+	flag.IntVar(&flags.linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault, "Number of LinodeVPCs to process simultaneously")
+	flag.IntVar(&flags.linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault, "Number of Linode Placement Groups to process simultaneously")
+	flag.IntVar(&flags.linodeFirewallConcurrency, "linodefirewall-concurrency", concurrencyDefault, "Number of Linode Firewall to process simultaneously")
+
+	opts = zap.Options{Development: true}
+	opts.BindFlags(flag.CommandLine)
+	flag.Parse()
+
+	return flags, opts
+}
+
+// validateEnvironment checks for required environment variables and returns the configuration for Linode and DNS clients.
+// It ensures that LINODE_TOKEN is set and defaults LINODE_DNS_TOKEN to LINODE_TOKEN if not provided.
+func validateEnvironment() (linodeConfig, dnsConfig scope.ClientConfig) {
+	linodeToken := os.Getenv("LINODE_TOKEN")
+	linodeDNSToken := os.Getenv("LINODE_DNS_TOKEN")
+	linodeDNSURL := os.Getenv("LINODE_DNS_URL")
+	linodeDNSCA := os.Getenv("LINODE_DNS_CA")
+
+	if linodeToken == "" {
+		setupLog.Error(errors.New("failed to get LINODE_TOKEN environment variable"), "unable to start operator")
+		os.Exit(1)
+	}
+	if linodeDNSToken == "" {
+		setupLog.Info("LINODE_DNS_TOKEN not provided, defaulting to the value of LINODE_TOKEN")
+		linodeDNSToken = linodeToken
+	}
+
+	return scope.ClientConfig{Token: linodeToken},
+		scope.ClientConfig{Token: linodeDNSToken, BaseUrl: linodeDNSURL, RootCertificatePath: linodeDNSCA}
+}
+
+// setupManager initializes and returns a new manager instance with the provided configurations.
+// It sets up the REST configuration, metrics server options, and registers controllers and webhooks.
+func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) manager.Manager {
+	restConfig := ctrl.GetConfigOrDie()
+	restConfig.QPS = float32(flags.restConfigQPS)
+	restConfig.Burst = flags.restConfigBurst
+	restConfig.UserAgent = fmt.Sprintf("CAPL/%s", version.GetVersion())
+
+	var tlsOpts []func(*tls.Config)
+	if !flags.secureMetrics {
+		tlsOpts = append(tlsOpts, func(c *tls.Config) {
+			setupLog.Info("disabling http/2")
+			c.NextProtos = []string{"http/1.2"}
+		})
+	}
+
+	metricsServerOptions := metricsserver.Options{
+		BindAddress:   flags.metricsAddr,
+		SecureServing: flags.secureMetrics,
+		TLSOpts:       tlsOpts,
+	}
+	if flags.secureMetrics {
+		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
+	}
+
+	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
+		Scheme:                 scheme,
+		Metrics:                metricsServerOptions,
+		HealthProbeBindAddress: flags.probeAddr,
+		LeaderElection:         flags.enableLeaderElection,
+		LeaderElectionID:       "3cfd31c3.cluster.x-k8s.io",
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to create manager")
+		os.Exit(1)
+	}
+
+	// Ensure mgr is not nil before proceeding
+	if mgr == nil {
+		setupLog.Error(errors.New("manager creation failed"), "manager is nil")
+		os.Exit(1)
+	}
+
+	setupControllers(mgr, flags, linodeConfig, dnsConfig)
+
+	// Setup webhooks if enabled (defaults to true)
+	webhooksEnabled := true // default to enabled
+	if webhooksEnv := os.Getenv("ENABLE_WEBHOOKS"); webhooksEnv != "" {
+		var err error
+		webhooksEnabled, err = strconv.ParseBool(webhooksEnv)
+		if err != nil {
+			setupLog.Error(err, "invalid ENABLE_WEBHOOKS value, defaulting to true")
+		}
+	}
+	if webhooksEnabled {
+		setupWebhooks(mgr)
+	}
+
+	setupHealthChecks(mgr)
+
+	return mgr
+}
+
+// setupHealthChecks adds health and readiness checks to the manager.
+// It registers a health check at the "healthz" endpoint and a readiness check at the "readyz" endpoint.
+func setupHealthChecks(mgr manager.Manager) {
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+}
+
+// setupControllers initializes and registers various controllers with the manager.
+// It sets up controllers for Linode resources, configuring each with the appropriate client and options.
+func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, dnsConfig scope.ClientConfig) {
+	// LinodeCluster Controller
+	if err := (&controller.LinodeClusterReconciler{
+		Client:             mgr.GetClient(),
+		Recorder:           mgr.GetEventRecorderFor("LinodeClusterReconciler"),
+		WatchFilterValue:   flags.clusterWatchFilter,
+		LinodeClientConfig: linodeClientConfig,
+		DnsClientConfig:    dnsConfig,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeClusterConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
+		os.Exit(1)
+	}
+
+	// LinodeMachine Controller
+	if err := (&controller.LinodeMachineReconciler{
+		Client:             mgr.GetClient(),
+		Recorder:           mgr.GetEventRecorderFor("LinodeMachineReconciler"),
+		WatchFilterValue:   flags.machineWatchFilter,
+		LinodeClientConfig: linodeClientConfig,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeMachineConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
+		os.Exit(1)
+	}
+
+	// LinodeVPC Controller
+	if err := (&controller.LinodeVPCReconciler{
+		Client:             mgr.GetClient(),
+		Recorder:           mgr.GetEventRecorderFor("LinodeVPCReconciler"),
+		WatchFilterValue:   flags.clusterWatchFilter,
+		LinodeClientConfig: linodeClientConfig,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeVPCConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
+		os.Exit(1)
+	}
+
+	// LinodeObjectStorageBucket Controller
+	if err := (&controller.LinodeObjectStorageBucketReconciler{
+		Client:             mgr.GetClient(),
+		Logger:             ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
+		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
+		WatchFilterValue:   flags.objectStorageBucketWatchFilter,
+		LinodeClientConfig: linodeClientConfig,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeObjectStorageBucketConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageBucket")
+		os.Exit(1)
+	}
+
+	// LinodePlacementGroup Controller
+	if err := (&controller.LinodePlacementGroupReconciler{
+		Client:             mgr.GetClient(),
+		Recorder:           mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
+		WatchFilterValue:   flags.clusterWatchFilter,
+		LinodeClientConfig: linodeClientConfig,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodePlacementGroupConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodePlacementGroup")
+		os.Exit(1)
+	}
+
+	// LinodeObjectStorageKey Controller
+	if err := (&controller.LinodeObjectStorageKeyReconciler{
+		Client:             mgr.GetClient(),
+		Scheme:             mgr.GetScheme(),
+		Logger:             ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
+		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageKeyReconciler"),
+		WatchFilterValue:   flags.objectStorageKeyWatchFilter,
+		LinodeClientConfig: linodeClientConfig,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeObjectStorageBucketConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageKey")
+		os.Exit(1)
+	}
+
+	// LinodeFirewall Controller
+	if err := (&controller.LinodeFirewallReconciler{
+		Client:             mgr.GetClient(),
+		Recorder:           mgr.GetEventRecorderFor("LinodeFirewallReconciler"),
+		WatchFilterValue:   flags.clusterWatchFilter,
+		LinodeClientConfig: linodeClientConfig,
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeFirewallConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeFirewall")
+		os.Exit(1)
+	}
+}
+
+// setupWebhooks initializes webhooks for the specified resources in the manager.
+// It sets up webhooks for various Linode resources to handle admission control and validation.
 func setupWebhooks(mgr manager.Manager) {
 	var err error
 	if err = (&infrastructurev1alpha2.LinodeCluster{}).SetupWebhookWithManager(mgr); err != nil {
@@ -315,7 +379,9 @@ func setupWebhooks(mgr manager.Manager) {
 	}
 }
 
-func setupObservabillity(ctx context.Context) func() {
+// setup configures observability features and returns a cleanup function.
+// It sets up OpenTelemetry tracing and logs the configuration applied, returning a function to clean up resources.
+func setupObservability(ctx context.Context) func() {
 	node := os.Getenv(envK8sNodeName)
 	pod := os.Getenv(envK8sPodName)
 
