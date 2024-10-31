@@ -121,7 +121,7 @@ spec:
               exit 0
             check:
               ($error): ~
-              ($stdout): "Nodebalancer exists and has the correct firewall configuration"
+              ($stdout): "Nodebalancer exists and has the correct firewall configuration\n"
     - name: Delete Firewall, Cluster, and LinodeCluster
       try:
         - delete:

@@ -325,16 +325,19 @@ CTLPTL_VERSION           ?= v0.8.29
 CLUSTERCTL_VERSION       ?= v1.7.2
 KUBECTL_VERSION          ?= v1.28.0
 KUBEBUILDER_VERSION      ?= v3.15.1
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.5
 TILT_VERSION             ?= 0.33.10
 KIND_VERSION             ?= 0.23.0
-CHAINSAW_VERSION         ?= v0.2.2
+CHAINSAW_VERSION         ?= v0.2.11
 HUSKY_VERSION            ?= v0.2.16
 NILAWAY_VERSION          ?= latest
 GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
-GOWRAP_VERSION           ?= v1.3.7
+GOWRAP_VERSION           ?= v1.4.0
 S5CMD_VERSION            ?= v2.2.2
+
+# v0.31.xxx is not supported by go 1.23. Use v0.32.0-alpha.3 instead. Update this version when the next release is available.
+CONVERSION_GEN_VERSION   ?= v0.32.0-alpha.3
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
@@ -376,7 +379,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: conversion-gen
 conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary.
 $(CONVERSION_GEN): $(LOCALBIN)
-	GOBIN=$(CACHE_BIN) go install k8s.io/code-generator/cmd/conversion-gen@latest
+	GOBIN=$(CACHE_BIN) go install k8s.io/code-generator/cmd/conversion-gen@$(CONVERSION_GEN_VERSION)
 
 .PHONY: tilt
 tilt: $(TILT) ## Download tilt locally if necessary.

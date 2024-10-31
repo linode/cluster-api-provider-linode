@@ -10,20 +10,20 @@ import (
 	"context"
 
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
-	"github.com/linode/cluster-api-provider-linode/observability/wrappers"
+	_sourceWrappers "github.com/linode/cluster-api-provider-linode/observability/wrappers"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// RuntimeReconcilerWithTracing implements wrappers.RuntimeReconciler interface instrumented with opentracing spans
+// RuntimeReconcilerWithTracing implements _sourceWrappers.RuntimeReconciler interface instrumented with opentracing spans
 type RuntimeReconcilerWithTracing struct {
-	wrappers.RuntimeReconciler
+	_sourceWrappers.RuntimeReconciler
 	_spanDecorator func(span trace.Span, params, results map[string]interface{})
 }
 
 // NewRuntimeReconcilerWithTracing returns RuntimeReconcilerWithTracing
-func NewRuntimeReconcilerWithTracing(base wrappers.RuntimeReconciler, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) RuntimeReconcilerWithTracing {
+func NewRuntimeReconcilerWithTracing(base _sourceWrappers.RuntimeReconciler, spanDecorator ...func(span trace.Span, params, results map[string]interface{})) RuntimeReconcilerWithTracing {
 	d := RuntimeReconcilerWithTracing{
 		RuntimeReconciler: base,
 	}
@@ -35,9 +35,9 @@ func NewRuntimeReconcilerWithTracing(base wrappers.RuntimeReconciler, spanDecora
 	return d
 }
 
-// Reconcile implements wrappers.RuntimeReconciler
+// Reconcile implements _sourceWrappers.RuntimeReconciler
 func (_d RuntimeReconcilerWithTracing) Reconcile(ctx context.Context, r1 reconcile.Request) (r2 reconcile.Result, err error) {
-	ctx, _span := tracing.Start(ctx, "wrappers.RuntimeReconciler.Reconcile")
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeReconciler.Reconcile")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
