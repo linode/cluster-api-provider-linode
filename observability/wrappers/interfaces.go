@@ -22,7 +22,7 @@ import (
 )
 
 type RuntimeReconciler interface {
-	reconcile.Reconciler
+	reconcile.TypedReconciler[reconcile.Request]
 }
 
 type RuntimeClient interface {

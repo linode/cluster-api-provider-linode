@@ -1,5 +1,3 @@
-{{.Import}}
-
 import (
     "github.com/linode/cluster-api-provider-linode/observability/tracing"
     "go.opentelemetry.io/otel"
