@@ -186,31 +186,31 @@ func processOutboundRule(rule infrav1alpha2.FirewallRule, outboundPolicy string,
 }
 
 // processAddresses extracts and transforms IPv4 and IPv6 addresses
-func processAddresses(addresses *infrav1alpha2.NetworkAddresses) ([]string, []string) {
+func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s []string, ipv6s []string) {
 	// Initialize empty slices for consistent return type
-	ruleIPv4s := make([]string, 0)
-	ruleIPv6s := make([]string, 0)
+	ipv4s = make([]string, 0)
+	ipv6s = make([]string, 0)
 
 	// Early return if addresses is nil
 	if addresses == nil {
-		return ruleIPv4s, ruleIPv6s
+		return ipv4s, ipv6s
 	}
 
 	// Process IPv4 addresses
 	if addresses.IPv4 != nil {
 		for _, ip := range *addresses.IPv4 {
-			ruleIPv4s = append(ruleIPv4s, transformToCIDR(ip))
+			ipv4s = append(ipv4s, transformToCIDR(ip))
 		}
 	}
 
 	// Process IPv6 addresses
 	if addresses.IPv6 != nil {
 		for _, ip := range *addresses.IPv6 {
-			ruleIPv6s = append(ruleIPv6s, transformToCIDR(ip))
+			ipv6s = append(ipv6s, transformToCIDR(ip))
 		}
 	}
 
-	return ruleIPv4s, ruleIPv6s
+	return ipv4s, ipv6s
 }
 
 // formatRuleLabel creates and formats the rule label
