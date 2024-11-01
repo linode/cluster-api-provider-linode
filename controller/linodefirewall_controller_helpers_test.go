@@ -10,6 +10,8 @@ import (
 )
 
 func TestTransformToCIDR(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -43,7 +45,9 @@ func TestTransformToCIDR(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			result := transformToCIDR(tt.input)
 			if result != tt.expected {
 				t.Errorf("transformToCIDR(%s) = %s; want %s",
@@ -54,6 +58,8 @@ func TestTransformToCIDR(t *testing.T) {
 }
 
 func TestProcessACL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		firewall *infrav1alpha2.LinodeFirewall
@@ -152,7 +158,9 @@ func TestProcessACL(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := processACL(tt.firewall)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("processACL() error = %v, wantErr %v", err, tt.wantErr)
