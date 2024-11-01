@@ -4,3 +4,18 @@ metadata:
   name: ($firewall)
 spec:
   enabled: true
+  inboundRules:
+    - action: ACCEPT
+      label: test-single-ip
+      protocol: TCP
+      ports: "80"
+      addresses:
+        ipv4:
+          - "192.168.1.1"    # This should be transformed to "192.168.1.1/32" by our code
+    - action: ACCEPT
+      label: test-cidr
+      protocol: TCP
+      ports: "443"
+      addresses:
+        ipv4:
+          - "10.0.0.0/8"     # This should remain unchanged since it's already in CIDR notation

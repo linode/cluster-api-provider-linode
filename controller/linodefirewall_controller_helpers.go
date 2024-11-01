@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -138,6 +140,27 @@ func chunkIPs(ips []string) [][]string {
 	return chunks
 }
 
+// transformToCIDR converts a single IP address to CIDR notation if needed
+// e.g., "192.168.1.1" becomes "192.168.1.1/32"
+func transformToCIDR(ip string) string {
+	// If already contains /, assume it's already in CIDR notation
+	if strings.Contains(ip, "/") {
+		return ip
+	}
+
+	// Try parsing as IPv4
+	if parsed := net.ParseIP(ip); parsed != nil {
+		if parsed.To4() != nil {
+			return ip + "/32"
+		}
+		// For IPv6
+		return ip + "/128"
+	}
+
+	// If not a valid IP, return as-is (will be validated later)
+	return ip
+}
+
 // processACL uses the CAPL LinodeFirewall representation to build out the inbound
 // and outbound rules for a linode Cloud Firewall and returns the configuration
 // for creating or updating the Firewall
@@ -157,11 +180,17 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (
 		ruleIPv6s := []string{}
 
 		if rule.Addresses.IPv4 != nil {
-			ruleIPv4s = append(ruleIPv4s, *rule.Addresses.IPv4...)
+			// Transform each IPv4 address
+			for _, ip := range *rule.Addresses.IPv4 {
+				ruleIPv4s = append(ruleIPv4s, transformToCIDR(ip))
+			}
 		}
 
 		if rule.Addresses.IPv6 != nil {
-			ruleIPv6s = append(ruleIPv6s, *rule.Addresses.IPv6...)
+			// Transform each IPv6 address
+			for _, ip := range *rule.Addresses.IPv6 {
+				ruleIPv6s = append(ruleIPv6s, transformToCIDR(ip))
+			}
 		}
 
 		ruleLabel := fmt.Sprintf("%s-%s", rule.Action, rule.Label)
