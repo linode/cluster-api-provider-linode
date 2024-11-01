@@ -186,7 +186,7 @@ func processOutboundRule(rule infrav1alpha2.FirewallRule, outboundPolicy string,
 }
 
 // processAddresses extracts and transforms IPv4 and IPv6 addresses
-func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s []string, ipv6s []string) {
+func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s, ipv6s []string) {
 	// Initialize empty slices for consistent return type
 	ipv4s = make([]string, 0)
 	ipv6s = make([]string, 0)
