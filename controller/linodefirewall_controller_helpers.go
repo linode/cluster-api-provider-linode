@@ -114,7 +114,7 @@ func updateFirewall(
 func chunkIPs(ips []string) [][]string {
 	ipCount := len(ips)
 	if ipCount == 0 {
-		return nil
+		return [][]string{}
 	}
 
 	// If the number of IPs is less than or equal to maxIPsPerFirewall,
@@ -187,14 +187,23 @@ func processOutboundRule(rule infrav1alpha2.FirewallRule, outboundPolicy string,
 
 // processAddresses extracts and transforms IPv4 and IPv6 addresses
 func processAddresses(addresses *infrav1alpha2.NetworkAddresses) ([]string, []string) {
-	var ruleIPv4s, ruleIPv6s []string
+	// Initialize empty slices for consistent return type
+	ruleIPv4s := make([]string, 0)
+	ruleIPv6s := make([]string, 0)
 
+	// Early return if addresses is nil
+	if addresses == nil {
+		return ruleIPv4s, ruleIPv6s
+	}
+
+	// Process IPv4 addresses
 	if addresses.IPv4 != nil {
 		for _, ip := range *addresses.IPv4 {
 			ruleIPv4s = append(ruleIPv4s, transformToCIDR(ip))
 		}
 	}
 
+	// Process IPv6 addresses
 	if addresses.IPv6 != nil {
 		for _, ip := range *addresses.IPv6 {
 			ruleIPv6s = append(ruleIPv6s, transformToCIDR(ip))
@@ -215,6 +224,16 @@ func formatRuleLabel(prefix, label string) string {
 
 // processIPv4Rules processes IPv4 rules and adds them to the rules slice
 func processIPv4Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel string, rules *[]linodego.FirewallRule) {
+	// Initialize rules if nil
+	if *rules == nil {
+		*rules = make([]linodego.FirewallRule, 0)
+	}
+
+	// If no IPs, return early
+	if len(ips) == 0 {
+		return
+	}
+
 	ipv4chunks := chunkIPs(ips)
 	for i, chunk := range ipv4chunks {
 		v4chunk := chunk
@@ -231,6 +250,16 @@ func processIPv4Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel s
 
 // processIPv6Rules processes IPv6 rules and adds them to the rules slice
 func processIPv6Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel string, rules *[]linodego.FirewallRule) {
+	// Initialize rules if nil
+	if *rules == nil {
+		*rules = make([]linodego.FirewallRule, 0)
+	}
+
+	// If no IPs, return early
+	if len(ips) == 0 {
+		return
+	}
+
 	ipv6chunks := chunkIPs(ips)
 	for i, chunk := range ipv6chunks {
 		v6chunk := chunk
