@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -112,7 +114,7 @@ func updateFirewall(
 func chunkIPs(ips []string) [][]string {
 	ipCount := len(ips)
 	if ipCount == 0 {
-		return nil
+		return [][]string{}
 	}
 
 	// If the number of IPs is less than or equal to maxIPsPerFirewall,
@@ -138,130 +140,172 @@ func chunkIPs(ips []string) [][]string {
 	return chunks
 }
 
+// transformToCIDR converts a single IP address to CIDR notation if needed
+// e.g., "192.168.1.1" becomes "192.168.1.1/32"
+func transformToCIDR(ip string) string {
+	// If already contains /, assume it's already in CIDR notation
+	if strings.Contains(ip, "/") {
+		return ip
+	}
+
+	// Try parsing as IPv4
+	if parsed := net.ParseIP(ip); parsed != nil {
+		if parsed.To4() != nil {
+			return ip + "/32"
+		}
+		// For IPv6
+		return ip + "/128"
+	}
+
+	// If not a valid IP, return as-is (will be validated later)
+	return ip
+}
+
+// processInboundRule handles a single inbound rule
+func processInboundRule(rule infrav1alpha2.FirewallRule, createOpts *linodego.FirewallCreateOptions) {
+	ruleIPv4s, ruleIPv6s := processAddresses(rule.Addresses)
+	ruleLabel := formatRuleLabel(rule.Action, rule.Label)
+
+	// Process IPv4
+	processIPv4Rules(ruleIPv4s, rule, ruleLabel, &createOpts.Rules.Inbound)
+
+	// Process IPv6
+	processIPv6Rules(ruleIPv6s, rule, ruleLabel, &createOpts.Rules.Inbound)
+}
+
+// processOutboundRule handles a single outbound rule
+func processOutboundRule(rule infrav1alpha2.FirewallRule, outboundPolicy string, createOpts *linodego.FirewallCreateOptions) {
+	ruleIPv4s, ruleIPv6s := processAddresses(rule.Addresses)
+	ruleLabel := formatRuleLabel(outboundPolicy, rule.Label)
+
+	// Process IPv4
+	processIPv4Rules(ruleIPv4s, rule, ruleLabel, &createOpts.Rules.Outbound)
+
+	// Process IPv6
+	processIPv6Rules(ruleIPv6s, rule, ruleLabel, &createOpts.Rules.Outbound)
+}
+
+// processAddresses extracts and transforms IPv4 and IPv6 addresses
+func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s, ipv6s []string) {
+	// Initialize empty slices for consistent return type
+	ipv4s = make([]string, 0)
+	ipv6s = make([]string, 0)
+
+	// Early return if addresses is nil
+	if addresses == nil {
+		return ipv4s, ipv6s
+	}
+
+	// Process IPv4 addresses
+	if addresses.IPv4 != nil {
+		for _, ip := range *addresses.IPv4 {
+			ipv4s = append(ipv4s, transformToCIDR(ip))
+		}
+	}
+
+	// Process IPv6 addresses
+	if addresses.IPv6 != nil {
+		for _, ip := range *addresses.IPv6 {
+			ipv6s = append(ipv6s, transformToCIDR(ip))
+		}
+	}
+
+	return ipv4s, ipv6s
+}
+
+// formatRuleLabel creates and formats the rule label
+func formatRuleLabel(prefix, label string) string {
+	ruleLabel := fmt.Sprintf("%s-%s", prefix, label)
+	if len(ruleLabel) > maxFirewallRuleLabelLen {
+		return ruleLabel[0:maxFirewallRuleLabelLen]
+	}
+	return ruleLabel
+}
+
+// processIPv4Rules processes IPv4 rules and adds them to the rules slice
+func processIPv4Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel string, rules *[]linodego.FirewallRule) {
+	// Initialize rules if nil
+	if *rules == nil {
+		*rules = make([]linodego.FirewallRule, 0)
+	}
+
+	// If no IPs, return early
+	if len(ips) == 0 {
+		return
+	}
+
+	ipv4chunks := chunkIPs(ips)
+	for i, chunk := range ipv4chunks {
+		v4chunk := chunk
+		*rules = append(*rules, linodego.FirewallRule{
+			Action:      rule.Action,
+			Label:       ruleLabel,
+			Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
+			Protocol:    rule.Protocol,
+			Ports:       rule.Ports,
+			Addresses:   linodego.NetworkAddresses{IPv4: &v4chunk},
+		})
+	}
+}
+
+// processIPv6Rules processes IPv6 rules and adds them to the rules slice
+func processIPv6Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel string, rules *[]linodego.FirewallRule) {
+	// Initialize rules if nil
+	if *rules == nil {
+		*rules = make([]linodego.FirewallRule, 0)
+	}
+
+	// If no IPs, return early
+	if len(ips) == 0 {
+		return
+	}
+
+	ipv6chunks := chunkIPs(ips)
+	for i, chunk := range ipv6chunks {
+		v6chunk := chunk
+		*rules = append(*rules, linodego.FirewallRule{
+			Action:      rule.Action,
+			Label:       ruleLabel,
+			Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
+			Protocol:    rule.Protocol,
+			Ports:       rule.Ports,
+			Addresses:   linodego.NetworkAddresses{IPv6: &v6chunk},
+		})
+	}
+}
+
 // processACL uses the CAPL LinodeFirewall representation to build out the inbound
-// and outbound rules for a linode Cloud Firewall and returns the configuration
-// for creating or updating the Firewall
-//
-//nolint:gocyclo,cyclop // As simple as possible.
-func processACL(firewall *infrav1alpha2.LinodeFirewall) (
-	*linodego.FirewallCreateOptions,
-	error,
-) {
+// and outbound rules for a linode Cloud Firewall
+func processACL(firewall *infrav1alpha2.LinodeFirewall) (*linodego.FirewallCreateOptions, error) {
 	createOpts := &linodego.FirewallCreateOptions{
 		Label: firewall.Name,
 	}
 
-	// process inbound rules
+	// Process inbound rules
 	for _, rule := range firewall.Spec.InboundRules {
-		ruleIPv4s := []string{}
-		ruleIPv6s := []string{}
-
-		if rule.Addresses.IPv4 != nil {
-			ruleIPv4s = append(ruleIPv4s, *rule.Addresses.IPv4...)
-		}
-
-		if rule.Addresses.IPv6 != nil {
-			ruleIPv6s = append(ruleIPv6s, *rule.Addresses.IPv6...)
-		}
-
-		ruleLabel := fmt.Sprintf("%s-%s", rule.Action, rule.Label)
-		if len(ruleLabel) > maxFirewallRuleLabelLen {
-			ruleLabel = ruleLabel[0:maxFirewallRuleLabelLen]
-		}
-
-		// Process IPv4
-		// chunk IPs to be in 255 chunks or fewer
-		ipv4chunks := chunkIPs(ruleIPv4s)
-		for i, chunk := range ipv4chunks {
-			v4chunk := chunk
-			createOpts.Rules.Inbound = append(createOpts.Rules.Inbound, linodego.FirewallRule{
-				Action:      rule.Action,
-				Label:       ruleLabel,
-				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    rule.Protocol,
-				Ports:       rule.Ports,
-				Addresses:   linodego.NetworkAddresses{IPv4: &v4chunk},
-			})
-		}
-
-		// Process IPv6
-		// chunk IPs to be in 255 chunks or fewer
-		ipv6chunks := chunkIPs(ruleIPv6s)
-		for i, chunk := range ipv6chunks {
-			v6chunk := chunk
-			createOpts.Rules.Inbound = append(createOpts.Rules.Inbound, linodego.FirewallRule{
-				Action:      rule.Action,
-				Label:       ruleLabel,
-				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    rule.Protocol,
-				Ports:       rule.Ports,
-				Addresses:   linodego.NetworkAddresses{IPv6: &v6chunk},
-			})
-		}
+		processInboundRule(rule, createOpts)
 	}
+
+	// Set inbound policy
 	if firewall.Spec.InboundPolicy == "" {
 		createOpts.Rules.InboundPolicy = "ACCEPT"
 	} else {
 		createOpts.Rules.InboundPolicy = firewall.Spec.InboundPolicy
 	}
 
-	// process outbound rules
+	// Process outbound rules
 	for _, rule := range firewall.Spec.OutboundRules {
-		ruleIPv4s := []string{}
-		ruleIPv6s := []string{}
-
-		if rule.Addresses.IPv4 != nil {
-			ruleIPv4s = append(ruleIPv4s, *rule.Addresses.IPv4...)
-		}
-
-		if rule.Addresses.IPv6 != nil {
-			ruleIPv6s = append(ruleIPv6s, *rule.Addresses.IPv6...)
-		}
-
-		ruleLabel := fmt.Sprintf("%s-%s", firewall.Spec.OutboundPolicy, rule.Label)
-		if len(ruleLabel) > maxFirewallRuleLabelLen {
-			ruleLabel = ruleLabel[0:maxFirewallRuleLabelLen]
-		}
-
-		// Process IPv4
-		// chunk IPs to be in 255 chunks or fewer
-		ipv4chunks := chunkIPs(ruleIPv4s)
-		for i, chunk := range ipv4chunks {
-			v4chunk := chunk
-			createOpts.Rules.Outbound = append(createOpts.Rules.Outbound, linodego.FirewallRule{
-				Action:      rule.Action,
-				Label:       ruleLabel,
-				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    rule.Protocol,
-				Ports:       rule.Ports,
-				Addresses:   linodego.NetworkAddresses{IPv4: &v4chunk},
-			})
-		}
-
-		// Process IPv6
-		// chunk IPs to be in 255 chunks or fewer
-		ipv6chunks := chunkIPs(ruleIPv6s)
-		for i, chunk := range ipv6chunks {
-			v6chunk := chunk
-			createOpts.Rules.Outbound = append(createOpts.Rules.Outbound, linodego.FirewallRule{
-				Action:      rule.Action,
-				Label:       ruleLabel,
-				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    rule.Protocol,
-				Ports:       rule.Ports,
-				Addresses:   linodego.NetworkAddresses{IPv6: &v6chunk},
-			})
-		}
+		processOutboundRule(rule, firewall.Spec.OutboundPolicy, createOpts)
 	}
 
+	// Set outbound policy
 	if firewall.Spec.OutboundPolicy == "" {
 		createOpts.Rules.OutboundPolicy = "ACCEPT"
 	} else {
 		createOpts.Rules.OutboundPolicy = firewall.Spec.OutboundPolicy
 	}
 
-	// need to check if we ended up needing to make too many rules
-	// with IP chunking
+	// Check rule count
 	if len(createOpts.Rules.Inbound)+len(createOpts.Rules.Outbound) > maxRulesPerFirewall {
 		return nil, errTooManyIPs
 	}
