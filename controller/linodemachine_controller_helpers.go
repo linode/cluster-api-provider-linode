@@ -129,8 +129,9 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, logg
 
 	// if vlan is enabled, attach additional interface as eth0 to linode
 	if machineScope.LinodeCluster.Spec.Network.UseVlan {
-		iface, err := getVlanInterfaceConfig(ctx, machineScope, logger)
+		iface, err := getVlanInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
 		if err != nil {
+			logger.Error(err, "Failed to get VLAN interface config")
 			return nil, err
 		}
 		if iface != nil {
@@ -363,7 +364,7 @@ func getFirewallID(ctx context.Context, machineScope *scope.MachineScope, logger
 	return *linodeFirewall.Spec.FirewallID, nil
 }
 
-func getVlanInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+func getVlanInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
 	logger = logger.WithValues("vlanName", machineScope.Cluster.Name)
 
 	// Try to obtain a IP for the machine using its name
@@ -373,6 +374,14 @@ func getVlanInterfaceConfig(ctx context.Context, machineScope *scope.MachineScop
 	}
 
 	logger.Info("obtained IP for machine", "name", machineScope.LinodeMachine.Name, "ip", ip)
+
+	for i, netInterface := range interfaces {
+		if netInterface.Purpose == linodego.InterfacePurposeVLAN {
+			interfaces[i].IPAMAddress = fmt.Sprintf(vlanIPFormat, ip)
+			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VLAN interface already exists
+		}
+	}
+
 	return &linodego.InstanceConfigInterfaceCreateOptions{
 		Purpose:     linodego.InterfacePurposeVLAN,
 		Label:       machineScope.Cluster.Name,

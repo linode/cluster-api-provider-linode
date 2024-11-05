@@ -2152,6 +2152,14 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 				Type:           "g6-nanode-1",
 				Image:          rutil.DefaultMachineControllerLinodeImage,
 				DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
+				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
+					{
+						Purpose: linodego.InterfacePurposePublic,
+					},
+					{
+						Purpose: linodego.InterfacePurposeVLAN,
+					},
+				},
 			},
 		}
 
@@ -2221,6 +2229,9 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 			After(getAddrs).
 			Return([]linodego.InstanceConfig{{
 				Interfaces: []linodego.InstanceConfigInterface{
+					{
+						Purpose: linodego.InterfacePurposePublic,
+					},
 					{
 						Purpose:     linodego.InterfacePurposeVLAN,
 						IPAMAddress: "10.0.0.2/11",
