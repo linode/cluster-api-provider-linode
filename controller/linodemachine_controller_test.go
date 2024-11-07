@@ -1438,7 +1438,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						createInst := mck.LinodeClient.EXPECT().
 							CreateInstance(ctx, gomock.Any()).
 							After(getImage).
-							Return(nil, &linodego.Error{Code: http.StatusBadRequest})
+							Return(nil, &linodego.Error{Code: http.StatusBadRequest, Message: "[400] [label] Label must be unique among your linodes"})
 						listInst := mck.LinodeClient.EXPECT().
 							ListInstances(ctx, gomock.Any()).
 							After(createInst).
