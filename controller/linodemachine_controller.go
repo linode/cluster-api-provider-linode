@@ -376,7 +376,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 	region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to fetch region %s", machineScope.LinodeMachine.Spec.Region))
-		return retryIfTransient(err)
+		return retryIfTransient(err, logger)
 	}
 	regionMetadataSupport := slices.Contains(region.Capabilities, linodego.CapabilityMetadata)
 	imageName := reconciler.DefaultMachineControllerLinodeImage
@@ -386,7 +386,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 	image, err := machineScope.LinodeClient.GetImage(ctx, imageName)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to fetch image %s", imageName))
-		return retryIfTransient(err)
+		return retryIfTransient(err, logger)
 	}
 	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
 	machineScope.LinodeMachine.Status.CloudinitMetadataSupport = true
@@ -403,7 +403,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 	createOpts, err := newCreateConfig(ctx, machineScope, logger)
 	if err != nil {
 		logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
-		return retryIfTransient(err)
+		return retryIfTransient(err, logger)
 	}
 
 	linodeInstance, retryAfter, err := createInstance(ctx, logger, machineScope, createOpts)
@@ -418,7 +418,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
 			return ctrl.Result{}, err
 		}
-		return retryIfTransient(err)
+		return retryIfTransient(err, logger)
 	}
 
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
@@ -440,12 +440,12 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
 		if err != nil {
 			logger.Error(err, "Failed to get default instance configuration")
-			return retryIfTransient(err)
+			return retryIfTransient(err, logger)
 		}
 
 		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Kernel: machineScope.LinodeMachine.Spec.Configuration.Kernel}); err != nil {
 			logger.Error(err, "Failed to update default instance configuration")
-			return retryIfTransient(err)
+			return retryIfTransient(err, logger)
 		}
 	}
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightConfigured)
@@ -492,7 +492,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 
 	var linodeInstance *linodego.Instance
 	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, instanceID); err != nil {
-		return retryIfTransient(err)
+		return retryIfTransient(err, logger)
 	}
 	// update the status
 	machineScope.LinodeMachine.Status.InstanceState = &linodeInstance.Status

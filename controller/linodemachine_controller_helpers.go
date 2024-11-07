@@ -61,14 +61,15 @@ var (
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
 )
 
-func retryIfTransient(err error) (ctrl.Result, error) {
+func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 	if util.IsRetryableError(err) {
 		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
 			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
-	return ctrl.Result{}, err
+	logger.Error(err, "skipping requeue due to non-retryable error")
+	return ctrl.Result{Requeue: false}, err
 }
 
 func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
