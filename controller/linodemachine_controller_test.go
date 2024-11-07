@@ -618,7 +618,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(res.Requeue).To(BeFalse())
+			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
 		})
 	})
 

@@ -68,8 +68,8 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
-	logger.Error(err, "skipping requeue due to non-retryable error")
-	return ctrl.Result{Requeue: false}, err
+	logger.Error(err, "unknown Linode API error")
+	return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, err
 }
 
 func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
