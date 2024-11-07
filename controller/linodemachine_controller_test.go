@@ -1418,6 +1418,81 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							{Type: clusterv1.MachineInternalIP, Address: "192.168.0.2"},
 						}))
 					})),
+					Path(Result("uses worker machine without disk if it already exists", func(ctx context.Context, mck Mock) {
+						linodeMachine = &infrav1alpha2.LinodeMachine{
+							ObjectMeta: metadata,
+							Spec: infrav1alpha2.LinodeMachineSpec{
+								Type:          "g6-nanode-1",
+								Image:         rutil.DefaultMachineControllerLinodeImage,
+								Configuration: nil,
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{},
+						}
+						getRegion := mck.LinodeClient.EXPECT().
+							GetRegion(ctx, gomock.Any()).
+							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+						getImage := mck.LinodeClient.EXPECT().
+							GetImage(ctx, gomock.Any()).
+							After(getRegion).
+							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+						createInst := mck.LinodeClient.EXPECT().
+							CreateInstance(ctx, gomock.Any()).
+							After(getImage).
+							Return(nil, &linodego.Error{Code: http.StatusBadRequest})
+						listInst := mck.LinodeClient.EXPECT().
+							ListInstances(ctx, gomock.Any()).
+							After(createInst).
+							Return([]linodego.Instance{{
+								ID:     123,
+								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+								IPv6:   "fd00::",
+								Status: linodego.InstanceOffline,
+							}}, nil)
+						mck.LinodeClient.EXPECT().
+							OnAfterResponse(gomock.Any()).
+							Return()
+						bootInst := mck.LinodeClient.EXPECT().
+							BootInstance(ctx, 123, 0).
+							After(listInst).
+							Return(nil)
+						getAddrs := mck.LinodeClient.EXPECT().
+							GetInstanceIPAddresses(ctx, 123).
+							After(bootInst).
+							Return(&linodego.InstanceIPAddressResponse{
+								IPv4: &linodego.InstanceIPv4Response{
+									Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+									Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+								},
+								IPv6: &linodego.InstanceIPv6Response{
+									SLAAC: &linodego.InstanceIP{
+										Address: "fd00::",
+									},
+								},
+							}, nil)
+						mck.LinodeClient.EXPECT().
+							ListInstanceConfigs(ctx, 123, gomock.Any()).
+							After(getAddrs).
+							Return([]linodego.InstanceConfig{{
+								Devices: &linodego.InstanceConfigDeviceMap{
+									SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+								},
+							}}, nil)
+						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightReady)).To(BeTrue())
+
+						Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
+						Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
+						Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
+							{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
+							{Type: clusterv1.MachineExternalIP, Address: "fd00::"},
+							{Type: clusterv1.MachineInternalIP, Address: "192.168.0.2"},
+						}))
+					})),
 				),
 			),
 		),
