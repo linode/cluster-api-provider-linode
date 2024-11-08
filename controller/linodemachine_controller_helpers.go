@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/netip"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -722,6 +723,27 @@ func createInstance(ctx context.Context, logger logr.Logger, machineScope *scope
 
 	machineScope.LinodeClient.OnAfterResponse(ctr.ApiResponseRatelimitCounter)
 	inst, err := machineScope.LinodeClient.CreateInstance(ctx, *createOpts)
+
+	// if instance already exists, we get 400 response. get respective instance and return
+	if linodego.ErrHasStatus(err, http.StatusBadRequest) && strings.Contains(err.Error(), "Label must be unique") {
+		logger.Error(err, "Failed to create instance, received [400 BadRequest] response.")
+
+		// check if instance already exists
+		listFilter := util.Filter{Label: createOpts.Label}
+		filter, errFilter := listFilter.String()
+		if errFilter != nil {
+			logger.Error(err, "Failed to create filter to list instance")
+			return nil, ctr.RetryAfter(), err
+		}
+		instances, listErr := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
+		if listErr != nil {
+			return nil, ctr.RetryAfter(), listErr
+		}
+		if len(instances) > 0 {
+			return &instances[0], ctr.RetryAfter(), nil
+		}
+	}
+
 	return inst, ctr.RetryAfter(), err
 }
 
