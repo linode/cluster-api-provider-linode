@@ -498,6 +498,92 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to add instance to Node Balancer backend"))
 	})
 
+	It("adopts a worker instance which already exists", func(ctx SpecContext) {
+		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+		getRegion := mockLinodeClient.EXPECT().
+			GetRegion(ctx, gomock.Any()).
+			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+		getImage := mockLinodeClient.EXPECT().
+			GetImage(ctx, gomock.Any()).
+			After(getRegion).
+			Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+		createInst := mockLinodeClient.EXPECT().
+			CreateInstance(ctx, gomock.Any()).
+			After(getImage).
+			Return(nil, &linodego.Error{Code: http.StatusBadRequest, Message: "[400] [label] Label must be unique among your linodes"})
+		listInst := mockLinodeClient.EXPECT().
+			ListInstances(ctx, gomock.Any()).
+			After(createInst).
+			Return([]linodego.Instance{{
+				ID:     123,
+				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+				IPv6:   "fd00::",
+				Status: linodego.InstanceOffline,
+			}}, nil)
+		mockLinodeClient.EXPECT().
+			OnAfterResponse(gomock.Any()).
+			Return()
+		bootInst := mockLinodeClient.EXPECT().
+			BootInstance(ctx, 123, 0).
+			After(listInst).
+			Return(nil)
+		mockLinodeClient.EXPECT().
+			GetInstanceIPAddresses(ctx, 123).
+			After(bootInst).
+			Return(&linodego.InstanceIPAddressResponse{
+				IPv4: &linodego.InstanceIPv4Response{
+					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+					Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+				},
+				IPv6: &linodego.InstanceIPv6Response{
+					SLAAC: &linodego.InstanceIP{
+						Address: "fd00::",
+					},
+				},
+			}, nil)
+
+		mScope := scope.MachineScope{
+			Client:        k8sClient,
+			LinodeClient:  mockLinodeClient,
+			Cluster:       &cluster,
+			Machine:       &machine,
+			LinodeCluster: &linodeCluster,
+			LinodeMachine: &linodeMachine,
+		}
+
+		patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.PatchHelper = patchHelper
+
+		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+
+		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
+		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
+		Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
+			{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
+			{Type: clusterv1.MachineExternalIP, Address: "fd00::"},
+			{Type: clusterv1.MachineInternalIP, Address: "192.168.0.2"},
+		}))
+
+		Expect(testLogs.String()).To(ContainSubstring("creating machine"))
+		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to list Linode machine instance"))
+		Expect(testLogs.String()).NotTo(ContainSubstring("Linode instance already exists"))
+		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to create Linode machine InstanceCreateOptions"))
+		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to create Linode machine instance"))
+		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to boot instance"))
+		Expect(testLogs.String()).NotTo(ContainSubstring("multiple instances found"))
+		Expect(testLogs.String()).NotTo(ContainSubstring("Failed to add instance to Node Balancer backend"))
+	})
+
 	Context("fails when a preflight condition is stale", func() {
 		It("can't create an instance in time", func(ctx SpecContext) {
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
@@ -1379,81 +1465,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						bootInst := mck.LinodeClient.EXPECT().
 							BootInstance(ctx, 123, 0).
 							After(createInst).
-							Return(nil)
-						getAddrs := mck.LinodeClient.EXPECT().
-							GetInstanceIPAddresses(ctx, 123).
-							After(bootInst).
-							Return(&linodego.InstanceIPAddressResponse{
-								IPv4: &linodego.InstanceIPv4Response{
-									Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-									Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-								},
-								IPv6: &linodego.InstanceIPv6Response{
-									SLAAC: &linodego.InstanceIP{
-										Address: "fd00::",
-									},
-								},
-							}, nil)
-						mck.LinodeClient.EXPECT().
-							ListInstanceConfigs(ctx, 123, gomock.Any()).
-							After(getAddrs).
-							Return([]linodego.InstanceConfig{{
-								Devices: &linodego.InstanceConfigDeviceMap{
-									SDA: &linodego.InstanceConfigDevice{DiskID: 100},
-								},
-							}}, nil)
-						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightReady)).To(BeTrue())
-
-						Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
-						Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
-						Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
-							{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
-							{Type: clusterv1.MachineExternalIP, Address: "fd00::"},
-							{Type: clusterv1.MachineInternalIP, Address: "192.168.0.2"},
-						}))
-					})),
-					Path(Result("uses worker machine without disk if it already exists", func(ctx context.Context, mck Mock) {
-						linodeMachine = &infrav1alpha2.LinodeMachine{
-							ObjectMeta: metadata,
-							Spec: infrav1alpha2.LinodeMachineSpec{
-								Type:          "g6-nanode-1",
-								Image:         rutil.DefaultMachineControllerLinodeImage,
-								Configuration: nil,
-							},
-							Status: infrav1alpha2.LinodeMachineStatus{},
-						}
-						getRegion := mck.LinodeClient.EXPECT().
-							GetRegion(ctx, gomock.Any()).
-							Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
-						getImage := mck.LinodeClient.EXPECT().
-							GetImage(ctx, gomock.Any()).
-							After(getRegion).
-							Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-						createInst := mck.LinodeClient.EXPECT().
-							CreateInstance(ctx, gomock.Any()).
-							After(getImage).
-							Return(nil, &linodego.Error{Code: http.StatusBadRequest, Message: "[400] [label] Label must be unique among your linodes"})
-						listInst := mck.LinodeClient.EXPECT().
-							ListInstances(ctx, gomock.Any()).
-							After(createInst).
-							Return([]linodego.Instance{{
-								ID:     123,
-								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
-								IPv6:   "fd00::",
-								Status: linodego.InstanceOffline,
-							}}, nil)
-						mck.LinodeClient.EXPECT().
-							OnAfterResponse(gomock.Any()).
-							Return()
-						bootInst := mck.LinodeClient.EXPECT().
-							BootInstance(ctx, 123, 0).
-							After(listInst).
 							Return(nil)
 						getAddrs := mck.LinodeClient.EXPECT().
 							GetInstanceIPAddresses(ctx, 123).
