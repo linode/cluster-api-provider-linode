@@ -331,11 +331,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 	}
 	if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
 		logger.Error(err, "Failed to fetch LinodeVPC")
-		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-			ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), err.Error(),
-			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
-			return ctrl.Result{}, err
-		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	} else if !linodeVPC.Status.Ready {
 		logger.Info("LinodeVPC is not yet available")
@@ -360,11 +355,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	}
 	if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeFirewall), &linodeFirewall); err != nil {
 		logger.Error(err, "Failed to find linode Firewall")
-		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-			ConditionPreflightLinodeFirewallReady, string(cerrs.CreateMachineError), err.Error(),
-			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
-		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	} else if !linodeFirewall.Status.Ready {
 		logger.Info("Linode firewall not yet ready")
@@ -415,11 +405,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 
 	if err != nil {
 		logger.Error(err, "Failed to create Linode machine instance")
-		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-			ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
-			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
-		}
 		return retryIfTransient(err, logger)
 	}
 
@@ -431,11 +416,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 
 func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Context, instanceID int, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	if err := configureDisks(ctx, logger, machineScope, instanceID); err != nil {
-		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-			ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
-			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
-		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
@@ -457,11 +437,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, instanceID int, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	if err := machineScope.LinodeClient.BootInstance(ctx, instanceID, 0); err != nil && !strings.HasSuffix(err.Error(), "already booted.") {
 		logger.Error(err, "Failed to boot instance")
-		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-			ConditionPreflightBootTriggered, string(cerrs.CreateMachineError), err.Error(),
-			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
-		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered)
@@ -472,11 +447,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 	addrs, err := buildInstanceAddrs(ctx, machineScope, instanceID)
 	if err != nil {
 		logger.Error(err, "Failed to get instance ip addresses")
-		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
-			ConditionPreflightReady, string(cerrs.CreateMachineError), err.Error(),
-			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
-		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 	machineScope.LinodeMachine.Status.Addresses = addrs
