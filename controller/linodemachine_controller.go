@@ -418,7 +418,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 			ConditionPreflightCreated, string(cerrs.CreateMachineError), err.Error(),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, err
 		}
 		return retryIfTransient(err, logger)
 	}
@@ -434,7 +434,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 			ConditionPreflightConfigured, string(cerrs.CreateMachineError), err.Error(),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
@@ -460,7 +460,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, in
 		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 			ConditionPreflightBootTriggered, string(cerrs.CreateMachineError), err.Error(),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
@@ -475,7 +475,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 		if reconciler.RecordDecayingCondition(machineScope.LinodeMachine,
 			ConditionPreflightReady, string(cerrs.CreateMachineError), err.Error(),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			return ctrl.Result{}, err
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
