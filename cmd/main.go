@@ -275,7 +275,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 
 	useGzip, err := strconv.ParseBool(os.Getenv("GZIP_COMPRESSION_ENABLED"))
 	if err != nil {
-		setupLog.Error(err, "proceeding without gzip compression for cloud-init data")
+		setupLog.Error(err, "proceeding without gzip compression for user-data")
 	}
 
 	// LinodeMachine Controller
