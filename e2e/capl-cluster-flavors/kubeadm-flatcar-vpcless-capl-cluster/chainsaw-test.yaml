@@ -23,6 +23,11 @@ spec:
       try:
         - assert:
             file: assert-capi-resources.yaml
+    - name: Modify existing CAPI deployment to use GZIP user-data
+      try:
+        # TODO: Add operation check
+        - patch:
+            file: patch-capl-controller-manager.yaml
     - name: Upload Flatcar image
       try:
         - script:
@@ -37,10 +42,10 @@ spec:
                 value: (env('LINODE_REGION'))
             content: |
               set -e
-              # Get the latest version on Beta channel.
-              # NOTE: This can be changed to Stable when Akamai support will come on these channels.
+              # Get the latest version on Alpha channel.
+              # NOTE: This can be changed to Beta when Ignition GZIP support for Akamai will come on these channels.
               curl -fsSL --remote-name \
-                https://beta.release.flatcar-linux.net/amd64-usr/current/flatcar_production_akamai_image.bin.gz
+                https://alpha.release.flatcar-linux.net/amd64-usr/current/flatcar_production_akamai_image.bin.gz
 
               res=$(curl -s --request POST \
                 --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}" \
