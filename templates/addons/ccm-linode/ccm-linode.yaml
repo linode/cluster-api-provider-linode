@@ -9,14 +9,14 @@ spec:
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
   chartName: ccm-linode
   namespace: kube-system
-  version: ${LINODE_CCM_VERSION:=v0.4.16}
+  version: ${LINODE_CCM_VERSION:=v0.4.18}
   options:
     waitForJobs: true
     wait: true
     timeout: 5m
   valuesTemplate: |
     routeController:
-      vpcName: {{ .InfraCluster.spec.vpcRef.name }}
+      vpcNames: {{ .InfraCluster.spec.vpcRef.name }}
       clusterCIDR: 10.0.0.0/8
       configureCloudRoutes: true
     secretRef:
