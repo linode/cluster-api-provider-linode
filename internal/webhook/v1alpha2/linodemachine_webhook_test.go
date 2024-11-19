@@ -35,6 +35,7 @@ import (
 
 	"github.com/linode/cluster-api-provider-linode/mock"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
@@ -42,18 +43,18 @@ func TestValidateLinodeMachine(t *testing.T) {
 	t.Parallel()
 
 	var (
-		machine = LinodeMachine{
+		machine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeMachineSpec{
+			Spec: infrav1alpha2.LinodeMachineSpec{
 				Region: "example",
 				Type:   "example",
 			},
 		}
-		disk                                        = InstanceDisk{Size: resource.MustParse("1G")}
-		disk_zero                                   = InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
+		disk                                        = infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+		disk_zero                                   = infrav1alpha2.InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
 		plan                                        = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
 		plan_zero                                   = linodego.LinodeType{Disk: 0}
 		plan_max                                    = linodego.LinodeType{Disk: math.MaxInt}
@@ -81,7 +82,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
-					machine.Spec.DataDisks = map[string]*InstanceDisk{"sdb": disk.DeepCopy()}
+					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": disk.DeepCopy()}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					require.Empty(t, errs)
 				}),
@@ -126,7 +127,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("data disk too large", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
-					machine.Spec.DataDisks = map[string]*InstanceDisk{"sdb": disk.DeepCopy(), "sdc": disk.DeepCopy()}
+					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": disk.DeepCopy(), "sdc": disk.DeepCopy()}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
@@ -140,7 +141,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := machine
-					machine.Spec.DataDisks = map[string]*InstanceDisk{"sda": disk.DeepCopy()}
+					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sda": disk.DeepCopy()}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskDataDiskInvalid)
@@ -173,22 +174,22 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 	mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 	var (
-		machine = LinodeMachine{
+		machine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeMachineSpec{
+			Spec: infrav1alpha2.LinodeMachineSpec{
 				Region: "example",
 				Type:   "example",
 			},
 		}
-		credentialsRefMachine = LinodeMachine{
+		credentialsRefMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeMachineSpec{
+			Spec: infrav1alpha2.LinodeMachineSpec{
 				CredentialsRef: &corev1.SecretReference{
 					Name: "machine-credentials",
 				},

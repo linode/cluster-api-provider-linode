@@ -35,6 +35,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
@@ -78,10 +79,10 @@ type linodeVPCValidator struct {
 	Client client.Client
 }
 
-// SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *LinodeVPC) SetupWebhookWithManager(mgr ctrl.Manager) error {
+// SetupLinodeVPCWebhookWithManager will setup the manager to manage the webhooks
+func SetupLinodeVPCWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&infrastructurev1alpha2.LinodeVPC{}).
 		WithValidator(&linodeVPCValidator{Client: mgr.GetClient()}).
 		Complete()
 }
@@ -91,7 +92,7 @@ func (r *LinodeVPC) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	vpc, ok := obj.(*LinodeVPC)
+	vpc, ok := obj.(*infrastructurev1alpha2.LinodeVPC)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
 	}
@@ -126,7 +127,7 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeVPCValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	old, ok := oldObj.(*LinodeVPC)
+	old, ok := oldObj.(*infrastructurev1alpha2.LinodeVPC)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
 	}
@@ -138,7 +139,7 @@ func (r *linodeVPCValidator) ValidateUpdate(ctx context.Context, oldObj, newObj 
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeVPCValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	c, ok := obj.(*LinodeVPC)
+	c, ok := obj.(*infrastructurev1alpha2.LinodeVPC)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
 	}
@@ -148,7 +149,7 @@ func (r *linodeVPCValidator) ValidateDelete(ctx context.Context, obj runtime.Obj
 	return nil, nil
 }
 
-func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient LinodeClient, spec LinodeVPCSpec) field.ErrorList {
+func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient LinodeClient, spec infrastructurev1alpha2.LinodeVPCSpec) field.ErrorList {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
@@ -165,7 +166,7 @@ func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodecl
 	return errs
 }
 
-func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec LinodeVPCSpec) field.ErrorList {
+func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec infrastructurev1alpha2.LinodeVPCSpec) field.ErrorList {
 	var (
 		errs    field.ErrorList
 		builder netipx.IPSetBuilder

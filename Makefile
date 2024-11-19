@@ -320,7 +320,7 @@ GOWRAP         ?= $(CACHE_BIN)/gowrap
 S5CMD 		   ?= $(CACHE_BIN)/s5cmd
 
 ## Tool Versions
-KUSTOMIZE_VERSION        ?= v5.4.1
+KUSTOMIZE_VERSION        ?= v5.4.3
 CTLPTL_VERSION           ?= v0.8.29
 CLUSTERCTL_VERSION       ?= v1.7.2
 KUBECTL_VERSION          ?= v1.28.0
