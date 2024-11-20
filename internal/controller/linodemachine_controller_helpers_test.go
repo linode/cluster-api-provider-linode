@@ -78,10 +78,6 @@ func TestSetUserData(t *testing.T) {
 		userData = userDataBuff.Bytes()
 	}
 
-	largeData := make([]byte, maxBootstrapDataBytesCloudInit*10)
-	_, err = rand.Read(largeData)
-	require.NoError(t, err, "Failed to create bootstrap data")
-
 	tests := []struct {
 		name          string
 		machineScope  *scope.MachineScope
@@ -185,6 +181,9 @@ func TestSetUserData(t *testing.T) {
 			wantConfig:   &linodego.InstanceCreateOptions{},
 			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					largeData := make([]byte, maxBootstrapDataBytesCloudInit*10)
+					_, err = rand.Read(largeData)
+					require.NoError(t, err, "Failed to create bootstrap data")
 					cred := corev1.Secret{
 						Data: map[string][]byte{
 							"value": largeData,
