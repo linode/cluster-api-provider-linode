@@ -52,8 +52,9 @@ var (
 	LinodeMachineMaxDataDisk = LinodeMachineMaxDisk - 1
 )
 
-// nolint:unused
 // log is for logging in this package.
+//
+//nolint:unused // Package logger variable is intended for future use in webhook implementation
 var linodemachinelog = logf.Log.WithName("linodemachine-resource")
 
 type linodeMachineValidator struct {

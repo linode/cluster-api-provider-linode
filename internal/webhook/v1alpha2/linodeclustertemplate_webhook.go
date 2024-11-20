@@ -23,8 +23,9 @@ import (
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
-// nolint:unused
 // log is for logging in this package.
+//
+//nolint:unused // Package logger variable is intended for future use in webhook implementation
 var linodeclustertemplatelog = logf.Log.WithName("linodeclustertemplate-resource")
 
 // SetupLinodeClusterTemplateWebhookWithManager registers the webhook for LinodeClusterTemplate in the manager.
