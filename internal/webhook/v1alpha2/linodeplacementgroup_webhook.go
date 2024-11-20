@@ -58,7 +58,7 @@ func SetupLinodePlacementGroupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeplacementgroup,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeplacementgroups,verbs=create;update,versions=v1alpha2,name=vlinodeplacementgroup-v1alpha2.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeplacementgroup,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeplacementgroups,verbs=create;update,versions=v1alpha2,name=validation.linodeplacementgroup.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // LinodePlacementGroupCustomValidator struct is responsible for validating the LinodePlacementGroup resource
 type LinodePlacementGroupCustomValidator struct {

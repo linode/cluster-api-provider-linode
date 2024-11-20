@@ -383,6 +383,10 @@ func setupWebhooks(mgr manager.Manager) {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageKey")
 		os.Exit(1)
 	}
+	if err = webhookinfrastructurev1alpha2.SetupLinodeFirewallWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeFirewall")
+		os.Exit(1)
+	}
 }
 
 // setup configures observability features and returns a cleanup function.
