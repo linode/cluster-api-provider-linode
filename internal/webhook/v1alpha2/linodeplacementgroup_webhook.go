@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Akamai Technologies, Inc.
+Copyright 2024.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,7 +30,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
@@ -43,46 +46,50 @@ var (
 )
 
 // log is for logging in this package.
-var linodepglog = logf.Log.WithName("linodeplacementgroup-resource")
+var linodeplacementgrouplog = logf.Log.WithName("linodeplacementgroup-resource")
 
-type linodePlacementGroupValidator struct {
-	Client client.Client
-}
-
-// SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *LinodePlacementGroup) SetupWebhookWithManager(mgr ctrl.Manager) error {
+// SetupLinodePlacementGroupWebhookWithManager registers the webhook for LinodePlacementGroup in the manager.
+func SetupLinodePlacementGroupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
-		WithValidator(&linodePlacementGroupValidator{Client: mgr.GetClient()}).
+		For(&infrav1alpha2.LinodePlacementGroup{}).
+		WithValidator(&LinodePlacementGroupCustomValidator{
+			Client: mgr.GetClient(),
+		}).
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeplacementgroup,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeplacementgroups,verbs=create,versions=v1alpha2,name=validation.linodeplacementgroup.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeplacementgroup,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeplacementgroups,verbs=create;update,versions=v1alpha2,name=validation.linodeplacementgroup.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodePlacementGroupValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	pg, ok := obj.(*LinodePlacementGroup)
+// LinodePlacementGroupCustomValidator struct is responsible for validating the LinodePlacementGroup resource
+type LinodePlacementGroupCustomValidator struct {
+	Client client.Client
+}
+
+var _ webhook.CustomValidator = &LinodePlacementGroupCustomValidator{}
+
+// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type LinodePlacementGroup.
+func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	pg, ok := obj.(*infrav1alpha2.LinodePlacementGroup)
 	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodePlacementGroup Resource")
+		return nil, fmt.Errorf("expected a LinodePlacementGroup object but got %T", obj)
 	}
-	spec := pg.Spec
-	linodepglog.Info("validate create", "name", pg.Name)
+	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon creation", "name", pg.GetName())
 
 	var linodeclient LinodeClient = defaultLinodeClient
 
-	if spec.CredentialsRef != nil {
-		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, pg.GetNamespace())
+	if pg.Spec.CredentialsRef != nil {
+		apiToken, err := getCredentialDataFromRef(ctx, v.Client, *pg.Spec.CredentialsRef, pg.GetNamespace())
 		if err != nil {
-			linodepglog.Error(err, "failed getting credentials from secret ref", "name", pg.Name)
+			linodeplacementgrouplog.Error(err, "failed getting credentials from secret ref", "name", pg.Name)
 			return nil, err
 		}
-		linodepglog.Info("creating a verified linode client for create request", "name", pg.Name)
+		linodeplacementgrouplog.Info("creating a verified linode client for create request", "name", pg.Name)
 		linodeclient.SetToken(string(apiToken))
 	}
-	// TODO: instrument with tracing, might need refactor to preserve readibility
+
 	var errs field.ErrorList
 
-	if err := r.validateLinodePlacementGroupSpec(ctx, linodeclient, spec, pg.Name); err != nil {
+	if err := v.validateLinodePlacementGroupSpec(ctx, linodeclient, pg.Spec, pg.Name); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -94,32 +101,33 @@ func (r *linodePlacementGroupValidator) ValidateCreate(ctx context.Context, obj 
 		pg.Name, errs)
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodePlacementGroupValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	old, ok := oldObj.(*LinodePlacementGroup)
+// ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type LinodePlacementGroup.
+func (v *LinodePlacementGroupCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	linodeplacementgroup, ok := newObj.(*infrav1alpha2.LinodePlacementGroup)
 	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodePlacementGroup Resource")
+		return nil, fmt.Errorf("expected a LinodePlacementGroup object for the newObj but got %T", newObj)
 	}
-	linodepglog.Info("validate update", "name", old.Name)
+	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon update", "name", linodeplacementgroup.GetName())
 
 	// TODO(user): fill in your validation logic upon object update.
+
 	return nil, nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *linodePlacementGroupValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	c, ok := obj.(*LinodePlacementGroup)
+// ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type LinodePlacementGroup.
+func (v *LinodePlacementGroupCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	linodeplacementgroup, ok := obj.(*infrav1alpha2.LinodePlacementGroup)
 	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodePlacementGroup Resource")
+		return nil, fmt.Errorf("expected a LinodePlacementGroup object but got %T", obj)
 	}
-	linodepglog.Info("validate delete", "name", c.Name)
+	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon deletion", "name", linodeplacementgroup.GetName())
 
 	// TODO(user): fill in your validation logic upon object deletion.
+
 	return nil, nil
 }
 
-func (r *linodePlacementGroupValidator) validateLinodePlacementGroupSpec(ctx context.Context, linodeclient LinodeClient, spec LinodePlacementGroupSpec, label string) field.ErrorList {
-	// TODO: instrument with tracing, might need refactor to preserve readibility
+func (v *LinodePlacementGroupCustomValidator) validateLinodePlacementGroupSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodePlacementGroupSpec, label string) field.ErrorList {
 	var errs field.ErrorList
 
 	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodePlacementGroupCapability); err != nil {

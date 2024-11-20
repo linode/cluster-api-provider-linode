@@ -16,7 +16,7 @@ RUN go mod download
 COPY cmd/main.go cmd/main.go
 COPY api/ api/
 COPY clients/ clients/
-COPY controller/ controller/
+COPY internal/ internal/
 COPY cloud/ cloud/
 COPY observability/ observability/
 COPY util/ util/

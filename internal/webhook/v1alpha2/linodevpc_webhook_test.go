@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -40,12 +41,12 @@ func TestValidateLinodeVPC(t *testing.T) {
 	t.Parallel()
 
 	var (
-		vpc = LinodeVPC{
+		vpc = infrav1alpha2.LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeVPCSpec{
+			Spec: infrav1alpha2.LinodeVPCSpec{
 				Region: "example",
 			},
 		}
@@ -83,7 +84,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/24"}, {Label: "bar", IPv4: "10.0.1.0/24"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/24"}, {Label: "bar", IPv4: "10.0.1.0/24"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					require.Empty(t, errs)
 				}),
@@ -123,7 +124,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{IPv4: "10.0.0.0/8"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{IPv4: "10.0.0.0/8"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
@@ -138,7 +139,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "$", IPv4: "10.0.0.0/8"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "$", IPv4: "10.0.0.0/8"}}
 
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
@@ -154,7 +155,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "--", IPv4: "10.0.0.0/8"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "--", IPv4: "10.0.0.0/8"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
@@ -170,7 +171,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "IPv4 CIDR"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "IPv4 CIDR"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorSubnetRange)
@@ -185,7 +186,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "10.9.9.9/8"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "10.9.9.9/8"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorSubnetRangeNotIPv4)
@@ -200,7 +201,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "10.0.0.0/32"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "10.0.0.0/32"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorSubnetRangeInvalidPrefix)
@@ -215,7 +216,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "9.9.9.0/24"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "9.9.9.0/24"}}
 
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
@@ -231,7 +232,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "192.168.128.0/24"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "192.168.128.0/24"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
@@ -246,7 +247,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "test", IPv4: "10.255.255.1/24"}, {Label: "test", IPv4: "10.255.255.0/24"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "10.255.255.1/24"}, {Label: "test", IPv4: "10.255.255.0/24"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
@@ -261,7 +262,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/8"}, {Label: "bar", IPv4: "10.0.0.0/24"}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/8"}, {Label: "bar", IPv4: "10.0.0.0/24"}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
@@ -280,23 +281,23 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 	mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 	var (
-		vpc = LinodeVPC{
+		vpc = infrav1alpha2.LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeVPCSpec{
+			Spec: infrav1alpha2.LinodeVPCSpec{
 				Region: "example",
 			},
 		}
 		validator              = &linodeVPCValidator{}
 		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
-		credentialsRefVPC      = LinodeVPC{
+		credentialsRefVPC      = infrav1alpha2.LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeVPCSpec{
+			Spec: infrav1alpha2.LinodeVPCSpec{
 				CredentialsRef: &corev1.SecretReference{
 					Name: "vpc-credentials",
 				},

@@ -27,6 +27,7 @@ import (
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -36,12 +37,13 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 	t.Parallel()
 
 	var (
-		bucket = LinodeObjectStorageBucket{
+		objvalidator = LinodeObjectStorageBucketCustomValidator{}
+		bucket       = infrav1alpha2.LinodeObjectStorageBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeObjectStorageBucketSpec{
+			Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 				Region: "example",
 			},
 		}
@@ -61,7 +63,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "iad"
-					assert.NoError(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+					assert.NoError(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 			Path(
@@ -73,7 +75,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-iad"
-					assert.NoError(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+					assert.NoError(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 			Path(
@@ -85,7 +87,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-iad-1"
-					assert.NoError(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+					assert.NoError(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 		),
@@ -96,7 +98,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "123invalid"
-					assert.Error(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+					assert.Error(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 			Path(
@@ -105,7 +107,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "invalid-2-2"
-					assert.Error(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+					assert.Error(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 			Path(
@@ -115,7 +117,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-1"
-					assert.Error(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+					assert.Error(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 			Path(
@@ -125,7 +127,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					assert.Error(t, bucket.validateLinodeObjectStorageBucket(ctx, mck.LinodeClient))
+					assert.Error(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 		),

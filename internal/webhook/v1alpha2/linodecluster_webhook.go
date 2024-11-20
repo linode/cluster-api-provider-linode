@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Akamai Technologies, Inc.
+Copyright 2024.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,20 +29,21 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
-// log is for logging in this package.
 var linodeclusterlog = logf.Log.WithName("linodecluster-resource")
 
 type linodeClusterValidator struct {
 	Client client.Client
 }
 
-// SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *LinodeCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
+// SetupLinodeClusterWebhookWithManager registers the webhook for LinodeCluster in the manager.
+func SetupLinodeClusterWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&infrav1alpha2.LinodeCluster{}).
 		WithValidator(&linodeClusterValidator{Client: mgr.GetClient()}).
 		Complete()
 }
@@ -52,7 +53,7 @@ func (r *LinodeCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	cluster, ok := obj.(*LinodeCluster)
+	cluster, ok := obj.(*infrav1alpha2.LinodeCluster)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
 	}
@@ -87,7 +88,7 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, obj runtime
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeClusterValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	old, ok := oldObj.(*LinodeCluster)
+	old, ok := oldObj.(*infrav1alpha2.LinodeCluster)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
 	}
@@ -99,7 +100,7 @@ func (r *linodeClusterValidator) ValidateUpdate(ctx context.Context, oldObj, new
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeClusterValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	c, ok := obj.(*LinodeCluster)
+	c, ok := obj.(*infrav1alpha2.LinodeCluster)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
 	}
@@ -109,7 +110,7 @@ func (r *linodeClusterValidator) ValidateDelete(ctx context.Context, obj runtime
 	return nil, nil
 }
 
-func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient LinodeClient, spec LinodeClusterSpec) field.ErrorList {
+func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeClusterSpec) field.ErrorList {
 	var errs field.ErrorList
 
 	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {

@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -40,12 +41,12 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 	t.Parallel()
 
 	var (
-		pg = LinodePlacementGroup{
+		pg = infrav1alpha2.LinodePlacementGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodePlacementGroupSpec{
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
 				Region: "example",
 			},
 		}
@@ -55,7 +56,7 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 		invalidRegionError          = "spec.region: Not found: \"example\""
 		invalidRegionNoPGCapability = "spec.region: Invalid value: \"example\": no capability: Placement Group"
 		invalidPGLabelError         = "metadata.name: Invalid value: \"a20_b!4\": can only contain ASCII letters, numbers, hyphens (-), underscores (_) and periods (.), must start and end with a alphanumeric character"
-		validator                   = &linodePlacementGroupValidator{}
+		validator                   = LinodePlacementGroupCustomValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -123,22 +124,22 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 	mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 	var (
-		pg = LinodePlacementGroup{
+		pg = infrav1alpha2.LinodePlacementGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodePlacementGroupSpec{
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
 				Region: "example",
 			},
 		}
 
-		credentialsRefPG = LinodePlacementGroup{
+		credentialsRefPG = infrav1alpha2.LinodePlacementGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodePlacementGroupSpec{
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
 				CredentialsRef: &corev1.SecretReference{
 					Name: "pg-credentials",
 				},
@@ -146,7 +147,7 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 			},
 		}
 		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
-		validator              = &linodePlacementGroupValidator{}
+		validator              = LinodePlacementGroupCustomValidator{Client: mockK8sClient}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(

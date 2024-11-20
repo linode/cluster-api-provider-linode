@@ -45,15 +45,17 @@ import (
 	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/controller"
+	"github.com/linode/cluster-api-provider-linode/internal/controller"
+	webhookinfrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/internal/webhook/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 	"github.com/linode/cluster-api-provider-linode/version"
+
+	// +kubebuilder:scaffold:imports
 
 	_ "go.uber.org/automaxprocs"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -238,6 +240,8 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 		setupWebhooks(mgr)
 	}
 
+	// +kubebuilder:scaffold:builder
+
 	setupHealthChecks(mgr)
 
 	return mgr
@@ -351,36 +355,40 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 // It sets up webhooks for various Linode resources to handle admission control and validation.
 func setupWebhooks(mgr manager.Manager) {
 	var err error
-	if err = (&infrastructurev1alpha2.LinodeCluster{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeClusterWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha2.LinodeClusterTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeClusterTemplateWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeClusterTemplate")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha2.LinodeMachine{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeMachineWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachine")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha2.LinodeMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeMachineTemplateWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachineTemplate")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha2.LinodeVPC{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeVPCWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeVPC")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha2.LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeObjectStorageBucketWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha2.LinodePlacementGroup{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodePlacementGroupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodePlacementGroup")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha2.LinodeObjectStorageKey{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeObjectStorageKeyWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageKey")
+		os.Exit(1)
+	}
+	if err = webhookinfrastructurev1alpha2.SetupLinodeFirewallWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeFirewall")
 		os.Exit(1)
 	}
 }

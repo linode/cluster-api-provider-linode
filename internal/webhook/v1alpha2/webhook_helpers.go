@@ -36,8 +36,6 @@ import (
 )
 
 const (
-	// defaultWebhookTimeout is the default timeout for an admission request
-	defaultWebhookTimeout = time.Second * 10
 	// defaultClientTimeout is the default timeout for a client Linode API call
 	defaultClientTimeout = time.Second * 10
 )

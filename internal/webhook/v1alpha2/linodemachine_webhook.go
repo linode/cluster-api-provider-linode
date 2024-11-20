@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Akamai Technologies, Inc.
+Copyright 2024.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
@@ -40,37 +42,38 @@ var (
 	// NOTE: sda is reserved for the OS device disk.
 	LinodeMachineDevicePaths = []string{"sdb", "sdc", "sdd", "sde", "sdf", "sdg", "sdh"}
 
-	// The maximum number of device disks allowed per [Configuration Profile per Linode’s Instance].
+	// The maximum number of device disks allowed per [Configuration Profile per Linode's Instance].
 	//
-	// [Configuration Profile per Linode’s Instance]: https://www.linode.com/docs/api/linode-instances/#configuration-profile-view
+	// [Configuration Profile per Linode's Instance]: https://www.linode.com/docs/api/linode-instances/#configuration-profile-view
 	LinodeMachineMaxDisk = 8
 
-	// The maximum number of data device disks allowed in a Linode’s Instance's configuration profile.
+	// The maximum number of data device disks allowed in a Linode's Instance's configuration profile.
 	// NOTE: The first device disk is reserved for the OS disk
 	LinodeMachineMaxDataDisk = LinodeMachineMaxDisk - 1
 )
 
-// log is for logging in this package.
 var linodemachinelog = logf.Log.WithName("linodemachine-resource")
 
 type linodeMachineValidator struct {
 	Client client.Client
 }
 
-// SetupWebhookWithManager will setup the manager to manage the webhooks
-func (r *LinodeMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
+// SetupLinodeMachineWebhookWithManager registers the webhook for LinodeMachine in the manager.
+func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&infrav1alpha2.LinodeMachine{}).
 		WithValidator(&linodeMachineValidator{Client: mgr.GetClient()}).
 		Complete()
 }
+
+// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable update and deletion validation.
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodemachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=create,versions=v1alpha2,name=validation.linodemachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	machine, ok := obj.(*LinodeMachine)
+	machine, ok := obj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
 	}
@@ -104,7 +107,7 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	old, ok := oldObj.(*LinodeMachine)
+	old, ok := oldObj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
 	}
@@ -116,7 +119,7 @@ func (r *linodeMachineValidator) ValidateUpdate(ctx context.Context, oldObj, new
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	c, ok := obj.(*LinodeMachine)
+	c, ok := obj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
 	}
@@ -126,7 +129,7 @@ func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime
 	return nil, nil
 }
 
-func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient, spec LinodeMachineSpec) field.ErrorList {
+func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeMachineSpec) field.ErrorList {
 	var errs field.ErrorList
 
 	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
@@ -146,7 +149,7 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 	return errs
 }
 
-func (r *linodeMachineValidator) validateLinodeMachineDisks(plan *linodego.LinodeType, spec LinodeMachineSpec) *field.Error {
+func (r *linodeMachineValidator) validateLinodeMachineDisks(plan *linodego.LinodeType, spec infrav1alpha2.LinodeMachineSpec) *field.Error {
 	// The Linode plan information is required to perform disk validation
 	if plan == nil {
 		return nil
@@ -171,7 +174,7 @@ func (r *linodeMachineValidator) validateLinodeMachineDisks(plan *linodego.Linod
 	return nil
 }
 
-func validateDataDisks(disks map[string]*InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
+func validateDataDisks(disks map[string]*infrav1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
 	devs := []string{}
 
 	for dev, disk := range disks {
@@ -194,7 +197,7 @@ func validateDataDisks(disks map[string]*InstanceDisk, path *field.Path, remainS
 	return remainSize, nil
 }
 
-func validateDisk(disk *InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
+func validateDisk(disk *infrav1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
 	if disk == nil {
 		return remainSize, nil
 	}

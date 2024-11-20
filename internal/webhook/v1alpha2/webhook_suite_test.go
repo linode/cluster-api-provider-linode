@@ -1,5 +1,5 @@
 /*
-Copyright 2023 Akamai Technologies, Inc.
+Copyright 2024.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import (
 	"time"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	//+kubebuilder:scaffold:imports
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,6 +37,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+
+	// +kubebuilder:scaffold:imports
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -45,14 +48,16 @@ import (
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
-var cfg *rest.Config
-var k8sClient client.Client
-var testEnv *envtest.Environment
-var ctx context.Context
-var cancel context.CancelFunc
+var (
+	cancel    context.CancelFunc
+	cfg       *rest.Config
+	ctx       context.Context
+	k8sClient client.Client
+	testEnv   *envtest.Environment
+)
 
-//nolint:paralleltest // Ginkgo bootstrap
 func TestAPIs(t *testing.T) {
+	t.Parallel()
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Webhook Suite")
@@ -65,7 +70,7 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: false,
 
 		// The BinaryAssetsDirectory is only required if you want to run the tests directly
@@ -73,11 +78,11 @@ var _ = BeforeSuite(func() {
 		// default path defined in controller-runtime which is /usr/local/kubebuilder/.
 		// Note that you must have the required binaries setup under the bin directory to perform
 		// the tests directly. When we run make test it will be setup and used automatically.
-		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s",
-			fmt.Sprintf("1.29.0-%s-%s", runtime.GOOS, runtime.GOARCH)),
+		BinaryAssetsDirectory: filepath.Join("..", "..", "..", "bin", "k8s",
+			fmt.Sprintf("1.31.0-%s-%s", runtime.GOOS, runtime.GOARCH)),
 
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "config", "webhook")},
+			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
 		},
 	}
 
@@ -88,19 +93,19 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	scheme := apimachineryruntime.NewScheme()
-	err = AddToScheme(scheme)
+	err = infrav1alpha2.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = admissionv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	//+kubebuilder:scaffold:scheme
+	// +kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	// start webhook server using Manager
+	// start webhook server using Manager.
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
@@ -114,25 +119,28 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&LinodeCluster{}).SetupWebhookWithManager(mgr)
+	err = SetupLinodeClusterWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&LinodeMachine{}).SetupWebhookWithManager(mgr)
+	err = SetupLinodeMachineWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&LinodeVPC{}).SetupWebhookWithManager(mgr)
+	err = SetupLinodePlacementGroupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&LinodeObjectStorageBucket{}).SetupWebhookWithManager(mgr)
+	err = SetupLinodeVPCWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&LinodePlacementGroup{}).SetupWebhookWithManager(mgr)
+	err = SetupLinodeObjectStorageBucketWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&LinodeObjectStorageKey{}).SetupWebhookWithManager(mgr)
+	err = SetupLinodeObjectStorageKeyWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	//+kubebuilder:scaffold:webhook
+	err = SetupLinodeFirewallWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
+	// +kubebuilder:scaffold:webhook
 
 	go func() {
 		defer GinkgoRecover()
@@ -140,7 +148,7 @@ var _ = BeforeSuite(func() {
 		Expect(err).NotTo(HaveOccurred())
 	}()
 
-	// wait for the webhook server to get ready
+	// wait for the webhook server to get ready.
 	dialer := &net.Dialer{Timeout: time.Second}
 	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
 	Eventually(func() error {
@@ -148,14 +156,14 @@ var _ = BeforeSuite(func() {
 		if err != nil {
 			return err
 		}
+
 		return conn.Close()
 	}).Should(Succeed())
-
 })
 
 var _ = AfterSuite(func() {
-	cancel()
 	By("tearing down the test environment")
+	cancel()
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })

@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -24,6 +25,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusteraddonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
 func TestValidateLinodeObjectStorageKey(t *testing.T) {
@@ -31,13 +34,13 @@ func TestValidateLinodeObjectStorageKey(t *testing.T) {
 
 	tests := []struct {
 		name string
-		spec LinodeObjectStorageKeySpec
+		spec infrav1alpha2.LinodeObjectStorageKeySpec
 		err  error
 	}{
 		{
 			name: "opaque",
-			spec: LinodeObjectStorageKeySpec{
-				GeneratedSecret: GeneratedSecret{
+			spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+				GeneratedSecret: infrav1alpha2.GeneratedSecret{
 					Type: corev1.SecretTypeOpaque,
 				},
 			},
@@ -45,8 +48,8 @@ func TestValidateLinodeObjectStorageKey(t *testing.T) {
 		},
 		{
 			name: "resourceset with empty secret data format",
-			spec: LinodeObjectStorageKeySpec{
-				GeneratedSecret: GeneratedSecret{
+			spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+				GeneratedSecret: infrav1alpha2.GeneratedSecret{
 					Type:   clusteraddonsv1.ClusterResourceSetSecretType,
 					Format: map[string]string{},
 				},
@@ -55,8 +58,8 @@ func TestValidateLinodeObjectStorageKey(t *testing.T) {
 		},
 		{
 			name: "valid resourceset",
-			spec: LinodeObjectStorageKeySpec{
-				GeneratedSecret: GeneratedSecret{
+			spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+				GeneratedSecret: infrav1alpha2.GeneratedSecret{
 					Type: clusteraddonsv1.ClusterResourceSetSecretType,
 					Format: map[string]string{
 						"file.yaml": "kind: Secret",
@@ -67,17 +70,19 @@ func TestValidateLinodeObjectStorageKey(t *testing.T) {
 		},
 	}
 
+	validator := LinodeObjectStorageKeyCustomValidator{}
+
 	for _, tt := range tests {
 		testcase := tt
 
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
-			key := LinodeObjectStorageKey{
+			key := &infrav1alpha2.LinodeObjectStorageKey{
 				Spec: testcase.spec,
 			}
 
-			_, err := key.validateLinodeObjectStorageKey()
+			_, err := validator.validateLinodeObjectStorageKey(key)
 			if err != nil {
 				if testcase.err == nil {
 					t.Fatal(err)
@@ -97,14 +102,16 @@ func TestLinodeObjectStorageKeyDefault(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		genSecret         GeneratedSecret
+		genSecret         infrav1alpha2.GeneratedSecret
 		expectedName      string
 		expectedNamespace string
 	}{
-		{"already set", GeneratedSecret{Name: "secret", Namespace: "ns"}, "secret", "ns"},
-		{"no name", GeneratedSecret{Namespace: "ns"}, "key-obj-key", "ns"},
-		{"no namespace", GeneratedSecret{Name: "secret"}, "secret", "keyns"},
+		{"already set", infrav1alpha2.GeneratedSecret{Name: "secret", Namespace: "ns"}, "secret", "ns"},
+		{"no name", infrav1alpha2.GeneratedSecret{Namespace: "ns"}, "key-obj-key", "ns"},
+		{"no namespace", infrav1alpha2.GeneratedSecret{Name: "secret"}, "secret", "keyns"},
 	}
+
+	defaulter := LinodeObjectStorageKeyDefaulter{}
 
 	for _, tt := range tests {
 		testcase := tt
@@ -112,17 +119,21 @@ func TestLinodeObjectStorageKeyDefault(t *testing.T) {
 		t.Run(testcase.name, func(t *testing.T) {
 			t.Parallel()
 
-			key := &LinodeObjectStorageKey{
+			key := &infrav1alpha2.LinodeObjectStorageKey{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "key",
 					Namespace: "keyns",
 				},
-				Spec: LinodeObjectStorageKeySpec{
+				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
 					GeneratedSecret: testcase.genSecret,
 				},
 			}
 
-			key.Default()
+			err := defaulter.Default(context.TODO(), key)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			if key.Spec.GeneratedSecret.Name != testcase.expectedName {
 				t.Errorf("name: expected %s but got %s", testcase.expectedName, key.Spec.GeneratedSecret.Name)
 			}

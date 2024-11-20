@@ -30,6 +30,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -39,16 +40,16 @@ func TestValidateLinodeCluster(t *testing.T) {
 	t.Parallel()
 
 	var (
-		cluster = LinodeCluster{
+		cluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "example",
-				Network: NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
-					AdditionalPorts: []LinodeNBPortConfig{
+					AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 						{
 							Port:                 8132,
 							NodeBalancerConfigID: ptr.To(1234),
@@ -95,35 +96,35 @@ func TestValidateCreate(t *testing.T) {
 	mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 	var (
-		cluster = LinodeCluster{
+		cluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "example",
-				Network: NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
 				},
 			},
 		}
 		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
-		credentialsRefCluster  = LinodeCluster{
+		credentialsRefCluster  = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				CredentialsRef: &corev1.SecretReference{
 					Name: "cluster-credentials",
 				},
 				Region: "us-ord",
-				Network: NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
+		validator = &linodeClusterValidator{Client: mockK8sClient}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -171,28 +172,28 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 	t.Parallel()
 
 	var (
-		validCluster = LinodeCluster{
+		validCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				Network: NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType:    "dns",
 					DNSRootDomain:       "test.net",
 					DNSUniqueIdentifier: "abc123",
 				},
 			},
 		}
-		inValidCluster = LinodeCluster{
+		inValidCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				Network: NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType: "dns",
 				},
 			},
@@ -203,7 +204,7 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 	NewSuite(t, mock.MockLinodeClient{}).Run(
 		OneOf(
 			Path(
-				Call("valid", func(ctx context.Context, mck Mock) {
+				Call("valid dns", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
@@ -230,26 +231,26 @@ func TestValidateVlanAndVPC(t *testing.T) {
 	t.Parallel()
 
 	var (
-		validCluster = LinodeCluster{
+		validCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				Network: NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					UseVlan: true,
 				},
 			},
 		}
-		inValidCluster = LinodeCluster{
+		inValidCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				Network: NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					UseVlan: true,
 				},
 				VPCRef: &corev1.ObjectReference{
@@ -265,7 +266,7 @@ func TestValidateVlanAndVPC(t *testing.T) {
 	NewSuite(t, mock.MockLinodeClient{}).Run(
 		OneOf(
 			Path(
-				Call("valid", func(ctx context.Context, mck Mock) {
+				Call("valid vlan", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {

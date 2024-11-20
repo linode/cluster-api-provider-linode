@@ -142,7 +142,7 @@ if debug == "true":
     local_resource(
         "capl-compile",
         'GOOS=linux CGO_ENABLED=0 go build -gcflags "-N -l" -ldflags="-X github.com/linode/cluster-api-provider-linode/version.version=$VERSION" -a -o bin/manager ./cmd/main.go',
-        deps=["./main.go", "./start.go", "vendor", "go.mod", "go.sum", "./api",  "./cloud", "./cmd", "./controller",
+        deps=["./main.go", "./start.go", "vendor", "go.mod", "go.sum", "./api",  "./cloud", "./cmd", "./internal",
             "./observability", "./util", "./version",],
         labels=["CAPL"],
     )
@@ -210,7 +210,7 @@ if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
         only=("Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
-        "./api", "./clients", "./cloud", "./cmd", "./controller", "./observability", "./util", "./version"),
+        "./api", "./clients", "./cloud", "./cmd", "./internal", "./observability", "./util", "./version"),
         build_args={"VERSION": os.getenv("VERSION", "")},
     )
 
