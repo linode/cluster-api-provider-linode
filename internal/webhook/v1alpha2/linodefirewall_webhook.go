@@ -29,9 +29,6 @@ import (
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
-// log is for logging in this package.
-//
-//nolint:unused // Package logger variable is intended for future use in webhook implementation
 var linodefirewalllog = logf.Log.WithName("linodefirewall-resource")
 
 // SetupLinodeFirewallWebhookWithManager registers the webhook for LinodeFirewall in the manager.
