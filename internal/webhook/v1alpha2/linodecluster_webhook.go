@@ -33,7 +33,7 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
-// nolint:unused
+// nolint:unused // This type is used by controller-runtime for webhook registration
 // log is for logging in this package.
 var linodeclusterlog = logf.Log.WithName("linodecluster-resource")
 

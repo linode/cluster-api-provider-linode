@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -128,7 +129,7 @@ func TestLinodeObjectStorageKeyDefault(t *testing.T) {
 				},
 			}
 
-			err := defaulter.Default(nil, key)
+			err := defaulter.Default(context.TODO(), key)
 			if err != nil {
 				t.Fatal(err)
 			}
