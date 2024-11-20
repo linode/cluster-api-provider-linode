@@ -33,9 +33,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
-	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 

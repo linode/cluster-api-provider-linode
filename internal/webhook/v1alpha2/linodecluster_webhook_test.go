@@ -32,6 +32,7 @@ import (
 
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
+
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 

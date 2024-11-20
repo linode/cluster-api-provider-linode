@@ -17,11 +17,10 @@ limitations under the License.
 package v1alpha2
 
 import (
+	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-	// TODO (user): Add any additional imports if needed
 )
 
 var _ = Describe("LinodeMachineTemplate Webhook", func() {
