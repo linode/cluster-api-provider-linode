@@ -37,6 +37,8 @@ import (
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
+	// +kubebuilder:scaffold:imports
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

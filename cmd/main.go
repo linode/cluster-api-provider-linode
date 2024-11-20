@@ -50,6 +50,8 @@ import (
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 	"github.com/linode/cluster-api-provider-linode/version"
 
+	// +kubebuilder:scaffold:imports
+
 	_ "go.uber.org/automaxprocs"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -237,6 +239,8 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 	if webhooksEnabled {
 		setupWebhooks(mgr)
 	}
+
+	// +kubebuilder:scaffold:builder
 
 	setupHealthChecks(mgr)
 
