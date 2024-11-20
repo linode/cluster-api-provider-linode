@@ -237,7 +237,10 @@ issues:
     - path: cmd/main.go
       linters:
         - gci
-    - path: controller/suite_test.go
+    - path: internal/controller/suite_test.go
+      linters:
+        - gci
+    - path: internal/webhook/v1alpha2/webhook_suite_test.go
       linters:
         - gci
     # Exclude goimports check for controller tests that import both mocktest and ginkgo/gomega as dot imports.
