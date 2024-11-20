@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
-	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -25,14 +25,14 @@ import (
 
 var _ = Describe("LinodeFirewall Webhook", func() {
 	var (
-		obj       *infrastructurev1alpha2.LinodeFirewall
-		oldObj    *infrastructurev1alpha2.LinodeFirewall
+		obj       *infrav1alpha2.LinodeFirewall
+		oldObj    *infrav1alpha2.LinodeFirewall
 		validator LinodeFirewallCustomValidator
 	)
 
 	BeforeEach(func() {
-		obj = &infrastructurev1alpha2.LinodeFirewall{}
-		oldObj = &infrastructurev1alpha2.LinodeFirewall{}
+		obj = &infrav1alpha2.LinodeFirewall{}
+		oldObj = &infrav1alpha2.LinodeFirewall{}
 		validator = LinodeFirewallCustomValidator{}
 		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
 		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
@@ -46,25 +46,5 @@ var _ = Describe("LinodeFirewall Webhook", func() {
 
 	Context("When creating or updating LinodeFirewall under Validating Webhook", func() {
 		// TODO (user): Add logic for validating webhooks
-		// Example:
-		// It("Should deny creation if a required field is missing", func() {
-		//     By("simulating an invalid creation scenario")
-		//     obj.SomeRequiredField = ""
-		//     Expect(validator.ValidateCreate(ctx, obj)).Error().To(HaveOccurred())
-		// })
-		//
-		// It("Should admit creation if all required fields are present", func() {
-		//     By("simulating an invalid creation scenario")
-		//     obj.SomeRequiredField = "valid_value"
-		//     Expect(validator.ValidateCreate(ctx, obj)).To(BeNil())
-		// })
-		//
-		// It("Should validate updates correctly", func() {
-		//     By("simulating a valid update scenario")
-		//     oldObj.SomeRequiredField = "updated_value"
-		//     obj.SomeRequiredField = "updated_value"
-		//     Expect(validator.ValidateUpdate(ctx, oldObj, obj)).To(BeNil())
-		// })
 	})
-
 })

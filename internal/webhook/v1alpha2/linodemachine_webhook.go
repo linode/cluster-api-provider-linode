@@ -32,7 +32,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
@@ -61,7 +61,7 @@ type linodeMachineValidator struct {
 // SetupLinodeMachineWebhookWithManager registers the webhook for LinodeMachine in the manager.
 func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&infrastructurev1alpha2.LinodeMachine{}).
+		For(&infrav1alpha2.LinodeMachine{}).
 		WithValidator(&linodeMachineValidator{Client: mgr.GetClient()}).
 		Complete()
 }
@@ -73,7 +73,7 @@ func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	machine, ok := obj.(*infrastructurev1alpha2.LinodeMachine)
+	machine, ok := obj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
 	}
@@ -107,7 +107,7 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	old, ok := oldObj.(*infrastructurev1alpha2.LinodeMachine)
+	old, ok := oldObj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
 	}
@@ -119,7 +119,7 @@ func (r *linodeMachineValidator) ValidateUpdate(ctx context.Context, oldObj, new
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	c, ok := obj.(*infrastructurev1alpha2.LinodeMachine)
+	c, ok := obj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
 	}
@@ -129,7 +129,7 @@ func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime
 	return nil, nil
 }
 
-func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient, spec infrastructurev1alpha2.LinodeMachineSpec) field.ErrorList {
+func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeMachineSpec) field.ErrorList {
 	var errs field.ErrorList
 
 	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
@@ -149,7 +149,7 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 	return errs
 }
 
-func (r *linodeMachineValidator) validateLinodeMachineDisks(plan *linodego.LinodeType, spec infrastructurev1alpha2.LinodeMachineSpec) *field.Error {
+func (r *linodeMachineValidator) validateLinodeMachineDisks(plan *linodego.LinodeType, spec infrav1alpha2.LinodeMachineSpec) *field.Error {
 	// The Linode plan information is required to perform disk validation
 	if plan == nil {
 		return nil
@@ -174,7 +174,7 @@ func (r *linodeMachineValidator) validateLinodeMachineDisks(plan *linodego.Linod
 	return nil
 }
 
-func validateDataDisks(disks map[string]*infrastructurev1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
+func validateDataDisks(disks map[string]*infrav1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
 	devs := []string{}
 
 	for dev, disk := range disks {
@@ -197,7 +197,7 @@ func validateDataDisks(disks map[string]*infrastructurev1alpha2.InstanceDisk, pa
 	return remainSize, nil
 }
 
-func validateDisk(disk *infrastructurev1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
+func validateDisk(disk *infrav1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
 	if disk == nil {
 		return remainSize, nil
 	}

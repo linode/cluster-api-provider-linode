@@ -20,7 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
 // log is for logging in this package.
@@ -30,7 +30,7 @@ var linodeclustertemplatelog = logf.Log.WithName("linodeclustertemplate-resource
 
 // SetupLinodeClusterTemplateWebhookWithManager registers the webhook for LinodeClusterTemplate in the manager.
 func SetupLinodeClusterTemplateWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(&infrastructurev1alpha2.LinodeClusterTemplate{}).
+	return ctrl.NewWebhookManagedBy(mgr).For(&infrav1alpha2.LinodeClusterTemplate{}).
 		Complete()
 }
 

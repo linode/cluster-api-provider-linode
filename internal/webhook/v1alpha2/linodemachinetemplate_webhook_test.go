@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
-	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -25,13 +25,13 @@ import (
 
 var _ = Describe("LinodeMachineTemplate Webhook", func() {
 	var (
-		obj    *infrastructurev1alpha2.LinodeMachineTemplate
-		oldObj *infrastructurev1alpha2.LinodeMachineTemplate
+		obj    *infrav1alpha2.LinodeMachineTemplate
+		oldObj *infrav1alpha2.LinodeMachineTemplate
 	)
 
 	BeforeEach(func() {
-		obj = &infrastructurev1alpha2.LinodeMachineTemplate{}
-		oldObj = &infrastructurev1alpha2.LinodeMachineTemplate{}
+		obj = &infrav1alpha2.LinodeMachineTemplate{}
+		oldObj = &infrav1alpha2.LinodeMachineTemplate{}
 		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
 		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
 		// TODO (user): Add any setup logic common to all tests
@@ -45,7 +45,7 @@ var _ = Describe("LinodeMachineTemplate Webhook", func() {
 		// TODO (user): Add logic to convert the object to the desired version and verify the conversion
 		// Example:
 		// It("Should convert the object correctly", func() {
-		//     convertedObj := &infrastructurev1alpha2.LinodeMachineTemplate{}
+		//     convertedObj := &infrav1alpha2.LinodeMachineTemplate{}
 		//     Expect(obj.ConvertTo(convertedObj)).To(Succeed())
 		//     Expect(convertedObj).ToNot(BeNil())
 		// })

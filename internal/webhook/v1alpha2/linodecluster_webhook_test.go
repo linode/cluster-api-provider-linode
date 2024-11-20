@@ -30,7 +30,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -40,16 +40,16 @@ func TestValidateLinodeCluster(t *testing.T) {
 	t.Parallel()
 
 	var (
-		cluster = infrastructurev1alpha2.LinodeCluster{
+		cluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: infrastructurev1alpha2.LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "example",
-				Network: infrastructurev1alpha2.NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
-					AdditionalPorts: []infrastructurev1alpha2.LinodeNBPortConfig{
+					AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 						{
 							Port:                 8132,
 							NodeBalancerConfigID: ptr.To(1234),
@@ -96,30 +96,30 @@ func TestValidateCreate(t *testing.T) {
 	mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 	var (
-		cluster = infrastructurev1alpha2.LinodeCluster{
+		cluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: infrastructurev1alpha2.LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "example",
-				Network: infrastructurev1alpha2.NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
 				},
 			},
 		}
 		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
-		credentialsRefCluster  = infrastructurev1alpha2.LinodeCluster{
+		credentialsRefCluster  = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: infrastructurev1alpha2.LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				CredentialsRef: &corev1.SecretReference{
 					Name: "cluster-credentials",
 				},
 				Region: "us-ord",
-				Network: infrastructurev1alpha2.NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType: "NodeBalancer",
 				},
 			},
@@ -172,28 +172,28 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 	t.Parallel()
 
 	var (
-		validCluster = infrastructurev1alpha2.LinodeCluster{
+		validCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: infrastructurev1alpha2.LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				Network: infrastructurev1alpha2.NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType:    "dns",
 					DNSRootDomain:       "test.net",
 					DNSUniqueIdentifier: "abc123",
 				},
 			},
 		}
-		inValidCluster = infrastructurev1alpha2.LinodeCluster{
+		inValidCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: infrastructurev1alpha2.LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				Network: infrastructurev1alpha2.NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					LoadBalancerType: "dns",
 				},
 			},
@@ -231,26 +231,26 @@ func TestValidateVlanAndVPC(t *testing.T) {
 	t.Parallel()
 
 	var (
-		validCluster = infrastructurev1alpha2.LinodeCluster{
+		validCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: infrastructurev1alpha2.LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				Network: infrastructurev1alpha2.NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					UseVlan: true,
 				},
 			},
 		}
-		inValidCluster = infrastructurev1alpha2.LinodeCluster{
+		inValidCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
 			},
-			Spec: infrastructurev1alpha2.LinodeClusterSpec{
+			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				Network: infrastructurev1alpha2.NetworkSpec{
+				Network: infrav1alpha2.NetworkSpec{
 					UseVlan: true,
 				},
 				VPCRef: &corev1.ObjectReference{

@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
 // log is for logging in this package.
@@ -41,7 +41,7 @@ const defaultKeySecretNameTemplate = "%s-obj-key"
 // SetupLinodeObjectStorageKeyWebhookWithManager registers the webhook for LinodeObjectStorageKey in the manager.
 func SetupLinodeObjectStorageKeyWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(&infrastructurev1alpha2.LinodeObjectStorageKey{}).
+		For(&infrav1alpha2.LinodeObjectStorageKey{}).
 		WithValidator(&LinodeObjectStorageKeyCustomValidator{}).
 		WithDefaulter(&LinodeObjectStorageKeyDefaulter{}).
 		Complete()
@@ -56,7 +56,7 @@ var _ webhook.CustomValidator = &LinodeObjectStorageKeyCustomValidator{}
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageKey.
 func (v *LinodeObjectStorageKeyCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	key, ok := obj.(*infrastructurev1alpha2.LinodeObjectStorageKey)
+	key, ok := obj.(*infrav1alpha2.LinodeObjectStorageKey)
 	if !ok {
 		return nil, fmt.Errorf("expected a LinodeObjectStorageKey object but got %T", obj)
 	}
@@ -67,7 +67,7 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateCreate(ctx context.Conte
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageKey.
 func (v *LinodeObjectStorageKeyCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	key, ok := newObj.(*infrastructurev1alpha2.LinodeObjectStorageKey)
+	key, ok := newObj.(*infrav1alpha2.LinodeObjectStorageKey)
 	if !ok {
 		return nil, fmt.Errorf("expected a LinodeObjectStorageKey object but got %T", newObj)
 	}
@@ -78,7 +78,7 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateUpdate(ctx context.Conte
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageKey.
 func (v *LinodeObjectStorageKeyCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	key, ok := obj.(*infrastructurev1alpha2.LinodeObjectStorageKey)
+	key, ok := obj.(*infrav1alpha2.LinodeObjectStorageKey)
 	if !ok {
 		return nil, fmt.Errorf("expected a LinodeObjectStorageKey object but got %T", obj)
 	}
@@ -87,7 +87,7 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateDelete(ctx context.Conte
 	return nil, nil
 }
 
-func (v *LinodeObjectStorageKeyCustomValidator) validateLinodeObjectStorageKey(key *infrastructurev1alpha2.LinodeObjectStorageKey) (admission.Warnings, error) {
+func (v *LinodeObjectStorageKeyCustomValidator) validateLinodeObjectStorageKey(key *infrav1alpha2.LinodeObjectStorageKey) (admission.Warnings, error) {
 	var errs field.ErrorList
 
 	if key.Spec.GeneratedSecret.Type == clusteraddonsv1.ClusterResourceSetSecretType && len(key.Spec.GeneratedSecret.Format) == 0 {
@@ -114,7 +114,7 @@ var _ webhook.CustomDefaulter = &LinodeObjectStorageKeyDefaulter{}
 
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the type LinodeObjectStorageKey.
 func (d *LinodeObjectStorageKeyDefaulter) Default(ctx context.Context, obj runtime.Object) error {
-	key, ok := obj.(*infrastructurev1alpha2.LinodeObjectStorageKey)
+	key, ok := obj.(*infrav1alpha2.LinodeObjectStorageKey)
 	if !ok {
 		return fmt.Errorf("expected a LinodeObjectStorageKey object but got %T", obj)
 	}
