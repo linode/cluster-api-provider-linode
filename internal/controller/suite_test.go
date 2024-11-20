@@ -64,7 +64,7 @@ func TestControllers(t *testing.T) {
 }
 
 func getFilePathToCAPICRDs() string {
-	goModFilePath := filepath.Join(basepath, "..", "go.mod")
+	goModFilePath := filepath.Join(basepath, "..", "..", "go.mod")
 
 	// Read the go.mod file
 	data, err = os.ReadFile(goModFilePath)
@@ -104,7 +104,7 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	crdPaths := []string{
-		filepath.Join("..", "config", "crd", "bases"),
+		filepath.Join("..", "..", "config", "crd", "bases"),
 	}
 
 	if capiPath := getFilePathToCAPICRDs(); capiPath != "" {
