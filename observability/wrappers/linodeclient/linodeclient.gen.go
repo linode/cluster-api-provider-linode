@@ -9,12 +9,11 @@ package linodeclient
 import (
 	"context"
 
+	_sourceClients "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 	"github.com/linode/linodego"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-
-	_sourceClients "github.com/linode/cluster-api-provider-linode/clients"
-	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 )
 
 // LinodeClientWithTracing implements _sourceClients.LinodeClient interface instrumented with opentracing spans

@@ -9,12 +9,11 @@ package runtimeclient
 import (
 	"context"
 
+	"github.com/linode/cluster-api-provider-linode/observability/tracing"
+	_sourceWrappers "github.com/linode/cluster-api-provider-linode/observability/wrappers"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/linode/cluster-api-provider-linode/observability/tracing"
-	_sourceWrappers "github.com/linode/cluster-api-provider-linode/observability/wrappers"
 )
 
 // RuntimeClientWithTracing implements _sourceWrappers.RuntimeClient interface instrumented with opentracing spans
