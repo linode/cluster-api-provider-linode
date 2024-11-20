@@ -115,6 +115,21 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 	ctlrSuite.Run(
 		OneOf(
 			Path(
+				Call("vpc present but not ready", func(ctx context.Context, mck Mock) {
+					Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
+					linodeVPC.Status.Ready = false
+					k8sClient.Status().Update(ctx, &linodeVPC)
+				}),
+				OneOf(
+					Path(Result("", func(ctx context.Context, mck Mock) {
+						reconciler.Client = k8sClient
+						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+					})),
+				),
+			),
+			Path(
 				Call("firewall doesn't exist", func(ctx context.Context, mck Mock) {
 					cScope.LinodeCluster.Spec.NodeBalancerFirewallRef = &corev1.ObjectReference{Name: "firewalltest"}
 				}),
@@ -141,21 +156,6 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			),
 			Path(
 				Call("vpc doesn't exist", func(ctx context.Context, mck Mock) {
-				}),
-				OneOf(
-					Path(Result("", func(ctx context.Context, mck Mock) {
-						reconciler.Client = k8sClient
-						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-						Expect(err).NotTo(HaveOccurred())
-						Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
-					})),
-				),
-			),
-			Path(
-				Call("vpc present but not ready", func(ctx context.Context, mck Mock) {
-					Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
-					linodeVPC.Status.Ready = false
-					k8sClient.Status().Update(ctx, &linodeVPC)
 				}),
 				OneOf(
 					Path(Result("", func(ctx context.Context, mck Mock) {

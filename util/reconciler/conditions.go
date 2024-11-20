@@ -31,13 +31,12 @@ func HasConditionSeverity(from conditions.Getter, typ clusterv1.ConditionType, s
 }
 
 func RecordDecayingCondition(to conditions.Setter, typ clusterv1.ConditionType, reason, message string, timeout time.Duration) bool {
-	conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityWarning, "%s", message)
-
 	if HasStaleCondition(to, typ, timeout) {
 		conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityError, "%s", message)
 		return true
 	}
 
+	conditions.MarkFalse(to, typ, reason, clusterv1.ConditionSeverityWarning, "%s", message)
 	return false
 }
 
@@ -47,5 +46,6 @@ func HasStaleCondition(from conditions.Getter, typ clusterv1.ConditionType, time
 		return false
 	}
 
-	return time.Now().After(cond.LastTransitionTime.Add(timeout))
+	// if severity is already set to error, it was a stale condition
+	return cond.Severity == clusterv1.ConditionSeverityError || time.Now().After(cond.LastTransitionTime.Add(timeout))
 }
