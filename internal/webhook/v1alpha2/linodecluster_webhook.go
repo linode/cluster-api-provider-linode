@@ -34,6 +34,8 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
+// log is for logging in this package.
+//
 //nolint:unused // Package logger variable is intended for future use in webhook implementation
 var linodeclusterlog = logf.Log.WithName("linodecluster-resource")
 
