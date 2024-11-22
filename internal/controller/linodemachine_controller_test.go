@@ -624,9 +624,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			reconciler.ReconcileTimeout = time.Nanosecond
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
-			Expect(res).NotTo(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("time is up"))
+			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
