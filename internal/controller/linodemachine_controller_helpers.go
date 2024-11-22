@@ -72,7 +72,7 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
 	logger.Error(err, "unknown Linode API error")
-	return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, err
+	return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 }
 
 func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
