@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/go-logr/logr"
+	awssigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/go-logr/logr/testr"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -84,7 +87,7 @@ func TestSetUserData(t *testing.T) {
 		createConfig  *linodego.InstanceCreateOptions
 		wantConfig    *linodego.InstanceCreateOptions
 		expectedError error
-		expects       func(client *mock.MockLinodeClient, kClient *mock.MockK8sClient)
+		expects       func(client *mock.MockLinodeClient, kClient *mock.MockK8sClient, s3Client *mock.MockS3Client, s3PresignedClient *mock.MockS3PresignClient)
 	}{
 		{
 			name: "Success - SetUserData metadata",
@@ -108,7 +111,7 @@ func TestSetUserData(t *testing.T) {
 			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
 				UserData: b64.StdEncoding.EncodeToString(userData),
 			}},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Client *mock.MockS3Client, s3PresignedClient *mock.MockS3PresignClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -143,7 +146,7 @@ func TestSetUserData(t *testing.T) {
 				"instancedata": b64.StdEncoding.EncodeToString([]byte("label: test-cluster\nregion: us-east\ntype: g6-standard-1")),
 				"userdata":     b64.StdEncoding.EncodeToString([]byte("test-data")),
 			}},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Client *mock.MockS3Client, s3PresignedClient *mock.MockS3PresignClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -160,7 +163,7 @@ func TestSetUserData(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - SetUserData large bootstrap data for cloud-init",
+			name: "Success - SetUserData metadata and cluster object store (large bootstrap data)",
 			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
 				Spec: v1beta1.MachineSpec{
 					ClusterName: "",
@@ -176,10 +179,18 @@ func TestSetUserData(t *testing.T) {
 				},
 				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
 				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
+			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
+				Spec: infrav1alpha2.LinodeClusterSpec{
+					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
+				},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
-			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
+				UserData: b64.StdEncoding.EncodeToString([]byte(`#include
+https://object.bucket.example.com
+`)),
+			}},
+			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Mock *mock.MockS3Client, s3PresignedMock *mock.MockS3PresignClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					largeData := make([]byte, maxBootstrapDataBytesCloudInit*10)
 					_, rerr := rand.Read(largeData)
@@ -192,11 +203,25 @@ func TestSetUserData(t *testing.T) {
 					*obj = cred
 					return nil
 				})
+				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"bucket_name":     []byte("fake"),
+							"bucket_endpoint": []byte("fake.example.com"),
+							"endpoint":        []byte("example.com"),
+							"access_key":      []byte("fake"),
+							"secret_key":      []byte("fake"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+				s3Mock.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
+				s3PresignedMock.EXPECT().PresignGetObject(gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{URL: "https://object.bucket.example.com"}, nil)
 			},
-			expectedError: fmt.Errorf("bootstrap data too large"),
 		},
 		{
-			name: "Error - SetUserData large bootstrap data for stackscript",
+			name: "Success - SetUserData StackScript and Cluster Object Store (large bootstrap data)",
 			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
 				Spec: v1beta1.MachineSpec{
 					ClusterName: "",
@@ -210,23 +235,52 @@ func TestSetUserData(t *testing.T) {
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04", Type: "g6-standard-2"},
 				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: false},
+			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
+				Spec: infrav1alpha2.LinodeClusterSpec{
+					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
+				},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
-			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+			wantConfig: &linodego.InstanceCreateOptions{
+				StackScriptData: map[string]string{
+					"instancedata": b64.StdEncoding.EncodeToString([]byte("label: test-cluster\nregion: us-ord\ntype: g6-standard-2")),
+					"userdata": b64.StdEncoding.EncodeToString([]byte(`#include
+https://object.bucket.example.com
+`)),
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Mock *mock.MockS3Client, s3PresignedMock *mock.MockS3PresignClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					largeData := make([]byte, maxBootstrapDataBytesStackscript*10)
+					_, rerr := rand.Read(largeData)
+					require.NoError(t, rerr, "Failed to create bootstrap data")
 					cred := corev1.Secret{
 						Data: map[string][]byte{
-							"value": make([]byte, maxBootstrapDataBytesStackscript+1),
+							"value": largeData,
 						},
 					}
 					*obj = cred
 					return nil
 				})
+				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"bucket_name":     []byte("fake"),
+							"bucket_endpoint": []byte("fake.example.com"),
+							"s3_endpoint":     []byte("example.com"),
+							"access_key":      []byte("fake"),
+							"secret_key":      []byte("fake"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+				s3Mock.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
+				s3PresignedMock.EXPECT().PresignGetObject(gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{URL: "https://object.bucket.example.com"}, nil)
+				mockClient.EXPECT().ListStackscripts(gomock.Any(), gomock.Any()).Return([]linodego.Stackscript{{}}, nil)
 			},
-			expectedError: fmt.Errorf("bootstrap data too large"),
 		},
 		{
 			name: "Error - SetUserData get bootstrap data",
@@ -249,7 +303,7 @@ func TestSetUserData(t *testing.T) {
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig:   &linodego.InstanceCreateOptions{},
-			expects: func(c *mock.MockLinodeClient, k *mock.MockK8sClient) {
+			expects: func(c *mock.MockLinodeClient, k *mock.MockK8sClient, s3Client *mock.MockS3Client, s3PresignedClient *mock.MockS3PresignClient) {
 			},
 			expectedError: fmt.Errorf("bootstrap data secret is nil for LinodeMachine default/test-cluster"),
 		},
@@ -276,7 +330,7 @@ func TestSetUserData(t *testing.T) {
 				"instancedata": b64.StdEncoding.EncodeToString([]byte("label: test-cluster\nregion: us-east\ntype: g6-standard-1")),
 				"userdata":     b64.StdEncoding.EncodeToString([]byte("test-data")),
 			}},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient) {
+			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Client *mock.MockS3Client, s3PresignedClient *mock.MockS3PresignClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
@@ -290,6 +344,60 @@ func TestSetUserData(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("ensure stackscript: failed to get stackscript with label CAPL-dev: failed to get stackscripts"),
 		},
+		{
+			name: "Error - SetUserData failed to upload to Cluster Object Store",
+			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
+				Spec: v1beta1.MachineSpec{
+					ClusterName: "",
+					Bootstrap: v1beta1.Bootstrap{
+						DataSecretName: ptr.To("test-data"),
+					},
+					InfrastructureRef: corev1.ObjectReference{},
+				},
+			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cluster",
+					Namespace: "default",
+				},
+				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
+				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
+			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
+				Spec: infrav1alpha2.LinodeClusterSpec{
+					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
+				},
+			}},
+			createConfig: &linodego.InstanceCreateOptions{},
+			wantConfig:   &linodego.InstanceCreateOptions{},
+			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Mock *mock.MockS3Client, s3PresignedMock *mock.MockS3PresignClient) {
+				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					largeData := make([]byte, max(maxBootstrapDataBytesCloudInit, maxBootstrapDataBytesStackscript)*10)
+					_, rerr := rand.Read(largeData)
+					require.NoError(t, rerr, "Failed to create bootstrap data")
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"value": largeData,
+						},
+					}
+					*obj = cred
+					return nil
+				})
+				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"bucket_name":     []byte("fake"),
+							"bucket_endpoint": []byte("fake.example.com"),
+							"s3_endpoint":     []byte("example.com"),
+							"access_key":      []byte("fake"),
+							"secret_key":      []byte("fake"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+				s3Mock.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &s3types.NoSuchBucket{})
+			},
+			expectedError: fmt.Errorf("put object"),
+		},
 	}
 	for _, tt := range tests {
 		testcase := tt
@@ -301,10 +409,14 @@ func TestSetUserData(t *testing.T) {
 
 			mockClient := mock.NewMockLinodeClient(ctrl)
 			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			mockS3Client := mock.NewMockS3Client(ctrl)
+			mockS3PresignClient := mock.NewMockS3PresignClient(ctrl)
 			testcase.machineScope.LinodeClient = mockClient
 			testcase.machineScope.Client = mockK8sClient
-			testcase.expects(mockClient, mockK8sClient)
-			logger := logr.Logger{}
+			testcase.machineScope.S3Client = mockS3Client
+			testcase.machineScope.S3PresignClient = mockS3PresignClient
+			testcase.expects(mockClient, mockK8sClient, mockS3Client, mockS3PresignClient)
+			logger := testr.New(t)
 
 			err := setUserData(context.Background(), testcase.machineScope, testcase.createConfig, gzipCompressionFlag, logger)
 			if testcase.expectedError != nil {

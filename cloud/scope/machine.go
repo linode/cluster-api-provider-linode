@@ -25,14 +25,16 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client        K8sClient
-	PatchHelper   *patch.Helper
-	Cluster       *clusterv1.Cluster
-	Machine       *clusterv1.Machine
-	TokenHash     string
-	LinodeClient  LinodeClient
-	LinodeCluster *infrav1alpha2.LinodeCluster
-	LinodeMachine *infrav1alpha2.LinodeMachine
+	Client          K8sClient
+	S3Client        S3Client
+	S3PresignClient S3PresignClient
+	PatchHelper     *patch.Helper
+	Cluster         *clusterv1.Cluster
+	Machine         *clusterv1.Machine
+	TokenHash       string
+	LinodeClient    LinodeClient
+	LinodeCluster   *infrav1alpha2.LinodeCluster
+	LinodeMachine   *infrav1alpha2.LinodeMachine
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
@@ -62,20 +64,28 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
+
+	s3client, s3PresignClient, err := CreateS3Clients(ctx, params.Client, *params.LinodeCluster)
+	if err != nil {
+		return nil, fmt.Errorf("create s3 clients: %w", err)
+	}
+
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	return &MachineScope{
-		Client:        params.Client,
-		PatchHelper:   helper,
-		Cluster:       params.Cluster,
-		Machine:       params.Machine,
-		TokenHash:     GetHash(linodeClientConfig.Token),
-		LinodeClient:  linodeClient,
-		LinodeCluster: params.LinodeCluster,
-		LinodeMachine: params.LinodeMachine,
+		Client:          params.Client,
+		S3Client:        s3client,
+		S3PresignClient: s3PresignClient,
+		PatchHelper:     helper,
+		Cluster:         params.Cluster,
+		Machine:         params.Machine,
+		TokenHash:       GetHash(linodeClientConfig.Token),
+		LinodeClient:    linodeClient,
+		LinodeCluster:   params.LinodeCluster,
+		LinodeMachine:   params.LinodeMachine,
 	}, nil
 }
 
@@ -102,7 +112,7 @@ func (s *MachineScope) AddFinalizer(ctx context.Context) error {
 // GetBootstrapData returns the bootstrap data from the secret in the Machine's bootstrap.dataSecretName.
 func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 	if m.Machine.Spec.Bootstrap.DataSecretName == nil {
-		return []byte{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"bootstrap data secret is nil for LinodeMachine %s/%s",
 			m.LinodeMachine.Namespace,
 			m.LinodeMachine.Name,
@@ -112,7 +122,7 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 	secret := &corev1.Secret{}
 	key := types.NamespacedName{Namespace: m.LinodeMachine.Namespace, Name: *m.Machine.Spec.Bootstrap.DataSecretName}
 	if err := m.Client.Get(ctx, key, secret); err != nil {
-		return []byte{}, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"failed to retrieve bootstrap data secret for LinodeMachine %s/%s",
 			m.LinodeMachine.Namespace,
 			m.LinodeMachine.Name,
@@ -129,6 +139,19 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 	}
 
 	return value, nil
+}
+
+func (m *MachineScope) GetBucketName(ctx context.Context) (string, error) {
+	if m.LinodeCluster.Spec.ObjectStore == nil {
+		return "", errors.New("no cluster object store")
+	}
+
+	name, err := getCredentialDataFromRef(ctx, m.Client, m.LinodeCluster.Spec.ObjectStore.CredentialsRef, m.LinodeCluster.GetNamespace(), "bucket_name")
+	if err != nil {
+		return "", fmt.Errorf("get bucket name: %w", err)
+	}
+
+	return string(name), nil
 }
 
 func (s *MachineScope) AddCredentialsRefFinalizer(ctx context.Context) error {
