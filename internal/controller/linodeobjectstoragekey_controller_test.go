@@ -360,6 +360,10 @@ var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 					patchHelper, err := patch.NewHelper(keyScope.Key, k8sClient)
 					Expect(err).NotTo(HaveOccurred())
 					keyScope.PatchHelper = patchHelper
+
+					mck.LinodeClient.EXPECT().GetObjectStorageBucket(gomock.Any(), "us-ord", "mybucket").Return(&linodego.ObjectStorageBucket{
+						Hostname: "hostname",
+					}, nil)
 				}),
 				Result("generates opaque secret with templated data", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, &keyScope)
