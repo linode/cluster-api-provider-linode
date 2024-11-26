@@ -61,6 +61,8 @@ type LinodeFirewallReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls/finalizers,verbs=update
+//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=addresssets,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=addresssets/finalizers,verbs=update
 
 func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
@@ -169,7 +171,7 @@ func (r *LinodeFirewallReconciler) reconcile(
 			return ctrl.Result{}, nil
 		}
 	}
-	if err = reconcileFirewall(ctx, fwScope, logger); err != nil {
+	if err = reconcileFirewall(ctx, r.Client, fwScope, logger); err != nil {
 		logger.Error(err, fmt.Sprintf("failed to %s Firewall", action))
 		reconciler.RecordDecayingCondition(
 			fwScope.LinodeFirewall,
@@ -203,6 +205,31 @@ func (r *LinodeFirewallReconciler) reconcile(
 	return ctrl.Result{}, nil
 }
 
+func (r *LinodeFirewallReconciler) removeAddressSetFinalizer(ctx context.Context, logger logr.Logger, fwScope *scope.FirewallScope, addrSetRef *corev1.ObjectReference) error {
+	if addrSetRef == nil || r.Client == nil {
+		return nil
+	}
+	addrSet := &infrav1alpha2.AddressSet{}
+	if addrSetRef.Namespace == "" {
+		addrSetRef.Namespace = fwScope.LinodeFirewall.Namespace
+	}
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: addrSetRef.Namespace, Name: addrSetRef.Name}, addrSet); err != nil {
+		if !apierrors.IsNotFound(err) {
+			logger.Error(err, "failed to fetch referenced AddressSet", "namespace", addrSetRef.Namespace, "name", addrSetRef.Name)
+			return err
+		}
+	}
+	finalizer := fmt.Sprintf("lfw.%s.%s", fwScope.LinodeFirewall.Namespace, fwScope.LinodeFirewall.Name)
+	if controllerutil.RemoveFinalizer(addrSet, finalizer) {
+		if err := r.Update(ctx, addrSet); err != nil {
+			logger.Error(err, "failed to remove finalizer from AddressSet")
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *LinodeFirewallReconciler) reconcileDelete(
 	ctx context.Context,
 	logger logr.Logger,
@@ -220,6 +247,21 @@ func (r *LinodeFirewallReconciler) reconcileDelete(
 	if err := fwScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")
 		return ctrl.Result{}, err
+	}
+	// remove finalizers on any AddressSets referenced in the firewall
+	for _, inboundRule := range fwScope.LinodeFirewall.Spec.InboundRules {
+		for _, addrSetRef := range inboundRule.AddressSetRefs {
+			if err := r.removeAddressSetFinalizer(ctx, logger, fwScope, addrSetRef); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+	for _, outboundRule := range fwScope.LinodeFirewall.Spec.OutboundRules {
+		for _, addrSetRef := range outboundRule.AddressSetRefs {
+			if err := r.removeAddressSetFinalizer(ctx, logger, fwScope, addrSetRef); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	err := fwScope.LinodeClient.DeleteFirewall(ctx, *fwScope.LinodeFirewall.Spec.FirewallID)
@@ -266,11 +308,18 @@ func (r *LinodeFirewallReconciler) SetupWithManager(mgr ctrl.Manager, options cr
 					}
 					return true
 				}},
-			)).Watches(
-		&clusterv1.Cluster{},
-		handler.EnqueueRequestsFromMapFunc(linodeFirewallMapper),
-		builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
-	).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
+			)).
+		Watches(
+			&clusterv1.Cluster{},
+			handler.EnqueueRequestsFromMapFunc(linodeFirewallMapper),
+			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+		).
+		Watches(
+			&infrav1alpha2.AddressSet{},
+			handler.EnqueueRequestsFromMapFunc(findObjectsForAddressSet(mgr.GetLogger(), r.TracedClient())),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}

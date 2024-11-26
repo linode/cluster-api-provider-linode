@@ -24,6 +24,7 @@ import (
 
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -44,6 +45,7 @@ import (
 var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
+	addrSetRefs := []*corev1.ObjectReference{{Namespace: defaultNamespace, Name: "lifecycle"}}
 	inboundRules := []infrav1alpha2.FirewallRule{{
 		Action:      "ACCEPT",
 		Label:       "a-label-that-is-way-too-long-and-should-be-truncated",
@@ -54,6 +56,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			IPv4: &[]string{"0.0.0.0/0"},
 			IPv6: &[]string{"::/0"},
 		},
+		AddressSetRefs: addrSetRefs,
 	}}
 	outboundRules := []infrav1alpha2.FirewallRule{{
 		Action:      "DROP",
@@ -69,7 +72,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 	linodeFW := infrav1alpha2.LinodeFirewall{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lifecycle",
-			Namespace: "default",
+			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeFirewallSpec{
 			FirewallID:     nil,
@@ -80,22 +83,35 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			OutboundPolicy: "ACCEPT",
 		},
 	}
+	addrSet := infrav1alpha2.AddressSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lifecycle",
+			Namespace: defaultNamespace,
+		},
+		Spec: infrav1alpha2.AddressSetSpec{
+			IPv4: &[]string{"10.0.0.0/11"},
+			IPv6: &[]string{"::/0"},
+		},
+	}
 
-	objectKey := client.ObjectKeyFromObject(&linodeFW)
+	fwObjectKey := client.ObjectKeyFromObject(&linodeFW)
+	addrSetObjectKey := client.ObjectKeyFromObject(&addrSet)
 
 	var reconciler LinodeFirewallReconciler
 	var fwScope scope.FirewallScope
 
 	BeforeAll(func(ctx SpecContext) {
 		fwScope.Client = k8sClient
+		Expect(k8sClient.Create(ctx, &addrSet)).To(Succeed())
 		Expect(k8sClient.Create(ctx, &linodeFW)).To(Succeed())
 	})
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
 		fwScope.LinodeClient = mck.LinodeClient
 
-		Expect(k8sClient.Get(ctx, objectKey, &linodeFW)).To(Succeed())
+		Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 		fwScope.LinodeFirewall = &linodeFW
+		Expect(k8sClient.Get(ctx, addrSetObjectKey, &addrSet)).To(Succeed())
 
 		// Create patch helper with latest state of resource.
 		// This is only needed when relying on envtest's k8sClient.
@@ -157,7 +173,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(k8sClient.Get(ctx, objectKey, &linodeFW)).To(Succeed())
+					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
 					Expect(mck.Logs()).NotTo(ContainSubstring("failed to create Firewall"))
 				}),
@@ -221,7 +237,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(k8sClient.Get(ctx, objectKey, &linodeFW)).To(Succeed())
+					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
 					Expect(mck.Logs()).NotTo(ContainSubstring("failed to update Firewall"))
 				}),

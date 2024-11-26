@@ -69,7 +69,10 @@ type FirewallRule struct {
 	Ports       string `json:"ports,omitempty"`
 	// +kubebuilder:validation:Enum=TCP;UDP;ICMP;IPENCAP
 	Protocol  linodego.NetworkProtocol `json:"protocol"`
-	Addresses *NetworkAddresses        `json:"addresses"`
+	Addresses *NetworkAddresses        `json:"addresses,omitempty"`
+	// AddressSetRefs is a list of references to AddressSets as an alternative to
+	// using Addresses but can be used in conjunction with it
+	AddressSetRefs []*corev1.ObjectReference `json:"addressSetRefs,omitempty"`
 }
 
 // NetworkAddresses holds a list of IPv4 and IPv6 addresses
