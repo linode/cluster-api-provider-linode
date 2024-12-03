@@ -14,6 +14,8 @@ import (
 	reflect "reflect"
 
 	dns "github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	resty "github.com/go-resty/resty/v2"
 	linodego "github.com/linode/linodego"
 	gomock "go.uber.org/mock/gomock"
@@ -2289,6 +2291,132 @@ func (mr *MockK8sClientMockRecorder) Update(ctx, obj any, opts ...any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, obj}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockK8sClient)(nil).Update), varargs...)
+}
+
+// MockS3Client is a mock of S3Client interface.
+type MockS3Client struct {
+	ctrl     *gomock.Controller
+	recorder *MockS3ClientMockRecorder
+}
+
+// MockS3ClientMockRecorder is the mock recorder for MockS3Client.
+type MockS3ClientMockRecorder struct {
+	mock *MockS3Client
+}
+
+// NewMockS3Client creates a new mock instance.
+func NewMockS3Client(ctrl *gomock.Controller) *MockS3Client {
+	mock := &MockS3Client{ctrl: ctrl}
+	mock.recorder = &MockS3ClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockS3Client) EXPECT() *MockS3ClientMockRecorder {
+	return m.recorder
+}
+
+// DeleteObject mocks base method.
+func (m *MockS3Client) DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteObject", varargs...)
+	ret0, _ := ret[0].(*s3.DeleteObjectOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteObject indicates an expected call of DeleteObject.
+func (mr *MockS3ClientMockRecorder) DeleteObject(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObject", reflect.TypeOf((*MockS3Client)(nil).DeleteObject), varargs...)
+}
+
+// HeadObject mocks base method.
+func (m *MockS3Client) HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "HeadObject", varargs...)
+	ret0, _ := ret[0].(*s3.HeadObjectOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HeadObject indicates an expected call of HeadObject.
+func (mr *MockS3ClientMockRecorder) HeadObject(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HeadObject", reflect.TypeOf((*MockS3Client)(nil).HeadObject), varargs...)
+}
+
+// PutObject mocks base method.
+func (m *MockS3Client) PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PutObject", varargs...)
+	ret0, _ := ret[0].(*s3.PutObjectOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PutObject indicates an expected call of PutObject.
+func (mr *MockS3ClientMockRecorder) PutObject(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutObject", reflect.TypeOf((*MockS3Client)(nil).PutObject), varargs...)
+}
+
+// MockS3PresignClient is a mock of S3PresignClient interface.
+type MockS3PresignClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockS3PresignClientMockRecorder
+}
+
+// MockS3PresignClientMockRecorder is the mock recorder for MockS3PresignClient.
+type MockS3PresignClientMockRecorder struct {
+	mock *MockS3PresignClient
+}
+
+// NewMockS3PresignClient creates a new mock instance.
+func NewMockS3PresignClient(ctrl *gomock.Controller) *MockS3PresignClient {
+	mock := &MockS3PresignClient{ctrl: ctrl}
+	mock.recorder = &MockS3PresignClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockS3PresignClient) EXPECT() *MockS3PresignClientMockRecorder {
+	return m.recorder
+}
+
+// PresignGetObject mocks base method.
+func (m *MockS3PresignClient) PresignGetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, params}
+	for _, a := range optFns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PresignGetObject", varargs...)
+	ret0, _ := ret[0].(*v4.PresignedHTTPRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PresignGetObject indicates an expected call of PresignGetObject.
+func (mr *MockS3PresignClientMockRecorder) PresignGetObject(ctx, params any, optFns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, params}, optFns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PresignGetObject", reflect.TypeOf((*MockS3PresignClient)(nil).PresignGetObject), varargs...)
 }
 
 // MockLinodeTokenClient is a mock of LinodeTokenClient interface.

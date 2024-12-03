@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	awssigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-resty/resty/v2"
 	"github.com/linode/linodego"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -121,6 +123,16 @@ type LinodeFirewallClient interface {
 
 type K8sClient interface {
 	client.Client
+}
+
+type S3Client interface {
+	DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+}
+
+type S3PresignClient interface {
+	PresignGetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error)
 }
 
 type LinodeTokenClient interface {
