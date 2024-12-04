@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: FirewallRule
+metadata:
+  labels:
+    app.kubernetes.io/name: firewallrule
+    app.kubernetes.io/instance: firewallrule-sample
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+  name: firewallrule-sample
+spec:
+  # TODO(user): Add fields here

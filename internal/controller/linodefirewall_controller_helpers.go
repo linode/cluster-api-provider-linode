@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -33,12 +34,17 @@ const (
 	maxRulesPerFirewall     = 25
 )
 
+const (
+	ruleTypeInbound  = "inbound"
+	ruleTypeOutbound = "outbound"
+)
+
 var (
 	errTooManyIPs = errors.New("too many IPs in this ACL, will exceed rules per firewall limit")
 )
 
-func findObjectsForAddressSet(logger logr.Logger, tracedClient client.Client) handler.MapFunc {
-	logger = logger.WithName("LinodeFirewallReconciler").WithName("findObjectsForAddressSet")
+func findObjectsForObject(logger logr.Logger, tracedClient client.Client) handler.MapFunc {
+	logger = logger.WithName("LinodeFirewallReconciler").WithName("findObjectsForObject")
 	return func(ctx context.Context, obj client.Object) []ctrl.Request {
 		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
 		defer cancel()
@@ -63,7 +69,7 @@ func findObjectsForAddressSet(logger logr.Logger, tracedClient client.Client) ha
 }
 
 // Constructs a unique list of requests for updating LinodeFirewalls that either reference the
-// AddressSet in the Inbound and/or OutboundRules
+// AddressSet / FirewallRule
 func buildRequests(firewalls []infrav1alpha2.LinodeFirewall, obj client.Object) []reconcile.Request {
 	requestSet := make(map[reconcile.Request]struct{})
 	for _, firewall := range firewalls {
@@ -73,14 +79,19 @@ func buildRequests(firewalls []infrav1alpha2.LinodeFirewall, obj client.Object) 
 		for _, outboundRule := range firewall.Spec.OutboundRules {
 			requestSet = buildRequestsHelper(requestSet, firewall, outboundRule.AddressSetRefs, obj)
 		}
+		requestSet = buildRequestsHelper(requestSet, firewall, firewall.Spec.InboundRuleRefs, obj)
+		requestSet = buildRequestsHelper(requestSet, firewall, firewall.Spec.OutboundRuleRefs, obj)
 	}
 
 	return slices.Collect(maps.Keys(requestSet))
 }
 
-func buildRequestsHelper(requestSet map[reconcile.Request]struct{}, firewall infrav1alpha2.LinodeFirewall, addrSetRefs []*corev1.ObjectReference, obj client.Object) map[reconcile.Request]struct{} {
-	for _, addrSetRef := range addrSetRefs {
-		if addrSetRef.Name == obj.GetName() && addrSetRef.Namespace == obj.GetNamespace() {
+func buildRequestsHelper(requestSet map[reconcile.Request]struct{}, firewall infrav1alpha2.LinodeFirewall, objRefs []*corev1.ObjectReference, obj client.Object) map[reconcile.Request]struct{} {
+	for _, objRef := range objRefs {
+		if objRef.Namespace == "" {
+			objRef.Namespace = firewall.Namespace
+		}
+		if objRef.Name == obj.GetName() && objRef.Namespace == obj.GetNamespace() {
 			requestSet[reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      firewall.GetName(),
@@ -232,52 +243,47 @@ func transformToCIDR(ip string) string {
 	return ip
 }
 
-// processInboundRule handles a single inbound rule
-func processInboundRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, rule infrav1alpha2.FirewallRule, lfw *infrav1alpha2.LinodeFirewall, createOpts *linodego.FirewallCreateOptions) error {
-	var ruleIPv4s []string
-	var ruleIPv6s []string
-	var err error
-	if rule.Addresses != nil {
-		ruleIPv4s, ruleIPv6s = processAddresses(rule.Addresses)
+func filterDuplicates(ipv4s, ipv6s []string) (filteredIPv4s, filteredIPv6s []string) {
+	// Declare "sets". Empty structs occupy 0 memory
+	ipv4Set := make(map[string]struct{})
+	ipv6Set := make(map[string]struct{})
+	for _, ip := range ipv4s {
+		ipv4Set[ip] = struct{}{}
 	}
-	if rule.AddressSetRefs != nil {
-		ruleIPv4s, ruleIPv6s, err = processAddressSetRefs(ctx, k8sClient, lfw, rule.AddressSetRefs, log)
-		if err != nil {
-			return err
-		}
+	for _, ip := range ipv6s {
+		ipv6Set[ip] = struct{}{}
 	}
-	ruleLabel := formatRuleLabel(rule.Action, rule.Label)
-
-	// Process IPv4
-	processIPv4Rules(ruleIPv4s, rule, ruleLabel, &createOpts.Rules.Inbound)
-
-	// Process IPv6
-	processIPv6Rules(ruleIPv6s, rule, ruleLabel, &createOpts.Rules.Inbound)
-
-	return nil
+	return slices.Collect(maps.Keys(ipv4Set)), slices.Collect(maps.Keys(ipv6Set))
 }
 
-// processOutboundRule handles a single outbound rule
-func processOutboundRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, rule infrav1alpha2.FirewallRule, lfw *infrav1alpha2.LinodeFirewall, createOpts *linodego.FirewallCreateOptions) error {
-	var ruleIPv4s []string
-	var ruleIPv6s []string
-	var err error
+// processRule handles a single inbound/outbound rule
+func processRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, rule infrav1alpha2.FirewallRuleSpec, lfw *infrav1alpha2.LinodeFirewall, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
+	ruleIPv4s := make([]string, 0)
+	ruleIPv6s := make([]string, 0)
 	if rule.Addresses != nil {
-		ruleIPv4s, ruleIPv6s = processAddresses(rule.Addresses)
+		ipv4s, ipv6s := processAddresses(rule.Addresses)
+		ruleIPv4s = append(ruleIPv4s, ipv4s...)
+		ruleIPv6s = append(ruleIPv6s, ipv6s...)
 	}
 	if rule.AddressSetRefs != nil {
-		ruleIPv4s, ruleIPv6s, err = processAddressSetRefs(ctx, k8sClient, lfw, rule.AddressSetRefs, log)
+		ipv4s, ipv6s, err := processAddressSetRefs(ctx, k8sClient, lfw, rule.AddressSetRefs, log)
 		if err != nil {
 			return err
 		}
+		ruleIPv4s = append(ruleIPv4s, ipv4s...)
+		ruleIPv6s = append(ruleIPv6s, ipv6s...)
 	}
-	ruleLabel := formatRuleLabel(lfw.Spec.OutboundPolicy, rule.Label)
+	ruleIPv4s, ruleIPv6s = filterDuplicates(ruleIPv4s, ruleIPv6s)
 
-	// Process IPv4
-	processIPv4Rules(ruleIPv4s, rule, ruleLabel, &createOpts.Rules.Outbound)
+	ruleLabel := formatRuleLabel(rule.Action, rule.Label)
 
-	// Process IPv6
-	processIPv6Rules(ruleIPv6s, rule, ruleLabel, &createOpts.Rules.Outbound)
+	if ruleType == ruleTypeInbound {
+		processIPRules(ruleIPv4s, rule, ruleLabel, linodego.IPTypeIPv4, &createOpts.Rules.Inbound)
+		processIPRules(ruleIPv6s, rule, ruleLabel, linodego.IPTypeIPv6, &createOpts.Rules.Inbound)
+	} else if ruleType == ruleTypeOutbound {
+		processIPRules(ruleIPv4s, rule, ruleLabel, linodego.IPTypeIPv4, &createOpts.Rules.Outbound)
+		processIPRules(ruleIPv6s, rule, ruleLabel, linodego.IPTypeIPv6, &createOpts.Rules.Outbound)
+	}
 
 	return nil
 }
@@ -311,13 +317,53 @@ func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s, ipv6s [
 	return slices.Collect(maps.Keys(ipv4Set)), slices.Collect(maps.Keys(ipv6Set))
 }
 
-// get finalizer for Firewall that references the AddressSet
+// get finalizer for Firewall that references the AddressSet or FirewallRule
 func getFinalizer(lfw *infrav1alpha2.LinodeFirewall) string {
 	return fmt.Sprintf("lfw.%s.%s", lfw.Namespace, lfw.Name)
 }
 
+func addAddrSetFinalizer(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, addrSetRef *corev1.ObjectReference) (*infrav1alpha2.AddressSet, error) {
+	addrSet := &infrav1alpha2.AddressSet{}
+	if addrSetRef.Namespace == "" {
+		addrSetRef.Namespace = firewall.Namespace
+	}
+	finalizer := getFinalizer(firewall)
+	if !controllerutil.ContainsFinalizer(addrSet, finalizer) {
+		controllerutil.AddFinalizer(addrSet, finalizer)
+		if retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: addrSetRef.Namespace, Name: addrSetRef.Name}, addrSet); err != nil {
+				return err
+			}
+			return k8sClient.Update(ctx, addrSet)
+		}); retryErr != nil {
+			return nil, retryErr
+		}
+	}
+	return addrSet, nil
+}
+
+func addFWRuleFinalizer(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, fwRuleRef *corev1.ObjectReference) (*infrav1alpha2.FirewallRule, error) {
+	fwRule := &infrav1alpha2.FirewallRule{}
+	if fwRuleRef.Namespace == "" {
+		fwRuleRef.Namespace = firewall.Namespace
+	}
+	finalizer := getFinalizer(firewall)
+	if !controllerutil.ContainsFinalizer(fwRule, finalizer) {
+		controllerutil.AddFinalizer(fwRule, finalizer)
+		if retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: fwRuleRef.Namespace, Name: fwRuleRef.Name}, fwRule); err != nil {
+				return err
+			}
+			return k8sClient.Update(ctx, fwRule)
+		}); retryErr != nil {
+			return nil, retryErr
+		}
+	}
+	return fwRule, nil
+}
+
 // processAddressSetRefs extracts and transforms IPv4 and IPv6 addresses from the reference AddressSet(s)
-func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, lfw *infrav1alpha2.LinodeFirewall, addressSetRefs []*corev1.ObjectReference, log logr.Logger) (ipv4s, ipv6s []string, err error) {
+func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, addressSetRefs []*corev1.ObjectReference, log logr.Logger) (ipv4s, ipv6s []string, err error) {
 	// Initialize empty slices for consistent return type
 	ipv4s = make([]string, 0)
 	ipv6s = make([]string, 0)
@@ -326,22 +372,11 @@ func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, lfw
 	ipv6Set := make(map[string]struct{})
 
 	for _, addrSetRef := range addressSetRefs {
-		addrSet := &infrav1alpha2.AddressSet{}
-		if addrSetRef.Namespace == "" {
-			addrSetRef.Namespace = lfw.Namespace
-		}
-		if k8sClient != nil {
-			if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: addrSetRef.Namespace, Name: addrSetRef.Name}, addrSet); err != nil {
-				log.Error(err, "failed to fetch referenced AddressSet", "namespace", addrSetRef.Namespace, "name", addrSetRef.Name)
-				return ipv4s, ipv6s, err
-			}
-			finalizer := getFinalizer(lfw)
-			if !controllerutil.ContainsFinalizer(addrSet, finalizer) {
-				controllerutil.AddFinalizer(addrSet, finalizer)
-				if err := k8sClient.Update(ctx, addrSet); err != nil {
-					return ipv4s, ipv6s, err
-				}
-			}
+		addrSet, err := addAddrSetFinalizer(ctx, k8sClient, firewall, addrSetRef)
+		if err != nil {
+			log.Error(err, "failed to add finalizer to AddressSet", "namespace", addrSetRef.Namespace, "name", addrSetRef.Name)
+
+			return ipv4s, ipv6s, err
 		}
 
 		// Process IPv4 addresses
@@ -370,8 +405,8 @@ func formatRuleLabel(prefix, label string) string {
 	return ruleLabel
 }
 
-// processIPv4Rules processes IPv4 rules and adds them to the rules slice
-func processIPv4Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel string, rules *[]linodego.FirewallRule) {
+// processIPRules processes IP rules and adds them to the rules slice
+func processIPRules(ips []string, rule infrav1alpha2.FirewallRuleSpec, ruleLabel string, ipType linodego.InstanceIPType, rules *[]linodego.FirewallRule) {
 	// Initialize rules if nil
 	if *rules == nil {
 		*rules = make([]linodego.FirewallRule, 0)
@@ -382,44 +417,42 @@ func processIPv4Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel s
 		return
 	}
 
-	ipv4chunks := chunkIPs(ips)
-	for i, chunk := range ipv4chunks {
-		v4chunk := chunk
-		*rules = append(*rules, linodego.FirewallRule{
-			Action:      rule.Action,
-			Label:       ruleLabel,
-			Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-			Protocol:    rule.Protocol,
-			Ports:       rule.Ports,
-			Addresses:   linodego.NetworkAddresses{IPv4: &v4chunk},
-		})
+	ipchunks := chunkIPs(ips)
+	if ipType == linodego.IPTypeIPv4 {
+		for i, chunk := range ipchunks {
+			*rules = append(*rules, linodego.FirewallRule{
+				Action:      rule.Action,
+				Label:       ruleLabel,
+				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
+				Protocol:    rule.Protocol,
+				Ports:       rule.Ports,
+				Addresses:   linodego.NetworkAddresses{IPv4: &chunk},
+			})
+		}
+	} else if ipType == linodego.IPTypeIPv6 {
+		for i, chunk := range ipchunks {
+			*rules = append(*rules, linodego.FirewallRule{
+				Action:      rule.Action,
+				Label:       ruleLabel,
+				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
+				Protocol:    rule.Protocol,
+				Ports:       rule.Ports,
+				Addresses:   linodego.NetworkAddresses{IPv6: &chunk},
+			})
+		}
 	}
 }
 
-// processIPv6Rules processes IPv6 rules and adds them to the rules slice
-func processIPv6Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel string, rules *[]linodego.FirewallRule) {
-	// Initialize rules if nil
-	if *rules == nil {
-		*rules = make([]linodego.FirewallRule, 0)
+func processFirewallRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, ruleRef *corev1.ObjectReference, firewall *infrav1alpha2.LinodeFirewall, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
+	rule, err := addFWRuleFinalizer(ctx, k8sClient, firewall, ruleRef)
+	if err != nil {
+		return err
+	}
+	if err := processRule(ctx, k8sClient, log, rule.Spec, firewall, ruleType, createOpts); err != nil {
+		return err
 	}
 
-	// If no IPs, return early
-	if len(ips) == 0 {
-		return
-	}
-
-	ipv6chunks := chunkIPs(ips)
-	for i, chunk := range ipv6chunks {
-		v6chunk := chunk
-		*rules = append(*rules, linodego.FirewallRule{
-			Action:      rule.Action,
-			Label:       ruleLabel,
-			Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-			Protocol:    rule.Protocol,
-			Ports:       rule.Ports,
-			Addresses:   linodego.NetworkAddresses{IPv6: &v6chunk},
-		})
-	}
+	return nil
 }
 
 // processACL uses the CAPL LinodeFirewall representation to build out the inbound
@@ -431,7 +464,12 @@ func processACL(ctx context.Context, k8sClient clients.K8sClient, log logr.Logge
 
 	// Process inbound rules
 	for _, rule := range firewall.Spec.InboundRules {
-		if err := processInboundRule(ctx, k8sClient, log, rule, firewall, createOpts); err != nil {
+		if err := processRule(ctx, k8sClient, log, rule, firewall, ruleTypeInbound, createOpts); err != nil {
+			return nil, err
+		}
+	}
+	for _, ruleRef := range firewall.Spec.InboundRuleRefs {
+		if err := processFirewallRule(ctx, k8sClient, log, ruleRef, firewall, ruleTypeInbound, createOpts); err != nil {
 			return nil, err
 		}
 	}
@@ -445,7 +483,12 @@ func processACL(ctx context.Context, k8sClient clients.K8sClient, log logr.Logge
 
 	// Process outbound rules
 	for _, rule := range firewall.Spec.OutboundRules {
-		if err := processOutboundRule(ctx, k8sClient, log, rule, firewall, createOpts); err != nil {
+		if err := processRule(ctx, k8sClient, log, rule, firewall, ruleTypeOutbound, createOpts); err != nil {
+			return nil, err
+		}
+	}
+	for _, ruleRef := range firewall.Spec.OutboundRuleRefs {
+		if err := processFirewallRule(ctx, k8sClient, log, ruleRef, firewall, ruleTypeOutbound, createOpts); err != nil {
 			return nil, err
 		}
 	}

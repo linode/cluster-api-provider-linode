@@ -30,6 +30,7 @@ rules:
   - infrastructure.cluster.x-k8s.io
   resources:
   - addresssets
+  - firewallrules
   verbs:
   - get
   - list
@@ -40,6 +41,7 @@ rules:
   - infrastructure.cluster.x-k8s.io
   resources:
   - addresssets/finalizers
+  - firewallrules/finalizers
   - linodeclusters/finalizers
   - linodefirewalls/finalizers
   - linodemachines/finalizers

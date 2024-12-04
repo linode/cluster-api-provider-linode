@@ -28,6 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -63,6 +64,8 @@ type LinodeFirewallReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls/finalizers,verbs=update
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=addresssets,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=addresssets/finalizers,verbs=update
+//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=firewallrules,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=firewallrules/finalizers,verbs=update
 
 func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
@@ -70,11 +73,6 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	log := ctrl.LoggerFrom(ctx).WithName("LinodeFirewallReconciler").WithValues("name", req.NamespacedName.String())
 	linodeFirewall := &infrav1alpha2.LinodeFirewall{}
-	if err := r.Client.Get(ctx, req.NamespacedName, linodeFirewall); err != nil {
-		log.Error(err, "failed to fetch Linode firewall")
-
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeFirewall); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "failed to fetch firewall")
@@ -205,25 +203,63 @@ func (r *LinodeFirewallReconciler) reconcile(
 	return ctrl.Result{}, nil
 }
 
-func (r *LinodeFirewallReconciler) removeAddressSetFinalizer(ctx context.Context, logger logr.Logger, fwScope *scope.FirewallScope, addrSetRef *corev1.ObjectReference) error {
-	if addrSetRef == nil || r.Client == nil {
+// remove a finalizer from a given generic k8s object
+func (r *LinodeFirewallReconciler) removeFinalizer(ctx context.Context, fwScope *scope.FirewallScope, obj client.Object) error {
+	if controllerutil.RemoveFinalizer(obj, getFinalizer(fwScope.LinodeFirewall)) {
+		return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+			return r.Update(ctx, obj)
+		})
+	}
+	return nil
+}
+
+// fetch an AddressSet and remove its finalizer for the associated LinodeFirewall
+func (r *LinodeFirewallReconciler) removeAddressSetFinalizer(ctx context.Context, logger logr.Logger, fwScope *scope.FirewallScope, objRef *corev1.ObjectReference) error {
+	if objRef == nil {
 		return nil
 	}
 	addrSet := &infrav1alpha2.AddressSet{}
-	if addrSetRef.Namespace == "" {
-		addrSetRef.Namespace = fwScope.LinodeFirewall.Namespace
+	if objRef.Namespace == "" {
+		objRef.Namespace = fwScope.LinodeFirewall.Namespace
 	}
-	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: addrSetRef.Namespace, Name: addrSetRef.Name}, addrSet); err != nil {
-		if !apierrors.IsNotFound(err) {
-			logger.Error(err, "failed to fetch referenced AddressSet", "namespace", addrSetRef.Namespace, "name", addrSetRef.Name)
-			return err
+	if err := r.TracedClient().Get(ctx, client.ObjectKey{Namespace: objRef.Namespace, Name: objRef.Name}, addrSet); err != nil {
+		if apierrors.IsNotFound(err) {
+			// no finalizer to remove, the object wasn't found, bail out
+			return nil
 		}
+		logger.Error(err, "failed to fetch referenced Object", "kind", objRef.Kind, "namespace", objRef.Namespace, "name", objRef.Name)
+		return err
 	}
-	if controllerutil.RemoveFinalizer(addrSet, getFinalizer(fwScope.LinodeFirewall)) {
-		if err := r.Update(ctx, addrSet); err != nil {
-			logger.Error(err, "failed to remove finalizer from AddressSet")
-			return err
+	if err := r.removeFinalizer(ctx, fwScope, addrSet); err != nil {
+		logger.Error(err, "failed to remove finalizer from Object", "kind", objRef.Kind, "namespace", objRef.Namespace, "name", objRef.Name)
+
+		return err
+	}
+
+	return nil
+}
+
+// fetch a FirewallRule and remove its finalizer for the associated LinodeFirewall
+func (r *LinodeFirewallReconciler) removeFirewallRuleFinalizer(ctx context.Context, logger logr.Logger, fwScope *scope.FirewallScope, objRef *corev1.ObjectReference) error {
+	if objRef == nil {
+		return nil
+	}
+	firewallRule := &infrav1alpha2.FirewallRule{}
+	if objRef.Namespace == "" {
+		objRef.Namespace = fwScope.LinodeFirewall.Namespace
+	}
+	if err := r.TracedClient().Get(ctx, client.ObjectKey{Namespace: objRef.Namespace, Name: objRef.Name}, firewallRule); err != nil {
+		if apierrors.IsNotFound(err) {
+			// no finalizer to remove, the object wasn't found, bail out
+			return nil
 		}
+		logger.Error(err, "failed to fetch referenced Object", "kind", objRef.Kind, "namespace", objRef.Namespace, "name", objRef.Name)
+		return err
+	}
+	if err := r.removeFinalizer(ctx, fwScope, firewallRule); err != nil {
+		logger.Error(err, "failed to remove finalizer from Object", "kind", objRef.Kind, "namespace", objRef.Namespace, "name", objRef.Name)
+
+		return err
 	}
 
 	return nil
@@ -260,6 +296,17 @@ func (r *LinodeFirewallReconciler) reconcileDelete(
 			if err := r.removeAddressSetFinalizer(ctx, logger, fwScope, addrSetRef); err != nil {
 				return ctrl.Result{}, err
 			}
+		}
+	}
+	// remove finalizers on any FirewallRules referenced in the firewall
+	for _, inboundRuleRef := range fwScope.LinodeFirewall.Spec.InboundRuleRefs {
+		if err := r.removeFirewallRuleFinalizer(ctx, logger, fwScope, inboundRuleRef); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	for _, outboundRuleRef := range fwScope.LinodeFirewall.Spec.OutboundRuleRefs {
+		if err := r.removeFirewallRuleFinalizer(ctx, logger, fwScope, outboundRuleRef); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -315,7 +362,12 @@ func (r *LinodeFirewallReconciler) SetupWithManager(mgr ctrl.Manager, options cr
 		).
 		Watches(
 			&infrav1alpha2.AddressSet{},
-			handler.EnqueueRequestsFromMapFunc(findObjectsForAddressSet(mgr.GetLogger(), r.TracedClient())),
+			handler.EnqueueRequestsFromMapFunc(findObjectsForObject(mgr.GetLogger(), r.TracedClient())),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
+		Watches(
+			&infrav1alpha2.FirewallRule{},
+			handler.EnqueueRequestsFromMapFunc(findObjectsForObject(mgr.GetLogger(), r.TracedClient())),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))

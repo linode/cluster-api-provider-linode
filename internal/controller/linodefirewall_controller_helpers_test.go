@@ -76,7 +76,7 @@ func TestProcessACL(t *testing.T) {
 			name: "Single IP addresses are converted to CIDR",
 			firewall: &infrav1alpha2.LinodeFirewall{
 				Spec: infrav1alpha2.LinodeFirewallSpec{
-					InboundRules: []infrav1alpha2.FirewallRule{
+					InboundRules: []infrav1alpha2.FirewallRuleSpec{
 						{
 							Action:   "ACCEPT",
 							Label:    "test-rule",
@@ -123,7 +123,7 @@ func TestProcessACL(t *testing.T) {
 			name: "Mixed single IPs and CIDR notation",
 			firewall: &infrav1alpha2.LinodeFirewall{
 				Spec: infrav1alpha2.LinodeFirewallSpec{
-					InboundRules: []infrav1alpha2.FirewallRule{
+					InboundRules: []infrav1alpha2.FirewallRuleSpec{
 						{
 							Action:   "ACCEPT",
 							Label:    "test-rule",
@@ -324,14 +324,14 @@ func TestProcessIPv4Rules(t *testing.T) {
 	tests := []struct {
 		name      string
 		ips       []string
-		rule      infrav1alpha2.FirewallRule
+		rule      infrav1alpha2.FirewallRuleSpec
 		ruleLabel string
 		want      []linodego.FirewallRule
 	}{
 		{
 			name: "Single IPv4 address",
 			ips:  []string{"192.168.1.1/32"},
-			rule: infrav1alpha2.FirewallRule{
+			rule: infrav1alpha2.FirewallRuleSpec{
 				Action:   "ACCEPT",
 				Protocol: "TCP",
 				Ports:    "80",
@@ -352,7 +352,7 @@ func TestProcessIPv4Rules(t *testing.T) {
 		{
 			name: "Multiple IPv4 addresses within limit",
 			ips:  []string{"192.168.1.1/32", "10.0.0.0/8"},
-			rule: infrav1alpha2.FirewallRule{
+			rule: infrav1alpha2.FirewallRuleSpec{
 				Action:   "DROP",
 				Protocol: "UDP",
 				Ports:    "53",
@@ -373,7 +373,7 @@ func TestProcessIPv4Rules(t *testing.T) {
 		{
 			name: "Empty IP list",
 			ips:  []string{},
-			rule: infrav1alpha2.FirewallRule{
+			rule: infrav1alpha2.FirewallRuleSpec{
 				Action:   "ACCEPT",
 				Protocol: "TCP",
 				Ports:    "80",
@@ -389,7 +389,7 @@ func TestProcessIPv4Rules(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			var got []linodego.FirewallRule
-			processIPv4Rules(tt.ips, tt.rule, tt.ruleLabel, &got)
+			processIPRules(tt.ips, tt.rule, tt.ruleLabel, linodego.IPTypeIPv4, &got)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("processIPv4Rules() = %v, want %v", got, tt.want)
 			}
@@ -403,14 +403,14 @@ func TestProcessIPv6Rules(t *testing.T) {
 	tests := []struct {
 		name      string
 		ips       []string
-		rule      infrav1alpha2.FirewallRule
+		rule      infrav1alpha2.FirewallRuleSpec
 		ruleLabel string
 		want      []linodego.FirewallRule
 	}{
 		{
 			name: "Single IPv6 address",
 			ips:  []string{"2001:db8::1/128"},
-			rule: infrav1alpha2.FirewallRule{
+			rule: infrav1alpha2.FirewallRuleSpec{
 				Action:   "ACCEPT",
 				Protocol: "TCP",
 				Ports:    "80",
@@ -431,7 +431,7 @@ func TestProcessIPv6Rules(t *testing.T) {
 		{
 			name: "Multiple IPv6 addresses within limit",
 			ips:  []string{"2001:db8::1/128", "2001:db8::/32"},
-			rule: infrav1alpha2.FirewallRule{
+			rule: infrav1alpha2.FirewallRuleSpec{
 				Action:   "DROP",
 				Protocol: "UDP",
 				Ports:    "53",
@@ -452,7 +452,7 @@ func TestProcessIPv6Rules(t *testing.T) {
 		{
 			name: "Empty IP list",
 			ips:  []string{},
-			rule: infrav1alpha2.FirewallRule{
+			rule: infrav1alpha2.FirewallRuleSpec{
 				Action:   "ACCEPT",
 				Protocol: "TCP",
 				Ports:    "80",
@@ -468,7 +468,7 @@ func TestProcessIPv6Rules(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			var got []linodego.FirewallRule
-			processIPv6Rules(tt.ips, tt.rule, tt.ruleLabel, &got)
+			processIPRules(tt.ips, tt.rule, tt.ruleLabel, linodego.IPTypeIPv6, &got)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("processIPv6Rules() = %v, want %v", got, tt.want)
 			}
@@ -489,7 +489,7 @@ func TestProcessInboundRule(t *testing.T) {
 			name: "Process inbound rule with IPv4 and IPv6",
 			firewall: &infrav1alpha2.LinodeFirewall{
 				Spec: infrav1alpha2.LinodeFirewallSpec{
-					InboundRules: []infrav1alpha2.FirewallRule{{
+					InboundRules: []infrav1alpha2.FirewallRuleSpec{{
 						Action:   "ACCEPT",
 						Label:    "test-rule",
 						Protocol: "TCP",
@@ -499,6 +499,7 @@ func TestProcessInboundRule(t *testing.T) {
 							IPv6: &[]string{"2001:db8::1"},
 						},
 					}},
+					InboundPolicy: "DROP",
 				},
 			},
 			createOpts: &linodego.FirewallCreateOptions{
@@ -535,10 +536,10 @@ func TestProcessInboundRule(t *testing.T) {
 			t.Parallel()
 			logger := logr.Logger{}
 			for _, rule := range tt.firewall.Spec.InboundRules {
-				err := processInboundRule(context.Background(), k8sClient, logger, rule, tt.firewall, tt.createOpts)
+				err := processRule(context.Background(), k8sClient, logger, rule, tt.firewall, ruleTypeInbound, tt.createOpts)
 				require.NoError(t, err)
 				if !reflect.DeepEqual(tt.createOpts, tt.want) {
-					t.Errorf("processInboundRule() = %v, want %v", tt.createOpts, tt.want)
+					t.Errorf("processRule (inbound) \n got: %+v\n want %+v", tt.createOpts, tt.want)
 				}
 			}
 		})
@@ -558,7 +559,7 @@ func TestProcessOutboundRule(t *testing.T) {
 			name: "Process outbound rule with IPv4 and IPv6",
 			firewall: &infrav1alpha2.LinodeFirewall{
 				Spec: infrav1alpha2.LinodeFirewallSpec{
-					OutboundRules: []infrav1alpha2.FirewallRule{{
+					OutboundRules: []infrav1alpha2.FirewallRuleSpec{{
 						Action:   "ACCEPT",
 						Label:    "test-rule",
 						Protocol: "TCP",
@@ -579,7 +580,7 @@ func TestProcessOutboundRule(t *testing.T) {
 					Outbound: []linodego.FirewallRule{
 						{
 							Action:      "ACCEPT",
-							Label:       "DROP-test-rule",
+							Label:       "ACCEPT-test-rule",
 							Description: "Rule 0, Created by CAPL: test-rule",
 							Protocol:    "TCP",
 							Ports:       "80",
@@ -587,7 +588,7 @@ func TestProcessOutboundRule(t *testing.T) {
 						},
 						{
 							Action:      "ACCEPT",
-							Label:       "DROP-test-rule",
+							Label:       "ACCEPT-test-rule",
 							Description: "Rule 0, Created by CAPL: test-rule",
 							Protocol:    "TCP",
 							Ports:       "80",
@@ -605,10 +606,10 @@ func TestProcessOutboundRule(t *testing.T) {
 			t.Parallel()
 			logger := logr.Logger{}
 			for _, rule := range tt.firewall.Spec.OutboundRules {
-				err := processOutboundRule(context.Background(), k8sClient, logger, rule, tt.firewall, tt.createOpts)
+				err := processRule(context.Background(), k8sClient, logger, rule, tt.firewall, ruleTypeOutbound, tt.createOpts)
 				require.NoError(t, err)
 				if !reflect.DeepEqual(tt.createOpts, tt.want) {
-					t.Errorf("processOutboundRule() = %v, want %v", tt.createOpts, tt.want)
+					t.Errorf("processRule (outbound) \n got: %+v\n want %+v", tt.createOpts, tt.want)
 				}
 			}
 		})
