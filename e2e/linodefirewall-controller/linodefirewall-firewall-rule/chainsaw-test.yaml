@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: linodefirewall-firewallrule
+  # Label to trigger the test on every PR
+  labels:
+    all:
+    quick:
+    linodefirewall:
+spec:
+  bindings:
+    # A short identifier for the E2E test run
+    - name: run
+      value: (join('-', ['e2e', 'fwrule-firewall', env('GIT_REF')]))
+    - name: firewall
+      # Format the firewall name into a valid Kubernetes object name
+      value: (trim((truncate(($run), `63`)), '-'))
+    - name: fwrule
+      # Format the fwrule name into a valid Kubernetes object name
+      value: (trim((truncate(($run), `63`)), '-'))
+  template: true
+  steps:
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create FirewallRule and LinodeFirewall
+      try:
+        - apply:
+            file: create-fwrule-firewall.yaml
+        - assert:
+            file: assert-fwrule-firewall.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeFirewall
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: FirewallRule
+    - name: Check if the Firewall was created
+      try:
+        - script:
+            env:
+              - name: FILTER
+                value: (to_string({"label":($firewall)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/networking/firewalls"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 1
+    - name: Delete Firewall and FirewallRule
+      try:
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeFirewall
+              name: ($firewall)
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: FirewallRule
+              name: ($fwrule)
+        - error:
+            file: check-fwrule-firewall-deletion.yaml
+    - name: Check if the Firewall was deleted
+      try:
+        - script:
+            env:
+              - name: FILTER
+                value: (to_string({"label":($firewall)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/networking/firewalls"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
