@@ -46,7 +46,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
 	addrSetRefs := []*corev1.ObjectReference{{Namespace: defaultNamespace, Name: "lifecycle"}}
-	inboundRules := []infrav1alpha2.FirewallRule{{
+	inboundRules := []infrav1alpha2.FirewallRuleSpec{{
 		Action:      "ACCEPT",
 		Label:       "a-label-that-is-way-too-long-and-should-be-truncated",
 		Description: "allow-ssh",
@@ -58,7 +58,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 		},
 		AddressSetRefs: addrSetRefs,
 	}}
-	outboundRules := []infrav1alpha2.FirewallRule{{
+	outboundRules := []infrav1alpha2.FirewallRuleSpec{{
 		Action:      "DROP",
 		Label:       "another-label-that-is-way-too-long-and-should-be-truncated",
 		Description: "deny-foo",
@@ -148,7 +148,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			),
 			Path(Result("unable to create with too many rules", func(ctx context.Context, mck Mock) {
 				for idx := 0; idx < 255; idx++ {
-					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRule{
+					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRuleSpec{
 						Action:   "ACCEPT",
 						Ports:    "22",
 						Protocol: "TCP",
@@ -219,7 +219,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					for idx := 0; idx < 256; idx++ {
 						ipv4s = append(ipv4s, fmt.Sprintf("192.168.%d.%d", idx, 0))
 					}
-					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRule{
+					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRuleSpec{
 						Action:   "ACCEPT",
 						Ports:    "22",
 						Protocol: "TCP",
