@@ -46,7 +46,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	infrav1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
@@ -568,10 +567,6 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		return ctrl.Result{}, err
 	}
 	controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha2.MachineFinalizer)
-	// TODO: remove this check and removal later
-	if controllerutil.ContainsFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String()) {
-		controllerutil.RemoveFinalizer(machineScope.LinodeMachine, infrav1alpha1.GroupVersion.String())
-	}
 
 	return ctrl.Result{}, nil
 }

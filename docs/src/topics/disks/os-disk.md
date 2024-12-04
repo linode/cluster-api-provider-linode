@@ -9,7 +9,7 @@ Use the `osDisk` section to specify the exact size the OS disk should be. The de
 the OS disk will dynamically be sized to the maximum allowed by the linode plan with any data disk sizes taken into account.
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
   name: ${CLUSTER}-control-plane
@@ -31,7 +31,7 @@ be set if an explicit size is being set as `size` is a required field
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
   name: ${CLUSTER}-control-plane

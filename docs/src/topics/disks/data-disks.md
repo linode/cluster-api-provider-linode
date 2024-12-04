@@ -23,7 +23,7 @@ A LinodeMachine can be configured with additional data disks with the key being 
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
   name: ${CLUSTER}-control-plane
@@ -45,7 +45,7 @@ spec:
 The following configuration can be used to configure a separate disk for etcd data on control plane nodes.
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
   name: ${CLUSTER}-control-plane

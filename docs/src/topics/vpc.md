@@ -46,7 +46,7 @@ A VPC is tied to a region. CAPL generates LinodeVPC manifest which contains the 
 
 ```yaml
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeVPC
 metadata:
   name: ${VPC_NAME:=${CLUSTER_NAME}}
