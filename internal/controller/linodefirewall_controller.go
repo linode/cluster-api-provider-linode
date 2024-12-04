@@ -219,8 +219,7 @@ func (r *LinodeFirewallReconciler) removeAddressSetFinalizer(ctx context.Context
 			return err
 		}
 	}
-	finalizer := fmt.Sprintf("lfw.%s.%s", fwScope.LinodeFirewall.Namespace, fwScope.LinodeFirewall.Name)
-	if controllerutil.RemoveFinalizer(addrSet, finalizer) {
+	if controllerutil.RemoveFinalizer(addrSet, getFinalizer(fwScope.LinodeFirewall)) {
 		if err := r.Update(ctx, addrSet); err != nil {
 			logger.Error(err, "failed to remove finalizer from AddressSet")
 			return err

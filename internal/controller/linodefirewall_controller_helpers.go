@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -64,37 +66,31 @@ func findObjectsForAddressSet(logger logr.Logger, tracedClient client.Client) ha
 // AddressSet in the Inbound and/or OutboundRules
 func buildRequests(firewalls []infrav1alpha2.LinodeFirewall, obj client.Object) []reconcile.Request {
 	requestSet := make(map[reconcile.Request]struct{})
-	for _, item := range firewalls {
-		for _, inboundRule := range item.Spec.InboundRules {
-			for _, addrSetRef := range inboundRule.AddressSetRefs {
-				if addrSetRef.Name == obj.GetName() && addrSetRef.Namespace == obj.GetNamespace() {
-					requestSet[reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Name:      item.GetName(),
-							Namespace: item.GetNamespace(),
-						},
-					}] = struct{}{}
-				}
-			}
+	for _, firewall := range firewalls {
+		for _, inboundRule := range firewall.Spec.InboundRules {
+			requestSet = buildRequestsHelper(requestSet, firewall, inboundRule.AddressSetRefs, obj)
 		}
-		for _, outboundRule := range item.Spec.OutboundRules {
-			for _, addrSetRef := range outboundRule.AddressSetRefs {
-				if addrSetRef.Name == obj.GetName() && addrSetRef.Namespace == obj.GetNamespace() {
-					requestSet[reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Name:      item.GetName(),
-							Namespace: item.GetNamespace(),
-						},
-					}] = struct{}{}
-				}
-			}
+		for _, outboundRule := range firewall.Spec.OutboundRules {
+			requestSet = buildRequestsHelper(requestSet, firewall, outboundRule.AddressSetRefs, obj)
 		}
 	}
-	requests := make([]reconcile.Request, 0, len(requestSet))
-	for req := range requestSet {
-		requests = append(requests, req)
+
+	return slices.Collect(maps.Keys(requestSet))
+}
+
+func buildRequestsHelper(requestSet map[reconcile.Request]struct{}, firewall infrav1alpha2.LinodeFirewall, addrSetRefs []*corev1.ObjectReference, obj client.Object) map[reconcile.Request]struct{} {
+	for _, addrSetRef := range addrSetRefs {
+		if addrSetRef.Name == obj.GetName() && addrSetRef.Namespace == obj.GetNamespace() {
+			requestSet[reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      firewall.GetName(),
+					Namespace: firewall.GetNamespace(),
+				},
+			}] = struct{}{}
+		}
 	}
-	return requests
+
+	return requestSet
 }
 
 // reconcileFirewall takes the CAPL firewall representation and uses it to either create or update the Cloud Firewall
@@ -291,15 +287,13 @@ func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s, ipv6s [
 	// Initialize empty slices for consistent return type
 	ipv4s = make([]string, 0)
 	ipv6s = make([]string, 0)
-	// Declare "sets". Empty structs occupy 0 memory
-	ipv4Set := make(map[string]struct{})
-	ipv6Set := make(map[string]struct{})
-
 	// Early return if addresses is nil
 	if addresses == nil {
 		return ipv4s, ipv6s
 	}
-
+	// Declare "sets". Empty structs occupy 0 memory
+	ipv4Set := make(map[string]struct{})
+	ipv6Set := make(map[string]struct{})
 	// Process IPv4 addresses
 	if addresses.IPv4 != nil {
 		for _, ip := range *addresses.IPv4 {
@@ -314,14 +308,12 @@ func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s, ipv6s [
 		}
 	}
 
-	for ipv4 := range ipv4Set {
-		ipv4s = append(ipv4s, ipv4)
-	}
-	for ipv6 := range ipv6Set {
-		ipv6s = append(ipv6s, ipv6)
-	}
+	return slices.Collect(maps.Keys(ipv4Set)), slices.Collect(maps.Keys(ipv6Set))
+}
 
-	return ipv4s, ipv6s
+// get finalizer for Firewall that references the AddressSet
+func getFinalizer(lfw *infrav1alpha2.LinodeFirewall) string {
+	return fmt.Sprintf("lfw.%s.%s", lfw.Namespace, lfw.Name)
 }
 
 // processAddressSetRefs extracts and transforms IPv4 and IPv6 addresses from the reference AddressSet(s)
@@ -341,13 +333,13 @@ func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, lfw
 		if k8sClient != nil {
 			if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: addrSetRef.Namespace, Name: addrSetRef.Name}, addrSet); err != nil {
 				log.Error(err, "failed to fetch referenced AddressSet", "namespace", addrSetRef.Namespace, "name", addrSetRef.Name)
-				return nil, nil, err
+				return ipv4s, ipv6s, err
 			}
-			finalizer := fmt.Sprintf("lfw.%s.%s", lfw.Namespace, lfw.Name)
+			finalizer := getFinalizer(lfw)
 			if !controllerutil.ContainsFinalizer(addrSet, finalizer) {
 				controllerutil.AddFinalizer(addrSet, finalizer)
 				if err := k8sClient.Update(ctx, addrSet); err != nil {
-					return nil, nil, err
+					return ipv4s, ipv6s, err
 				}
 			}
 		}
@@ -358,7 +350,6 @@ func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, lfw
 				ipv4Set[transformToCIDR(ip)] = struct{}{}
 			}
 		}
-
 		// Process IPv6 addresses
 		if addrSet.Spec.IPv6 != nil {
 			for _, ip := range *addrSet.Spec.IPv6 {
@@ -366,14 +357,8 @@ func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, lfw
 			}
 		}
 	}
-	for ipv4 := range ipv4Set {
-		ipv4s = append(ipv4s, ipv4)
-	}
-	for ipv6 := range ipv6Set {
-		ipv6s = append(ipv6s, ipv6)
-	}
 
-	return ipv4s, ipv6s, nil
+	return slices.Collect(maps.Keys(ipv4Set)), slices.Collect(maps.Keys(ipv6Set)), nil
 }
 
 // formatRuleLabel creates and formats the rule label
