@@ -78,7 +78,7 @@ help: ## Display this help.
 
 ##@ Generate:
 .PHONY: generate
-generate: generate-manifests generate-conversion generate-code generate-mock
+generate: generate-manifests generate-code generate-mock
 
 .PHONY: generate-manifests
 generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -88,10 +88,6 @@ generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole
 generate-code: controller-gen gowrap ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	go generate ./...
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-
-.PHONY: generate-conversion
-generate-conversion: conversion-gen
-	$(CONVERSION_GEN) ./api/v1alpha1 --go-header-file=./hack/boilerplate.go.txt --output-file=zz_generated.conversion.go
 
 .PHONY: generate-mock
 generate-mock: mockgen ## Generate mocks for the Linode API client.

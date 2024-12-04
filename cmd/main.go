@@ -42,7 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	infrastructurev1alpha1 "github.com/linode/cluster-api-provider-linode/api/v1alpha1"
 	infrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/internal/controller"
@@ -94,7 +93,6 @@ type flagVars struct {
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
-	utilruntime.Must(infrastructurev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }

@@ -23,7 +23,7 @@ Which may be optionally consumed by one or more custom resource objects:
 
 ```yaml
 # Example: LinodeCluster
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeCluster
 metadata:
   name: test-cluster
@@ -33,7 +33,7 @@ spec:
   ...
 ---
 # Example: LinodeVPC
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeVPC
 metadata:
   name: test-vpc
@@ -43,7 +43,7 @@ spec:
   ...
 ---
 # Example: LinodeMachine
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachine
 metadata:
   name: test-machine
