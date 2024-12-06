@@ -7,6 +7,7 @@ resources:
   - ../../../addons/etcd-backup-restore
   - ../../../addons/machine-health-check
   - ../../../addons/placementGroups
+  - ../../../addons/cluster-object-store
 
 patches:
   - target:

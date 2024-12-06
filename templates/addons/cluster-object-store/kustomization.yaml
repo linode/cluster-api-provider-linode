@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+    - cluster-object-store.yaml
+
+patches:
+    - target:
+          group: infrastructure.cluster.x-k8s.io
+          version: v1alpha2
+          kind: LinodeCluster
+      patch: |-
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+          kind: LinodeCluster
+          metadata:
+              name: ${CLUSTER_NAME}
+              spec:
+                  objectStore:
+                      presignedURLDuration: "24h"
+                      credentialsRef:
+                          name: ${CLUSTER_NAME}-object-store-obj-key
