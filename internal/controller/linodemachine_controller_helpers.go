@@ -27,6 +27,7 @@ import (
 	"net/netip"
 	"slices"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -50,6 +51,8 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
+
+	_ "embed"
 )
 
 const (
@@ -59,6 +62,9 @@ const (
 )
 
 var (
+	//go:embed cloud-init.tmpl
+	cloudConfigTemplate string
+
 	errNoPublicIPv4Addrs      = errors.New("no public ipv4 addresses set")
 	errNoPublicIPv6Addrs      = errors.New("no public IPv6 address set")
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
@@ -495,36 +501,14 @@ func compressUserData(bootstrapData []byte) ([]byte, error) {
 }
 
 func setUserData(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, gzipCompressionEnabled bool, logger logr.Logger) error {
-	bootstrapData, err := machineScope.GetBootstrapData(ctx)
+	bootstrapData, err := resolveBootstrapData(ctx, machineScope, gzipCompressionEnabled, logger)
 	if err != nil {
-		logger.Error(err, "Failed to get bootstrap data")
-
 		return err
 	}
 
-	userData := bootstrapData
-	//nolint:nestif // this is a temp flag until cloud-init is updated in cloud-init compatible images
 	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
-		if gzipCompressionEnabled {
-			userData, err = compressUserData(bootstrapData)
-			if err != nil {
-				logger.Error(err, "failed to compress bootstrap data")
-
-				return err
-			}
-		}
-		bootstrapSize := len(userData)
-		if bootstrapSize > maxBootstrapDataBytesCloudInit {
-			err = errors.New("bootstrap data too large")
-			logger.Error(err, "decoded bootstrap data exceeds size limit",
-				"limit", maxBootstrapDataBytesCloudInit,
-				"size", bootstrapSize,
-			)
-
-			return err
-		}
 		createConfig.Metadata = &linodego.InstanceMetadataOptions{
-			UserData: b64.StdEncoding.EncodeToString(userData),
+			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
 		}
 	} else {
 		logger.Info("using StackScripts for bootstrapping")
@@ -551,6 +535,81 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		}
 	}
 	return nil
+}
+
+func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope, gzipCompressionEnabled bool, logger logr.Logger) ([]byte, error) {
+	bootstrapdata, err := machineScope.GetBootstrapData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		size       = len(bootstrapdata)
+		compressed []byte
+		limit      int
+	)
+
+	// Determine limits for delivery method, e.g. Metadata vs. Stackscript.
+	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
+		limit = maxBootstrapDataBytesCloudInit
+	} else {
+		limit = maxBootstrapDataBytesStackscript
+	}
+
+	switch {
+	// Best case: Can just deliver user-data directly.
+	case size < limit:
+		return bootstrapdata, nil
+	// Compromise case (Metadata): Use compression.
+	case machineScope.LinodeMachine.Status.CloudinitMetadataSupport && gzipCompressionEnabled:
+		compressed, err = compressUserData(bootstrapdata)
+		// Fallback to Object Storage workaround on compression failure.
+		if err != nil {
+			logger.Info(fmt.Sprintf("Failed to compress bootstrap data: %v", err))
+			logger.Info("Falling back to Object Storage")
+			goto obj
+		}
+		size = len(compressed)
+		if size < limit {
+			return compressed, nil
+		}
+		goto obj
+	obj:
+		fallthrough
+	// Worst case: Object Storage workaround.
+	default:
+		logger.Info("decoded bootstrap data exceeds size limit", "limit", limit, "size", size)
+	}
+
+	if machineScope.LinodeCluster.Spec.ObjectStore == nil {
+		return nil, errors.New("must enable cluster object store feature to bootstrap linodemachine")
+	}
+
+	logger.Info("Uploading bootstrap data to Object Storage")
+
+	// Pass the user-data indirectly via a "pointer" cloud-config.
+	url, err := services.CreateObject(ctx, machineScope, bootstrapdata, logger)
+	if err != nil {
+		return nil, fmt.Errorf("upload bootstrap data: %w", err)
+	}
+	tmpl, err := template.New(machineScope.LinodeMachine.Name).Parse(cloudConfigTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parse cloud-config template: %w", err)
+	}
+	var config bytes.Buffer
+	if err := tmpl.Execute(&config, []string{url}); err != nil {
+		return nil, fmt.Errorf("execute cloud-config template: %w", err)
+	}
+	out := config.String()
+
+	return []byte(out), err
+}
+
+// NOTE: Prefer to keep this logic simple, by always assuming the LinodeMachine's cloud-config exists in Object Storage
+// and attempting to delete it, then ignoring certain errors, e.g. no such key or bucket, etc.
+// This *may* need to revisit w.r.t. rate-limits for shared(?) buckets 🤷‍♀️
+func deleteBootstrapData(ctx context.Context, machineScope *scope.MachineScope) error {
+	return services.DeleteObject(ctx, machineScope)
 }
 
 func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha2.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {

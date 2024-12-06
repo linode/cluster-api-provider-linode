@@ -513,6 +513,14 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		machineScope.LinodeMachine.Status.Ready = true
 		conditions.MarkTrue(machineScope.LinodeMachine, clusterv1.ReadyCondition)
 	}
+
+	// Clean up after instance creation.
+	if linodeInstance.Status == linodego.InstanceRunning && machineScope.Machine.Status.Phase == "Running" {
+		if err := deleteBootstrapData(ctx, machineScope); err != nil {
+			logger.Error(err, "Fail to bootstrap data")
+		}
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -522,6 +530,10 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	machineScope *scope.MachineScope,
 ) (ctrl.Result, error) {
 	logger.Info("deleting machine")
+
+	if err := deleteBootstrapData(ctx, machineScope); err != nil {
+		logger.Error(err, "Fail to bootstrap data")
+	}
 
 	if machineScope.LinodeMachine.Spec.ProviderID == nil {
 		logger.Info("Machine ID is missing, nothing to do")
