@@ -46,8 +46,6 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte, 
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   s3manager.ReadSeekCloser(bytes.NewReader(data)),
-		// TODO: Enable SSE?
-		// ServerSideEncryption: types.ServerSideEncryptionAes256,
 	}); err != nil {
 		return "", fmt.Errorf("put object (%s) in bucket (%s)", key, bucket)
 	}
