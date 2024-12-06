@@ -4,16 +4,27 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
 const (
@@ -26,15 +37,75 @@ var (
 	errTooManyIPs = errors.New("too many IPs in this ACL, will exceed rules per firewall limit")
 )
 
+func findObjectsForAddressSet(logger logr.Logger, tracedClient client.Client) handler.MapFunc {
+	logger = logger.WithName("LinodeFirewallReconciler").WithName("findObjectsForAddressSet")
+	return func(ctx context.Context, obj client.Object) []ctrl.Request {
+		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
+		defer cancel()
+
+		// Get all Firewalls because we can't filter on arbitrary fields in the spec
+		firewalls := &infrav1alpha2.LinodeFirewallList{}
+		if err := tracedClient.List(ctx, firewalls, &client.ListOptions{}); err != nil {
+			switch {
+			case apierrors.IsNotFound(err) || firewalls == nil:
+				logger.Info("LinodeFirewall(s) not found for %s")
+
+				return nil
+			case err != nil:
+				logger.Error(err, "Failed to get LinodeFirewalls")
+
+				return nil
+			}
+		}
+
+		return buildRequests(firewalls.Items, obj)
+	}
+}
+
+// Constructs a unique list of requests for updating LinodeFirewalls that either reference the
+// AddressSet in the Inbound and/or OutboundRules
+func buildRequests(firewalls []infrav1alpha2.LinodeFirewall, obj client.Object) []reconcile.Request {
+	requestSet := make(map[reconcile.Request]struct{})
+	for _, firewall := range firewalls {
+		for _, inboundRule := range firewall.Spec.InboundRules {
+			requestSet = buildRequestsHelper(requestSet, firewall, inboundRule.AddressSetRefs, obj)
+		}
+		for _, outboundRule := range firewall.Spec.OutboundRules {
+			requestSet = buildRequestsHelper(requestSet, firewall, outboundRule.AddressSetRefs, obj)
+		}
+	}
+
+	return slices.Collect(maps.Keys(requestSet))
+}
+
+func buildRequestsHelper(requestSet map[reconcile.Request]struct{}, firewall infrav1alpha2.LinodeFirewall, addrSetRefs []*corev1.ObjectReference, obj client.Object) map[reconcile.Request]struct{} {
+	for _, addrSetRef := range addrSetRefs {
+		if addrSetRef.Name == obj.GetName() && addrSetRef.Namespace == obj.GetNamespace() {
+			requestSet[reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      firewall.GetName(),
+					Namespace: firewall.GetNamespace(),
+				},
+			}] = struct{}{}
+		}
+	}
+
+	return requestSet
+}
+
 // reconcileFirewall takes the CAPL firewall representation and uses it to either create or update the Cloud Firewall
 // via the given linode client
 func reconcileFirewall(
 	ctx context.Context,
+	k8sClient clients.K8sClient,
 	fwScope *scope.FirewallScope,
 	logger logr.Logger,
 ) error {
 	// build out the firewall rules for create or update
-	fwConfig, err := processACL(fwScope.LinodeFirewall)
+	if fwScope.LinodeFirewall.Namespace == "" {
+		fwScope.LinodeFirewall.Namespace = "default"
+	}
+	fwConfig, err := processACL(ctx, k8sClient, logger, fwScope.LinodeFirewall)
 	if err != nil {
 		logger.Info("Failed to process ACL", "error", err.Error())
 
@@ -162,8 +233,19 @@ func transformToCIDR(ip string) string {
 }
 
 // processInboundRule handles a single inbound rule
-func processInboundRule(rule infrav1alpha2.FirewallRule, createOpts *linodego.FirewallCreateOptions) {
-	ruleIPv4s, ruleIPv6s := processAddresses(rule.Addresses)
+func processInboundRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, rule infrav1alpha2.FirewallRule, lfw *infrav1alpha2.LinodeFirewall, createOpts *linodego.FirewallCreateOptions) error {
+	var ruleIPv4s []string
+	var ruleIPv6s []string
+	var err error
+	if rule.Addresses != nil {
+		ruleIPv4s, ruleIPv6s = processAddresses(rule.Addresses)
+	}
+	if rule.AddressSetRefs != nil {
+		ruleIPv4s, ruleIPv6s, err = processAddressSetRefs(ctx, k8sClient, lfw, rule.AddressSetRefs, log)
+		if err != nil {
+			return err
+		}
+	}
 	ruleLabel := formatRuleLabel(rule.Action, rule.Label)
 
 	// Process IPv4
@@ -171,18 +253,33 @@ func processInboundRule(rule infrav1alpha2.FirewallRule, createOpts *linodego.Fi
 
 	// Process IPv6
 	processIPv6Rules(ruleIPv6s, rule, ruleLabel, &createOpts.Rules.Inbound)
+
+	return nil
 }
 
 // processOutboundRule handles a single outbound rule
-func processOutboundRule(rule infrav1alpha2.FirewallRule, outboundPolicy string, createOpts *linodego.FirewallCreateOptions) {
-	ruleIPv4s, ruleIPv6s := processAddresses(rule.Addresses)
-	ruleLabel := formatRuleLabel(outboundPolicy, rule.Label)
+func processOutboundRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, rule infrav1alpha2.FirewallRule, lfw *infrav1alpha2.LinodeFirewall, createOpts *linodego.FirewallCreateOptions) error {
+	var ruleIPv4s []string
+	var ruleIPv6s []string
+	var err error
+	if rule.Addresses != nil {
+		ruleIPv4s, ruleIPv6s = processAddresses(rule.Addresses)
+	}
+	if rule.AddressSetRefs != nil {
+		ruleIPv4s, ruleIPv6s, err = processAddressSetRefs(ctx, k8sClient, lfw, rule.AddressSetRefs, log)
+		if err != nil {
+			return err
+		}
+	}
+	ruleLabel := formatRuleLabel(lfw.Spec.OutboundPolicy, rule.Label)
 
 	// Process IPv4
 	processIPv4Rules(ruleIPv4s, rule, ruleLabel, &createOpts.Rules.Outbound)
 
 	// Process IPv6
 	processIPv6Rules(ruleIPv6s, rule, ruleLabel, &createOpts.Rules.Outbound)
+
+	return nil
 }
 
 // processAddresses extracts and transforms IPv4 and IPv6 addresses
@@ -190,27 +287,78 @@ func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s, ipv6s [
 	// Initialize empty slices for consistent return type
 	ipv4s = make([]string, 0)
 	ipv6s = make([]string, 0)
-
 	// Early return if addresses is nil
 	if addresses == nil {
 		return ipv4s, ipv6s
 	}
-
+	// Declare "sets". Empty structs occupy 0 memory
+	ipv4Set := make(map[string]struct{})
+	ipv6Set := make(map[string]struct{})
 	// Process IPv4 addresses
 	if addresses.IPv4 != nil {
 		for _, ip := range *addresses.IPv4 {
-			ipv4s = append(ipv4s, transformToCIDR(ip))
+			ipv4Set[transformToCIDR(ip)] = struct{}{}
 		}
 	}
 
 	// Process IPv6 addresses
 	if addresses.IPv6 != nil {
 		for _, ip := range *addresses.IPv6 {
-			ipv6s = append(ipv6s, transformToCIDR(ip))
+			ipv6Set[transformToCIDR(ip)] = struct{}{}
 		}
 	}
 
-	return ipv4s, ipv6s
+	return slices.Collect(maps.Keys(ipv4Set)), slices.Collect(maps.Keys(ipv6Set))
+}
+
+// get finalizer for Firewall that references the AddressSet
+func getFinalizer(lfw *infrav1alpha2.LinodeFirewall) string {
+	return fmt.Sprintf("lfw.%s.%s", lfw.Namespace, lfw.Name)
+}
+
+// processAddressSetRefs extracts and transforms IPv4 and IPv6 addresses from the reference AddressSet(s)
+func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, lfw *infrav1alpha2.LinodeFirewall, addressSetRefs []*corev1.ObjectReference, log logr.Logger) (ipv4s, ipv6s []string, err error) {
+	// Initialize empty slices for consistent return type
+	ipv4s = make([]string, 0)
+	ipv6s = make([]string, 0)
+	// Declare "sets". Empty structs occupy 0 memory
+	ipv4Set := make(map[string]struct{})
+	ipv6Set := make(map[string]struct{})
+
+	for _, addrSetRef := range addressSetRefs {
+		addrSet := &infrav1alpha2.AddressSet{}
+		if addrSetRef.Namespace == "" {
+			addrSetRef.Namespace = lfw.Namespace
+		}
+		if k8sClient != nil {
+			if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: addrSetRef.Namespace, Name: addrSetRef.Name}, addrSet); err != nil {
+				log.Error(err, "failed to fetch referenced AddressSet", "namespace", addrSetRef.Namespace, "name", addrSetRef.Name)
+				return ipv4s, ipv6s, err
+			}
+			finalizer := getFinalizer(lfw)
+			if !controllerutil.ContainsFinalizer(addrSet, finalizer) {
+				controllerutil.AddFinalizer(addrSet, finalizer)
+				if err := k8sClient.Update(ctx, addrSet); err != nil {
+					return ipv4s, ipv6s, err
+				}
+			}
+		}
+
+		// Process IPv4 addresses
+		if addrSet.Spec.IPv4 != nil {
+			for _, ip := range *addrSet.Spec.IPv4 {
+				ipv4Set[transformToCIDR(ip)] = struct{}{}
+			}
+		}
+		// Process IPv6 addresses
+		if addrSet.Spec.IPv6 != nil {
+			for _, ip := range *addrSet.Spec.IPv6 {
+				ipv6Set[transformToCIDR(ip)] = struct{}{}
+			}
+		}
+	}
+
+	return slices.Collect(maps.Keys(ipv4Set)), slices.Collect(maps.Keys(ipv6Set)), nil
 }
 
 // formatRuleLabel creates and formats the rule label
@@ -276,14 +424,16 @@ func processIPv6Rules(ips []string, rule infrav1alpha2.FirewallRule, ruleLabel s
 
 // processACL uses the CAPL LinodeFirewall representation to build out the inbound
 // and outbound rules for a linode Cloud Firewall
-func processACL(firewall *infrav1alpha2.LinodeFirewall) (*linodego.FirewallCreateOptions, error) {
+func processACL(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, firewall *infrav1alpha2.LinodeFirewall) (*linodego.FirewallCreateOptions, error) {
 	createOpts := &linodego.FirewallCreateOptions{
 		Label: firewall.Name,
 	}
 
 	// Process inbound rules
 	for _, rule := range firewall.Spec.InboundRules {
-		processInboundRule(rule, createOpts)
+		if err := processInboundRule(ctx, k8sClient, log, rule, firewall, createOpts); err != nil {
+			return nil, err
+		}
 	}
 
 	// Set inbound policy
@@ -295,7 +445,9 @@ func processACL(firewall *infrav1alpha2.LinodeFirewall) (*linodego.FirewallCreat
 
 	// Process outbound rules
 	for _, rule := range firewall.Spec.OutboundRules {
-		processOutboundRule(rule, firewall.Spec.OutboundPolicy, createOpts)
+		if err := processOutboundRule(ctx, k8sClient, log, rule, firewall, createOpts); err != nil {
+			return nil, err
+		}
 	}
 
 	// Set outbound policy

@@ -90,7 +90,7 @@ For controlling firewalls via Linode resources, a [Cloud Firewall](https://www.l
 be defined and provisioned via the `LinodeFirewall` resource in CAPL. Any updates to the cloud firewall CAPL resource
 will be updated in the cloud firewall and overwrite any changes made outside the CAPL resource.
 
-Example `LinodeFirewall`:
+Example `LinodeFirewall` and `AddressSet`:
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeFirewall
@@ -108,14 +108,22 @@ spec:
         ipv4:
           - "10.0.0.0/8"
     - action: ACCEPT
-      addresses:
-        ipv4:
-          - 0.0.0.0/0
-        ipv6:
-          - ::/0
+      label: inbound-api-server
       ports: "6443"
       protocol: TCP
-      label: inbound-api-server
+      addressSetRefs:  # Can be used together with .addresses if desired.
+        - name: my-hosts
+          kind: AddressSet
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: AddressSet
+metadata:
+  name: my-hosts
+spec:
+  ipv4:
+    - "0.0.0.0/0"
+  ipv6:
+    - ::/0
 ```
 
 ### Cloud Firewall Machine Integration

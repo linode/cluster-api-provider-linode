@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: AddressSet
+metadata:
+  labels:
+    app.kubernetes.io/name: addressset
+    app.kubernetes.io/instance: addressset-sample
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+  name: addressset-sample
+spec:
+  # TODO(user): Add fields here

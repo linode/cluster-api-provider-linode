@@ -18,6 +18,7 @@ resources:
 - bases/infrastructure.cluster.x-k8s.io_linodeplacementgroups.yaml
 - bases/infrastructure.cluster.x-k8s.io_linodeobjectstoragekeys.yaml
 - bases/infrastructure.cluster.x-k8s.io_linodefirewalls.yaml
+- bases/infrastructure.cluster.x-k8s.io_addresssets.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -38,6 +39,7 @@ patches:
 - path: patches/webhook_in_linodeclustertemplates.yaml
 - path: patches/webhook_in_linodemachinetemplates.yaml
 #- path: patches/webhook_in_linodefirewalls.yaml
+#- path: patches/webhook_in_addresssets.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 - path: patches/capicontract_in_linodeclusters.yaml
@@ -60,6 +62,7 @@ patches:
 #- path: patches/cainjection_in_linodevpcs.yaml
 #- path: patches/cainjection_in_linodeobjectstoragebuckets.yaml
 #- path: patches/cainjection_in_linodefirewalls.yaml
+#- path: patches/cainjection_in_addresssets.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [VALIDATION]
