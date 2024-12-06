@@ -191,8 +191,7 @@ type ObjectStore struct {
 
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
 	// supplied then the credentials of the controller will be used.
-	// +optional
-	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
+	CredentialsRef corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

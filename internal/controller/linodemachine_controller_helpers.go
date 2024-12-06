@@ -581,6 +581,10 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 		logger.Info("decoded bootstrap data exceeds size limit", "limit", limit, "size", size)
 	}
 
+	if machineScope.LinodeCluster.Spec.ObjectStore == nil {
+		return nil, errors.New("must enable cluster object store feature to bootstrap linodemachine")
+	}
+
 	logger.Info("Uploading bootstrap data to Object Storage")
 
 	// Pass the user-data indirectly via a "pointer" cloud-config.

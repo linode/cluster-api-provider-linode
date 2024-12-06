@@ -142,11 +142,11 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 }
 
 func (m *MachineScope) GetBucketName(ctx context.Context) (string, error) {
-	if m.LinodeCluster.Spec.ObjectStore == nil || m.LinodeCluster.Spec.ObjectStore.CredentialsRef == nil {
+	if m.LinodeCluster.Spec.ObjectStore == nil {
 		return "", errors.New("no cluster object store")
 	}
 
-	name, err := getCredentialDataFromRef(ctx, m.Client, *m.LinodeCluster.Spec.ObjectStore.CredentialsRef, m.LinodeCluster.GetNamespace(), "bucket_name")
+	name, err := getCredentialDataFromRef(ctx, m.Client, m.LinodeCluster.Spec.ObjectStore.CredentialsRef, m.LinodeCluster.GetNamespace(), "bucket_name")
 	if err != nil {
 		return "", fmt.Errorf("get bucket name: %w", err)
 	}

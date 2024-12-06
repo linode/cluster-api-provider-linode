@@ -285,7 +285,7 @@ func TestNewMachineScope(t *testing.T) {
 						LinodeCluster: &infrav1alpha2.LinodeCluster{
 							Spec: infrav1alpha2.LinodeClusterSpec{
 								ObjectStore: &infrav1alpha2.ObjectStore{
-									CredentialsRef: &corev1.SecretReference{Name: "fake"},
+									CredentialsRef: corev1.SecretReference{Name: "fake"},
 								},
 							}},
 						LinodeMachine: &infrav1alpha2.LinodeMachine{},

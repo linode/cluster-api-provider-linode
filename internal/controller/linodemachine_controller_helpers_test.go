@@ -181,7 +181,7 @@ func TestSetUserData(t *testing.T) {
 				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
 			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
 				Spec: infrav1alpha2.LinodeClusterSpec{
-					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: &corev1.SecretReference{Name: "fake"}},
+					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
 				},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
@@ -239,7 +239,7 @@ https://object.bucket.example.com
 				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: false},
 			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
 				Spec: infrav1alpha2.LinodeClusterSpec{
-					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: &corev1.SecretReference{Name: "fake"}},
+					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
 				},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
@@ -363,7 +363,7 @@ https://object.bucket.example.com
 				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
 			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
 				Spec: infrav1alpha2.LinodeClusterSpec{
-					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: &corev1.SecretReference{Name: "fake"}},
+					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
 				},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
