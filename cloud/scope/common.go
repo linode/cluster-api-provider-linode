@@ -40,7 +40,7 @@ const (
 	maxBody = 131072
 
 	// defaultObjectStorageSignedUrlExpiry is the default expiration for Object Storage signed URls
-	defaultObjectStorageSignedUrlExpiry = 900 * time.Second
+	defaultObjectStorageSignedUrlExpiry = 15 * time.Minute
 )
 
 type Option struct {
@@ -122,8 +122,8 @@ func CreateS3Clients(ctx context.Context, crClient K8sClient, cluster infrav1alp
 	)
 
 	// If we have a cluster object store bucket, get its configuration.
-	if cluster.Spec.ObjectStore != nil && cluster.Spec.ObjectStore.CredentialsRef != nil {
-		secret, err := getCredentials(ctx, crClient, *cluster.Spec.ObjectStore.CredentialsRef, cluster.GetNamespace())
+	if cluster.Spec.ObjectStore != nil {
+		secret, err := getCredentials(ctx, crClient, cluster.Spec.ObjectStore.CredentialsRef, cluster.GetNamespace())
 		if err == nil {
 			var (
 				access_key  = string(secret.Data["access_key"])
