@@ -239,20 +239,38 @@ func transformToCIDR(ip string) string {
 	return ip
 }
 
+func filterDuplicates(ipv4s, ipv6s []string) (filteredIPv4s, filteredIPv6s []string) {
+	// Declare "sets". Empty structs occupy 0 memory
+	ipv4Set := make(map[string]struct{})
+	ipv6Set := make(map[string]struct{})
+	for _, ip := range ipv4s {
+		ipv4Set[ip] = struct{}{}
+	}
+	for _, ip := range ipv6s {
+		ipv6Set[ip] = struct{}{}
+	}
+	return slices.Collect(maps.Keys(ipv4Set)), slices.Collect(maps.Keys(ipv6Set))
+}
+
 // processRule handles a single inbound/outbound rule
 func processRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, rule infrav1alpha2.FirewallRuleSpec, lfw *infrav1alpha2.LinodeFirewall, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
-	var ruleIPv4s []string
-	var ruleIPv6s []string
-	var err error
+	ruleIPv4s := make([]string, 0)
+	ruleIPv6s := make([]string, 0)
 	if rule.Addresses != nil {
-		ruleIPv4s, ruleIPv6s = processAddresses(rule.Addresses)
+		ipv4s, ipv6s := processAddresses(rule.Addresses)
+		ruleIPv4s = append(ruleIPv4s, ipv4s...)
+		ruleIPv6s = append(ruleIPv6s, ipv6s...)
 	}
 	if rule.AddressSetRefs != nil {
-		ruleIPv4s, ruleIPv6s, err = processAddressSetRefs(ctx, k8sClient, lfw, rule.AddressSetRefs, log)
+		ipv4s, ipv6s, err := processAddressSetRefs(ctx, k8sClient, lfw, rule.AddressSetRefs, log)
 		if err != nil {
 			return err
 		}
+		ruleIPv4s = append(ruleIPv4s, ipv4s...)
+		ruleIPv6s = append(ruleIPv6s, ipv6s...)
 	}
+	ruleIPv4s, ruleIPv6s = filterDuplicates(ruleIPv4s, ruleIPv6s)
+
 	ruleLabel := formatRuleLabel(rule.Action, rule.Label)
 
 	if ruleType == "inbound" {
