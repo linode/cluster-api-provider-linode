@@ -98,8 +98,8 @@ resources:
   path: github.com/linode/cluster-api-provider-linode/api/v1alpha2
   version: v1alpha2
   webhooks:
-    validation: true
     defaulting: true
+    validation: true
     webhookVersion: v1
 - api:
     crdVersion: v1
@@ -113,4 +113,12 @@ resources:
   webhooks:
     validation: true
     webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: AddressSet
+  path: github.com/linode/cluster-api-provider-linode/api/v1alpha2
+  version: v1alpha2
 version: "3"
