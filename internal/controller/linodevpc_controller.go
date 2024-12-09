@@ -127,7 +127,7 @@ func (r *LinodeVPCReconciler) reconcile(
 			vpcScope.LinodeVPC.Status.FailureReason = util.Pointer(failureReason)
 			vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer(err.Error())
 
-			conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
+			conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
 
 			r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
@@ -171,7 +171,8 @@ func (r *LinodeVPCReconciler) reconcile(
 		logger = logger.WithValues("vpcID", *vpcScope.LinodeVPC.Spec.VPCID)
 
 		err = r.reconcileUpdate(ctx, logger, vpcScope)
-		if err != nil && !reconciler.HasConditionSeverity(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
+		if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition,
+			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 			logger.Info("re-queuing VPC update")
 
 			res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
@@ -185,7 +186,8 @@ func (r *LinodeVPCReconciler) reconcile(
 	failureReason = infrav1alpha2.CreateVPCError
 
 	err = r.reconcileCreate(ctx, logger, vpcScope)
-	if err != nil && !reconciler.HasConditionSeverity(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
+	if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition,
+		reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 		logger.Info("re-queuing VPC creation")
 
 		res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
@@ -201,9 +203,7 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 
 	if err := vpcScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
-
-		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
-
+		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), "", "%s", err.Error())
 		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.CreateVPCError), err.Error())
 
 		return err
@@ -211,9 +211,7 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 
 	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
-
-		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
-
+		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), "", "%s", err.Error())
 		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.CreateVPCError), err.Error())
 
 		return err
@@ -232,9 +230,7 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 
 	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
-
-		reconciler.RecordDecayingCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.UpdateVPCError), err.Error(), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout))
-
+		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.UpdateVPCError), "", "%s", err.Error())
 		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.UpdateVPCError), err.Error())
 
 		return err
@@ -276,7 +272,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 					return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
 				}
 
-				conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletionFailedReason, clusterv1.ConditionSeverityError, "skipped due to node(s) attached")
+				conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletionFailedReason, "", "skipped due to node(s) attached")
 
 				return ctrl.Result{}, errors.New("will not delete VPC with node(s) attached")
 			}
@@ -298,7 +294,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		logger.Info("VPC ID is missing, nothing to do")
 	}
 
-	conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "VPC deleted")
+	conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "VPC deleted")
 
 	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletedReason, "VPC has cleaned up")
 
