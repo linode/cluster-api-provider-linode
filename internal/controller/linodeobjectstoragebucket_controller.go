@@ -125,7 +125,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectStorageBucketScope, err error) {
 	bScope.Bucket.Status.FailureMessage = util.Pointer(err.Error())
 	r.Recorder.Event(bScope.Bucket, corev1.EventTypeWarning, "Failed", err.Error())
-	conditions.MarkFalse(bScope.Bucket, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
+	conditions.MarkFalse(bScope.Bucket, clusterv1.ReadyCondition, "Failed", "", "%s", err.Error())
 }
 
 func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
