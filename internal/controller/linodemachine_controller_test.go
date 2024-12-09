@@ -630,7 +630,6 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
-			// Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Message).To(ContainSubstring("time is up"))
 			condition := conditions.Get(&linodeMachine, ConditionPreflightCreated)
 			Expect(condition).ToNot(BeNil())
 			Expect(condition.Status).To(Equal(corev1.ConditionFalse))
