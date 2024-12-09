@@ -159,7 +159,7 @@ func (r *LinodeFirewallReconciler) reconcile(
 		failureReason = infrav1alpha2.CreateFirewallError
 		if err = fwScope.AddCredentialsRefFinalizer(ctx); err != nil {
 			logger.Error(err, "failed to update credentials secret")
-			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", err.Error())
+			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
 			r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 
 			return ctrl.Result{}, nil
@@ -167,7 +167,7 @@ func (r *LinodeFirewallReconciler) reconcile(
 	}
 	if err = reconcileFirewall(ctx, r.Client, fwScope, logger); err != nil {
 		logger.Error(err, fmt.Sprintf("failed to %s Firewall", action))
-		conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", err.Error())
+		conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
 		r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 
 		switch {

@@ -252,7 +252,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 		if reconciler.HasStaleCondition(clusterScope.LinodeCluster,
 			ConditionPreflightLinodeNBFirewallReady,
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
-			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, string(cerrs.CreateClusterError), "", err.Error())
+			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, string(cerrs.CreateClusterError), "", "%s", err.Error())
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -284,7 +284,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		if reconciler.HasStaleCondition(clusterScope.LinodeCluster,
 			ConditionPreflightLinodeVPCReady,
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
-			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), "", err.Error())
+			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), "", "%s", err.Error())
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -300,7 +300,7 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(err.Error())
 
-	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), "", err.Error())
+	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
 
 	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
 }
