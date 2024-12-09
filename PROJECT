@@ -121,4 +121,12 @@ resources:
   kind: AddressSet
   path: github.com/linode/cluster-api-provider-linode/api/v1alpha2
   version: v1alpha2
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: FirewallRule
+  path: github.com/linode/cluster-api-provider-linode/api/v1alpha2
+  version: v1alpha2
 version: "3"
