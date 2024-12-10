@@ -519,16 +519,6 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 			"instancedata": b64.StdEncoding.EncodeToString([]byte(instanceData)),
 			"userdata":     b64.StdEncoding.EncodeToString(bootstrapData),
 		}
-		stackscriptSize := len(fmt.Sprint(createConfig.StackScriptData))
-		if stackscriptSize > maxBootstrapDataBytesStackscript {
-			err = errors.New("bootstrap data too large")
-			logger.Error(err, "decoded bootstrap data exceeds size limit",
-				"limit", maxBootstrapDataBytesStackscript,
-				"size", stackscriptSize,
-			)
-
-			return err
-		}
 		createConfig.StackScriptID, err = services.EnsureStackscript(ctx, machineScope)
 		if err != nil {
 			return fmt.Errorf("ensure stackscript: %w", err)
@@ -549,49 +539,50 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 		limit      int
 	)
 
-	// Determine limits for delivery method, e.g. Metadata vs. Stackscript.
+	// Determine limits for delivery service, e.g. Metadata vs. Stackscript.
 	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
 		limit = maxBootstrapDataBytesCloudInit
 	} else {
 		limit = maxBootstrapDataBytesStackscript
 	}
 
+	// Determine the delivery mechanism for the bootstrap data based on limits. This informs the formatting of the
+	// bootstrap data.
 	switch {
-	// Best case: Can just deliver user-data directly.
+	// Best case: Deliver data directly.
 	case size < limit:
 		return bootstrapdata, nil
 	// Compromise case (Metadata): Use compression.
 	case machineScope.LinodeMachine.Status.CloudinitMetadataSupport && gzipCompressionEnabled:
-		compressed, err = compressUserData(bootstrapdata)
-		// Fallback to Object Storage workaround on compression failure.
-		if err != nil {
-			logger.Info(fmt.Sprintf("Failed to compress bootstrap data: %v", err))
-			logger.Info("Falling back to Object Storage")
+		if compressed, err = compressUserData(bootstrapdata); err != nil {
+			// Break and use the Cluster Object Store workaround on compression failure.
+			logger.Info(fmt.Sprintf("Failed to compress bootstrap data: %v. Using Cluster Object Store instead.", err))
 			goto obj
 		}
+
 		size = len(compressed)
-		if size < limit {
+		if len(compressed) < limit {
 			return compressed, nil
 		}
-		goto obj
-	obj:
-		fallthrough
-	// Worst case: Object Storage workaround.
-	default:
-		logger.Info("decoded bootstrap data exceeds size limit", "limit", limit, "size", size)
 	}
+
+obj:
+	// Worst case: Upload to Cluster Object Store.
+	logger.Info("decoded bootstrap data exceeds size limit", "limit", limit, "size", size)
 
 	if machineScope.LinodeCluster.Spec.ObjectStore == nil {
 		return nil, errors.New("must enable cluster object store feature to bootstrap linodemachine")
 	}
 
-	logger.Info("Uploading bootstrap data to Object Storage")
+	logger.Info("Uploading bootstrap data the Cluster Object Store")
 
-	// Pass the user-data indirectly via a "pointer" cloud-config.
+	// Upload the original bootstrap data.
 	url, err := services.CreateObject(ctx, machineScope, bootstrapdata, logger)
 	if err != nil {
 		return nil, fmt.Errorf("upload bootstrap data: %w", err)
 	}
+
+	// Format a "pointer" cloud-config.
 	tmpl, err := template.New(machineScope.LinodeMachine.Name).Parse(cloudConfigTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("parse cloud-config template: %w", err)
@@ -600,9 +591,8 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 	if err := tmpl.Execute(&config, []string{url}); err != nil {
 		return nil, fmt.Errorf("execute cloud-config template: %w", err)
 	}
-	out := config.String()
 
-	return []byte(out), err
+	return config.Bytes(), err
 }
 
 // NOTE: Prefer to keep this logic simple, by always assuming the LinodeMachine's cloud-config exists in Object Storage

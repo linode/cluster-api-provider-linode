@@ -16,29 +16,37 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 )
 
-func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte, logger logr.Logger) (string, error) {
-	logger.Info("Create Object Storage object")
-
+func validateObjectScopeParams(mscope *scope.MachineScope) error {
 	if mscope == nil {
-		return "", errors.New("machine scope can't be nil")
+		return errors.New("nil machine scope")
 	}
 
 	if mscope.S3Client == nil {
-		return "", errors.New("nil S3 client in machine scope")
+		return errors.New("nil S3 client")
 	}
 
 	if mscope.LinodeCluster.Spec.ObjectStore == nil {
-		return "", errors.New("nil cluster object store")
+		return errors.New("nil cluster object store")
 	}
 
+	return nil
+}
+
+func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte, logger logr.Logger) (string, error) {
+	logger.Info("Create Object Storage object")
+
+	if err := validateObjectScopeParams(mscope); err != nil {
+		return "", err
+	}
 	if len(data) == 0 {
-		return "", errors.New("got empty data")
+		return "", errors.New("empty data")
 	}
 
 	bucket, err := mscope.GetBucketName(ctx)
 	if err != nil || bucket == "" {
-		return "", errors.New("no bucket name")
+		return "", errors.New("missing bucket name")
 	}
+
 	// Key by UUID for shared buckets.
 	key := string(mscope.LinodeMachine.ObjectMeta.UID)
 
@@ -65,23 +73,15 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte, 
 		},
 		opts...)
 	if err != nil {
-		return "", fmt.Errorf("get presigned url: %w", err)
+		return "", fmt.Errorf("generate presigned url: %w", err)
 	}
 
 	return req.URL, nil
 }
 
 func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
-	if mscope == nil {
-		return errors.New("machine scope can't be nil")
-	}
-
-	if mscope.S3Client == nil {
-		return errors.New("nil S3 client in machine scope")
-	}
-
-	if mscope.LinodeCluster.Spec.ObjectStore == nil {
-		return errors.New("nil cluster object store")
+	if err := validateObjectScopeParams(mscope); err != nil {
+		return err
 	}
 
 	bucket, err := mscope.GetBucketName(ctx)
@@ -92,7 +92,6 @@ func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
 	// Key by UUID for shared buckets.
 	key := string(mscope.LinodeMachine.ObjectMeta.UID)
 
-	// TODO: Just ignore errors in the caller?
 	_, err = mscope.S3Client.HeadObject(
 		ctx,
 		&s3.HeadObjectInput{
