@@ -264,7 +264,7 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 		logger.Info("Placement Group ID is missing, nothing to do")
 	}
 
-	conditions.MarkFalse(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "Placement Group deleted")
+	conditions.MarkFalse(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "Placement Group deleted")
 
 	r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, clusterv1.DeletedReason, "Placement Group has cleaned up")
 

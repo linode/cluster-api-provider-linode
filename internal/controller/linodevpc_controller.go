@@ -272,7 +272,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 					return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
 				}
 
-				conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletionFailedReason, "", "skipped due to node(s) attached")
+				conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletionFailedReason, "", "%s", "skipped due to node(s) attached")
 
 				return ctrl.Result{}, errors.New("will not delete VPC with node(s) attached")
 			}
@@ -294,7 +294,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		logger.Info("VPC ID is missing, nothing to do")
 	}
 
-	conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "VPC deleted")
+	conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "VPC deleted")
 
 	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletedReason, "VPC has cleaned up")
 

@@ -329,14 +329,14 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	switch {
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "external":
 		logger.Info("LoadBalacing managed externally, nothing to do.")
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "Deletion in progress")
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "Deletion in progress")
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "LoadBalacing managed externally", "LoadBalacing managed externally, nothing to do.")
 
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeDNS:
 		if err := removeMachineFromDNS(ctx, logger, clusterScope); err != nil {
 			return fmt.Errorf("remove machine from loadbalancer: %w", err)
 		}
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "Load balancing for Type DNS deleted")
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "Load balancing for Type DNS deleted")
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancing for Type DNS deleted")
 
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil:
@@ -355,7 +355,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			return err
 		}
 
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "Load balancer for Type NodeBalancer deleted")
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "Load balancer for Type NodeBalancer deleted")
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer for Type NodeBalancer deleted")
 
 		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
