@@ -264,6 +264,35 @@ func TestNewMachineScope(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, mScope)
 			})),
+			Path(
+				Call("cluster object store used", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
+						secret := corev1.Secret{Data: map[string][]byte{
+							"bucket_name": []byte("fake"),
+							"s3_endpoint": []byte("fake"),
+							"access_key":  []byte("fake"),
+							"secret_key":  []byte("fake"),
+						}}
+						*obj = secret
+						return nil
+					})
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					mScope, err := NewMachineScope(ctx, ClientConfig{Token: "apiToken"}, MachineScopeParams{
+						Client:  mck.K8sClient,
+						Cluster: &clusterv1.Cluster{},
+						Machine: &clusterv1.Machine{},
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							Spec: infrav1alpha2.LinodeClusterSpec{
+								ObjectStore: &infrav1alpha2.ObjectStore{
+									CredentialsRef: corev1.SecretReference{Name: "fake"},
+								},
+							}},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{},
+					})
+					require.NoError(t, err)
+					assert.NotNil(t, mScope)
+				})),
 		),
 	)
 }
