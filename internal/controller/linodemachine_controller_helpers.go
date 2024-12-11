@@ -557,7 +557,7 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 		if compressed, err = compressUserData(bootstrapdata); err != nil {
 			// Break and use the Cluster Object Store workaround on compression failure.
 			logger.Info(fmt.Sprintf("Failed to compress bootstrap data: %v. Using Cluster Object Store instead.", err))
-			goto obj
+			break
 		}
 
 		size = len(compressed)
@@ -566,7 +566,6 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 		}
 	}
 
-obj:
 	// Worst case: Upload to Cluster Object Store.
 	logger.Info("decoded bootstrap data exceeds size limit", "limit", limit, "size", size)
 
@@ -577,13 +576,13 @@ obj:
 	logger.Info("Uploading bootstrap data the Cluster Object Store")
 
 	// Upload the original bootstrap data.
-	url, err := services.CreateObject(ctx, machineScope, bootstrapdata, logger)
+	url, err := services.CreateObject(ctx, machineScope, bootstrapdata)
 	if err != nil {
 		return nil, fmt.Errorf("upload bootstrap data: %w", err)
 	}
 
 	// Format a "pointer" cloud-config.
-	tmpl, err := template.New(machineScope.LinodeMachine.Name).Parse(cloudConfigTemplate)
+	tmpl, err := template.New(string(machineScope.LinodeMachine.UID)).Parse(cloudConfigTemplate)
 	if err != nil {
 		return nil, fmt.Errorf("parse cloud-config template: %w", err)
 	}

@@ -396,7 +396,7 @@ https://object.bucket.example.com
 				})
 				s3Mock.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &s3types.NoSuchBucket{})
 			},
-			expectedError: fmt.Errorf("put object () in bucket (fake)"),
+			expectedError: fmt.Errorf("put object"),
 		},
 	}
 	for _, tt := range tests {

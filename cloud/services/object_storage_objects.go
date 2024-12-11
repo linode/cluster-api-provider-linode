@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
-	"github.com/go-logr/logr"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 )
@@ -32,9 +31,7 @@ func validateObjectScopeParams(mscope *scope.MachineScope) error {
 	return nil
 }
 
-func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte, logger logr.Logger) (string, error) {
-	logger.Info("Create Object Storage object")
-
+func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte) (string, error) {
 	if err := validateObjectScopeParams(mscope); err != nil {
 		return "", err
 	}
@@ -43,7 +40,10 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte, 
 	}
 
 	bucket, err := mscope.GetBucketName(ctx)
-	if err != nil || bucket == "" {
+	if err != nil {
+		return "", err
+	}
+	if bucket == "" {
 		return "", errors.New("missing bucket name")
 	}
 
@@ -55,7 +55,7 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte, 
 		Key:    aws.String(key),
 		Body:   s3manager.ReadSeekCloser(bytes.NewReader(data)),
 	}); err != nil {
-		return "", fmt.Errorf("put object (%s) in bucket (%s)", key, bucket)
+		return "", fmt.Errorf("put object: %w", err)
 	}
 
 	var opts []func(*s3.PresignOptions)
@@ -85,10 +85,12 @@ func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	bucket, err := mscope.GetBucketName(ctx)
-	if err != nil || bucket == "" {
-		return errors.New("got empty bucket name")
+	if err != nil {
+		return err
 	}
-
+	if bucket == "" {
+		return errors.New("missing bucket name")
+	}
 	// Key by UUID for shared buckets.
 	key := string(mscope.LinodeMachine.ObjectMeta.UID)
 
@@ -101,24 +103,26 @@ func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
 	if err != nil {
 		var (
 			ae  smithy.APIError
-			kne *types.NoSuchKey
 			bne *types.NoSuchBucket
+			kne *types.NoSuchKey
+			nf  *types.NotFound
 		)
 		switch {
-		// TODO: Check if this edge-case is also present with Linode Object Storage.
-		// In the case that the IAM policy does not have sufficient
-		// permissions to get the object, we will attempt to delete it
-		// anyway for backwards compatibility reasons.
+		// In the case that the IAM policy does not have sufficient permissions to get the object, we will attempt to
+		// delete it anyway for backwards compatibility reasons.
 		case errors.As(err, &ae) && ae.ErrorCode() == "Forbidden":
 			break
-		// Object already deleted.
+		// Specified bucket does not exist.
 		case errors.As(err, &bne):
 			return nil
-		// Bucket does not exist.
+		// Specified key does not exist.
 		case errors.As(err, &kne):
 			return nil
+		// Object not found.
+		case errors.As(err, &nf):
+			return nil
 		default:
-			return fmt.Errorf("delete S3 object: %w", err)
+			return fmt.Errorf("delete object: %w", err)
 		}
 	}
 
@@ -127,7 +131,7 @@ func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
 			Bucket: aws.String(bucket),
 			Key:    aws.String(key),
 		}); err != nil {
-		return fmt.Errorf("delete S3 object: %w", err)
+		return fmt.Errorf("delete object: %w", err)
 	}
 
 	return nil

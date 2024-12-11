@@ -8,7 +8,6 @@ import (
 	awssigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -26,13 +25,11 @@ import (
 func TestCreateObject(t *testing.T) {
 	t.Parallel()
 
-	var log = testr.New(t)
-
 	NewSuite(t, mock.MockK8sClient{}, mock.MockS3Client{}, mock.MockS3PresignClient{}).Run(
 		OneOf(
 			Path(
 				Result("nil machine scope", func(ctx context.Context, mck Mock) {
-					_, err := CreateObject(ctx, nil, []byte("fake"), log)
+					_, err := CreateObject(ctx, nil, []byte("fake"))
 					assert.ErrorContains(t, err, "nil machine scope")
 				}),
 				Result("nil s3 client", func(ctx context.Context, mck Mock) {
@@ -41,7 +38,7 @@ func TestCreateObject(t *testing.T) {
 							Spec: infrav1alpha2.LinodeClusterSpec{
 								ObjectStore: &infrav1alpha2.ObjectStore{
 									CredentialsRef: corev1.SecretReference{Name: "fake"}}}}},
-						[]byte("fake"), log)
+						[]byte("fake"))
 					assert.ErrorContains(t, err, "nil machine scope")
 				}),
 				Result("nil cluster object store", func(ctx context.Context, mck Mock) {
@@ -49,7 +46,7 @@ func TestCreateObject(t *testing.T) {
 						S3Client:        mck.S3Client,
 						S3PresignClient: mck.S3PresignClient,
 						LinodeCluster:   &infrav1alpha2.LinodeCluster{},
-					}, []byte("fake"), log)
+					}, []byte("fake"))
 					assert.ErrorContains(t, err, "nil cluster object store")
 				}),
 				Result("no data", func(ctx context.Context, mck Mock) {
@@ -60,27 +57,50 @@ func TestCreateObject(t *testing.T) {
 							Spec: infrav1alpha2.LinodeClusterSpec{
 								ObjectStore: &infrav1alpha2.ObjectStore{
 									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
-					},
-						nil, log)
+					}, nil)
 					assert.ErrorContains(t, err, "empty data")
 				}),
-				Path(
-					Call("empty bucket name", func(ctx context.Context, mck Mock) {
-						mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("get credentials ref"))
-					}),
-					Result("error", func(ctx context.Context, mck Mock) {
-						_, err := CreateObject(ctx, &scope.MachineScope{
-							Client:          mck.K8sClient,
-							S3Client:        mck.S3Client,
-							S3PresignClient: mck.S3PresignClient,
-							LinodeCluster: &infrav1alpha2.LinodeCluster{
-								Spec: infrav1alpha2.LinodeClusterSpec{
-									ObjectStore: &infrav1alpha2.ObjectStore{
-										CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
-						}, []byte("fake"), log)
-						assert.ErrorContains(t, err, "missing bucket name")
-					}),
-				),
+			),
+			Path(
+				Call("fail to get bucket name", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("get credentials ref"))
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := CreateObject(ctx, &scope.MachineScope{
+						Client:          mck.K8sClient,
+						S3Client:        mck.S3Client,
+						S3PresignClient: mck.S3PresignClient,
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							Spec: infrav1alpha2.LinodeClusterSpec{
+								ObjectStore: &infrav1alpha2.ObjectStore{
+									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
+					}, []byte("fake"))
+					assert.ErrorContains(t, err, "get bucket name")
+				}),
+				Call("empty bucket name", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
+						secret := corev1.Secret{Data: map[string][]byte{
+							"bucket_name": nil,
+							"s3_endpoint": []byte("fake"),
+							"access_key":  []byte("fake"),
+							"secret_key":  []byte("fake"),
+						}}
+						*obj = secret
+						return nil
+					})
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := CreateObject(ctx, &scope.MachineScope{
+						Client:          mck.K8sClient,
+						S3Client:        mck.S3Client,
+						S3PresignClient: mck.S3PresignClient,
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							Spec: infrav1alpha2.LinodeClusterSpec{
+								ObjectStore: &infrav1alpha2.ObjectStore{
+									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
+					}, []byte("fake"))
+					assert.ErrorContains(t, err, "missing bucket name")
+				}),
 			),
 		),
 		OneOf(
@@ -109,7 +129,7 @@ func TestCreateObject(t *testing.T) {
 								ObjectStore: &infrav1alpha2.ObjectStore{
 									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
 						LinodeMachine: &infrav1alpha2.LinodeMachine{},
-					}, []byte("fake"), log)
+					}, []byte("fake"))
 					assert.ErrorContains(t, err, "put object")
 				}),
 			),
@@ -139,7 +159,7 @@ func TestCreateObject(t *testing.T) {
 								ObjectStore: &infrav1alpha2.ObjectStore{
 									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
 						LinodeMachine: &infrav1alpha2.LinodeMachine{},
-					}, []byte("fake"), log)
+					}, []byte("fake"))
 					assert.ErrorContains(t, err, "generate presigned url")
 				}),
 			),
@@ -168,7 +188,7 @@ func TestCreateObject(t *testing.T) {
 								ObjectStore: &infrav1alpha2.ObjectStore{
 									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
 						LinodeMachine: &infrav1alpha2.LinodeMachine{},
-					}, []byte("fake"), log)
+					}, []byte("fake"))
 					require.NoError(t, err)
 					assert.Equal(t, "https://example.com", url)
 				}),
@@ -216,6 +236,47 @@ func TestDeleteObject(t *testing.T) {
 						assert.ErrorContains(t, err, "empty data")
 					}),
 				),
+			),
+			Path(
+				Call("fail to get bucket name", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("get credentials ref"))
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					err := DeleteObject(ctx, &scope.MachineScope{
+						Client:          mck.K8sClient,
+						S3Client:        mck.S3Client,
+						S3PresignClient: mck.S3PresignClient,
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							Spec: infrav1alpha2.LinodeClusterSpec{
+								ObjectStore: &infrav1alpha2.ObjectStore{
+									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
+					})
+					assert.ErrorContains(t, err, "get bucket name")
+				}),
+				Call("empty bucket name", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
+						secret := corev1.Secret{Data: map[string][]byte{
+							"bucket_name": nil,
+							"s3_endpoint": []byte("fake"),
+							"access_key":  []byte("fake"),
+							"secret_key":  []byte("fake"),
+						}}
+						*obj = secret
+						return nil
+					})
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					err := DeleteObject(ctx, &scope.MachineScope{
+						Client:          mck.K8sClient,
+						S3Client:        mck.S3Client,
+						S3PresignClient: mck.S3PresignClient,
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							Spec: infrav1alpha2.LinodeClusterSpec{
+								ObjectStore: &infrav1alpha2.ObjectStore{
+									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
+					})
+					assert.ErrorContains(t, err, "missing bucket name")
+				}),
 			),
 		),
 		OneOf(
