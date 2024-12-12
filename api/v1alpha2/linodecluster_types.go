@@ -52,6 +52,11 @@ type LinodeClusterSpec struct {
 	// NodeBalancerFirewallRef is a reference to a NodeBalancer Firewall object. This makes the linode use the specified NodeBalancer Firewall.
 	NodeBalancerFirewallRef *corev1.ObjectReference `json:"nodeBalancerFirewallRef,omitempty"`
 
+	// ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
+	// bootstrapping (e.g. Cloud-init).
+	// +optional
+	ObjectStore *ObjectStore `json:"objectStore,omitempty"`
+
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
 	// supplied then the credentials of the controller will be used.
 	// +optional
@@ -171,6 +176,21 @@ type LinodeNBPortConfig struct {
 	// nodeBalancerConfigID is the config ID of port's NodeBalancer config.
 	// +optional
 	NodeBalancerConfigID *int `json:"nodeBalancerConfigID,omitempty"`
+}
+
+// ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
+// bootstrapping (e.g. Cloud-init).
+type ObjectStore struct {
+	// PresignedURLDuration defines the duration for which presigned URLs are valid.
+	//
+	// This is used to generate presigned URLs for S3 Bucket objects, which are used by
+	// control-plane and worker nodes to fetch bootstrap data.
+	//
+	// +optional
+	PresignedURLDuration *metav1.Duration `json:"presignedURLDuration,omitempty"`
+
+	// CredentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store.
+	CredentialsRef corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -16,11 +16,16 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/edgegrid"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
 	"github.com/linode/cluster-api-provider-linode/version"
 
@@ -33,6 +38,9 @@ const (
 
 	// MaxBodySize is the max payload size for Akamai edge dns client requests
 	maxBody = 131072
+
+	// defaultObjectStorageSignedUrlExpiry is the default expiration for Object Storage signed URls
+	defaultObjectStorageSignedUrlExpiry = 15 * time.Minute
 )
 
 type Option struct {
@@ -102,6 +110,47 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (LinodeClient, erro
 		&newClient,
 		linodeclient.DefaultDecorator(),
 	), nil
+}
+
+func CreateS3Clients(ctx context.Context, crClient K8sClient, cluster infrav1alpha2.LinodeCluster) (S3Client, S3PresignClient, error) {
+	var (
+		configOpts = []func(*awsconfig.LoadOptions) error{
+			awsconfig.WithRegion("auto"),
+		}
+
+		clientOpts = []func(*s3.Options){}
+	)
+
+	// If we have a cluster object store bucket, get its configuration.
+	if cluster.Spec.ObjectStore != nil {
+		secret, err := getCredentials(ctx, crClient, cluster.Spec.ObjectStore.CredentialsRef, cluster.GetNamespace())
+		if err == nil {
+			var (
+				access_key  = string(secret.Data["access_key"])
+				secret_key  = string(secret.Data["secret_key"])
+				s3_endpoint = string(secret.Data["s3_endpoint"])
+			)
+
+			configOpts = append(configOpts, awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(access_key, secret_key, "")))
+			clientOpts = append(clientOpts, func(opts *s3.Options) {
+				opts.BaseEndpoint = aws.String(s3_endpoint)
+			})
+		}
+	}
+
+	config, err := awsconfig.LoadDefaultConfig(ctx, configOpts...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load s3 config: %w", err)
+	}
+
+	var (
+		s3Client        = s3.NewFromConfig(config, clientOpts...)
+		s3PresignClient = s3.NewPresignClient(s3Client, func(opts *s3.PresignOptions) {
+			opts.Expires = defaultObjectStorageSignedUrlExpiry
+		})
+	)
+
+	return s3Client, s3PresignClient, nil
 }
 
 func setUpEdgeDNSInterface() (dnsInterface dns.DNS, err error) {

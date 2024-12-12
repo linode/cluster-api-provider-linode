@@ -298,6 +298,13 @@ func TestGenerateKeySecret(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 				Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+					BucketAccess: []infrav1alpha2.BucketAccessRef{
+						{
+							BucketName:  "bucket",
+							Region:      "region",
+							Permissions: "read_write",
+						},
+					},
 					GeneratedSecret: infrav1alpha2.GeneratedSecret{
 						Name:      "test-key-obj-key",
 						Namespace: "test-namespace",
@@ -319,6 +326,13 @@ func TestGenerateKeySecret(t *testing.T) {
 						Permissions: "read_write",
 					},
 				},
+			},
+			expectLinode: func(mck *mock.MockLinodeClient) {
+				mck.EXPECT().GetObjectStorageBucket(gomock.Any(), "region", "bucket").Return(&linodego.ObjectStorageBucket{
+					Label:    "bucket",
+					Region:   "region",
+					Hostname: "hostname",
+				}, nil)
 			},
 			expectedErr: errors.New("unable to generate secret; failed to parse template in secret data format for key"),
 		},
