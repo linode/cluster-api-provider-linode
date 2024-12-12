@@ -155,6 +155,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	conditions.Set(bScope.Bucket, metav1.Condition{
 		Type:   string(clusterv1.ReadyCondition),
 		Status: metav1.ConditionTrue,
+		Reason: "ObjectStorageBucketReady", // We have to set the reason to not fail object patching
 	})
 
 	return nil

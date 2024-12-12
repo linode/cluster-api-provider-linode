@@ -237,6 +237,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   string(ConditionPreflightBootstrapDataSecretReady),
 		Status: metav1.ConditionTrue,
+		Reason: "BootstrapDataSecretReady", // We have to set the reason to not fail object patching
 	})
 
 	// Update
@@ -270,7 +271,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 				conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 					Type:   string(ConditionPreflightLinodeFirewallReady),
 					Status: metav1.ConditionFalse,
-					Reason: "linode firewall not yet available",
+					Reason: "LinodeFirewallNotYetAvailable", // We have to set the reason to not fail object patching
 				})
 				return res, err
 			}
@@ -372,6 +373,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   string(ConditionPreflightLinodeVPCReady),
 		Status: metav1.ConditionTrue,
+		Reason: "LinodeVPCReady", // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}, nil
 }
@@ -415,6 +417,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   string(ConditionPreflightLinodeFirewallReady),
 		Status: metav1.ConditionTrue,
+		Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}, nil
 }
@@ -444,6 +447,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   string(ConditionPreflightMetadataSupportConfigured),
 		Status: metav1.ConditionTrue,
+		Reason: "LinodeMetadataSupportConfigured", // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}, nil
 }
@@ -486,6 +490,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   string(ConditionPreflightCreated),
 		Status: metav1.ConditionTrue,
+		Reason: "LinodeMachinePreflightCreated", // We have to set the reason to not fail object patching
 	})
 	// Set the provider ID since the instance is successfully created
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
@@ -528,6 +533,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   string(ConditionPreflightConfigured),
 		Status: metav1.ConditionTrue,
+		Reason: "LinodeMachinePreflightConfigured", // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}, nil
 }
@@ -557,6 +563,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, in
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   string(ConditionPreflightBootTriggered),
 		Status: metav1.ConditionTrue,
+		Reason: "LinodeMachinePreflightBootTriggered", // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}, nil
 }
@@ -588,6 +595,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   string(ConditionPreflightReady),
 		Status: metav1.ConditionTrue,
+		Reason: "LinodeMachinePreflightReady", // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}, nil
 }
@@ -633,6 +641,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:   string(clusterv1.ReadyCondition),
 			Status: metav1.ConditionTrue,
+			Reason: "LinodeMachineReady", // We have to set the reason to not fail object patching
 		})
 	}
 	return ctrl.Result{}, nil

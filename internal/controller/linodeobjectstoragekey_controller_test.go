@@ -124,7 +124,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(key.Status.Ready).To(BeTrue())
 					Expect(key.Status.FailureMessage).To(BeNil())
 					Expect(key.Status.Conditions).To(HaveLen(1))
-					Expect(key.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+					Expect(key.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
 					Expect(key.Status.CreationTime).NotTo(BeNil())
 					Expect(*key.Status.LastKeyGeneration).To(Equal(key.Spec.KeyGeneration))
 					Expect(*key.Status.LastKeyGeneration).To(Equal(0))

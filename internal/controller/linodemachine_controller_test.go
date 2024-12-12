@@ -632,7 +632,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
 			condition := conditions.Get(&linodeMachine, ConditionPreflightCreated)
 			Expect(condition).ToNot(BeNil())
-			Expect(condition.Status).To(Equal(corev1.ConditionFalse))
+			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			Expect(condition.Reason).To(Equal(string(cerrs.CreateMachineError)))
 			Expect(condition.Message).To(ContainSubstring("time is up"))
 		})
@@ -1357,6 +1357,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 					conditions.Set(mScope.LinodeMachine, metav1.Condition{
 						Type:   ConditionPreflightMetadataSupportConfigured,
 						Status: metav1.ConditionTrue,
+						Reason: "LinodeMetadataSupportConfigured", // We have to set the reason to not fail object patching
 					})
 				}),
 				OneOf(

@@ -193,6 +193,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
 		Type:   string(clusterv1.ReadyCondition),
 		Status: metav1.ConditionTrue,
+		Reason: "LoadBalancerReady", // We have to set the reason to not fail object patching
 	})
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
@@ -215,9 +216,9 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-					Type:    string(ConditionPreflightLinodeVPCReady),
-					Status:  metav1.ConditionFalse,
-					Message: "linode vpc not yet available",
+					Type:   string(ConditionPreflightLinodeVPCReady),
+					Status: metav1.ConditionFalse,
+					Reason: "LinodeVPCNotYetAvailable", // We have to set the reason to not fail object patching
 				})
 				return res, err
 			}
@@ -225,6 +226,7 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
 			Type:   string(ConditionPreflightLinodeVPCReady),
 			Status: metav1.ConditionTrue,
+			Reason: "LinodeVPCReady", // We have to set the reason to not fail object patching
 		})
 	}
 
@@ -233,9 +235,9 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-					Type:    string(ConditionPreflightLinodeNBFirewallReady),
-					Status:  metav1.ConditionFalse,
-					Message: "linode firewall not yet available",
+					Type:   string(ConditionPreflightLinodeNBFirewallReady),
+					Status: metav1.ConditionFalse,
+					Reason: "LinodeFirewallNotYetAvailable", // We have to set the reason to not fail object patching
 				})
 				return res, err
 			}
@@ -243,6 +245,7 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
 			Type:   string(ConditionPreflightLinodeNBFirewallReady),
 			Status: metav1.ConditionTrue,
+			Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
 		})
 	}
 

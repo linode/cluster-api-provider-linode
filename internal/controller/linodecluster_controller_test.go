@@ -320,9 +320,9 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(3))
-					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
-					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeNBFirewallReady))
-					Expect(linodeCluster.Status.Conditions[2].Type).To(Equal(ConditionPreflightLinodeVPCReady))
+					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
+					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(string(ConditionPreflightLinodeNBFirewallReady)))
+					Expect(linodeCluster.Status.Conditions[2].Type).To(Equal(string(ConditionPreflightLinodeVPCReady)))
 					By("checking NB id")
 					Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
 
@@ -435,7 +435,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
-					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
 
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
@@ -704,7 +704,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
-					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(clusterv1.ReadyCondition))
+					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
 
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))

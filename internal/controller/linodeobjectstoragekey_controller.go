@@ -247,6 +247,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 	conditions.Set(keyScope.Key, metav1.Condition{
 		Type:   string(clusterv1.ReadyCondition),
 		Status: metav1.ConditionTrue,
+		Reason: "LinodeObjectStorageKeySynced", // We have to set the reason to not fail object patching
 	})
 	r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "Synced", "Object storage key synced")
 
