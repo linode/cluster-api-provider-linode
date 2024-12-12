@@ -28,7 +28,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -63,9 +62,7 @@ type LinodeFirewallReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls/finalizers,verbs=update
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=addresssets,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=addresssets/finalizers,verbs=update
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=firewallrules,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=firewallrules/finalizers,verbs=update
 
 func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
@@ -203,68 +200,6 @@ func (r *LinodeFirewallReconciler) reconcile(
 	return ctrl.Result{}, nil
 }
 
-// remove a finalizer from a given generic k8s object
-func (r *LinodeFirewallReconciler) removeFinalizer(ctx context.Context, fwScope *scope.FirewallScope, obj client.Object) error {
-	if controllerutil.RemoveFinalizer(obj, getFinalizer(fwScope.LinodeFirewall)) {
-		return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			return r.Update(ctx, obj)
-		})
-	}
-	return nil
-}
-
-// fetch an AddressSet and remove its finalizer for the associated LinodeFirewall
-func (r *LinodeFirewallReconciler) removeAddressSetFinalizer(ctx context.Context, logger logr.Logger, fwScope *scope.FirewallScope, objRef *corev1.ObjectReference) error {
-	if objRef == nil {
-		return nil
-	}
-	addrSet := &infrav1alpha2.AddressSet{}
-	if objRef.Namespace == "" {
-		objRef.Namespace = fwScope.LinodeFirewall.Namespace
-	}
-	if err := r.TracedClient().Get(ctx, client.ObjectKey{Namespace: objRef.Namespace, Name: objRef.Name}, addrSet); err != nil {
-		if apierrors.IsNotFound(err) {
-			// no finalizer to remove, the object wasn't found, bail out
-			return nil
-		}
-		logger.Error(err, "failed to fetch referenced Object", "kind", objRef.Kind, "namespace", objRef.Namespace, "name", objRef.Name)
-		return err
-	}
-	if err := r.removeFinalizer(ctx, fwScope, addrSet); err != nil {
-		logger.Error(err, "failed to remove finalizer from Object", "kind", objRef.Kind, "namespace", objRef.Namespace, "name", objRef.Name)
-
-		return err
-	}
-
-	return nil
-}
-
-// fetch a FirewallRule and remove its finalizer for the associated LinodeFirewall
-func (r *LinodeFirewallReconciler) removeFirewallRuleFinalizer(ctx context.Context, logger logr.Logger, fwScope *scope.FirewallScope, objRef *corev1.ObjectReference) error {
-	if objRef == nil {
-		return nil
-	}
-	firewallRule := &infrav1alpha2.FirewallRule{}
-	if objRef.Namespace == "" {
-		objRef.Namespace = fwScope.LinodeFirewall.Namespace
-	}
-	if err := r.TracedClient().Get(ctx, client.ObjectKey{Namespace: objRef.Namespace, Name: objRef.Name}, firewallRule); err != nil {
-		if apierrors.IsNotFound(err) {
-			// no finalizer to remove, the object wasn't found, bail out
-			return nil
-		}
-		logger.Error(err, "failed to fetch referenced Object", "kind", objRef.Kind, "namespace", objRef.Namespace, "name", objRef.Name)
-		return err
-	}
-	if err := r.removeFinalizer(ctx, fwScope, firewallRule); err != nil {
-		logger.Error(err, "failed to remove finalizer from Object", "kind", objRef.Kind, "namespace", objRef.Namespace, "name", objRef.Name)
-
-		return err
-	}
-
-	return nil
-}
-
 func (r *LinodeFirewallReconciler) reconcileDelete(
 	ctx context.Context,
 	logger logr.Logger,
@@ -282,32 +217,6 @@ func (r *LinodeFirewallReconciler) reconcileDelete(
 	if err := fwScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")
 		return ctrl.Result{}, err
-	}
-	// remove finalizers on any AddressSets referenced in the firewall
-	for _, inboundRule := range fwScope.LinodeFirewall.Spec.InboundRules {
-		for _, addrSetRef := range inboundRule.AddressSetRefs {
-			if err := r.removeAddressSetFinalizer(ctx, logger, fwScope, addrSetRef); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	}
-	for _, outboundRule := range fwScope.LinodeFirewall.Spec.OutboundRules {
-		for _, addrSetRef := range outboundRule.AddressSetRefs {
-			if err := r.removeAddressSetFinalizer(ctx, logger, fwScope, addrSetRef); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	}
-	// remove finalizers on any FirewallRules referenced in the firewall
-	for _, inboundRuleRef := range fwScope.LinodeFirewall.Spec.InboundRuleRefs {
-		if err := r.removeFirewallRuleFinalizer(ctx, logger, fwScope, inboundRuleRef); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-	for _, outboundRuleRef := range fwScope.LinodeFirewall.Spec.OutboundRuleRefs {
-		if err := r.removeFirewallRuleFinalizer(ctx, logger, fwScope, outboundRuleRef); err != nil {
-			return ctrl.Result{}, err
-		}
 	}
 
 	err := fwScope.LinodeClient.DeleteFirewall(ctx, *fwScope.LinodeFirewall.Spec.FirewallID)

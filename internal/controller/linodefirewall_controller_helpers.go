@@ -14,10 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -257,7 +255,7 @@ func filterDuplicates(ipv4s, ipv6s []string) (filteredIPv4s, filteredIPv6s []str
 }
 
 // processRule handles a single inbound/outbound rule
-func processRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, rule infrav1alpha2.FirewallRuleSpec, lfw *infrav1alpha2.LinodeFirewall, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
+func processRule(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, log logr.Logger, rule infrav1alpha2.FirewallRuleSpec, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
 	ruleIPv4s := make([]string, 0)
 	ruleIPv6s := make([]string, 0)
 	if rule.Addresses != nil {
@@ -266,7 +264,7 @@ func processRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logg
 		ruleIPv6s = append(ruleIPv6s, ipv6s...)
 	}
 	if rule.AddressSetRefs != nil {
-		ipv4s, ipv6s, err := processAddressSetRefs(ctx, k8sClient, lfw, rule.AddressSetRefs, log)
+		ipv4s, ipv6s, err := processAddressSetRefs(ctx, k8sClient, firewall, rule.AddressSetRefs, log)
 		if err != nil {
 			return err
 		}
@@ -317,51 +315,6 @@ func processAddresses(addresses *infrav1alpha2.NetworkAddresses) (ipv4s, ipv6s [
 	return slices.Collect(maps.Keys(ipv4Set)), slices.Collect(maps.Keys(ipv6Set))
 }
 
-// get finalizer for Firewall that references the AddressSet or FirewallRule
-func getFinalizer(lfw *infrav1alpha2.LinodeFirewall) string {
-	return fmt.Sprintf("lfw.%s.%s", lfw.Namespace, lfw.Name)
-}
-
-func addAddrSetFinalizer(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, addrSetRef *corev1.ObjectReference) (*infrav1alpha2.AddressSet, error) {
-	addrSet := &infrav1alpha2.AddressSet{}
-	if addrSetRef.Namespace == "" {
-		addrSetRef.Namespace = firewall.Namespace
-	}
-	finalizer := getFinalizer(firewall)
-	if !controllerutil.ContainsFinalizer(addrSet, finalizer) {
-		controllerutil.AddFinalizer(addrSet, finalizer)
-		if retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: addrSetRef.Namespace, Name: addrSetRef.Name}, addrSet); err != nil {
-				return err
-			}
-			return k8sClient.Update(ctx, addrSet)
-		}); retryErr != nil {
-			return nil, retryErr
-		}
-	}
-	return addrSet, nil
-}
-
-func addFWRuleFinalizer(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, fwRuleRef *corev1.ObjectReference) (*infrav1alpha2.FirewallRule, error) {
-	fwRule := &infrav1alpha2.FirewallRule{}
-	if fwRuleRef.Namespace == "" {
-		fwRuleRef.Namespace = firewall.Namespace
-	}
-	finalizer := getFinalizer(firewall)
-	if !controllerutil.ContainsFinalizer(fwRule, finalizer) {
-		controllerutil.AddFinalizer(fwRule, finalizer)
-		if retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: fwRuleRef.Namespace, Name: fwRuleRef.Name}, fwRule); err != nil {
-				return err
-			}
-			return k8sClient.Update(ctx, fwRule)
-		}); retryErr != nil {
-			return nil, retryErr
-		}
-	}
-	return fwRule, nil
-}
-
 // processAddressSetRefs extracts and transforms IPv4 and IPv6 addresses from the reference AddressSet(s)
 func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, addressSetRefs []*corev1.ObjectReference, log logr.Logger) (ipv4s, ipv6s []string, err error) {
 	// Initialize empty slices for consistent return type
@@ -372,9 +325,12 @@ func processAddressSetRefs(ctx context.Context, k8sClient clients.K8sClient, fir
 	ipv6Set := make(map[string]struct{})
 
 	for _, addrSetRef := range addressSetRefs {
-		addrSet, err := addAddrSetFinalizer(ctx, k8sClient, firewall, addrSetRef)
-		if err != nil {
-			log.Error(err, "failed to add finalizer to AddressSet", "namespace", addrSetRef.Namespace, "name", addrSetRef.Name)
+		addrSet := &infrav1alpha2.AddressSet{}
+		if addrSetRef.Namespace == "" {
+			addrSetRef.Namespace = firewall.Namespace
+		}
+		if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: addrSetRef.Namespace, Name: addrSetRef.Name}, addrSet); err != nil {
+			log.Error(err, "failed to get AddressSet", "namespace", addrSetRef.Namespace, "name", addrSetRef.Name)
 
 			return ipv4s, ipv6s, err
 		}
@@ -443,12 +399,17 @@ func processIPRules(ips []string, rule infrav1alpha2.FirewallRuleSpec, ruleLabel
 	}
 }
 
-func processFirewallRule(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, ruleRef *corev1.ObjectReference, firewall *infrav1alpha2.LinodeFirewall, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
-	rule, err := addFWRuleFinalizer(ctx, k8sClient, firewall, ruleRef)
-	if err != nil {
+func processFirewallRule(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, log logr.Logger, ruleRef *corev1.ObjectReference, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
+	rule := &infrav1alpha2.FirewallRule{}
+	if ruleRef.Namespace == "" {
+		ruleRef.Namespace = firewall.Namespace
+	}
+	if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ruleRef.Namespace, Name: ruleRef.Name}, rule); err != nil {
+		log.Error(err, "failed to get FirewallRule", "namespace", ruleRef.Namespace, "name", ruleRef.Name)
+
 		return err
 	}
-	if err := processRule(ctx, k8sClient, log, rule.Spec, firewall, ruleType, createOpts); err != nil {
+	if err := processRule(ctx, k8sClient, firewall, log, rule.Spec, ruleType, createOpts); err != nil {
 		return err
 	}
 
@@ -464,12 +425,12 @@ func processACL(ctx context.Context, k8sClient clients.K8sClient, log logr.Logge
 
 	// Process inbound rules
 	for _, rule := range firewall.Spec.InboundRules {
-		if err := processRule(ctx, k8sClient, log, rule, firewall, ruleTypeInbound, createOpts); err != nil {
+		if err := processRule(ctx, k8sClient, firewall, log, rule, ruleTypeInbound, createOpts); err != nil {
 			return nil, err
 		}
 	}
 	for _, ruleRef := range firewall.Spec.InboundRuleRefs {
-		if err := processFirewallRule(ctx, k8sClient, log, ruleRef, firewall, ruleTypeInbound, createOpts); err != nil {
+		if err := processFirewallRule(ctx, k8sClient, firewall, log, ruleRef, ruleTypeInbound, createOpts); err != nil {
 			return nil, err
 		}
 	}
@@ -483,12 +444,12 @@ func processACL(ctx context.Context, k8sClient clients.K8sClient, log logr.Logge
 
 	// Process outbound rules
 	for _, rule := range firewall.Spec.OutboundRules {
-		if err := processRule(ctx, k8sClient, log, rule, firewall, ruleTypeOutbound, createOpts); err != nil {
+		if err := processRule(ctx, k8sClient, firewall, log, rule, ruleTypeOutbound, createOpts); err != nil {
 			return nil, err
 		}
 	}
 	for _, ruleRef := range firewall.Spec.OutboundRuleRefs {
-		if err := processFirewallRule(ctx, k8sClient, log, ruleRef, firewall, ruleTypeOutbound, createOpts); err != nil {
+		if err := processFirewallRule(ctx, k8sClient, firewall, log, ruleRef, ruleTypeOutbound, createOpts); err != nil {
 			return nil, err
 		}
 	}
