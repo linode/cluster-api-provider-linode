@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 const (
@@ -105,7 +104,7 @@ type LinodeVPCStatus struct {
 
 	// Conditions defines current service state of the LinodeVPC.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -124,11 +123,19 @@ type LinodeVPC struct {
 	Status LinodeVPCStatus `json:"status,omitempty"`
 }
 
-func (lv *LinodeVPC) GetConditions() clusterv1.Conditions {
+func (lv *LinodeVPC) GetConditions() []metav1.Condition {
 	return lv.Status.Conditions
 }
 
-func (lv *LinodeVPC) SetConditions(conditions clusterv1.Conditions) {
+func (lv *LinodeVPC) SetConditions(conditions []metav1.Condition) {
+	lv.Status.Conditions = conditions
+}
+
+func (lv *LinodeVPC) GetV1Beta2Conditions() []metav1.Condition {
+	return lv.Status.Conditions
+}
+
+func (lv *LinodeVPC) SetV1Beta2Conditions(conditions []metav1.Condition) {
 	lv.Status.Conditions = conditions
 }
 

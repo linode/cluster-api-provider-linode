@@ -32,7 +32,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -147,7 +147,12 @@ func (r *LinodeObjectStorageKeyReconciler) reconcile(ctx context.Context, keySco
 func (r *LinodeObjectStorageKeyReconciler) setFailure(keyScope *scope.ObjectStorageKeyScope, err error) {
 	keyScope.Key.Status.FailureMessage = util.Pointer(err.Error())
 	r.Recorder.Event(keyScope.Key, corev1.EventTypeWarning, "Failed", err.Error())
-	conditions.MarkFalse(keyScope.Key, clusterv1.ReadyCondition, "Failed", clusterv1.ConditionSeverityError, "%s", err.Error())
+	conditions.Set(keyScope.Key, metav1.Condition{
+		Type:    string(clusterv1.ReadyCondition),
+		Status:  metav1.ConditionFalse,
+		Reason:  "Failed",
+		Message: err.Error(),
+	})
 }
 
 func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, keyScope *scope.ObjectStorageKeyScope) error {
@@ -239,7 +244,10 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 	keyScope.Key.Status.LastKeyGeneration = &keyScope.Key.Spec.KeyGeneration
 	keyScope.Key.Status.Ready = true
 
-	conditions.MarkTrue(keyScope.Key, clusterv1.ReadyCondition)
+	conditions.Set(keyScope.Key, metav1.Condition{
+		Type:   string(clusterv1.ReadyCondition),
+		Status: metav1.ConditionTrue,
+	})
 	r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "Synced", "Object storage key synced")
 
 	return nil
@@ -303,13 +311,13 @@ func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, op
 		WithOptions(options).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(
-			predicates.ResourceHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
 		)).
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeObjectStorageKeyMapper),
-			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)

@@ -32,7 +32,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -52,8 +52,8 @@ import (
 const (
 	lbTypeDNS string = "dns"
 
-	ConditionPreflightLinodeVPCReady        clusterv1.ConditionType = "PreflightLinodeVPCReady"
-	ConditionPreflightLinodeNBFirewallReady clusterv1.ConditionType = "PreflightLinodeNBFirewallReady"
+	ConditionPreflightLinodeVPCReady        string = "PreflightLinodeVPCReady"
+	ConditionPreflightLinodeNBFirewallReady string = "PreflightLinodeNBFirewallReady"
 )
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
@@ -155,7 +155,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
 		if err := r.reconcileDelete(ctx, logger, clusterScope); err != nil {
 			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster,
-				clusterv1.ReadyCondition,
+				string(clusterv1.ReadyCondition),
 				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 				logger.Info("re-queuing cluster/nb deletion")
 				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -179,7 +179,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
 			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster,
-				clusterv1.ReadyCondition,
+				string(clusterv1.ReadyCondition),
 				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 				logger.Info("re-queuing cluster/load-balancer creation")
 				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -190,7 +190,10 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	clusterScope.LinodeCluster.Status.Ready = true
-	conditions.MarkTrue(clusterScope.LinodeCluster, clusterv1.ReadyCondition)
+	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		Type:   string(clusterv1.ReadyCondition),
+		Status: metav1.ConditionTrue,
+	})
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
 		if len(eachMachine.Status.Addresses) == 0 {
@@ -211,22 +214,36 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
 			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
-				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, "linode vpc not yet available", "", "")
+				conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+					Type:    string(ConditionPreflightLinodeVPCReady),
+					Status:  metav1.ConditionFalse,
+					Message: "linode vpc not yet available",
+				})
 				return res, err
 			}
 		}
-		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady)
+		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			Type:   string(ConditionPreflightLinodeVPCReady),
+			Status: metav1.ConditionTrue,
+		})
 	}
 
 	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
 		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady) {
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
-				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, "linode firewall not yet available", "", "")
+				conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+					Type:    string(ConditionPreflightLinodeNBFirewallReady),
+					Status:  metav1.ConditionFalse,
+					Message: "linode firewall not yet available",
+				})
 				return res, err
 			}
 		}
-		conditions.MarkTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady)
+		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			Type:   string(ConditionPreflightLinodeNBFirewallReady),
+			Status: metav1.ConditionTrue,
+		})
 	}
 
 	return ctrl.Result{}, nil
@@ -252,7 +269,12 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 		if reconciler.HasStaleCondition(clusterScope.LinodeCluster,
 			ConditionPreflightLinodeNBFirewallReady,
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
-			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, string(cerrs.CreateClusterError), "", "%s", err.Error())
+			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+				Type:    string(ConditionPreflightLinodeNBFirewallReady),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateClusterError),
+				Message: err.Error(),
+			})
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -284,7 +306,12 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		if reconciler.HasStaleCondition(clusterScope.LinodeCluster,
 			ConditionPreflightLinodeVPCReady,
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
-			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), "", "%s", err.Error())
+			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+				Type:    string(ConditionPreflightLinodeVPCReady),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateClusterError),
+				Message: err.Error(),
+			})
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -300,7 +327,12 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(err.Error())
 
-	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
+	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		Type:    string(clusterv1.ReadyCondition),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(failureReason),
+		Message: err.Error(),
+	})
 
 	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
 }
@@ -329,14 +361,24 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	switch {
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "external":
 		logger.Info("LoadBalacing managed externally, nothing to do.")
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "Deletion in progress")
+		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(clusterv1.DeletedReason),
+			Message: "Deletion in progress",
+		})
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "LoadBalacing managed externally", "LoadBalacing managed externally, nothing to do.")
 
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeDNS:
 		if err := removeMachineFromDNS(ctx, logger, clusterScope); err != nil {
 			return fmt.Errorf("remove machine from loadbalancer: %w", err)
 		}
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "Load balancing for Type DNS deleted")
+		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(clusterv1.DeletedReason),
+			Message: "Load balancing for Type DNS deleted",
+		})
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancing for Type DNS deleted")
 
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil:
@@ -355,7 +397,12 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			return err
 		}
 
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "Load balancer for Type NodeBalancer deleted")
+		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(clusterv1.DeletedReason),
+			Message: "Load balancer for Type NodeBalancer deleted",
+		})
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer for Type NodeBalancer deleted")
 
 		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
@@ -387,13 +434,13 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 		For(&infrav1alpha2.LinodeCluster{}).
 		WithOptions(options).
 		// we care about reconciling on metadata updates for LinodeClusters because the OwnerRef for the Cluster is needed
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue)).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue)).
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(
 				kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha2.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha2.LinodeCluster{}),
 			),
-			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
 		).
 		Watches(
 			&infrav1alpha2.LinodeMachine{},

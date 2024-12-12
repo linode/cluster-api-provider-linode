@@ -27,12 +27,13 @@ import (
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -121,7 +122,12 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 			pgScope.LinodePlacementGroup.Status.FailureReason = util.Pointer(failureReason)
 			pgScope.LinodePlacementGroup.Status.FailureMessage = util.Pointer(err.Error())
 
-			conditions.MarkFalse(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
+			conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+				Type:    string(clusterv1.ReadyCondition),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(failureReason),
+				Message: err.Error(),
+			})
 
 			r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
@@ -174,7 +180,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	failureReason = infrav1alpha2.CreatePlacementGroupError
 
 	err = r.reconcileCreate(ctx, logger, pgScope)
-	if err != nil && !reconciler.HasStaleCondition(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)) {
+	if err != nil && !reconciler.HasStaleCondition(pgScope.LinodePlacementGroup, string(clusterv1.ReadyCondition), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)) {
 		logger.Info("re-queuing Placement Group creation")
 
 		res = ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}
@@ -190,7 +196,12 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 
 	if err := pgScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
-		conditions.MarkFalse(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(infrav1alpha2.CreatePlacementGroupError), "", "%s", err.Error())
+		conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(infrav1alpha2.CreatePlacementGroupError),
+			Message: err.Error(),
+		})
 		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha2.CreatePlacementGroupError), err.Error())
 
 		return err
@@ -198,7 +209,12 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 
 	if err := r.reconcilePlacementGroup(ctx, pgScope, logger); err != nil {
 		logger.Error(err, "Failed to create Placement Group")
-		conditions.MarkFalse(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, string(infrav1alpha2.CreatePlacementGroupError), "", "%s", err.Error())
+		conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(infrav1alpha2.CreatePlacementGroupError),
+			Message: err.Error(),
+		})
 		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha2.CreatePlacementGroupError), err.Error())
 
 		return err
@@ -264,7 +280,12 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 		logger.Info("Placement Group ID is missing, nothing to do")
 	}
 
-	conditions.MarkFalse(pgScope.LinodePlacementGroup, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "Placement Group deleted")
+	conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+		Type:    string(clusterv1.ReadyCondition),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(clusterv1.DeletedReason),
+		Message: "Placement Group deleted",
+	})
 
 	r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, clusterv1.DeletedReason, "Placement Group has cleaned up")
 
@@ -308,7 +329,7 @@ func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, opti
 		For(&infrav1alpha2.LinodePlacementGroup{}).
 		WithOptions(options).
 		WithEventFilter(predicate.And(
-			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodePlacementGroup)
@@ -323,7 +344,7 @@ func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, opti
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodePlacementGroupMapper),
-			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)

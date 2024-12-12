@@ -78,7 +78,7 @@ type LinodeClusterStatus struct {
 
 	// Conditions defines current service state of the LinodeCluster.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -98,11 +98,21 @@ type LinodeCluster struct {
 	Status LinodeClusterStatus `json:"status,omitempty"`
 }
 
-func (lm *LinodeCluster) GetConditions() clusterv1.Conditions {
+func (lm *LinodeCluster) GetConditions() []metav1.Condition {
 	return lm.Status.Conditions
 }
 
-func (lm *LinodeCluster) SetConditions(conditions clusterv1.Conditions) {
+func (lm *LinodeCluster) SetConditions(conditions []metav1.Condition) {
+	lm.Status.Conditions = conditions
+
+}
+
+// We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api
+func (lm *LinodeCluster) GetV1Beta2Conditions() []metav1.Condition {
+	return lm.Status.Conditions
+}
+
+func (lm *LinodeCluster) SetV1Beta2Conditions(conditions []metav1.Condition) {
 	lm.Status.Conditions = conditions
 }
 

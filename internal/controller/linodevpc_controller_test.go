@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -165,7 +165,12 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("update requeues", func(ctx context.Context, mck Mock) {
-						conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, "test", clusterv1.ConditionSeverityWarning, "%s", "test")
+						conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+							Type:    string(clusterv1.ReadyCondition),
+							Status:  metav1.ConditionFalse,
+							Reason:  "test",
+							Message: "test",
+						})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))

@@ -40,7 +40,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -625,14 +625,12 @@ func createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.Ma
 				logger.Error(err, "Failed to create disk", "DiskLabel", label)
 			}
 
-			conditions.MarkFalse(
-				machineScope.LinodeMachine,
-				ConditionPreflightAdditionalDisksCreated,
-				string(cerrs.CreateMachineError),
-				clusterv1.ConditionSeverityWarning,
-				"%s",
-				err.Error(),
-			)
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    ConditionPreflightAdditionalDisksCreated,
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateMachineError),
+				Message: err.Error(),
+			})
 			return err
 		}
 		disk.DiskID = linodeDisk.ID
@@ -642,7 +640,10 @@ func createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.Ma
 	if err != nil {
 		return err
 	}
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightAdditionalDisksCreated)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   ConditionPreflightAdditionalDisksCreated,
+		Status: metav1.ConditionTrue,
+	})
 	return nil
 }
 
@@ -655,12 +656,22 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 	if err != nil {
 		logger.Error(err, "Failed to get default instance configuration")
 
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "%s", err.Error())
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    ConditionPreflightRootDiskResized,
+			Status:  metav1.ConditionFalse,
+			Reason:  string(cerrs.CreateMachineError),
+			Message: err.Error(),
+		})
 		return err
 	}
 
 	if instanceConfig.Devices.SDA == nil {
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResized, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "root disk not yet ready")
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    ConditionPreflightRootDiskResized,
+			Status:  metav1.ConditionFalse,
+			Reason:  string(cerrs.CreateMachineError),
+			Message: "root disk not yet ready",
+		})
 
 		return errors.New("root disk not yet ready")
 	}
@@ -673,7 +684,12 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 		if err != nil {
 			logger.Error(err, "Failed to get root disk for instance")
 
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "%s", err.Error())
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    ConditionPreflightRootDiskResizing,
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateMachineError),
+				Message: err.Error(),
+			})
 
 			return err
 		}
@@ -688,14 +704,25 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 		}
 
 		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing, string(cerrs.CreateMachineError), clusterv1.ConditionSeverityWarning, "%s", err.Error())
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    ConditionPreflightRootDiskResizing,
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateMachineError),
+				Message: err.Error(),
+			})
 			return err
 		}
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:   ConditionPreflightRootDiskResizing,
+			Status: metav1.ConditionTrue,
+		})
 	}
 
 	conditions.Delete(machineScope.LinodeMachine, ConditionPreflightRootDiskResizing)
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightRootDiskResized)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   ConditionPreflightRootDiskResized,
+		Status: metav1.ConditionTrue,
+	})
 
 	return nil
 }

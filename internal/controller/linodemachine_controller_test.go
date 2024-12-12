@@ -34,7 +34,7 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -1354,7 +1354,10 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						Namespace: namespace,
 					}
 					linodeMachine.Status.CloudinitMetadataSupport = true
-					conditions.MarkTrue(mScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured)
+					conditions.Set(mScope.LinodeMachine, metav1.Condition{
+						Type:   ConditionPreflightMetadataSupportConfigured,
+						Status: metav1.ConditionTrue,
+					})
 				}),
 				OneOf(
 					Path(Result("firewall ready condition is not set", func(ctx context.Context, mck Mock) {
@@ -1673,7 +1676,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					res, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceRunning))
-					Expect(rutil.ConditionTrue(linodeMachine, clusterv1.ReadyCondition)).To(BeTrue())
+					Expect(rutil.ConditionTrue(linodeMachine, string(clusterv1.ReadyCondition))).To(BeTrue())
 				})),
 		),
 	)

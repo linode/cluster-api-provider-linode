@@ -35,7 +35,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -59,16 +59,16 @@ const (
 	defaultDiskFilesystem = string(linodego.FilesystemExt4)
 
 	// conditions for preflight instance creation
-	ConditionPreflightBootstrapDataSecretReady  clusterv1.ConditionType = "PreflightBootstrapDataSecretReady"
-	ConditionPreflightLinodeFirewallReady       clusterv1.ConditionType = "PreflightLinodeFirewallReady"
-	ConditionPreflightMetadataSupportConfigured clusterv1.ConditionType = "PreflightMetadataSupportConfigured"
-	ConditionPreflightCreated                   clusterv1.ConditionType = "PreflightCreated"
-	ConditionPreflightRootDiskResizing          clusterv1.ConditionType = "PreflightRootDiskResizing"
-	ConditionPreflightRootDiskResized           clusterv1.ConditionType = "PreflightRootDiskResized"
-	ConditionPreflightAdditionalDisksCreated    clusterv1.ConditionType = "PreflightAdditionalDisksCreated"
-	ConditionPreflightConfigured                clusterv1.ConditionType = "PreflightConfigured"
-	ConditionPreflightBootTriggered             clusterv1.ConditionType = "PreflightBootTriggered"
-	ConditionPreflightReady                     clusterv1.ConditionType = "PreflightReady"
+	ConditionPreflightBootstrapDataSecretReady  string = "PreflightBootstrapDataSecretReady"
+	ConditionPreflightLinodeFirewallReady       string = "PreflightLinodeFirewallReady"
+	ConditionPreflightMetadataSupportConfigured string = "PreflightMetadataSupportConfigured"
+	ConditionPreflightCreated                   string = "PreflightCreated"
+	ConditionPreflightRootDiskResizing          string = "PreflightRootDiskResizing"
+	ConditionPreflightRootDiskResized           string = "PreflightRootDiskResized"
+	ConditionPreflightAdditionalDisksCreated    string = "PreflightAdditionalDisksCreated"
+	ConditionPreflightConfigured                string = "PreflightConfigured"
+	ConditionPreflightBootTriggered             string = "PreflightBootTriggered"
+	ConditionPreflightReady                     string = "PreflightReady"
 
 	// WaitingForBootstrapDataReason used when machine is waiting for bootstrap data to be ready before proceeding.
 	WaitingForBootstrapDataReason = "WaitingForBootstrapData"
@@ -179,7 +179,12 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 			if linodego.ErrHasStatus(err, http.StatusBadRequest) {
 				machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
 				machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
-				conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
+				conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+					Type:    string(clusterv1.ReadyCondition),
+					Status:  metav1.ConditionFalse,
+					Reason:  string(failureReason),
+					Message: err.Error(),
+				})
 			}
 
 			// Record the event regardless of whether the error is retryable or not for visibility.
@@ -219,13 +224,20 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	}
 
 	// Make sure bootstrap data is available and populated.
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootstrapDataSecretReady) && machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightBootstrapDataSecretReady)) && machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap data secret is not yet available")
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightBootstrapDataSecretReady, WaitingForBootstrapDataReason, "", "%s", "")
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:   string(ConditionPreflightBootstrapDataSecretReady),
+			Status: metav1.ConditionFalse,
+			Reason: string(WaitingForBootstrapDataReason),
+		})
 		return ctrl.Result{}, nil
-	} else {
-		conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootstrapDataSecretReady)
 	}
+
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   string(ConditionPreflightBootstrapDataSecretReady),
+		Status: metav1.ConditionTrue,
+	})
 
 	// Update
 	if machineScope.LinodeMachine.Status.InstanceState != nil {
@@ -252,10 +264,14 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
-		if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+		if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightLinodeFirewallReady)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, machineScope)
 			if err != nil || !res.IsZero() {
-				conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, string("linode firewall not yet available"), "", "%s", "")
+				conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+					Type:   string(ConditionPreflightLinodeFirewallReady),
+					Status: metav1.ConditionFalse,
+					Reason: "linode firewall not yet available",
+				})
 				return res, err
 			}
 		}
@@ -271,14 +287,14 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		}
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightMetadataSupportConfigured)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 		res, err := r.reconcilePreflightMetadataSupportConfigure(ctx, logger, machineScope)
 		if err != nil || !res.IsZero() {
 			return res, err
 		}
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightCreated) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightCreated)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 		res, err := r.reconcilePreflightCreate(ctx, logger, machineScope)
 		if err != nil || !res.IsZero() {
 			return res, err
@@ -291,21 +307,21 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		return ctrl.Result{}, err
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightConfigured) {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightConfigured)) {
 		res, err := r.reconcilePreflightConfigure(ctx, instanceID, logger, machineScope)
 		if err != nil || !res.IsZero() {
 			return res, err
 		}
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered) {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightBootTriggered)) {
 		res, err := r.reconcilePreflightBoot(ctx, instanceID, logger, machineScope)
 		if err != nil || !res.IsZero() {
 			return res, err
 		}
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightReady) {
+	if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightReady)) {
 		res, err := r.reconcilePreflightReady(ctx, instanceID, logger, machineScope)
 		if err != nil || !res.IsZero() {
 			return res, err
@@ -333,17 +349,30 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 		if reconciler.HasStaleCondition(machineScope.LinodeMachine,
 			ConditionPreflightLinodeVPCReady,
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), "", "%s", err.Error())
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    string(ConditionPreflightLinodeVPCReady),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateClusterError),
+				Message: err.Error(),
+			})
 			return ctrl.Result{}, err
 		}
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), "", "%s", err.Error())
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    string(ConditionPreflightLinodeVPCReady),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(cerrs.CreateClusterError),
+			Message: err.Error(),
+		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	} else if !linodeVPC.Status.Ready {
 		logger.Info("LinodeVPC is not yet available")
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	}
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "LinodeVPC is now available")
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   string(ConditionPreflightLinodeVPCReady),
+		Status: metav1.ConditionTrue,
+	})
 	return ctrl.Result{}, nil
 }
 
@@ -362,18 +391,31 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeFirewall), &linodeFirewall); err != nil {
 		logger.Error(err, "Failed to find linode Firewall")
 		if reconciler.HasStaleCondition(machineScope.LinodeMachine,
-			ConditionPreflightLinodeFirewallReady,
+			string(ConditionPreflightLinodeFirewallReady),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, string(cerrs.CreateMachineError), "", "%s", err.Error())
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    string(ConditionPreflightLinodeFirewallReady),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateMachineError),
+				Message: err.Error(),
+			})
 			return ctrl.Result{}, err
 		}
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady, string(cerrs.CreateMachineError), "", "%s", err.Error())
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    string(ConditionPreflightLinodeFirewallReady),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(cerrs.CreateMachineError),
+			Message: err.Error(),
+		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	} else if !linodeFirewall.Status.Ready {
 		logger.Info("Linode firewall not yet ready")
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   string(ConditionPreflightLinodeFirewallReady),
+		Status: metav1.ConditionTrue,
+	})
 	return ctrl.Result{}, nil
 }
 
@@ -399,7 +441,10 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 		logger.Info("cloud-init metadata support not available", "imageMetadataSupport", imageMetadataSupport, "regionMetadataSupport", regionMetadataSupport)
 		machineScope.LinodeMachine.Status.CloudinitMetadataSupport = false
 	}
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   string(ConditionPreflightMetadataSupportConfigured),
+		Status: metav1.ConditionTrue,
+	})
 	return ctrl.Result{}, nil
 }
 
@@ -419,16 +464,29 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 	if err != nil {
 		logger.Error(err, "Failed to create Linode machine instance")
 		if reconciler.HasStaleCondition(machineScope.LinodeMachine,
-			ConditionPreflightCreated,
+			string(ConditionPreflightCreated),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightCreated, string(cerrs.CreateMachineError), "", "%s", err.Error())
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    string(ConditionPreflightCreated),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateMachineError),
+				Message: err.Error(),
+			})
 			return ctrl.Result{}, err
 		}
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightCreated, string(cerrs.CreateMachineError), "", "%s", err.Error())
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    string(ConditionPreflightCreated),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(cerrs.CreateMachineError),
+			Message: err.Error(),
+		})
 		return retryIfTransient(err, logger)
 	}
 
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightCreated)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   string(ConditionPreflightCreated),
+		Status: metav1.ConditionTrue,
+	})
 	// Set the provider ID since the instance is successfully created
 	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
 	return ctrl.Result{}, nil
@@ -437,12 +495,22 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Context, instanceID int, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	if err := configureDisks(ctx, logger, machineScope, instanceID); err != nil {
 		if reconciler.HasStaleCondition(machineScope.LinodeMachine,
-			ConditionPreflightConfigured,
+			string(ConditionPreflightConfigured),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightConfigured, string(cerrs.CreateMachineError), "", "%s", err.Error())
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    string(ConditionPreflightConfigured),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateMachineError),
+				Message: err.Error(),
+			})
 			return ctrl.Result{}, err
 		}
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightConfigured, string(cerrs.CreateMachineError), "", "%s", err.Error())
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    string(ConditionPreflightConfigured),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(cerrs.CreateMachineError),
+			Message: err.Error(),
+		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
@@ -457,7 +525,10 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 			return retryIfTransient(err, logger)
 		}
 	}
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightConfigured)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   string(ConditionPreflightConfigured),
+		Status: metav1.ConditionTrue,
+	})
 	return ctrl.Result{}, nil
 }
 
@@ -465,15 +536,28 @@ func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, in
 	if err := machineScope.LinodeClient.BootInstance(ctx, instanceID, 0); err != nil && !strings.HasSuffix(err.Error(), "already booted.") {
 		logger.Error(err, "Failed to boot instance")
 		if reconciler.HasStaleCondition(machineScope.LinodeMachine,
-			ConditionPreflightBootTriggered,
+			string(ConditionPreflightBootTriggered),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightBootTriggered, string(cerrs.CreateMachineError), "", "%s", err.Error())
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    string(ConditionPreflightBootTriggered),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateMachineError),
+				Message: err.Error(),
+			})
 			return ctrl.Result{}, err
 		}
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightBootTriggered, string(cerrs.CreateMachineError), "", "%s", err.Error())
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    string(ConditionPreflightBootTriggered),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(cerrs.CreateMachineError),
+			Message: err.Error(),
+		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightBootTriggered)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   string(ConditionPreflightBootTriggered),
+		Status: metav1.ConditionTrue,
+	})
 	return ctrl.Result{}, nil
 }
 
@@ -482,16 +566,29 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 	if err != nil {
 		logger.Error(err, "Failed to get instance ip addresses")
 		if reconciler.HasStaleCondition(machineScope.LinodeMachine,
-			ConditionPreflightReady,
+			string(ConditionPreflightReady),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightReady, string(cerrs.CreateMachineError), "", "%s", err.Error())
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    string(ConditionPreflightReady),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(cerrs.CreateMachineError),
+				Message: err.Error(),
+			})
 			return ctrl.Result{}, err
 		}
-		conditions.MarkFalse(machineScope.LinodeMachine, ConditionPreflightReady, string(cerrs.CreateMachineError), "", "%s", err.Error())
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    string(ConditionPreflightReady),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(cerrs.CreateMachineError),
+			Message: err.Error(),
+		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 	machineScope.LinodeMachine.Status.Addresses = addrs
-	conditions.MarkTrue(machineScope.LinodeMachine, ConditionPreflightReady)
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   string(ConditionPreflightReady),
+		Status: metav1.ConditionTrue,
+	})
 	return ctrl.Result{}, nil
 }
 
@@ -516,14 +613,27 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		} else {
 			logger.Info("Instance not ready in time, skipping reconciliation", "status", linodeInstance.Status)
-			conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), "", "%s", "skipped due to long running operation")
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    string(clusterv1.ReadyCondition),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(linodeInstance.Status),
+				Message: "skipped due to long running operation",
+			})
 		}
 	} else if linodeInstance.Status != linodego.InstanceRunning {
 		logger.Info("Instance has incompatible status, skipping reconciliation", "status", linodeInstance.Status)
-		conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, string(linodeInstance.Status), "", "%s", "incompatible status")
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(linodeInstance.Status),
+			Message: "incompatible status",
+		})
 	} else {
 		machineScope.LinodeMachine.Status.Ready = true
-		conditions.MarkTrue(machineScope.LinodeMachine, clusterv1.ReadyCondition)
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:   string(clusterv1.ReadyCondition),
+			Status: metav1.ConditionTrue,
+		})
 	}
 	return ctrl.Result{}, nil
 }
@@ -567,7 +677,12 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		}
 	}
 
-	conditions.MarkFalse(machineScope.LinodeMachine, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "instance deleted")
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:    string(clusterv1.ReadyCondition),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(clusterv1.DeletedReason),
+		Message: "instance deleted",
+	})
 
 	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, clusterv1.DeletedReason, "instance has cleaned up")
 
@@ -608,11 +723,11 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeMachineMapper),
-			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
 		).
 		// we care about reconciling on metadata updates for LinodeMachines because the OwnerRef for the Machine is needed
 		WithEventFilter(predicate.And(
-			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeMachine)
 				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodeMachine)
