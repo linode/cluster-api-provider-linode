@@ -30,25 +30,13 @@ rules:
   - infrastructure.cluster.x-k8s.io
   resources:
   - addresssets
+  - firewallrules
   verbs:
   - get
   - list
   - patch
   - update
   - watch
-- apiGroups:
-  - infrastructure.cluster.x-k8s.io
-  resources:
-  - addresssets/finalizers
-  - linodeclusters/finalizers
-  - linodefirewalls/finalizers
-  - linodemachines/finalizers
-  - linodeobjectstoragebuckets/finalizers
-  - linodeobjectstoragekeys/finalizers
-  - linodeplacementgroups/finalizers
-  - linodevpcs/finalizers
-  verbs:
-  - update
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
@@ -67,6 +55,18 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - linodeclusters/finalizers
+  - linodefirewalls/finalizers
+  - linodemachines/finalizers
+  - linodeobjectstoragebuckets/finalizers
+  - linodeobjectstoragekeys/finalizers
+  - linodeplacementgroups/finalizers
+  - linodevpcs/finalizers
+  verbs:
+  - update
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
