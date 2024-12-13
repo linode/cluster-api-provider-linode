@@ -30,6 +30,7 @@
     - [VPC](./topics/vpc.md)
     - [Firewalling](./topics/firewalling.md)
     - [Placement Groups](./topics/placement-groups.md)
+    - [Cluster Object Store](./topics/cluster-object-store.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
     - [Testing](./developers/testing.md)
