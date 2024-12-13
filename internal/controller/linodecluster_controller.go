@@ -154,7 +154,9 @@ func (r *LinodeClusterReconciler) reconcile(
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
 		if err := r.reconcileDelete(ctx, logger, clusterScope); err != nil {
-			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
+			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster,
+				clusterv1.ReadyCondition,
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 				logger.Info("re-queuing cluster/nb deletion")
 				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 			}
@@ -176,7 +178,9 @@ func (r *LinodeClusterReconciler) reconcile(
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
-			if !reconciler.HasConditionSeverity(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError) {
+			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster,
+				clusterv1.ReadyCondition,
+				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 				logger.Info("re-queuing cluster/load-balancer creation")
 				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 			}
@@ -207,7 +211,7 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
 			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
-				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, "linode vpc not yet available", clusterv1.ConditionSeverityError, "")
+				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, "linode vpc not yet available", "", "")
 				return res, err
 			}
 		}
@@ -218,7 +222,7 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady) {
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
-				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, "linode firewall not yet available", clusterv1.ConditionSeverityError, "")
+				conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, "linode firewall not yet available", "", "")
 				return res, err
 			}
 		}
@@ -245,9 +249,10 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	err := clusterScope.Client.Get(ctx, objectKey, linodeFirewall)
 	if err != nil {
 		logger.Error(err, "Failed to fetch LinodeFirewall")
-		if reconciler.RecordDecayingCondition(clusterScope.LinodeCluster,
-			ConditionPreflightLinodeNBFirewallReady, string(cerrs.CreateClusterError), err.Error(),
+		if reconciler.HasStaleCondition(clusterScope.LinodeCluster,
+			ConditionPreflightLinodeNBFirewallReady,
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
+			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady, string(cerrs.CreateClusterError), "", "%s", err.Error())
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -276,9 +281,10 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 	}
 	if err := clusterScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
 		logger.Error(err, "Failed to fetch LinodeVPC")
-		if reconciler.RecordDecayingCondition(clusterScope.LinodeCluster,
-			ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), err.Error(),
+		if reconciler.HasStaleCondition(clusterScope.LinodeCluster,
+			ConditionPreflightLinodeVPCReady,
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
+			conditions.MarkFalse(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady, string(cerrs.CreateClusterError), "", "%s", err.Error())
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -294,7 +300,7 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(err.Error())
 
-	reconciler.RecordDecayingCondition(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), err.Error(), reconciler.DefaultTimeout(lcr.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout))
+	conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
 
 	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
 }
@@ -323,14 +329,14 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	switch {
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "external":
 		logger.Info("LoadBalacing managed externally, nothing to do.")
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Deletion in progress")
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "Deletion in progress")
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "LoadBalacing managed externally", "LoadBalacing managed externally, nothing to do.")
 
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeDNS:
 		if err := removeMachineFromDNS(ctx, logger, clusterScope); err != nil {
 			return fmt.Errorf("remove machine from loadbalancer: %w", err)
 		}
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancing for Type DNS deleted")
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "Load balancing for Type DNS deleted")
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancing for Type DNS deleted")
 
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil:
@@ -349,7 +355,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			return err
 		}
 
-		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, clusterv1.ConditionSeverityInfo, "Load balancer for Type NodeBalancer deleted")
+		conditions.MarkFalse(clusterScope.LinodeCluster, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "Load balancer for Type NodeBalancer deleted")
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer for Type NodeBalancer deleted")
 
 		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil

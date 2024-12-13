@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	cerrs "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -629,8 +630,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
-			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Severity).To(Equal(clusterv1.ConditionSeverityWarning))
-			Expect(conditions.Get(&linodeMachine, ConditionPreflightCreated).Message).To(ContainSubstring("time is up"))
+			condition := conditions.Get(&linodeMachine, ConditionPreflightCreated)
+			Expect(condition).ToNot(BeNil())
+			Expect(condition.Status).To(Equal(corev1.ConditionFalse))
+			Expect(condition.Reason).To(Equal(string(cerrs.CreateMachineError)))
+			Expect(condition.Message).To(ContainSubstring("time is up"))
 		})
 	})
 

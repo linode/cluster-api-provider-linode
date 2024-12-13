@@ -112,7 +112,7 @@ func (r *LinodeFirewallReconciler) reconcile(
 		if err != nil {
 			fwScope.LinodeFirewall.Status.FailureReason = util.Pointer(failureReason)
 			fwScope.LinodeFirewall.Status.FailureMessage = util.Pointer(err.Error())
-			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), clusterv1.ConditionSeverityError, "%s", err.Error())
+			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
 			r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
@@ -154,13 +154,7 @@ func (r *LinodeFirewallReconciler) reconcile(
 		failureReason = infrav1alpha2.CreateFirewallError
 		if err = fwScope.AddCredentialsRefFinalizer(ctx); err != nil {
 			logger.Error(err, "failed to update credentials secret")
-			reconciler.RecordDecayingCondition(
-				fwScope.LinodeFirewall,
-				clusterv1.ReadyCondition,
-				string(failureReason),
-				err.Error(),
-				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultFWControllerReconcileTimeout),
-			)
+			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
 			r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 
 			return ctrl.Result{}, nil
@@ -168,20 +162,15 @@ func (r *LinodeFirewallReconciler) reconcile(
 	}
 	if err = reconcileFirewall(ctx, r.Client, fwScope, logger); err != nil {
 		logger.Error(err, fmt.Sprintf("failed to %s Firewall", action))
-		reconciler.RecordDecayingCondition(
-			fwScope.LinodeFirewall,
-			clusterv1.ReadyCondition,
-			string(failureReason),
-			err.Error(),
-			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultFWControllerReconcileTimeout),
-		)
+		conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
 		r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 
 		switch {
 		case errors.Is(err, errTooManyIPs):
 			// Cannot reconcile firewall with too many ips, wait for an update to the spec
 			return ctrl.Result{}, nil
-		case util.IsRetryableError(err) && !reconciler.HasConditionSeverity(fwScope.LinodeFirewall, clusterv1.ReadyCondition, clusterv1.ConditionSeverityError):
+		case util.IsRetryableError(err) && !reconciler.HasStaleCondition(fwScope.LinodeFirewall, clusterv1.ReadyCondition,
+			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultFWControllerReconcileTimeout)):
 			logger.Info(fmt.Sprintf("re-queuing Firewall %s", action))
 
 			return ctrl.Result{RequeueAfter: reconciler.DefaultFWControllerReconcilerDelay}, nil
