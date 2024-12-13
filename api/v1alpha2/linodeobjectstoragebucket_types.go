@@ -104,20 +104,20 @@ type LinodeObjectStorageBucket struct {
 	Status LinodeObjectStorageBucketStatus `json:"status,omitempty"`
 }
 
-func (b *LinodeObjectStorageBucket) GetConditions() []metav1.Condition {
-	return b.Status.Conditions
+func (losb *LinodeObjectStorageBucket) GetConditions() []metav1.Condition {
+	return losb.Status.Conditions
 }
 
-func (b *LinodeObjectStorageBucket) SetConditions(conditions []metav1.Condition) {
-	b.Status.Conditions = conditions
+func (losb *LinodeObjectStorageBucket) SetConditions(conditions []metav1.Condition) {
+	losb.Status.Conditions = conditions
 }
 
-func (b *LinodeObjectStorageBucket) GetV1Beta2Conditions() []metav1.Condition {
-	return b.Status.Conditions
+func (losb *LinodeObjectStorageBucket) GetV1Beta2Conditions() []metav1.Condition {
+	return losb.GetConditions()
 }
 
-func (b *LinodeObjectStorageBucket) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	b.Status.Conditions = conditions
+func (losb *LinodeObjectStorageBucket) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	losb.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

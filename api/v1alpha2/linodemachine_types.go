@@ -246,11 +246,11 @@ func (lm *LinodeMachine) SetConditions(conditions []metav1.Condition) {
 }
 
 func (lm *LinodeMachine) GetV1Beta2Conditions() []metav1.Condition {
-	return lm.Status.Conditions
+	return lm.GetConditions()
 }
 
 func (lm *LinodeMachine) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lm.Status.Conditions = conditions
+	lm.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

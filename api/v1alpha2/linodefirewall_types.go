@@ -158,11 +158,11 @@ func (lfw *LinodeFirewall) SetConditions(conditions []metav1.Condition) {
 
 // We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api
 func (lfw *LinodeFirewall) GetV1Beta2Conditions() []metav1.Condition {
-	return lfw.Status.Conditions
+	return lfw.GetConditions()
 }
 
 func (lfw *LinodeFirewall) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lfw.Status.Conditions = conditions
+	lfw.SetConditions(conditions)
 }
 
 //+kubebuilder:object:root=true

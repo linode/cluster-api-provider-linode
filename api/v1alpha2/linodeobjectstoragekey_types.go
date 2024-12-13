@@ -133,20 +133,20 @@ type LinodeObjectStorageKey struct {
 	Status LinodeObjectStorageKeyStatus `json:"status,omitempty"`
 }
 
-func (b *LinodeObjectStorageKey) GetConditions() []metav1.Condition {
-	return b.Status.Conditions
+func (losk *LinodeObjectStorageKey) GetConditions() []metav1.Condition {
+	return losk.Status.Conditions
 }
 
-func (b *LinodeObjectStorageKey) SetConditions(conditions []metav1.Condition) {
-	b.Status.Conditions = conditions
+func (losk *LinodeObjectStorageKey) SetConditions(conditions []metav1.Condition) {
+	losk.Status.Conditions = conditions
 }
 
-func (b *LinodeObjectStorageKey) GetV1Beta2Conditions() []metav1.Condition {
-	return b.Status.Conditions
+func (losk *LinodeObjectStorageKey) GetV1Beta2Conditions() []metav1.Condition {
+	return losk.GetConditions()
 }
 
-func (b *LinodeObjectStorageKey) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	b.Status.Conditions = conditions
+func (losk *LinodeObjectStorageKey) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	losk.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

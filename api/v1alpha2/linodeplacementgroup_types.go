@@ -117,20 +117,20 @@ type LinodePlacementGroup struct {
 	Status LinodePlacementGroupStatus `json:"status,omitempty"`
 }
 
-func (lm *LinodePlacementGroup) GetConditions() []metav1.Condition {
-	return lm.Status.Conditions
+func (lpg *LinodePlacementGroup) GetConditions() []metav1.Condition {
+	return lpg.Status.Conditions
 }
 
-func (lm *LinodePlacementGroup) SetConditions(conditions []metav1.Condition) {
-	lm.Status.Conditions = conditions
+func (lpg *LinodePlacementGroup) SetConditions(conditions []metav1.Condition) {
+	lpg.Status.Conditions = conditions
 }
 
-func (lm *LinodePlacementGroup) GetV1Beta2Conditions() []metav1.Condition {
-	return lm.Status.Conditions
+func (lpg *LinodePlacementGroup) GetV1Beta2Conditions() []metav1.Condition {
+	return lpg.GetConditions()
 }
 
-func (lm *LinodePlacementGroup) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lm.Status.Conditions = conditions
+func (lpg *LinodePlacementGroup) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	lpg.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

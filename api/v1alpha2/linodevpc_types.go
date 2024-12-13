@@ -132,11 +132,11 @@ func (lv *LinodeVPC) SetConditions(conditions []metav1.Condition) {
 }
 
 func (lv *LinodeVPC) GetV1Beta2Conditions() []metav1.Condition {
-	return lv.Status.Conditions
+	return lv.GetConditions()
 }
 
 func (lv *LinodeVPC) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lv.Status.Conditions = conditions
+	lv.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

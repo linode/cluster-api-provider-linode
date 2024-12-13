@@ -98,22 +98,21 @@ type LinodeCluster struct {
 	Status LinodeClusterStatus `json:"status,omitempty"`
 }
 
-func (lm *LinodeCluster) GetConditions() []metav1.Condition {
-	return lm.Status.Conditions
+func (lc *LinodeCluster) GetConditions() []metav1.Condition {
+	return lc.Status.Conditions
 }
 
-func (lm *LinodeCluster) SetConditions(conditions []metav1.Condition) {
-	lm.Status.Conditions = conditions
-
+func (lc *LinodeCluster) SetConditions(conditions []metav1.Condition) {
+	lc.Status.Conditions = conditions
 }
 
 // We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api
-func (lm *LinodeCluster) GetV1Beta2Conditions() []metav1.Condition {
-	return lm.Status.Conditions
+func (lc *LinodeCluster) GetV1Beta2Conditions() []metav1.Condition {
+	return lc.GetConditions()
 }
 
-func (lm *LinodeCluster) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lm.Status.Conditions = conditions
+func (lc *LinodeCluster) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	lc.SetConditions(conditions)
 }
 
 // NetworkSpec encapsulates Linode networking resources.
