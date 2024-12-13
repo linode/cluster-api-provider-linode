@@ -33,7 +33,6 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -182,13 +181,13 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 				conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 					Type:    string(clusterv1.ReadyCondition),
 					Status:  metav1.ConditionFalse,
-					Reason:  string(failureReason),
+					Reason:  failureReason,
 					Message: err.Error(),
 				})
 			}
 
 			// Record the event regardless of whether the error is retryable or not for visibility.
-			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, string(failureReason), err.Error())
+			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, failureReason, err.Error())
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
@@ -353,7 +352,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightLinodeVPCReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateClusterError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return ctrl.Result{}, err
@@ -361,7 +360,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:    ConditionPreflightLinodeVPCReady,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(cerrs.CreateClusterError),
+			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -398,7 +397,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightLinodeFirewallReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateMachineError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return ctrl.Result{}, err
@@ -406,7 +405,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:    ConditionPreflightLinodeFirewallReady,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(cerrs.CreateMachineError),
+			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
@@ -473,7 +472,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightCreated,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateMachineError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return ctrl.Result{}, err
@@ -481,7 +480,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:    ConditionPreflightCreated,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(cerrs.CreateMachineError),
+			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
 		return retryIfTransient(err, logger)
@@ -505,7 +504,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightConfigured,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateMachineError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return ctrl.Result{}, err
@@ -513,7 +512,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:    ConditionPreflightConfigured,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(cerrs.CreateMachineError),
+			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
@@ -547,7 +546,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, in
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightBootTriggered,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateMachineError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return ctrl.Result{}, err
@@ -555,7 +554,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, in
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:    ConditionPreflightBootTriggered,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(cerrs.CreateMachineError),
+			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
@@ -578,7 +577,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateMachineError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return ctrl.Result{}, err
@@ -586,7 +585,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:    ConditionPreflightReady,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(cerrs.CreateMachineError),
+			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil

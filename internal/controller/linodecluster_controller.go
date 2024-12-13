@@ -30,7 +30,6 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -275,7 +274,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
 				Type:    ConditionPreflightLinodeNBFirewallReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateClusterError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return ctrl.Result{}, err
@@ -312,7 +311,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
 				Type:    ConditionPreflightLinodeVPCReady,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateClusterError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return ctrl.Result{}, err
@@ -333,11 +332,11 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason string, er
 	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
 		Type:    string(clusterv1.ReadyCondition),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(failureReason),
+		Reason:  failureReason,
 		Message: err.Error(),
 	})
 
-	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, string(failureReason), err.Error())
+	lcr.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, failureReason, err.Error())
 }
 
 func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
