@@ -321,8 +321,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(3))
 					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
-					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(string(ConditionPreflightLinodeNBFirewallReady)))
-					Expect(linodeCluster.Status.Conditions[2].Type).To(Equal(string(ConditionPreflightLinodeVPCReady)))
+					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeNBFirewallReady))
+					Expect(linodeCluster.Status.Conditions[2].Type).To(Equal(ConditionPreflightLinodeVPCReady))
 					By("checking NB id")
 					Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
 

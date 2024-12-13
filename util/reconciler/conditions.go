@@ -20,14 +20,6 @@ func HasConditionStatus(from conditions.Getter, typ string, status metav1.Condit
 	return cond.Status == status
 }
 
-func RecordDecayingCondition(to conditions.Setter, typ string, reason, message string, timeout time.Duration) bool {
-	if HasStaleCondition(to, typ, timeout) {
-		return true
-	}
-
-	return false
-}
-
 func HasStaleCondition(from conditions.Getter, typ string, timeout time.Duration) bool {
 	cond := conditions.Get(from, typ)
 	if cond == nil {
