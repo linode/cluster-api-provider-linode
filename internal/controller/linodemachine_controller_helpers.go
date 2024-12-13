@@ -38,7 +38,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	cerrs "sigs.k8s.io/cluster-api/errors"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -628,7 +627,7 @@ func createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.Ma
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightAdditionalDisksCreated,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateMachineError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return err
@@ -659,7 +658,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:    ConditionPreflightRootDiskResized,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(cerrs.CreateMachineError),
+			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
 		return err
@@ -669,7 +668,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:    ConditionPreflightRootDiskResized,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(cerrs.CreateMachineError),
+			Reason:  util.CreateError,
 			Message: "root disk not yet ready",
 		})
 
@@ -687,7 +686,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightRootDiskResizing,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateMachineError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 
@@ -707,7 +706,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 				Type:    ConditionPreflightRootDiskResizing,
 				Status:  metav1.ConditionFalse,
-				Reason:  string(cerrs.CreateMachineError),
+				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
 			return err

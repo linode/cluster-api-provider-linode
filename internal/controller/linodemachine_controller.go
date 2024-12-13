@@ -171,7 +171,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res ctrl.Result, err error) {
-	failureReason := cerrs.MachineStatusError("UnknownError")
+	failureReason := util.UnknownError
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
@@ -219,7 +219,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 
 	// Delete
 	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-		failureReason = cerrs.DeleteMachineError
+		failureReason = util.DeleteError
 		return r.reconcileDelete(ctx, logger, machineScope)
 	}
 
@@ -242,12 +242,12 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 
 	// Update
 	if machineScope.LinodeMachine.Status.InstanceState != nil {
-		failureReason = cerrs.UpdateMachineError
+		failureReason = util.UpdateError
 		return r.reconcileUpdate(ctx, logger, machineScope)
 	}
 
 	// Create
-	failureReason = cerrs.CreateMachineError
+	failureReason = util.CreateError
 	return r.reconcileCreate(ctx, logger, machineScope)
 }
 

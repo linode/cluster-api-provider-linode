@@ -326,7 +326,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 	return ctrl.Result{}, nil
 }
 
-func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.ClusterStatusError, err error, lcr *LinodeClusterReconciler) {
+func setFailureReason(clusterScope *scope.ClusterScope, failureReason string, err error, lcr *LinodeClusterReconciler) {
 	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(err.Error())
 
@@ -343,7 +343,7 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason cerrs.Clus
 func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	if err := clusterScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to update credentials finalizer")
-		setFailureReason(clusterScope, cerrs.CreateClusterError, err, r)
+		setFailureReason(clusterScope, util.CreateError, err, r)
 		return err
 	}
 
@@ -396,7 +396,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		err := clusterScope.LinodeClient.DeleteNodeBalancer(ctx, *clusterScope.LinodeCluster.Spec.Network.NodeBalancerID)
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
 			logger.Error(err, "failed to delete NodeBalancer")
-			setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+			setFailureReason(clusterScope, util.DeleteError, err, r)
 			return err
 		}
 
@@ -420,7 +420,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 
 	if err := clusterScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to remove credentials finalizer")
-		setFailureReason(clusterScope, cerrs.DeleteClusterError, err, r)
+		setFailureReason(clusterScope, util.DeleteError, err, r)
 		return err
 	}
 	controllerutil.RemoveFinalizer(clusterScope.LinodeCluster, infrav1alpha2.ClusterFinalizer)

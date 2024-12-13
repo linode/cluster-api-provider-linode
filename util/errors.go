@@ -24,3 +24,11 @@ var (
 	// ErrRateLimit indicates hitting linode API rate limits
 	ErrRateLimit = errors.New("rate-limit exceeded")
 )
+
+// List of failure reasons to use in the status fields of our resources
+var (
+	CreateError  = "CreateError"
+	DeleteError  = "DeleteError"
+	UpdateError  = "UpdateError"
+	UnknownError = "UnknownError"
+)
