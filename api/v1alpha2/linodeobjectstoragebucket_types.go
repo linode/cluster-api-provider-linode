@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 type ObjectStorageACL string
@@ -76,7 +75,7 @@ type LinodeObjectStorageBucketStatus struct {
 
 	// Conditions specify the service state of the LinodeObjectStorageBucket.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// Hostname is the address assigned to the bucket.
 	// +optional
@@ -105,12 +104,20 @@ type LinodeObjectStorageBucket struct {
 	Status LinodeObjectStorageBucketStatus `json:"status,omitempty"`
 }
 
-func (b *LinodeObjectStorageBucket) GetConditions() clusterv1.Conditions {
-	return b.Status.Conditions
+func (losb *LinodeObjectStorageBucket) GetConditions() []metav1.Condition {
+	return losb.Status.Conditions
 }
 
-func (b *LinodeObjectStorageBucket) SetConditions(conditions clusterv1.Conditions) {
-	b.Status.Conditions = conditions
+func (losb *LinodeObjectStorageBucket) SetConditions(conditions []metav1.Condition) {
+	losb.Status.Conditions = conditions
+}
+
+func (losb *LinodeObjectStorageBucket) GetV1Beta2Conditions() []metav1.Condition {
+	return losb.GetConditions()
+}
+
+func (losb *LinodeObjectStorageBucket) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	losb.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

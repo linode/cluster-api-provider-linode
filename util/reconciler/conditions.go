@@ -3,16 +3,15 @@ package reconciler
 import (
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 )
 
-func ConditionTrue(from conditions.Getter, typ clusterv1.ConditionType) bool {
-	return HasConditionStatus(from, typ, "True")
+func ConditionTrue(from conditions.Getter, typ string) bool {
+	return HasConditionStatus(from, typ, metav1.ConditionTrue)
 }
 
-func HasConditionStatus(from conditions.Getter, typ clusterv1.ConditionType, status corev1.ConditionStatus) bool {
+func HasConditionStatus(from conditions.Getter, typ string, status metav1.ConditionStatus) bool {
 	cond := conditions.Get(from, typ)
 	if cond == nil {
 		return false
@@ -21,16 +20,7 @@ func HasConditionStatus(from conditions.Getter, typ clusterv1.ConditionType, sta
 	return cond.Status == status
 }
 
-func HasConditionSeverity(from conditions.Getter, typ clusterv1.ConditionType, severity clusterv1.ConditionSeverity) bool {
-	cond := conditions.Get(from, typ)
-	if cond == nil {
-		return false
-	}
-
-	return cond.Severity == severity
-}
-
-func HasStaleCondition(from conditions.Getter, typ clusterv1.ConditionType, timeout time.Duration) bool {
+func HasStaleCondition(from conditions.Getter, typ string, timeout time.Duration) bool {
 	cond := conditions.Get(from, typ)
 	if cond == nil {
 		return false

@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 const (
@@ -101,7 +100,7 @@ type LinodeObjectStorageKeyStatus struct {
 
 	// Conditions specify the service state of the LinodeObjectStorageKey.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// CreationTime specifies the creation timestamp for the secret.
 	// +optional
@@ -133,12 +132,20 @@ type LinodeObjectStorageKey struct {
 	Status LinodeObjectStorageKeyStatus `json:"status,omitempty"`
 }
 
-func (b *LinodeObjectStorageKey) GetConditions() clusterv1.Conditions {
-	return b.Status.Conditions
+func (losk *LinodeObjectStorageKey) GetConditions() []metav1.Condition {
+	return losk.Status.Conditions
 }
 
-func (b *LinodeObjectStorageKey) SetConditions(conditions clusterv1.Conditions) {
-	b.Status.Conditions = conditions
+func (losk *LinodeObjectStorageKey) SetConditions(conditions []metav1.Condition) {
+	losk.Status.Conditions = conditions
+}
+
+func (losk *LinodeObjectStorageKey) GetV1Beta2Conditions() []metav1.Condition {
+	return losk.GetConditions()
+}
+
+func (losk *LinodeObjectStorageKey) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	losk.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

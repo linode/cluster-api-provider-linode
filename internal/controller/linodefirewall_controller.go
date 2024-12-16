@@ -26,11 +26,12 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -112,7 +113,12 @@ func (r *LinodeFirewallReconciler) reconcile(
 		if err != nil {
 			fwScope.LinodeFirewall.Status.FailureReason = util.Pointer(failureReason)
 			fwScope.LinodeFirewall.Status.FailureMessage = util.Pointer(err.Error())
-			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
+			conditions.Set(fwScope.LinodeFirewall, metav1.Condition{
+				Type:    string(clusterv1.ReadyCondition),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(failureReason),
+				Message: err.Error(),
+			})
 			r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
 
@@ -154,7 +160,12 @@ func (r *LinodeFirewallReconciler) reconcile(
 		failureReason = infrav1alpha2.CreateFirewallError
 		if err = fwScope.AddCredentialsRefFinalizer(ctx); err != nil {
 			logger.Error(err, "failed to update credentials secret")
-			conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
+			conditions.Set(fwScope.LinodeFirewall, metav1.Condition{
+				Type:    string(clusterv1.ReadyCondition),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(failureReason),
+				Message: err.Error(),
+			})
 			r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 
 			return ctrl.Result{}, nil
@@ -162,14 +173,19 @@ func (r *LinodeFirewallReconciler) reconcile(
 	}
 	if err = reconcileFirewall(ctx, r.Client, fwScope, logger); err != nil {
 		logger.Error(err, fmt.Sprintf("failed to %s Firewall", action))
-		conditions.MarkFalse(fwScope.LinodeFirewall, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
+		conditions.Set(fwScope.LinodeFirewall, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(failureReason),
+			Message: err.Error(),
+		})
 		r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
 
 		switch {
 		case errors.Is(err, errTooManyIPs):
 			// Cannot reconcile firewall with too many ips, wait for an update to the spec
 			return ctrl.Result{}, nil
-		case util.IsRetryableError(err) && !reconciler.HasStaleCondition(fwScope.LinodeFirewall, clusterv1.ReadyCondition,
+		case util.IsRetryableError(err) && !reconciler.HasStaleCondition(fwScope.LinodeFirewall, string(clusterv1.ReadyCondition),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultFWControllerReconcileTimeout)):
 			logger.Info(fmt.Sprintf("re-queuing Firewall %s", action))
 
@@ -241,7 +257,7 @@ func (r *LinodeFirewallReconciler) SetupWithManager(mgr ctrl.Manager, options cr
 		WithOptions(options).
 		WithEventFilter(
 			predicate.And(
-				predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
+				predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 				predicate.GenerationChangedPredicate{},
 				predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 					oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeFirewall)
@@ -256,7 +272,7 @@ func (r *LinodeFirewallReconciler) SetupWithManager(mgr ctrl.Manager, options cr
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeFirewallMapper),
-			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
 		).
 		Watches(
 			&infrav1alpha2.AddressSet{},

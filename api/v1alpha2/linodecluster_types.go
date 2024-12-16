@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/errors"
 )
 
 const (
@@ -73,7 +72,7 @@ type LinodeClusterStatus struct {
 	// reconciling the LinodeCluster and will contain a succinct value suitable
 	// for machine interpretation.
 	// +optional
-	FailureReason *errors.ClusterStatusError `json:"failureReason,omitempty"`
+	FailureReason *string `json:"failureReason,omitempty"`
 
 	// FailureMessage will be set in the event that there is a terminal problem
 	// reconciling the LinodeCluster and will contain a more verbose string suitable
@@ -83,7 +82,7 @@ type LinodeClusterStatus struct {
 
 	// Conditions defines current service state of the LinodeCluster.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -103,12 +102,21 @@ type LinodeCluster struct {
 	Status LinodeClusterStatus `json:"status,omitempty"`
 }
 
-func (lm *LinodeCluster) GetConditions() clusterv1.Conditions {
-	return lm.Status.Conditions
+func (lc *LinodeCluster) GetConditions() []metav1.Condition {
+	return lc.Status.Conditions
 }
 
-func (lm *LinodeCluster) SetConditions(conditions clusterv1.Conditions) {
-	lm.Status.Conditions = conditions
+func (lc *LinodeCluster) SetConditions(conditions []metav1.Condition) {
+	lc.Status.Conditions = conditions
+}
+
+// We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api
+func (lc *LinodeCluster) GetV1Beta2Conditions() []metav1.Condition {
+	return lc.GetConditions()
+}
+
+func (lc *LinodeCluster) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	lc.SetConditions(conditions)
 }
 
 // NetworkSpec encapsulates Linode networking resources.

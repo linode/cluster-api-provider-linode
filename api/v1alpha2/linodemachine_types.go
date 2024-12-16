@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/errors"
 )
 
 const (
@@ -192,7 +191,7 @@ type LinodeMachineStatus struct {
 	// can be added as events to the Machine object and/or logged in the
 	// controller's output.
 	// +optional
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+	FailureReason *string `json:"failureReason,omitempty"`
 
 	// FailureMessage will be set in the event that there is a terminal problem
 	// reconciling the Machine and will contain a more verbose string suitable
@@ -215,7 +214,7 @@ type LinodeMachineStatus struct {
 
 	// Conditions defines current service state of the LinodeMachine.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -237,12 +236,20 @@ type LinodeMachine struct {
 	Status LinodeMachineStatus `json:"status,omitempty"`
 }
 
-func (lm *LinodeMachine) GetConditions() clusterv1.Conditions {
+func (lm *LinodeMachine) GetConditions() []metav1.Condition {
 	return lm.Status.Conditions
 }
 
-func (lm *LinodeMachine) SetConditions(conditions clusterv1.Conditions) {
+func (lm *LinodeMachine) SetConditions(conditions []metav1.Condition) {
 	lm.Status.Conditions = conditions
+}
+
+func (lm *LinodeMachine) GetV1Beta2Conditions() []metav1.Condition {
+	return lm.GetConditions()
+}
+
+func (lm *LinodeMachine) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	lm.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

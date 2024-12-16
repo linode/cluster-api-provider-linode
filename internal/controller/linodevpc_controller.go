@@ -26,12 +26,13 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -127,7 +128,12 @@ func (r *LinodeVPCReconciler) reconcile(
 			vpcScope.LinodeVPC.Status.FailureReason = util.Pointer(failureReason)
 			vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer(err.Error())
 
-			conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(failureReason), "", "%s", err.Error())
+			conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+				Type:    string(clusterv1.ReadyCondition),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(failureReason),
+				Message: err.Error(),
+			})
 
 			r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(failureReason), err.Error())
 		}
@@ -171,7 +177,7 @@ func (r *LinodeVPCReconciler) reconcile(
 		logger = logger.WithValues("vpcID", *vpcScope.LinodeVPC.Spec.VPCID)
 
 		err = r.reconcileUpdate(ctx, logger, vpcScope)
-		if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition,
+		if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC, string(clusterv1.ReadyCondition),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 			logger.Info("re-queuing VPC update")
 
@@ -186,7 +192,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	failureReason = infrav1alpha2.CreateVPCError
 
 	err = r.reconcileCreate(ctx, logger, vpcScope)
-	if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC, clusterv1.ReadyCondition,
+	if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC, string(clusterv1.ReadyCondition),
 		reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 		logger.Info("re-queuing VPC creation")
 
@@ -203,7 +209,12 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 
 	if err := vpcScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
-		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), "", "%s", err.Error())
+		conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(infrav1alpha2.CreateVPCError),
+			Message: err.Error(),
+		})
 		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.CreateVPCError), err.Error())
 
 		return err
@@ -211,7 +222,12 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 
 	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
-		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.CreateVPCError), "", "%s", err.Error())
+		conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(infrav1alpha2.CreateVPCError),
+			Message: err.Error(),
+		})
 		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.CreateVPCError), err.Error())
 
 		return err
@@ -230,7 +246,12 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 
 	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
-		conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, string(infrav1alpha2.UpdateVPCError), "", "%s", err.Error())
+		conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(infrav1alpha2.UpdateVPCError),
+			Message: err.Error(),
+		})
 		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.UpdateVPCError), err.Error())
 
 		return err
@@ -272,7 +293,12 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 					return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
 				}
 
-				conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletionFailedReason, "", "%s", "skipped due to node(s) attached")
+				conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+					Type:    string(clusterv1.ReadyCondition),
+					Status:  metav1.ConditionFalse,
+					Reason:  string(clusterv1.DeletionFailedReason),
+					Message: "skipped due to node(s) attached",
+				})
 
 				return ctrl.Result{}, errors.New("will not delete VPC with node(s) attached")
 			}
@@ -294,7 +320,12 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		logger.Info("VPC ID is missing, nothing to do")
 	}
 
-	conditions.MarkFalse(vpcScope.LinodeVPC, clusterv1.ReadyCondition, clusterv1.DeletedReason, "", "%s", "VPC deleted")
+	conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+		Type:    string(clusterv1.ReadyCondition),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(clusterv1.DeletedReason),
+		Message: "VPC deleted",
+	})
 
 	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletedReason, "VPC has cleaned up")
 
@@ -338,7 +369,7 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 		For(&infrav1alpha2.LinodeVPC{}).
 		WithOptions(options).
 		WithEventFilter(predicate.And(
-			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeVPC)
@@ -353,7 +384,7 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeVPCMapper),
-			builder.WithPredicates(predicates.ClusterUnpausedAndInfrastructureReady(mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)

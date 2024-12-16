@@ -19,7 +19,6 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 const (
@@ -118,7 +117,7 @@ type LinodeFirewallStatus struct {
 
 	// Conditions defines current service state of the LinodeFirewall.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -137,12 +136,21 @@ type LinodeFirewall struct {
 	Status LinodeFirewallStatus `json:"status,omitempty"`
 }
 
-func (lfw *LinodeFirewall) GetConditions() clusterv1.Conditions {
+func (lfw *LinodeFirewall) GetConditions() []metav1.Condition {
 	return lfw.Status.Conditions
 }
 
-func (lfw *LinodeFirewall) SetConditions(conditions clusterv1.Conditions) {
+func (lfw *LinodeFirewall) SetConditions(conditions []metav1.Condition) {
 	lfw.Status.Conditions = conditions
+}
+
+// We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api
+func (lfw *LinodeFirewall) GetV1Beta2Conditions() []metav1.Condition {
+	return lfw.GetConditions()
+}
+
+func (lfw *LinodeFirewall) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	lfw.SetConditions(conditions)
 }
 
 //+kubebuilder:object:root=true

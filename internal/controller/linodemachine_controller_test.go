@@ -33,8 +33,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	cerrs "sigs.k8s.io/cluster-api/errors"
-	"sigs.k8s.io/cluster-api/util/conditions"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -632,8 +631,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
 			condition := conditions.Get(&linodeMachine, ConditionPreflightCreated)
 			Expect(condition).ToNot(BeNil())
-			Expect(condition.Status).To(Equal(corev1.ConditionFalse))
-			Expect(condition.Reason).To(Equal(string(cerrs.CreateMachineError)))
+			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			Expect(condition.Reason).To(Equal(util.CreateError))
 			Expect(condition.Message).To(ContainSubstring("time is up"))
 		})
 	})
@@ -1354,7 +1353,11 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						Namespace: namespace,
 					}
 					linodeMachine.Status.CloudinitMetadataSupport = true
-					conditions.MarkTrue(mScope.LinodeMachine, ConditionPreflightMetadataSupportConfigured)
+					conditions.Set(mScope.LinodeMachine, metav1.Condition{
+						Type:   ConditionPreflightMetadataSupportConfigured,
+						Status: metav1.ConditionTrue,
+						Reason: "LinodeMetadataSupportConfigured", // We have to set the reason to not fail object patching
+					})
 				}),
 				OneOf(
 					Path(Result("firewall ready condition is not set", func(ctx context.Context, mck Mock) {
@@ -1673,7 +1676,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					res, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceRunning))
-					Expect(rutil.ConditionTrue(linodeMachine, clusterv1.ReadyCondition)).To(BeTrue())
+					Expect(rutil.ConditionTrue(linodeMachine, string(clusterv1.ReadyCondition))).To(BeTrue())
 				})),
 		),
 	)
