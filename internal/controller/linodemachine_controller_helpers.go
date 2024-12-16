@@ -690,6 +690,7 @@ func createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.Ma
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   ConditionPreflightAdditionalDisksCreated,
 		Status: metav1.ConditionTrue,
+		Reason: "AdditionalDisksCreated",
 	})
 	return nil
 }
@@ -762,6 +763,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 			Type:   ConditionPreflightRootDiskResizing,
 			Status: metav1.ConditionTrue,
+			Reason: "RootDiskResizing",
 		})
 	}
 
@@ -769,6 +771,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   ConditionPreflightRootDiskResized,
 		Status: metav1.ConditionTrue,
+		Reason: "RootDiskResized",
 	})
 
 	return nil
