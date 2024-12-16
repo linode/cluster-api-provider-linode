@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -38,7 +37,12 @@ type LinodeFirewallSpec struct {
 	Enabled bool `json:"enabled,omitempty"`
 
 	// +optional
-	InboundRules []FirewallRule `json:"inboundRules,omitempty"`
+	InboundRules []FirewallRuleSpec `json:"inboundRules,omitempty"`
+
+	// InboundRuleRefs is a list of references to FirewallRules as an alternative to
+	// using InboundRules but can be used in conjunction with it
+	// +optional
+	InboundRuleRefs []*corev1.ObjectReference `json:"inboundRuleRefs,omitempty"`
 
 	// InboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
 	// +kubebuilder:validation:Enum=ACCEPT;DROP
@@ -47,7 +51,12 @@ type LinodeFirewallSpec struct {
 	InboundPolicy string `json:"inboundPolicy,omitempty"`
 
 	// +optional
-	OutboundRules []FirewallRule `json:"outboundRules,omitempty"`
+	OutboundRules []FirewallRuleSpec `json:"outboundRules,omitempty"`
+
+	// OutboundRuleRefs is a list of references to FirewallRules as an alternative to
+	// using OutboundRules but can be used in conjunction with it
+	// +optional
+	OutboundRuleRefs []*corev1.ObjectReference `json:"outboundRuleRefs,omitempty"`
 
 	// OutboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
 	// +kubebuilder:validation:Enum=ACCEPT;DROP
@@ -59,27 +68,6 @@ type LinodeFirewallSpec struct {
 	// supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
-}
-
-type FirewallRule struct {
-	Action      string `json:"action"`
-	Label       string `json:"label"`
-	Description string `json:"description,omitempty"`
-	Ports       string `json:"ports,omitempty"`
-	// +kubebuilder:validation:Enum=TCP;UDP;ICMP;IPENCAP
-	Protocol  linodego.NetworkProtocol `json:"protocol"`
-	Addresses *NetworkAddresses        `json:"addresses,omitempty"`
-	// AddressSetRefs is a list of references to AddressSets as an alternative to
-	// using Addresses but can be used in conjunction with it
-	AddressSetRefs []*corev1.ObjectReference `json:"addressSetRefs,omitempty"`
-}
-
-// NetworkAddresses holds a list of IPv4 and IPv6 addresses
-// We don't use linodego here since kubebuilder can't generate DeepCopyInto
-// for linodego.NetworkAddresses
-type NetworkAddresses struct {
-	IPv4 *[]string `json:"ipv4,omitempty"`
-	IPv6 *[]string `json:"ipv6,omitempty"`
 }
 
 // LinodeFirewallStatus defines the observed state of LinodeFirewall

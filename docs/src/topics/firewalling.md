@@ -90,7 +90,7 @@ For controlling firewalls via Linode resources, a [Cloud Firewall](https://www.l
 be defined and provisioned via the `LinodeFirewall` resource in CAPL. Any updates to the cloud firewall CAPL resource
 will be updated in the cloud firewall and overwrite any changes made outside the CAPL resource.
 
-Example `LinodeFirewall` and `AddressSet`:
+Example `LinodeFirewall`, `AddressSet`, and `FirewallRule`:
 ```yaml
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeFirewall
@@ -101,29 +101,60 @@ spec:
   inboundPolicy: DROP
   inboundRules:
     - action: ACCEPT
-      label: intra-cluster
-      ports: "1-65535"
-      protocol: "TCP"
-      addresses:
-        ipv4:
-          - "10.0.0.0/8"
-    - action: ACCEPT
       label: inbound-api-server
       ports: "6443"
       protocol: TCP
+      addresses:
+        ipv4:
+          - "192.168.255.0/24"
+    - action: ACCEPT
+      label: intra-cluster
+      ports: "1-65535"
+      protocol: "TCP"
       addressSetRefs:  # Can be used together with .addresses if desired.
-        - name: my-hosts
+        - name: vpc-addrset
           kind: AddressSet
+  inboundRuleRefs:  # Can be used together with .inboundRules if desired
+    - name: example-fwrule-udp
+      kind: FirewallRule
+    - name: example-fwrule-icmp
+      kind: FirewallRule
+  # outboundRules: []
+  # outboundRuleRefs: []
+  # outboundPolicy: ACCEPT
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: AddressSet
 metadata:
-  name: my-hosts
+  name: vpc-addrset
 spec:
   ipv4:
-    - "0.0.0.0/0"
-  ipv6:
-    - ::/0
+    - "10.0.0.0/8"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: FirewallRule
+metadata:
+  name: example-fwrule-udp
+spec:
+  action: ACCEPT
+  label: intra-cluster-udp
+  ports: "1-65535"
+  protocol: "UDP"
+  addresses:
+    ipv4:
+      - "10.0.0.0/8"
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: FirewallRule
+metadata:
+  name: example-fwrule-icmp
+spec:
+  action: ACCEPT
+  label: intra-cluster-icmp
+  protocol: "ICMP"
+  addressSetRefs:  # Can be used together with .addresses if desired.
+    - name: vpc-addrset
+      kind: AddressSet
 ```
 
 ### Cloud Firewall Machine Integration

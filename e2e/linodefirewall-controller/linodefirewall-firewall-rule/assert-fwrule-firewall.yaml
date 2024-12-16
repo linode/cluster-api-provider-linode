@@ -1,0 +1,27 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeFirewall
+metadata:
+  name: ($firewall)
+spec:
+  enabled: true
+  inboundPolicy: DROP
+  inboundRuleRefs:
+    - name: ($fwrule)
+      kind: FirewallRule
+status:
+  ready: true
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: FirewallRule
+metadata:
+  name: ($fwrule)
+spec:
+  action: ACCEPT
+  label: test
+  ports: "1-65535"
+  protocol: "TCP"
+  addresses:
+    ipv4:
+    - "10.0.0.0/8"
+    ipv6:
+    - ::/0

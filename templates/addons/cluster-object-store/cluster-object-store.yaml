@@ -1,0 +1,42 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageBucket
+metadata:
+    labels:
+        app.kubernetes.io/name: linodeobjectstoragebucket
+        app.kubernetes.io/instance: ${CLUSTER_NAME}-object-store
+        app.kubernetes.io/part-of: cluster-api-provider-linode
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/created-by: cluster-api-provider-linode
+        cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+    name: ${CLUSTER_NAME}-object-store
+spec:
+    credentialsRef:
+        name: ${CLUSTER_NAME}-credentials
+    region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+    labels:
+        app.kubernetes.io/name: linodeobjectstoragekey
+        app.kubernetes.io/instance: ${CLUSTER_NAME}-object-store
+        app.kubernetes.io/part-of: cluster-api-provider-linode
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/created-by: cluster-api-provider-linode
+        cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+    name: ${CLUSTER_NAME}-object-store
+spec:
+    credentialsRef:
+        name: ${CLUSTER_NAME}-credentials
+    bucketAccess:
+        - bucketName: ${CLUSTER_NAME}-object-store
+          permissions: read_write
+          region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
+    generatedSecret:
+        type: Opaque
+        format:
+            bucket_name: '{{ .BucketName }}'
+            s3_endpoint: '{{ .S3Endpoint }}'
+            access_key: '{{ .AccessKey }}'
+            secret_key: '{{ .SecretKey }}'

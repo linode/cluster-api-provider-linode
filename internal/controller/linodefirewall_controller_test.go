@@ -46,7 +46,8 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
 	addrSetRefs := []*corev1.ObjectReference{{Namespace: defaultNamespace, Name: "lifecycle"}}
-	inboundRules := []infrav1alpha2.FirewallRule{{
+	inboundRuleRefs := []*corev1.ObjectReference{{Namespace: defaultNamespace, Name: "lifecycle"}}
+	inboundRules := []infrav1alpha2.FirewallRuleSpec{{
 		Action:      "ACCEPT",
 		Label:       "a-label-that-is-way-too-long-and-should-be-truncated",
 		Description: "allow-ssh",
@@ -58,7 +59,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 		},
 		AddressSetRefs: addrSetRefs,
 	}}
-	outboundRules := []infrav1alpha2.FirewallRule{{
+	outboundRules := []infrav1alpha2.FirewallRuleSpec{{
 		Action:      "DROP",
 		Label:       "another-label-that-is-way-too-long-and-should-be-truncated",
 		Description: "deny-foo",
@@ -75,12 +76,13 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeFirewallSpec{
-			FirewallID:     nil,
-			Enabled:        true,
-			InboundRules:   inboundRules,
-			OutboundRules:  outboundRules,
-			InboundPolicy:  "DROP",
-			OutboundPolicy: "ACCEPT",
+			FirewallID:      nil,
+			Enabled:         true,
+			InboundRules:    inboundRules,
+			InboundRuleRefs: inboundRuleRefs,
+			OutboundRules:   outboundRules,
+			InboundPolicy:   "DROP",
+			OutboundPolicy:  "ACCEPT",
 		},
 	}
 	addrSet := infrav1alpha2.AddressSet{
@@ -93,9 +95,26 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			IPv6: &[]string{"::/0"},
 		},
 	}
+	fwRule := infrav1alpha2.FirewallRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lifecycle",
+			Namespace: defaultNamespace,
+		},
+		Spec: infrav1alpha2.FirewallRuleSpec{
+			Action:      "ACCEPT",
+			Label:       "fwrule-test",
+			Description: "allow-ssh",
+			Ports:       "22",
+			Protocol:    "TCP",
+			Addresses: &infrav1alpha2.NetworkAddresses{
+				IPv4: &[]string{"192.168.0.0/16"},
+			},
+		},
+	}
 
 	fwObjectKey := client.ObjectKeyFromObject(&linodeFW)
 	addrSetObjectKey := client.ObjectKeyFromObject(&addrSet)
+	fwRuleObjectKey := client.ObjectKeyFromObject(&fwRule)
 
 	var reconciler LinodeFirewallReconciler
 	var fwScope scope.FirewallScope
@@ -103,6 +122,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 	BeforeAll(func(ctx SpecContext) {
 		fwScope.Client = k8sClient
 		Expect(k8sClient.Create(ctx, &addrSet)).To(Succeed())
+		Expect(k8sClient.Create(ctx, &fwRule)).To(Succeed())
 		Expect(k8sClient.Create(ctx, &linodeFW)).To(Succeed())
 	})
 
@@ -112,6 +132,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 		Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 		fwScope.LinodeFirewall = &linodeFW
 		Expect(k8sClient.Get(ctx, addrSetObjectKey, &addrSet)).To(Succeed())
+		Expect(k8sClient.Get(ctx, fwRuleObjectKey, &fwRule)).To(Succeed())
 
 		// Create patch helper with latest state of resource.
 		// This is only needed when relying on envtest's k8sClient.
@@ -123,6 +144,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 		reconciler = LinodeFirewallReconciler{
 			Recorder: mck.Recorder(),
 		}
+		reconciler.Client = k8sClient
 	})
 
 	suite.Run(
@@ -148,7 +170,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			),
 			Path(Result("unable to create with too many rules", func(ctx context.Context, mck Mock) {
 				for idx := 0; idx < 255; idx++ {
-					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRule{
+					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRuleSpec{
 						Action:   "ACCEPT",
 						Ports:    "22",
 						Protocol: "TCP",
@@ -224,7 +246,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					for idx := 0; idx < 256; idx++ {
 						ipv4s = append(ipv4s, fmt.Sprintf("192.168.%d.%d", idx, 0))
 					}
-					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRule{
+					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRuleSpec{
 						Action:   "ACCEPT",
 						Ports:    "22",
 						Protocol: "TCP",

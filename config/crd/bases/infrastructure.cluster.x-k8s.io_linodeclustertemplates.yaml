@@ -220,6 +220,34 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
+                      objectStore:
+                        description: |-
+                          ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
+                          bootstrapping (e.g. Cloud-init).
+                        properties:
+                          credentialsRef:
+                            description: CredentialsRef is a reference to a Secret
+                              that contains the credentials to use for accessing the
+                              Cluster Object Store.
+                            properties:
+                              name:
+                                description: name is unique within a namespace to
+                                  reference a secret resource.
+                                type: string
+                              namespace:
+                                description: namespace defines the space within which
+                                  the secret name must be unique.
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          presignedURLDuration:
+                            description: |-
+                              PresignedURLDuration defines the duration for which presigned URLs are valid.
+
+                              This is used to generate presigned URLs for S3 Bucket objects, which are used by
+                              control-plane and worker nodes to fetch bootstrap data.
+                            type: string
+                        type: object
                       region:
                         description: The Linode Region the LinodeCluster lives in.
                         type: string

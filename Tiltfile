@@ -100,6 +100,7 @@ if os.getenv("INSTALL_RKE2_PROVIDER", "false") == "true":
 capl_resources = [
     "capl-system:namespace",
     "addresssets.infrastructure.cluster.x-k8s.io:customresourcedefinition",
+    "firewallrules.infrastructure.cluster.x-k8s.io:customresourcedefinition",
     "linodeclusters.infrastructure.cluster.x-k8s.io:customresourcedefinition",
     "linodemachines.infrastructure.cluster.x-k8s.io:customresourcedefinition",
     "linodeclustertemplates.infrastructure.cluster.x-k8s.io:customresourcedefinition",

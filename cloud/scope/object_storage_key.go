@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/go-logr/logr"
@@ -103,26 +104,29 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 		"SecretKey": key.SecretKey,
 	}
 
-	// If the desired secret is of ClusterResourceSet type, encapsulate the secret.
-	// Bucket details are retrieved from the first referenced LinodeObjectStorageBucket in the access key.
-	if s.Key.Spec.GeneratedSecret.Type == clusteraddonsv1.ClusterResourceSetSecretType {
+	if len(s.Key.Spec.GeneratedSecret.Format) == 0 {
+		secretStringData = map[string]string{
+			"access_key": key.AccessKey,
+			"secret_key": key.SecretKey,
+		}
+	} else {
 		// This should never run since the CRD has a validation marker to ensure bucketAccess has at least one item.
 		if len(s.Key.Spec.BucketAccess) == 0 {
 			return nil, fmt.Errorf("unable to generate %s; spec.bucketAccess must not be empty", clusteraddonsv1.ClusterResourceSetSecretType)
 		}
 
+		// Bucket details are retrieved from the first referenced LinodeObjectStorageBucket in the access key.
 		bucketRef := s.Key.Spec.BucketAccess[0]
 		bucket, err := s.LinodeClient.GetObjectStorageBucket(ctx, bucketRef.Region, bucketRef.BucketName)
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate %s; failed to get bucket: %w", clusteraddonsv1.ClusterResourceSetSecretType, err)
 		}
 
+		tmplData["BucketName"] = bucket.Label
 		tmplData["BucketEndpoint"] = bucket.Hostname
-	} else if len(s.Key.Spec.GeneratedSecret.Format) == 0 {
-		secretStringData = map[string]string{
-			"access_key": key.AccessKey,
-			"secret_key": key.SecretKey,
-		}
+		// Cluster URL (S3 endpoint)
+		// https://techdocs.akamai.com/cloud-computing/docs/access-buckets-and-files-through-urls#cluster-url-s3-endpoint
+		tmplData["S3Endpoint"] = "https://" + strings.TrimPrefix(bucket.Hostname, bucket.Label+".")
 	}
 
 	for key, tmpl := range s.Key.Spec.GeneratedSecret.Format {

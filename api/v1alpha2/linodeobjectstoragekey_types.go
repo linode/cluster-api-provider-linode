@@ -46,9 +46,8 @@ type GeneratedSecret struct {
 	// +optional
 	Type corev1.SecretType `json:"type,omitempty"`
 	// How to format the data stored in the generated Secret.
-	// It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey.
+	// It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey .BucketName .BucketEndpoint .S3Endpoint
 	// If no format is supplied then a generic one is used containing the values specified.
-	// When SecretType is set to addons.cluster.x-k8s.io/resource-set, a .BucketEndpoint value is also available pointing to the location of the first bucket specified in BucketAccess.
 	// +optional
 	Format map[string]string `json:"format,omitempty"`
 }
