@@ -46,8 +46,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # Expose matched filters as job 'src' output variable
+      paths: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: .github/filters.yml
   e2e-test:
+    needs: changes
     name: ${{ format('{0}-e2e-tests', inputs.e2e-selector) }}
+    if: ${{contains(fromJSON(needs.changes.outputs.paths), 'src')}}
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.github_token }}
