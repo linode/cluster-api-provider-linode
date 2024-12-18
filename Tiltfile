@@ -28,7 +28,11 @@ helm_resource(
     "capi-operator",
     "capi-operator-repo/cluster-api-operator",
     namespace="capi-operator-system",
-    flags=["--create-namespace", "--wait"],
+    flags=[
+      "--create-namespace",
+      "--wait",
+      "--version=0.14.0",
+    ],
     resource_deps=["capi-operator-repo", "cert-manager"],
     labels=["CAPI"],
 )
