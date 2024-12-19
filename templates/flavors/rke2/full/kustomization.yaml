@@ -64,7 +64,7 @@ patches:
         agentConfig:
           additionalUserData:
             config: |-
-              diskSetup:
+              disk_setup:
                 /dev/sdc:
                   layout: true
               fs_setup:
