@@ -78,7 +78,7 @@ help: ## Display this help.
 
 ##@ Generate:
 .PHONY: generate
-generate: generate-manifests generate-code generate-mock
+generate: generate-manifests generate-code generate-mock generate-api-docs
 
 .PHONY: generate-manifests
 generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -96,6 +96,14 @@ generate-mock: mockgen ## Generate mocks for the Linode API client.
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
 	bash hack/generate-flavors.sh
+
+.PHONY: generate-api-docs
+generate-api-docs: crd-ref-docs ## Generate API reference documentation.
+	$(CRD_REF_DOCS) \
+		--config=./docs/.crd-ref-docs.yaml \
+		--source-path=./api/ \
+		--renderer=markdown \
+		--output-path=./docs/src/reference
 
 .PHONY: check-gen-diff
 check-gen-diff:
@@ -301,6 +309,7 @@ KUBECTL        ?= $(LOCALBIN)/kubectl
 KUSTOMIZE      ?= $(LOCALBIN)/kustomize
 CTLPTL         ?= $(LOCALBIN)/ctlptl
 CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
+CRD_REF_DOCS   ?= $(CACHE_BIN)/crd-ref-docs
 KUBEBUILDER    ?= $(LOCALBIN)/kubebuilder
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CONVERSION_GEN ?= $(CACHE_BIN)/conversion-gen
@@ -313,12 +322,13 @@ NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
-S5CMD 		   ?= $(CACHE_BIN)/s5cmd
+S5CMD          ?= $(CACHE_BIN)/s5cmd
 
 ## Tool Versions
 KUSTOMIZE_VERSION        ?= v5.4.3
 CTLPTL_VERSION           ?= v0.8.29
 CLUSTERCTL_VERSION       ?= v1.7.2
+CRD_REF_DOCS_VERSION     ?= v0.1.0
 KUBECTL_VERSION          ?= v1.28.0
 KUBEBUILDER_VERSION      ?= v3.15.1
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
@@ -354,6 +364,11 @@ clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary.
 $(CLUSTERCTL): $(LOCALBIN)
 	curl -fsSL https://github.com/kubernetes-sigs/cluster-api/releases/download/$(CLUSTERCTL_VERSION)/clusterctl-$(OS)-$(ARCH_SHORT) -o $(CLUSTERCTL)
 	chmod +x $(CLUSTERCTL)
+
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	GOBIN=$(CACHE_BIN) go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
 
 .PHONY: kubectl
 kubectl: $(KUBECTL) ## Download kubectl locally if necessary.
