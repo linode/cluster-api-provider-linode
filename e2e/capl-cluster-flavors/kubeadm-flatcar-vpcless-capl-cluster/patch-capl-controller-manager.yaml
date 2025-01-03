@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capl-controller-manager
+  namespace: capl-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          env:
+          - name: GZIP_COMPRESSION_ENABLED
+            value: "true"
