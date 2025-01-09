@@ -20,11 +20,11 @@
 </p>
 <p align="center">
 <!-- go build / test CI -->
-<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml">
-<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/go-test.yml/badge.svg"></a>
+<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build_test_ci.yml">
+<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build_test_ci.yml/badge.svg"></a>
 <!-- docker build CI -->
-<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml">
-<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-docker-image.yml/badge.svg"></a>
+<a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-push.yml">
+<img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-push.yml/badge.svg"></a>
 <!-- CodeQL -->
 <a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/codeql.yml">
 <img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/codeql.yml/badge.svg"></a>
