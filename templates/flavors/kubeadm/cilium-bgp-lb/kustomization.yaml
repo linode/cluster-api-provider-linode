@@ -39,6 +39,10 @@ patches:
               value: ${LINODE_URL:="https://api.linode.com"}
             - name: SSL_CERT_DIR
               value: "/tls"
+            - name: BGP_PEER_PREFIX
+              value: ${BGP_PEER_PREFIX:=""}
+            - name: BGP_CUSTOM_ID_MAP
+              value: ${BGP_CUSTOM_ID_MAP:=""}
           volumeMounts:
             - name: cacert
               mountPath: /tls
