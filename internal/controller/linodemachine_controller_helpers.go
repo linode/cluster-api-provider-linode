@@ -593,11 +593,12 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 	return config.Bytes(), err
 }
 
-// NOTE: Prefer to keep this logic simple, by always assuming the LinodeMachine's cloud-config exists in Object Storage
-// and attempting to delete it, then ignoring certain errors, e.g. no such key or bucket, etc.
 // This *may* need to revisit w.r.t. rate-limits for shared(?) buckets 🤷‍♀️
 func deleteBootstrapData(ctx context.Context, machineScope *scope.MachineScope) error {
-	return services.DeleteObject(ctx, machineScope)
+	if machineScope.LinodeCluster.Spec.ObjectStore != nil {
+		return services.DeleteObject(ctx, machineScope)
+	}
+	return nil
 }
 
 func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha2.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {
