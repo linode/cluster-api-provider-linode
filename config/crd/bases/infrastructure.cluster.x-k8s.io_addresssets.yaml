@@ -4,13 +4,19 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.5
+  labels:
+    clusterctl.cluster.x-k8s.io/move-hierarchy: "true"
   name: addresssets.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
+    categories:
+    - cluster-api
     kind: AddressSet
     listKind: AddressSetList
     plural: addresssets
+    shortNames:
+    - addrset
     singular: addressset
   scope: Namespaced
   versions:
