@@ -31,6 +31,7 @@
     - [Firewalling](./topics/firewalling.md)
     - [Placement Groups](./topics/placement-groups.md)
     - [Cluster Object Store](./topics/cluster-object-store.md)
+    - [Linode Cloud Controller Manager](./topics/linode-cloud-controller-manager.md)
 - [Development](./developers/development.md)
     - [Releasing](./developers/releasing.md)
     - [Testing](./developers/testing.md)
