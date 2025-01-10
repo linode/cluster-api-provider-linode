@@ -32,7 +32,7 @@ type AddressSetStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=addressset,scope=Namespaced,categories=cluster-api,shortName=addrset
+// +kubebuilder:resource:path=addresssets,scope=Namespaced,categories=cluster-api,shortName=addrset
 // +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 
 // AddressSet is the Schema for the addresssets API
