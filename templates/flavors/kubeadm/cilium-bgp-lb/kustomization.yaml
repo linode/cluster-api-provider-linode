@@ -33,8 +33,25 @@ patches:
           image:
             pullPolicy: IfNotPresent
           env:
+            - name: LINODE_EXTERNAL_SUBNET
+              value: ${LINODE_EXTERNAL_SUBNET:=""}
             - name: LINODE_URL
-              value: https://api.linode.com/v4beta
+              value: ${LINODE_URL:="https://api.linode.com"}
+            - name: SSL_CERT_DIR
+              value: "/tls"
+            - name: BGP_PEER_PREFIX
+              value: ${BGP_PEER_PREFIX:=""}
+            - name: BGP_CUSTOM_ID_MAP
+              value: ${BGP_CUSTOM_ID_MAP:=""}
+          volumeMounts:
+            - name: cacert
+              mountPath: /tls
+              readOnly: true
+          volumes:
+            - name: cacert
+              secret:
+                secretName: linode-ca
+                defaultMode: 420
 transformers:
   - |
     apiVersion: builtin
