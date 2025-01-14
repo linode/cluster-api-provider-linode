@@ -9,7 +9,7 @@ spec:
   repoURL: https://linode.github.io/linode-blockstorage-csi-driver/
   chartName: linode-blockstorage-csi-driver
   namespace: kube-system
-  version: ${LINODE_CSI_VERSION:=v0.8.4}
+  version: ${LINODE_CSI_VERSION:=v1.0.3}
   options:
     waitForJobs: true
     wait: true
@@ -18,3 +18,18 @@ spec:
     secretRef:
       name: "linode-token-region"
       apiTokenRef: "apiToken"
+    csiLinodePlugin:
+      env:
+        - name: LINODE_URL
+          value: ${LINODE_URL:="https://api.linode.com"}
+        - name: SSL_CERT_DIR
+          value: "/tls"
+      volumeMounts:
+        - name: cacert
+          mountPath: /tls
+          readOnly: true
+      volumes:
+        - name: cacert
+          secret:
+            secretName: linode-ca
+            defaultMode: 420
