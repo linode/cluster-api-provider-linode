@@ -190,9 +190,10 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	clusterScope.LinodeCluster.Status.Ready = true
 	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-		Type:   string(clusterv1.ReadyCondition),
-		Status: metav1.ConditionTrue,
-		Reason: "LoadBalancerReady", // We have to set the reason to not fail object patching
+		Type:    string(clusterv1.ReadyCondition),
+		Status:  metav1.ConditionTrue,
+		Reason:  "LoadBalancerReady", // We have to set the reason to not fail object patching
+		Message: "LoadBalancer ready",
 	})
 
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
@@ -215,17 +216,19 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-					Type:   ConditionPreflightLinodeVPCReady,
-					Status: metav1.ConditionFalse,
-					Reason: "LinodeVPCNotYetAvailable", // We have to set the reason to not fail object patching
+					Type:    ConditionPreflightLinodeVPCReady,
+					Status:  metav1.ConditionFalse,
+					Reason:  "LinodeVPCNotYetAvailable", // We have to set the reason to not fail object patching
+					Message: "Linode VPC not yet available",
 				})
 				return res, err
 			}
 		}
 		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-			Type:   ConditionPreflightLinodeVPCReady,
-			Status: metav1.ConditionTrue,
-			Reason: "LinodeVPCReady", // We have to set the reason to not fail object patching
+			Type:    ConditionPreflightLinodeVPCReady,
+			Status:  metav1.ConditionTrue,
+			Reason:  "LinodeVPCReady", // We have to set the reason to not fail object patching
+			Message: "Linode VPC ready",
 		})
 	}
 
@@ -234,17 +237,19 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-					Type:   ConditionPreflightLinodeNBFirewallReady,
-					Status: metav1.ConditionFalse,
-					Reason: "LinodeFirewallNotYetAvailable", // We have to set the reason to not fail object patching
+					Type:    ConditionPreflightLinodeNBFirewallReady,
+					Status:  metav1.ConditionFalse,
+					Reason:  "LinodeFirewallNotYetAvailable", // We have to set the reason to not fail object patching
+					Message: "Linode Firewall not yet available",
 				})
 				return res, err
 			}
 		}
 		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-			Type:   ConditionPreflightLinodeNBFirewallReady,
-			Status: metav1.ConditionTrue,
-			Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+			Type:    ConditionPreflightLinodeNBFirewallReady,
+			Status:  metav1.ConditionTrue,
+			Reason:  "LinodeFirewallReady", // We have to set the reason to not fail object patching
+			Message: "Linode Firewall ready",
 		})
 	}
 
