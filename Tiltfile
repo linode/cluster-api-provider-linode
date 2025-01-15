@@ -2,7 +2,8 @@ load("ext://k8s_attach", "k8s_attach")
 load("ext://helm_resource", "helm_resource", "helm_repo")
 load("ext://namespace", "namespace_create")
 load("ext://restart_process", "docker_build_with_restart")
-load("ext://secret", "secret_create_generic")
+load("ext://secret", "secret_from_dict")
+load("ext://base64", "decode_base64")
 update_settings(k8s_upsert_timeout_secs=120)
 
 helm_repo(
@@ -193,22 +194,20 @@ for resource in manager_yaml:
             if container["name"] == "manager":
                 if os.getenv("LINODE_URL"):
                     container["env"].append({"name": "LINODE_URL", "value": os.getenv("LINODE_URL")})
-                if os.getenv("LINODE_CA"):
+                if os.getenv("LINODE_CA_BASE64"):
                     container["env"].append({"name": "SSL_CERT_DIR", "value": "/tmp/linode-ca"})
                     container["volumeMounts"].append({"mountPath": "/tmp/linode-ca", "name": "linode-ca", "readOnly": True})
-        if os.getenv("LINODE_CA"):
+        if os.getenv("LINODE_CA_BASE64"):
             resource["spec"]["template"]["spec"]["volumes"].append({"name": "linode-ca", "secret": {"defaultMode": 420, "secretName": "linode-ca"}})
 
 k8s_yaml(encode_yaml_stream(manager_yaml))
 
-if os.getenv("LINODE_CA"):
-    print(os.getenv("LINODE_CA"))
-
-    ca_secret = secret_create_generic(
+if os.getenv("LINODE_CA_BASE64"):
+    ca_secret = k8s_yaml(secret_from_dict(
         "linode-ca",
         namespace = "capl-system",
-        from_file="cacert.pem=" + os.getenv("LINODE_CA")
-    )
+        inputs={"cacert.pem": decode_base64(os.getenv("LINODE_CA_BASE64"))}
+    ))
     capl_resources.append("linode-ca:secret")
 
 if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":

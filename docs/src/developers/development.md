@@ -40,7 +40,7 @@ needed via the make targets, but a recommendation is to
 #### Optional Environment Variables
 ```bash
 export LINODE_URL= # Default unset. Set this to talk to a specific linode api endpoint
-export LINODE_CA= # Default unset. Set this to use a specific CA when talking to the linode API
+export LINODE_CA_BASE64= # Default empty. Set this to base64 encoded content of specific CA when talking to custom linode API
 export CAPL_DEBUG=false # Default false. Set this to true to enable delve integration
 export INSTALL_K3S_PROVIDER=false # Default false. Set this to true to enable k3s capi provider installation
 export INSTALL_RKE2_PROVIDER=false # Default false. Set this to true to enable the RKE2 capi provider installation

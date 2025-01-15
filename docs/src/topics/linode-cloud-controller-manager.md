@@ -22,7 +22,6 @@ Check the cert contents and if its a CA, use it.
 Additional vars which needs to be set for custom enviroments:
 ```sh
 export LINODE_URL=<env specific API path>
-export LINODE_CA=<env specific CA file path on disk>
 export LINODE_EXTERNAL_SUBNET=<network to be marked as public network>
 export LINODE_CA_BASE64=<base64 encoded value of LINODE_CA cert content>
 ```
