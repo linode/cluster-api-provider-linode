@@ -12,6 +12,8 @@ Make sure to create the token with at least the following read/write permissions
   - VPCs
   - IPs
   - Object Storage
+  - Stackscripts
+  - Firewalls
 - clusterctl is [installed](https://cluster-api.sigs.k8s.io/user/quick-start#installation)
 - Cluster API [management cluster](https://cluster-api.sigs.k8s.io/user/quick-start#install-andor-configure-a-kubernetes-cluster) is created
 ```admonish question title=""
