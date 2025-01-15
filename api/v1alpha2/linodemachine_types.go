@@ -237,6 +237,11 @@ type LinodeMachine struct {
 }
 
 func (lm *LinodeMachine) GetConditions() []metav1.Condition {
+	for i := range lm.Status.Conditions {
+		if lm.Status.Conditions[i].Reason == "" {
+			lm.Status.Conditions[i].Reason = "none"
+		}
+	}
 	return lm.Status.Conditions
 }
 
