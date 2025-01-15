@@ -105,6 +105,11 @@ type LinodeObjectStorageBucket struct {
 }
 
 func (losb *LinodeObjectStorageBucket) GetConditions() []metav1.Condition {
+	for i := range losb.Status.Conditions {
+		if losb.Status.Conditions[i].Reason == "" {
+			losb.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
 	return losb.Status.Conditions
 }
 

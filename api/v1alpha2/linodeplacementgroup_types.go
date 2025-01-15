@@ -118,6 +118,11 @@ type LinodePlacementGroup struct {
 }
 
 func (lpg *LinodePlacementGroup) GetConditions() []metav1.Condition {
+	for i := range lpg.Status.Conditions {
+		if lpg.Status.Conditions[i].Reason == "" {
+			lpg.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
 	return lpg.Status.Conditions
 }
 
