@@ -103,6 +103,11 @@ type LinodeCluster struct {
 }
 
 func (lc *LinodeCluster) GetConditions() []metav1.Condition {
+	for i := range lc.Status.Conditions {
+		if lc.Status.Conditions[i].Reason == "" {
+			lc.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
 	return lc.Status.Conditions
 }
 

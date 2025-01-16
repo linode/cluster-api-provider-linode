@@ -137,6 +137,11 @@ type LinodeFirewall struct {
 }
 
 func (lfw *LinodeFirewall) GetConditions() []metav1.Condition {
+	for i := range lfw.Status.Conditions {
+		if lfw.Status.Conditions[i].Reason == "" {
+			lfw.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
 	return lfw.Status.Conditions
 }
 

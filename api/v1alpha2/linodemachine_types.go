@@ -27,7 +27,8 @@ import (
 const (
 	// MachineFinalizer allows ReconcileLinodeMachine to clean up Linode resources associated
 	// with LinodeMachine before removing it from the apiserver.
-	MachineFinalizer = "linodemachine.infrastructure.cluster.x-k8s.io"
+	MachineFinalizer       = "linodemachine.infrastructure.cluster.x-k8s.io"
+	DefaultConditionReason = "None"
 )
 
 // LinodeMachineSpec defines the desired state of LinodeMachine
@@ -237,6 +238,11 @@ type LinodeMachine struct {
 }
 
 func (lm *LinodeMachine) GetConditions() []metav1.Condition {
+	for i := range lm.Status.Conditions {
+		if lm.Status.Conditions[i].Reason == "" {
+			lm.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
 	return lm.Status.Conditions
 }
 

@@ -133,6 +133,11 @@ type LinodeObjectStorageKey struct {
 }
 
 func (losk *LinodeObjectStorageKey) GetConditions() []metav1.Condition {
+	for i := range losk.Status.Conditions {
+		if losk.Status.Conditions[i].Reason == "" {
+			losk.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
 	return losk.Status.Conditions
 }
 
