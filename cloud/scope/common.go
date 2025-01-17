@@ -98,7 +98,10 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (LinodeClient, erro
 		newClient.SetRootCertificate(config.RootCertificatePath)
 	}
 	if config.BaseUrl != "" {
-		newClient.SetBaseURL(config.BaseUrl)
+		_, err := newClient.UseURL(config.BaseUrl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set base URL: %w", err)
+		}
 	}
 	newClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
