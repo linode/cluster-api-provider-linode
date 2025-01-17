@@ -172,8 +172,8 @@ if debug == "true":
 manager_yaml = decode_yaml_stream(kustomize("config/default"))
 for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":
-        resource["stringData"]["LINODE_TOKEN"] = os.getenv("LINODE_TOKEN")
-        resource["stringData"]["LINODE_DNS_TOKEN"] = os.getenv("LINODE_DNS_TOKEN")
+        resource["stringData"]["apiToken"] = os.getenv("LINODE_TOKEN")
+        resource["stringData"]["dnsToken"] = os.getenv("LINODE_DNS_TOKEN")
         if os.getenv("LINODE_URL"):
             resource["stringData"]["LINODE_URL"] = os.getenv("LINODE_URL")
         if os.getenv("LINODE_CA_BASE64"):
