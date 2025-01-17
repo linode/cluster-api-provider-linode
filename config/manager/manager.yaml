@@ -48,36 +48,6 @@ spec:
             - --leader-elect
           image: controller:latest
           env:
-            - name: LINODE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: capl-manager-credentials
-                  key: LINODE_TOKEN
-            - name: LINODE_DNS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: capl-manager-credentials
-                  key: LINODE_DNS_TOKEN
-            - name: AKAMAI_HOST
-              valueFrom:
-                secretKeyRef:
-                  key: AKAMAI_HOST
-                  name: akamai-edgerc-secret
-            - name: AKAMAI_ACCESS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  key: AKAMAI_ACCESS_TOKEN
-                  name: akamai-edgerc-secret
-            - name: AKAMAI_CLIENT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  key: AKAMAI_CLIENT_TOKEN
-                  name: akamai-edgerc-secret
-            - name: AKAMAI_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  key: AKAMAI_CLIENT_SECRET
-                  name: akamai-edgerc-secret
             - name: LINODE_API_VERSION
               value: v4beta
             - name: K8S_NODE_NAME
@@ -88,6 +58,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+          envFrom: # allows configuring additional stuff like LINODE_URL
+            - secretRef:
+                name: capl-manager-credentials
+            - secretRef:
+                name: akamai-edgerc-secret
           name: manager
           securityContext:
             readOnlyRootFilesystem: true
