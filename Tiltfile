@@ -172,8 +172,12 @@ if debug == "true":
 manager_yaml = decode_yaml_stream(kustomize("config/default"))
 for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":
-        resource["stringData"]["apiToken"] = os.getenv("LINODE_TOKEN")
-        resource["stringData"]["dnsToken"] = os.getenv("LINODE_DNS_TOKEN")
+        resource["stringData"]["LINODE_TOKEN"] = os.getenv("LINODE_TOKEN")
+        resource["stringData"]["LINODE_DNS_TOKEN"] = os.getenv("LINODE_DNS_TOKEN")
+        if os.getenv("LINODE_URL"):
+            resource["stringData"]["LINODE_URL"] = os.getenv("LINODE_URL")
+        if os.getenv("LINODE_CA_BASE64"):
+            resource["stringData"]["SSL_CERT_DIR"] = "/tmp/linode-ca"
     if resource["metadata"]["name"] == "capl-akamai-edgerc-secret":
         resource["stringData"]["AKAMAI_HOST"] = os.getenv("AKAMAI_HOST")
         resource["stringData"]["AKAMAI_CLIENT_TOKEN"] = os.getenv("AKAMAI_CLIENT_TOKEN")
@@ -192,10 +196,7 @@ for resource in manager_yaml:
         for container in resource["spec"]["template"]["spec"]["containers"]:
             container.pop("securityContext")
             if container["name"] == "manager":
-                if os.getenv("LINODE_URL"):
-                    container["env"].append({"name": "LINODE_URL", "value": os.getenv("LINODE_URL")})
                 if os.getenv("LINODE_CA_BASE64"):
-                    container["env"].append({"name": "SSL_CERT_DIR", "value": "/tmp/linode-ca"})
                     container["volumeMounts"].append({"mountPath": "/tmp/linode-ca", "name": "linode-ca", "readOnly": True})
         if os.getenv("LINODE_CA_BASE64"):
             resource["spec"]["template"]["spec"]["volumes"].append({"name": "linode-ca", "secret": {"defaultMode": 420, "secretName": "linode-ca"}})
