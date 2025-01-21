@@ -163,6 +163,28 @@ local-deploy: kind ctlptl tilt kustomize clusterctl
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	$(TILT) ci -f Tiltfile
 
+##@ Test Upgrade:
+
+LATEST_REF   := $(shell git rev-parse --short HEAD)
+LAST_RELEASE := $(shell git describe --abbrev=0 --tags)
+
+.PHONY: last-release-cluster
+last-release-cluster: kind ctlptl tilt kustomize clusterctl
+	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
+	git checkout $(LAST_RELEASE)
+	$(TILT) ci -f Tiltfile
+
+.PHONY: checkout-latest-commit
+checkout-latest-commit:
+	git checkout $(LATEST_REF)
+
+.PHONY: test-upgrade
+test-upgrade: last-release-cluster checkout-latest-commit local-deploy
+
+.PHONY: clean-kind-cluster
+clean-kind-cluster: ctlptl
+	$(CTLPTL) delete -f .tilt/ctlptl-config.yaml
+
 ## --------------------------------------
 ## Build
 ## --------------------------------------
