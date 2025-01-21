@@ -165,21 +165,24 @@ local-deploy: kind ctlptl tilt kustomize clusterctl
 
 ##@ Test Upgrade:
 
-LATEST_REF   := $(shell git rev-parse --short HEAD)
-LAST_RELEASE := $(shell git describe --abbrev=0 --tags)
+LATEST_REF         := $(shell git rev-parse --short HEAD)
+LAST_RELEASE       := $(shell git describe --abbrev=0 --tags)
+COMMON_CLUSTER_REF := $(shell echo "up-$(LATEST_REF)" | cut -c1-8)
 
 .PHONY: last-release-cluster
-last-release-cluster: kind ctlptl tilt kustomize clusterctl
+last-release-cluster: kind ctlptl tilt kustomize clusterctl chainsaw local-release
 	$(CTLPTL) apply -f .tilt/ctlptl-config.yaml
 	git checkout $(LAST_RELEASE)
 	$(TILT) ci -f Tiltfile
+	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) $(CHAINSAW) test ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
 
 .PHONY: checkout-latest-commit
 checkout-latest-commit:
 	git checkout $(LATEST_REF)
 
 .PHONY: test-upgrade
-test-upgrade: last-release-cluster checkout-latest-commit local-deploy
+test-upgrade: last-release-cluster checkout-latest-commit local-deploy local-release
+	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) $(CHAINSAW) test ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
 
 .PHONY: clean-kind-cluster
 clean-kind-cluster: ctlptl
