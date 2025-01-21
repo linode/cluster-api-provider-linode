@@ -3,7 +3,7 @@ name: Run e2e upgrade test
 on:
   push:
     branches:
-      - main
+      - test-upgrade
     tags:
       - "*"
   workflow_dispatch:
