@@ -80,6 +80,8 @@ jobs:
             linode.github.io:443
 
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run Upgrade Test
         env:
