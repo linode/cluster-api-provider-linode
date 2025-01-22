@@ -16,7 +16,7 @@ spec:
       value: (join('-', ['e2e', 'validating-webhooks', env('GIT_REF')]))
     - name: name
       # Format a generic resource name
-      value: (trim((truncate(($run), `32`)), '-'))
+      value: (trim((truncate(($run), `29`)), '-'))
   template: true
   steps:
     - name: Check if CAPL provider resources exist
