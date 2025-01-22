@@ -16,7 +16,7 @@ spec:
       value: (join('-', ['e2e', 'min-lm', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
-      value: (trim((truncate(($run), `32`)), '-'))
+      value: (trim((truncate(($run), `29`)), '-'))
   template: true
   steps:
     - name: Check if CAPI provider resources exist

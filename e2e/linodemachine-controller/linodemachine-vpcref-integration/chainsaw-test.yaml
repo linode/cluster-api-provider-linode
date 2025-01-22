@@ -17,7 +17,7 @@ spec:
       value: (join('-', ['e2e', 'lm-vpc', env('GIT_REF')]))
     - name: cluster
       # Format the cluster name
-      value: (trim((truncate(($run), `32`)), '-'))
+      value: (trim((truncate(($run), `29`)), '-'))
     - name: vpc
       # Format the VPC name into a valid Kubernetes object name
       value: (trim((truncate(($run), `63`)), '-'))

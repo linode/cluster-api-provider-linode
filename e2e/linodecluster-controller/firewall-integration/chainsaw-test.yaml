@@ -18,7 +18,7 @@ spec:
       value: (trim((truncate(($run), `63`)), '-'))
     - name: cluster
       # Format the cluster name
-      value: (trim((truncate(($run), `32`)), '-'))
+      value: (trim((truncate(($run), `29`)), '-'))
     - name: nodebalancer
       value: ($cluster)
   template: true
