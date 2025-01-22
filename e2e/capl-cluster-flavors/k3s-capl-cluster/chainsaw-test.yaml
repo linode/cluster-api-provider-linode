@@ -33,10 +33,12 @@ spec:
                 value: ($namespace)
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
+              - name: KUBERNETES_VERSION
+                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
             content: |
               set -e
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
-              --flavor k3s --kubernetes-version v1.29.1+k3s2 \
+              --flavor k3s --kubernetes-version ${KUBERNETES_VERSION}+k3s2 \
               --infrastructure local-linode:v0.0.0 \
               --control-plane-machine-count 1 --worker-machine-count 1 \
               --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > k3s-cluster.yaml

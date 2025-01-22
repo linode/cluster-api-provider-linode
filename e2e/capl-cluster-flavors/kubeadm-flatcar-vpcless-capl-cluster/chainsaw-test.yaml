@@ -71,11 +71,13 @@ spec:
                 value: ($namespace)
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
+              - name: KUBERNETES_VERSION
+                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
             content: |
               set -e
               export FLATCAR_IMAGE_NAME=$(cat image-id)
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
-              --kubernetes-version v1.29.5 \
+              --kubernetes-version ${KUBERNETES_VERSION} \
               --infrastructure local-linode:v0.0.0 \
               --control-plane-machine-count 1 --worker-machine-count 1 \
               --flavor kubeadm-flatcar \
