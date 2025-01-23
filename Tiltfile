@@ -116,6 +116,7 @@ capl_resources = [
     "linodeobjectstoragebuckets.infrastructure.cluster.x-k8s.io:customresourcedefinition",
     "linodeobjectstoragekeys.infrastructure.cluster.x-k8s.io:customresourcedefinition",
     "capl-mutating-webhook-configuration:mutatingwebhookconfiguration",
+    "capl-ca:secret",
     "capl-linodeclustertemplate-editor-role:clusterrole",
     "capl-linodeclustertemplate-viewer-role:clusterrole",
     "capl-linodemachine-editor-role:clusterrole",
@@ -176,8 +177,8 @@ for resource in manager_yaml:
         resource["stringData"]["dnsToken"] = os.getenv("LINODE_DNS_TOKEN")
         if os.getenv("LINODE_URL"):
             resource["stringData"]["LINODE_URL"] = os.getenv("LINODE_URL")
-        if os.getenv("LINODE_CA_BASE64"):
-            resource["stringData"]["SSL_CERT_DIR"] = "/tmp/linode-ca"
+    if resource["metadata"]["name"] == "capl-ca":
+        resource["data"]["cacert.pem"] = os.getenv("LINODE_CA_BASE64")
     if resource["metadata"]["name"] == "capl-akamai-edgerc-secret":
         resource["stringData"]["AKAMAI_HOST"] = os.getenv("AKAMAI_HOST")
         resource["stringData"]["AKAMAI_CLIENT_TOKEN"] = os.getenv("AKAMAI_CLIENT_TOKEN")
@@ -195,21 +196,8 @@ for resource in manager_yaml:
         resource["spec"]["template"]["spec"].pop("securityContext")
         for container in resource["spec"]["template"]["spec"]["containers"]:
             container.pop("securityContext")
-            if container["name"] == "manager":
-                if os.getenv("LINODE_CA_BASE64"):
-                    container["volumeMounts"].append({"mountPath": "/tmp/linode-ca", "name": "linode-ca", "readOnly": True})
-        if os.getenv("LINODE_CA_BASE64"):
-            resource["spec"]["template"]["spec"]["volumes"].append({"name": "linode-ca", "secret": {"defaultMode": 420, "secretName": "linode-ca"}})
 
 k8s_yaml(encode_yaml_stream(manager_yaml))
-
-if os.getenv("LINODE_CA_BASE64"):
-    ca_secret = k8s_yaml(secret_from_dict(
-        "linode-ca",
-        namespace = "capl-system",
-        inputs={"cacert.pem": decode_base64(os.getenv("LINODE_CA_BASE64"))}
-    ))
-    capl_resources.append("linode-ca:secret")
 
 if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":
     docker_build(

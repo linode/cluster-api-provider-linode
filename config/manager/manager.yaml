@@ -68,6 +68,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: SSL_CERT_DIR
+              value: /tls
           envFrom: # allows configuring additional stuff like LINODE_URL
             - secretRef:
                 name: capl-manager-credentials
@@ -102,5 +104,14 @@ spec:
             requests:
               cpu: 1000m
               memory: 512Mi
+          volumeMounts:
+            - name: cacert
+              mountPath: /tls
+              readOnly: true
+      volumes:
+        - name: cacert
+          secret:
+            secretName: capl-ca
+            defaultMode: 420
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10

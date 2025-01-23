@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ca
+data:
+  cacert.pem: ${LINODE_CA_BASE64:=""}
