@@ -64,6 +64,9 @@ func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation
 
 func getMachineIPs(cscope *scope.ClusterScope) (ipv4IPs, ipv6IPs []string, err error) {
 	for _, eachMachine := range cscope.LinodeMachines.Items {
+		if !eachMachine.Status.Ready {
+			continue
+		}
 		for _, IPs := range eachMachine.Status.Addresses {
 			if IPs.Type != v1beta1.MachineExternalIP {
 				continue
