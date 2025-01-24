@@ -119,6 +119,8 @@ func CreateS3Clients(ctx context.Context, crClient K8sClient, cluster infrav1alp
 	var (
 		configOpts = []func(*awsconfig.LoadOptions) error{
 			awsconfig.WithRegion("auto"),
+			awsconfig.WithRequestChecksumCalculation(aws.RequestChecksumCalculationWhenRequired),
+			awsconfig.WithResponseChecksumValidation(aws.ResponseChecksumValidationWhenRequired),
 		}
 
 		clientOpts = []func(*s3.Options){}
