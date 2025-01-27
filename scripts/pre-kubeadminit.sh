@@ -17,6 +17,8 @@ imports = ["/etc/containerd/conf.d/*.toml"]
     runtime_type = "io.containerd.runc.v2"
   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
     SystemdCgroup = true
+  [plugins."io.containerd.grpc.v1.cri".registry]
+     config_path = "/etc/containerd/certs.d"
 EOF
 
 chmod 644 /etc/containerd/config.toml
