@@ -1,0 +1,37 @@
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+    name: ($cluster)
+spec:
+    kubeadmConfigSpec:
+        files:
+            - path: /chonk.txt
+              contentFrom:
+                  secret:
+                      key: chonk.txt
+                      name: chonk-secret
+        clusterConfiguration:
+            apiServer:
+                extraArgs:
+                    cloud-provider: external
+            controllerManager:
+                extraArgs:
+                    cloud-provider: external
+    machineTemplate:
+        infrastructureRef:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+            name: ($cluster)
+    replicas: 1
+    version: 1.29.1
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+    name: ($cluster)
+spec:
+    template:
+        spec:
+            region: us-sea
+            type: g6-nanode-1
