@@ -70,6 +70,8 @@ spec:
                   fieldPath: metadata.name
             - name: SSL_CERT_DIR
               value: /tls
+            - name: GZIP_COMPRESSION_ENABLED
+              value: "true"
           envFrom: # allows configuring additional stuff like LINODE_URL
             - secretRef:
                 name: capl-manager-credentials
