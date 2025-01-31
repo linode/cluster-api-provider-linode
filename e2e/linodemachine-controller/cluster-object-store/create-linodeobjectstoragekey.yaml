@@ -1,0 +1,16 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  name: ($key)
+spec:
+  bucketAccess:
+    - bucketName: ($key)
+      permissions: read_write
+      region: us-sea
+  generatedSecret:
+    name: ($key_secret)
+    format:
+      bucket_name: '{{ .BucketName }}'
+      s3_endpoint: '{{ .S3Endpoint }}'
+      access_key: '{{ .AccessKey }}'
+      secret_key: '{{ .SecretKey }}'
