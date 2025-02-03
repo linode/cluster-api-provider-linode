@@ -17,5 +17,5 @@ spec:
   valuesTemplate: |
     proxyServerHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
     proxyServerPort: ${KONNECTIVITY_PORT:=8132}
-    serverCount: ${CONTROL_PLANE_MACHINE_COUNT}
+    serverCount: ${CONTROL_PLANE_MACHINE_COUNT:=1}
     agentReplicas: ${KONNECTIVITY_AGENT_REPLICAS:=3}

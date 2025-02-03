@@ -79,7 +79,6 @@ spec:
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
               --kubernetes-version ${KUBERNETES_VERSION} \
               --infrastructure local-linode:v0.0.0 \
-              --control-plane-machine-count 1 --worker-machine-count 1 \
               --flavor kubeadm-flatcar \
               --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > flatcar-cluster.yaml
             check:

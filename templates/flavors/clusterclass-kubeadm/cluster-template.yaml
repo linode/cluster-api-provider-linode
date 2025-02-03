@@ -22,9 +22,9 @@ spec:
       - name: workerMachineType
         value: ${LINODE_MACHINE_TYPE}
     controlPlane:
-      replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+      replicas: ${CONTROL_PLANE_MACHINE_COUNT:=1}
     workers:
       machineDeployments:
         - class: default-worker
           name: md-0
-          replicas: ${WORKER_MACHINE_COUNT}
+          replicas: ${WORKER_MACHINE_COUNT:=1}

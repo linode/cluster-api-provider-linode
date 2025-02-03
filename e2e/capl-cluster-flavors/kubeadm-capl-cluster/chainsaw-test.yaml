@@ -42,7 +42,6 @@ spec:
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
               --kubernetes-version ${KUBERNETES_VERSION} \
               --infrastructure local-linode:v0.0.0 \
-              --control-plane-machine-count 1 --worker-machine-count 1 \
               --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > default-cluster.yaml
             check:
               ($error == null): true
