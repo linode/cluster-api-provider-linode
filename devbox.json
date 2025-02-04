@@ -20,7 +20,8 @@
     "kyverno-chainsaw@latest",
     "kubernetes-helm@latest",
     "kubectl@latest",
-    "kubebuilder@4.2.0"
+    "kubebuilder@4.2.0",
+    "jq@latest"
   ],
   "shell": {
     "init_hook": [

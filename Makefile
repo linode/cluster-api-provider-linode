@@ -331,6 +331,9 @@ export PATH := $(CACHE_BIN):$(PATH)
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+$(CACHE_BIN):
+	mkdir -p $(CACHE_BIN)
+
 ## --------------------------------------
 ## Tooling Binaries
 ## --------------------------------------
