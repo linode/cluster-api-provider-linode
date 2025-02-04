@@ -32,6 +32,10 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 ```
 
 ```admonish info
+Consider also setting the following environment variables: `CONTROL_PLANE_MACHINE_COUNT=1` and `WORKER_MACHINE_COUNT=1`. These counts can also be modified case-by-case with the `--control-plane-machine-count` and `--worker-machine-count` flags. `clusterctl` defaults these to 1 and 0, respectively, which results in a control plane-only cluster with one node.
+```
+
+```admonish info
 This project uses [linodego](https://github.com/linode/linodego) for Linode API interaction. 
 Please refer to it for more details on environment variables used for client configuration.
 ```
