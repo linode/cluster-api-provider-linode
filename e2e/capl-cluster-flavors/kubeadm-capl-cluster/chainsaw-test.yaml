@@ -130,28 +130,29 @@ spec:
             namespace: kube-system
     - name: Delete child cluster
       try:
-        - delete:
-            ref:
-              apiVersion: cluster.x-k8s.io/v1beta1
-              kind: Cluster
-              name: ($cluster)
-        - delete:
-            ref:
-              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-              kind: LinodeVPC
-              name: ($cluster)
-        - delete:
-            ref:
-              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-              kind: LinodeFirewall
-              name: ($cluster)
-        - delete:
-            ref:
-              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-              kind: LinodeFirewall
-              name: ($cluster)-nb
-        - error:
-            file: check-child-cluster-vpc-and-firewall-deleted.yaml
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+              - name: SKIP_DELETE
+                value: (env('SKIP_CUSTOM_DELETE'))
+            content: |
+              set -e
+              if [[ -n "$SKIP_DELETE" ]]; then
+                echo "Skipping deletion of child cluster"
+                exit 0
+              fi
+              kubectl delete cluster $CLUSTER -n $NAMESPACE --timeout=60s || { echo "deletion failed!"; exit 1; }
+              kubectl delete linodevpc $CLUSTER -n $NAMESPACE --timeout=60s || { echo "deletion failed!"; exit 1; }
+              kubectl delete linodefirewall $CLUSTER -n $NAMESPACE --timeout=60s || { echo "deletion failed!"; exit 1; }
+              kubectl delete linodefirewall $CLUSTER-nb -n $NAMESPACE --timeout=60s || { echo "deletion failed!"; exit 1; }
+            check:
+              ($error == null): true
+              (contains($stdout, 'deletion failed')): false
     - name: Check if the linodes are deleted
       try:
         - script:
@@ -164,8 +165,14 @@ spec:
                 value: linode/instances
               - name: FILTER
                 value: (to_string({"tags":($cluster)}))
+              - name: SKIP_DELETE
+                value: (env('SKIP_CUSTOM_DELETE'))
             content: |
               set -e
+              if [[ -n "$SKIP_DELETE" ]]; then
+                echo {\"results\":0}
+                exit 0
+              fi
               curl -s \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "X-Filter: $FILTER" \

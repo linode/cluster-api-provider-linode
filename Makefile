@@ -184,7 +184,7 @@ checkout-last-release:
 
 .PHONY: last-release-cluster
 last-release-cluster: kind ctlptl tilt kustomize clusterctl chainsaw kind-cluster checkout-last-release local-release local-deploy
-	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 600s --skip-delete ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
+	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) SKIP_CUSTOM_DELETE=true $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 600s --skip-delete ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
 
 .PHONY: test-upgrade
 test-upgrade: last-release-cluster checkout-latest-commit
