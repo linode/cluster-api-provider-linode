@@ -33,6 +33,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -151,6 +152,12 @@ func (r *LinodeVPCReconciler) reconcile(
 	if err := vpcScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
 		logger.Error(err, "failed to update linode client token from Credential Ref")
 		return res, err
+	}
+
+	// Pause
+	// We don't have much to do, but simply requeue without an error if we are paused or if we were recently unpaused
+	if isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, nil, vpcScope.LinodeVPC); err != nil || isPaused || conditionChanged {
+		return ctrl.Result{}, err
 	}
 
 	// Delete

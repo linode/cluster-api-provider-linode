@@ -32,6 +32,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -96,6 +97,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.reconcile(ctx, log, fwScope)
 }
 
+//nolint:cyclop // simplying this further makes it much harder to read
 func (r *LinodeFirewallReconciler) reconcile(
 	ctx context.Context,
 	logger logr.Logger,
@@ -133,6 +135,12 @@ func (r *LinodeFirewallReconciler) reconcile(
 	// Override the controller credentials with ones from the Firewall's Secret reference (if supplied).
 	if err := fwScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
 		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return ctrl.Result{}, err
+	}
+
+	// Pause
+	// We don't have much to do, but simply requeue without an error if we are paused or if we were recently unpaused
+	if isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, fwScope.Client, nil, fwScope.LinodeFirewall); err != nil || isPaused || conditionChanged {
 		return ctrl.Result{}, err
 	}
 

@@ -35,6 +35,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -169,6 +170,51 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, log, machineScope)
 }
 
+func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
+	// Pause
+	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, machineScope.Client, machineScope.Cluster, machineScope.LinodeMachine)
+
+	if err == nil && !isPaused && !conditionChanged {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if machineScope.LinodeMachine.Spec.FirewallRef == nil {
+		logger.Info("Paused reconciliation is skipped due to missing Firewall ref")
+		return nil
+	}
+
+	linodeFW := infrav1alpha2.LinodeFirewall{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: machineScope.LinodeMachine.Spec.FirewallRef.Namespace,
+			Name:      machineScope.LinodeMachine.Spec.FirewallRef.Name,
+		},
+	}
+
+	if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeFW), &linodeFW); err != nil {
+		return err
+	}
+
+	annotations := linodeFW.ObjectMeta.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	if isPaused {
+		logger.Info("CAPI cluster is paused, pausing Firewall too")
+		// if we're paused, we should slap the pause annotation on our children
+		// get the firewall & add the annotation
+		annotations[clusterv1.PausedAnnotation] = "true"
+	} else {
+		// we are not paused here, but were previously paused (we can get here only if conditionChanged is true.
+		logger.Info("CAPI cluster is no longer paused, removing pause annotation from Firewall")
+		delete(annotations, clusterv1.PausedAnnotation)
+	}
+	linodeFW.SetAnnotations(annotations)
+	return machineScope.PatchHelper.Patch(ctx, &linodeFW)
+}
+
 func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res ctrl.Result, err error) {
 	failureReason := util.UnknownError
 	//nolint:dupl // Code duplication is simplicity in this case.
@@ -214,6 +260,11 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 			logger.Error(err, "failed to update linode client token from Credential Ref")
 			return ctrl.Result{}, err
 		}
+	}
+
+	// Pause
+	if err := r.reconcilePause(ctx, logger, machineScope); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Delete

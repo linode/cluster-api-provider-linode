@@ -30,6 +30,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -115,6 +116,13 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 			reterr = err
 		}
 	}()
+
+	// Pause
+	// We don't have much to do, but simply requeue without an error if we are paused or if we were recently unpaused
+	if isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, bScope.Client, nil, bScope.Bucket); err != nil || isPaused || conditionChanged {
+		return ctrl.Result{}, err
+	}
+
 	if err := r.reconcileApply(ctx, bScope); err != nil {
 		return res, err
 	}
