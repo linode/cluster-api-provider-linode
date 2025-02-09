@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"time"
 
 	"github.com/linode/linodego"
@@ -98,13 +99,17 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					bScope.LinodeClient = mck.LinodeClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(HaveOccurred())
+					// second one is the real thing
+					_, err = reconciler.reconcile(ctx, &bScope)
+					Expect(err).NotTo(HaveOccurred())
 
 					By("status")
 					Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 					Expect(obj.Status.Ready).To(BeTrue())
 					Expect(obj.Status.FailureMessage).To(BeNil())
-					Expect(obj.Status.Conditions).To(HaveLen(1))
-					Expect(obj.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
+					Expect(obj.Status.Conditions).To(HaveLen(2))
+					readyCond := conditions.Get(&obj, string(clusterv1.ReadyCondition))
+					Expect(readyCond).NotTo(BeNil())
 					Expect(*obj.Status.Hostname).To(Equal("hostname"))
 					Expect(obj.Status.CreationTime).NotTo(BeNil())
 
@@ -139,6 +144,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				Result("error", func(ctx context.Context, mck Mock) {
 					bScope.LinodeClient = mck.LinodeClient
 					_, err := reconciler.reconcile(ctx, &bScope)
+					Expect(err).NotTo(BeNil())
+					// pause is done, now retry
+					_, err = reconciler.reconcile(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("get bucket error"))
 				}),
 			),

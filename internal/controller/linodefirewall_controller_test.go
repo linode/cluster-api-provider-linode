@@ -20,14 +20,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"time"
 
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -157,6 +157,9 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
+						// first one is for pause
+						res, err = reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall create"))
 					})),
@@ -194,7 +197,9 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				Result("success", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 					Expect(err).NotTo(HaveOccurred())
-
+					// once more after pause
+					_, err = reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
 					Expect(mck.Logs()).NotTo(ContainSubstring("failed to create Firewall"))
@@ -209,14 +214,18 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("update requeues for update rules error", func(ctx context.Context, mck Mock) {
+						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
+
 						conditions.Set(fwScope.LinodeFirewall, metav1.Condition{
 							Type:    string(clusterv1.ReadyCondition),
 							Status:  metav1.ConditionFalse,
 							Reason:  "test",
 							Message: "test",
 						})
-						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						// after pause is done, do the real reconcile
+						res, err = reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall update"))

@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -124,6 +125,9 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					Path(Result("", func(ctx context.Context, mck Mock) {
 						reconciler.Client = k8sClient
 						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						// pause is done, now real thing
+						_, err = reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
 						Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
 					})),
@@ -430,12 +434,16 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
 					Expect(err).NotTo(HaveOccurred())
 
+					// One more for pause
+					_, err = reconciler.reconcile(ctx, cScope, logr.Logger{})
+					Expect(err).NotTo(HaveOccurred())
 					By("checking ready conditions")
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
-					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
+					readyCond := conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition))
+					Expect(readyCond).NotTo(BeNil())
 
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))
@@ -699,12 +707,17 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
 					Expect(err).NotTo(HaveOccurred())
 
+					// once more for pause
+					_, err = reconciler.reconcile(ctx, cScope, logr.Logger{})
+					Expect(err).NotTo(HaveOccurred())
+
 					By("checking ready conditions")
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
-					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
+					cond := conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition))
+					Expect(cond).NotTo(BeNil())
 
 					By("checking controlPlaneEndpoint/NB host and port")
 					Expect(linodeCluster.Spec.ControlPlaneEndpoint.Host).To(Equal(controlPlaneEndpointHost))

@@ -1941,6 +1941,15 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 
 		Expect(err).NotTo(HaveOccurred())
 
+		// gotta do it again for pause
+		_, err = lpgReconciler.reconcile(ctx, logger, &scope.PlacementGroupScope{
+			PatchHelper:          helper,
+			Client:               k8sClient,
+			LinodeClient:         mockLinodeClient,
+			LinodePlacementGroup: &linodePlacementGroup,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
 		mScope := scope.MachineScope{
 			Client:        k8sClient,
 			LinodeClient:  mockLinodeClient,
@@ -2117,6 +2126,14 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 		})
 
 		Expect(err).NotTo(HaveOccurred())
+		// reconcile again for the real thing
+		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
+			PatchHelper:  helper,
+			Client:       k8sClient,
+			LinodeClient: mockLinodeClient,
+			LinodeVPC:    &linodeVPC,
+		})
+		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{
 			Client:        k8sClient,
@@ -2185,6 +2202,15 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 		helper, err := patch.NewHelper(&linodeVPC, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
 
+		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
+			PatchHelper:  helper,
+			Client:       k8sClient,
+			LinodeClient: mockLinodeClient,
+			LinodeVPC:    &linodeVPC,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		// second one is for real - first just does the pause
 		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
 			PatchHelper:  helper,
 			Client:       k8sClient,

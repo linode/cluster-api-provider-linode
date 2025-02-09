@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
@@ -100,7 +101,12 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
+					// first one is pause
 					_, err := reconciler.reconcile(ctx, &keyScope)
+					Expect(err).NotTo(HaveOccurred())
+					// one more for the actual thing
+					_, err = reconciler.reconcile(ctx, &keyScope)
+					Expect(err).NotTo(BeNil())
 					Expect(err.Error()).To(ContainSubstring("create key error"))
 				}),
 			),
@@ -123,8 +129,9 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(k8sClient.Get(ctx, objectKey, &key)).To(Succeed())
 					Expect(key.Status.Ready).To(BeTrue())
 					Expect(key.Status.FailureMessage).To(BeNil())
-					Expect(key.Status.Conditions).To(HaveLen(1))
-					Expect(key.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
+					Expect(key.Status.Conditions).To(HaveLen(2))
+					readyCond := conditions.Get(&key, string(clusterv1.ReadyCondition))
+					Expect(readyCond).NotTo(BeNil())
 					Expect(key.Status.CreationTime).NotTo(BeNil())
 					Expect(*key.Status.LastKeyGeneration).To(Equal(key.Spec.KeyGeneration))
 					Expect(*key.Status.LastKeyGeneration).To(Equal(0))
@@ -161,6 +168,12 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
 					_, err := reconciler.reconcile(ctx, &keyScope)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = keyScope.Client.Get(ctx, client.ObjectKeyFromObject(&key), keyScope.Key)
+					Expect(err).NotTo(HaveOccurred())
+					// pause is done, now do the real reconcile
+					_, err = reconciler.reconcile(ctx, &keyScope)
 					Expect(err.Error()).To(ContainSubstring("rotate key error"))
 				}),
 			),
@@ -369,6 +382,10 @@ var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 					_, err := reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(HaveOccurred())
 
+					// rerun to reconcile pause
+					_, err = reconciler.reconcile(ctx, &keyScope)
+					Expect(err).NotTo(HaveOccurred())
+
 					var secret corev1.Secret
 					secretKey := client.ObjectKey{Namespace: "other", Name: "opaque-custom-secret"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
@@ -398,7 +415,9 @@ var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 				Result("generates cluster-resource-set secret with templated data", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(HaveOccurred())
-
+					// rerun to reconcilePause
+					_, err = reconciler.reconcile(ctx, &keyScope)
+					Expect(err).NotTo(HaveOccurred())
 					var secret corev1.Secret
 					secretKey := client.ObjectKey{Namespace: "other", Name: "cluster-resource-set-custom-secret"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
@@ -490,7 +509,7 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 		}),
 		Call("scheme with no infrav1alpha1", func(ctx context.Context, mck Mock) {
 			prev := mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
-			mck.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(2)
+			mck.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(3)
 		}),
 		Result("error", func(ctx context.Context, mck Mock) {
 			keyScope.Client = mck.K8sClient
