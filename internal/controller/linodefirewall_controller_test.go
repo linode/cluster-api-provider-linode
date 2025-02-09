@@ -290,12 +290,18 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
+						// Now do it after the pause is done
+						res, err = reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
 						Expect(mck.Logs()).To(ContainSubstring("failed to delete Firewall"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						Expect(err).NotTo(HaveOccurred())
+						// Now pause is done
+						res, err = reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 					})),

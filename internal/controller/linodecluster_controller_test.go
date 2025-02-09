@@ -124,7 +124,13 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				OneOf(
 					Path(Result("", func(ctx context.Context, mck Mock) {
 						reconciler.Client = k8sClient
+						err = cScope.Client.Get(ctx, clusterKey, cScope.LinodeCluster)
+						Expect(err).NotTo(HaveOccurred())
+
 						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+
+						err = cScope.Client.Get(ctx, clusterKey, cScope.LinodeCluster)
 						Expect(err).NotTo(HaveOccurred())
 						// pause is done, now real thing
 						_, err = reconciler.reconcile(ctx, cScope, mck.Logger())

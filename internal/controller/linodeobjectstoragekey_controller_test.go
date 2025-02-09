@@ -167,6 +167,8 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
+					err = keyScope.Client.Get(ctx, client.ObjectKeyFromObject(&key), keyScope.Key)
+					Expect(err).NotTo(HaveOccurred())
 					_, err := reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(HaveOccurred())
 

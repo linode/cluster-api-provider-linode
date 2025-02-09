@@ -94,7 +94,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
 						// The first requeue sets the condition to `notPaused`
-						err = pgScope.Client.Get(ctx, client.ObjectKeyFromObject(pgScope.LinodePlacementGroup), &linodePG)
+						err = pgScope.Client.Get(ctx, client.ObjectKeyFromObject(pgScope.LinodePlacementGroup), pgScope.LinodePlacementGroup)
 						Expect(err).NotTo(HaveOccurred())
 						condition := v1beta2conditions.Get(&linodePG, clusterv1.PausedV1Beta2Condition)
 						Expect(condition).NotTo(BeNil())
