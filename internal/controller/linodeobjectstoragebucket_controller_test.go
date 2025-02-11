@@ -99,15 +99,12 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					bScope.LinodeClient = mck.LinodeClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(HaveOccurred())
-					// second one is the real thing
-					_, err = reconciler.reconcile(ctx, &bScope)
-					Expect(err).NotTo(HaveOccurred())
 
 					By("status")
 					Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
 					Expect(obj.Status.Ready).To(BeTrue())
 					Expect(obj.Status.FailureMessage).To(BeNil())
-					Expect(obj.Status.Conditions).To(HaveLen(2))
+					Expect(obj.Status.Conditions).To(HaveLen(1))
 					readyCond := conditions.Get(&obj, string(clusterv1.ReadyCondition))
 					Expect(readyCond).NotTo(BeNil())
 					Expect(*obj.Status.Hostname).To(Equal("hostname"))
@@ -145,8 +142,6 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					bScope.LinodeClient = mck.LinodeClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(BeNil())
-					// pause is done, now retry
-					_, err = reconciler.reconcile(ctx, &bScope)
 					Expect(err.Error()).To(ContainSubstring("get bucket error"))
 				}),
 			),

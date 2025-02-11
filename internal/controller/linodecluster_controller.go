@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -118,6 +119,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 func (r *LinodeClusterReconciler) reconcilePause(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) error {
+	// Pausing a cluster pauses the VPC as well.
 	// First thing to do is handle a paused Cluster. Paused clusters shouldn't be deleted.
 	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, clusterScope.Client, clusterScope.Cluster, clusterScope.LinodeCluster)
 	if err == nil && !isPaused && !conditionChanged {
@@ -160,7 +162,11 @@ func (r *LinodeClusterReconciler) reconcilePause(ctx context.Context, clusterSco
 		delete(annotations, clusterv1.PausedAnnotation)
 	}
 	linodeVPC.SetAnnotations(annotations)
-	return clusterScope.PatchHelper.Patch(ctx, &linodeVPC)
+	vpcPatchHelper, err := patch.NewHelper(&linodeVPC, clusterScope.Client)
+	if err != nil {
+		return fmt.Errorf("failed to build patch helper for linode VPC object: %w", err)
+	}
+	return vpcPatchHelper.Patch(ctx, &linodeVPC)
 }
 
 //nolint:cyclop // can't make it simpler with existing API

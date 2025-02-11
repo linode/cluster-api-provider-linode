@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"errors"
-
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
@@ -65,7 +64,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
-			VPCRef: &corev1.ObjectReference{Name: "vpctest"},
+			VPCRef: &corev1.ObjectReference{Name: "vpctest", Namespace: defaultNamespace},
 		},
 	}
 	linodeVPC := infrav1alpha2.LinodeVPC{
@@ -124,15 +123,10 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				OneOf(
 					Path(Result("", func(ctx context.Context, mck Mock) {
 						reconciler.Client = k8sClient
-						err = cScope.Client.Get(ctx, clusterKey, cScope.LinodeCluster)
-						Expect(err).NotTo(HaveOccurred())
-
+						// first for pause reconciliation
 						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-
-						err = cScope.Client.Get(ctx, clusterKey, cScope.LinodeCluster)
-						Expect(err).NotTo(HaveOccurred())
-						// pause is done, now real thing
+						// second for real
 						_, err = reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
 						Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
@@ -145,7 +139,12 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				}),
 				Result("", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
+					// first reconcile is for pause
 					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).NotTo(HaveOccurred())
+
+					// second reconcile is for real
+					_, err = reconciler.reconcile(ctx, cScope, mck.Logger())
 					Expect(err).NotTo(HaveOccurred())
 					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeNBFirewallReady)).To(BeFalse())
 				}),
@@ -329,10 +328,11 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(3))
-					Expect(linodeCluster.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
-					Expect(linodeCluster.Status.Conditions[1].Type).To(Equal(ConditionPreflightLinodeNBFirewallReady))
-					Expect(linodeCluster.Status.Conditions[2].Type).To(Equal(ConditionPreflightLinodeVPCReady))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(4))
+					Expect(conditions.Get(&linodeCluster, clusterv1.PausedV1Beta2Condition).Status).To(Equal(metav1.ConditionFalse))
+					Expect(conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition)).Status).To(Equal(metav1.ConditionTrue))
+					Expect(conditions.Get(&linodeCluster, ConditionPreflightLinodeNBFirewallReady)).NotTo(BeNil())
+					Expect(conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)).NotTo(BeNil())
 					By("checking NB id")
 					Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
 
@@ -440,7 +440,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 					_, err := reconciler.reconcile(ctx, cScope, logr.Logger{})
 					Expect(err).NotTo(HaveOccurred())
 
-					// One more for pause
+					// Once more for pause
 					_, err = reconciler.reconcile(ctx, cScope, logr.Logger{})
 					Expect(err).NotTo(HaveOccurred())
 					By("checking ready conditions")

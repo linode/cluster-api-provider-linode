@@ -19,13 +19,11 @@ package controller
 import (
 	"context"
 	"errors"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"time"
 
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1beta2conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -92,17 +90,6 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 				OneOf(
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
-						Expect(err).NotTo(HaveOccurred())
-						// The first requeue sets the condition to `notPaused`
-						err = pgScope.Client.Get(ctx, client.ObjectKeyFromObject(pgScope.LinodePlacementGroup), pgScope.LinodePlacementGroup)
-						Expect(err).NotTo(HaveOccurred())
-						condition := v1beta2conditions.Get(&linodePG, clusterv1.PausedV1Beta2Condition)
-						Expect(condition).NotTo(BeNil())
-
-						// The second requeue will have the delays
-						err = pgScope.Client.Get(ctx, client.ObjectKeyFromObject(pgScope.LinodePlacementGroup), pgScope.LinodePlacementGroup)
-						Expect(err).NotTo(HaveOccurred())
-						res, err = reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Placement Group creation"))

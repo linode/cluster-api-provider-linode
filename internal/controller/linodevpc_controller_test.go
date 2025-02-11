@@ -96,9 +96,6 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
-						// first one just sets the conditions
-						res, err = reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
-						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC creation"))
 					})),
@@ -161,11 +158,6 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
-					Expect(err).NotTo(HaveOccurred())
-
-					err = vpcScope.Client.Get(ctx, client.ObjectKeyFromObject(vpcScope.LinodeVPC), vpcScope.LinodeVPC)
-					Expect(err).NotTo(HaveOccurred())
-					_, err = reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(mck.Logs()).NotTo(ContainSubstring("Failed to update VPC"))
 				}),

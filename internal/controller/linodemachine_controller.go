@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"slices"
 	"strings"
 	"time"
@@ -171,7 +172,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 }
 
 func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
-	// Pause
+	// Pausing a machine Pauses the firewall referred by the machine
 	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, machineScope.Client, machineScope.Cluster, machineScope.LinodeMachine)
 
 	if err == nil && !isPaused && !conditionChanged {
@@ -212,7 +213,11 @@ func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger log
 		delete(annotations, clusterv1.PausedAnnotation)
 	}
 	linodeFW.SetAnnotations(annotations)
-	return machineScope.PatchHelper.Patch(ctx, &linodeFW)
+	fwPatchHelper, err := patch.NewHelper(&linodeFW, machineScope.Client)
+	if err != nil {
+		return fmt.Errorf("failed to create patch helper for firewalls: %w", err)
+	}
+	return fwPatchHelper.Patch(ctx, &linodeFW)
 }
 
 func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res ctrl.Result, err error) {

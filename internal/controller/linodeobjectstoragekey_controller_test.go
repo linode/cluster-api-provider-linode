@@ -101,11 +101,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
-					// first one is pause
 					_, err := reconciler.reconcile(ctx, &keyScope)
-					Expect(err).NotTo(HaveOccurred())
-					// one more for the actual thing
-					_, err = reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(BeNil())
 					Expect(err.Error()).To(ContainSubstring("create key error"))
 				}),
@@ -129,7 +125,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(k8sClient.Get(ctx, objectKey, &key)).To(Succeed())
 					Expect(key.Status.Ready).To(BeTrue())
 					Expect(key.Status.FailureMessage).To(BeNil())
-					Expect(key.Status.Conditions).To(HaveLen(2))
+					Expect(key.Status.Conditions).To(HaveLen(1))
 					readyCond := conditions.Get(&key, string(clusterv1.ReadyCondition))
 					Expect(readyCond).NotTo(BeNil())
 					Expect(key.Status.CreationTime).NotTo(BeNil())
@@ -167,15 +163,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
-					err = keyScope.Client.Get(ctx, client.ObjectKeyFromObject(&key), keyScope.Key)
-					Expect(err).NotTo(HaveOccurred())
 					_, err := reconciler.reconcile(ctx, &keyScope)
-					Expect(err).NotTo(HaveOccurred())
-
-					err = keyScope.Client.Get(ctx, client.ObjectKeyFromObject(&key), keyScope.Key)
-					Expect(err).NotTo(HaveOccurred())
-					// pause is done, now do the real reconcile
-					_, err = reconciler.reconcile(ctx, &keyScope)
 					Expect(err.Error()).To(ContainSubstring("rotate key error"))
 				}),
 			),
@@ -384,10 +372,6 @@ var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 					_, err := reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(HaveOccurred())
 
-					// rerun to reconcile pause
-					_, err = reconciler.reconcile(ctx, &keyScope)
-					Expect(err).NotTo(HaveOccurred())
-
 					var secret corev1.Secret
 					secretKey := client.ObjectKey{Namespace: "other", Name: "opaque-custom-secret"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
@@ -416,9 +400,6 @@ var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 				}),
 				Result("generates cluster-resource-set secret with templated data", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, &keyScope)
-					Expect(err).NotTo(HaveOccurred())
-					// rerun to reconcilePause
-					_, err = reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(HaveOccurred())
 					var secret corev1.Secret
 					secretKey := client.ObjectKey{Namespace: "other", Name: "cluster-resource-set-custom-secret"}
@@ -511,15 +492,13 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 		}),
 		Call("scheme with no infrav1alpha1", func(ctx context.Context, mck Mock) {
 			prev := mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme)
-			mck.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(3)
+			mck.K8sClient.EXPECT().Scheme().After(prev).Return(runtime.NewScheme()).Times(2)
 		}),
 		Result("error", func(ctx context.Context, mck Mock) {
 			keyScope.Client = mck.K8sClient
-
-			patchHelper, err := patch.NewHelper(keyScope.Key, mck.K8sClient)
+			helper, err := patch.NewHelper(keyScope.Key, mck.K8sClient)
 			Expect(err).NotTo(HaveOccurred())
-			keyScope.PatchHelper = patchHelper
-
+			keyScope.PatchHelper = helper
 			_, err = reconciler.reconcile(ctx, &keyScope)
 			Expect(err.Error()).To(ContainSubstring("no kind is registered"))
 		}),
@@ -532,7 +511,6 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					keyScope.Key.Spec.KeyGeneration = 1
 					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
 					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
-
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &keyScope)
