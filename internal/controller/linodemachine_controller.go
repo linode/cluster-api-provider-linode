@@ -25,8 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"sigs.k8s.io/cluster-api/util/patch"
-
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
