@@ -1928,7 +1928,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 
 	It("creates a instance in a PlacementGroup with a firewall", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
-
 		helper, err := patch.NewHelper(&linodePlacementGroup, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -1940,7 +1939,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		})
 
 		Expect(err).NotTo(HaveOccurred())
-
 		mScope := scope.MachineScope{
 			Client:        k8sClient,
 			LinodeClient:  mockLinodeClient,

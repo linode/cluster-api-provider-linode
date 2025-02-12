@@ -154,6 +154,9 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					}, nil)
 				}),
 				Result("update success", func(ctx context.Context, mck Mock) {
+					err = vpcScope.Client.Get(ctx, client.ObjectKeyFromObject(vpcScope.LinodeVPC), vpcScope.LinodeVPC)
+					Expect(err).NotTo(HaveOccurred())
+
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(mck.Logs()).NotTo(ContainSubstring("Failed to update VPC"))

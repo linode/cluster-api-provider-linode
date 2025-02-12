@@ -115,6 +115,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 			reterr = err
 		}
 	}()
+
 	if err := r.reconcileApply(ctx, bScope); err != nil {
 		return res, err
 	}
@@ -180,7 +181,7 @@ func (r *LinodeObjectStorageBucketReconciler) SetupWithManager(mgr ctrl.Manager,
 		WithOptions(options).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(
-			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
 		)).
 		Watches(

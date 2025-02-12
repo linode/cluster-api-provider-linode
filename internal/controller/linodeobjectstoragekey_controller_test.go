@@ -31,6 +31,7 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	clusteraddonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
+	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -101,6 +102,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
 					_, err := reconciler.reconcile(ctx, &keyScope)
+					Expect(err).NotTo(BeNil())
 					Expect(err.Error()).To(ContainSubstring("create key error"))
 				}),
 			),
@@ -124,7 +126,8 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(key.Status.Ready).To(BeTrue())
 					Expect(key.Status.FailureMessage).To(BeNil())
 					Expect(key.Status.Conditions).To(HaveLen(1))
-					Expect(key.Status.Conditions[0].Type).To(Equal(string(clusterv1.ReadyCondition)))
+					readyCond := conditions.Get(&key, string(clusterv1.ReadyCondition))
+					Expect(readyCond).NotTo(BeNil())
 					Expect(key.Status.CreationTime).NotTo(BeNil())
 					Expect(*key.Status.LastKeyGeneration).To(Equal(key.Spec.KeyGeneration))
 					Expect(*key.Status.LastKeyGeneration).To(Equal(0))
@@ -398,7 +401,6 @@ var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 				Result("generates cluster-resource-set secret with templated data", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(HaveOccurred())
-
 					var secret corev1.Secret
 					secretKey := client.ObjectKey{Namespace: "other", Name: "cluster-resource-set-custom-secret"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
@@ -494,11 +496,9 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 		}),
 		Result("error", func(ctx context.Context, mck Mock) {
 			keyScope.Client = mck.K8sClient
-
-			patchHelper, err := patch.NewHelper(keyScope.Key, mck.K8sClient)
+			helper, err := patch.NewHelper(keyScope.Key, mck.K8sClient)
 			Expect(err).NotTo(HaveOccurred())
-			keyScope.PatchHelper = patchHelper
-
+			keyScope.PatchHelper = helper
 			_, err = reconciler.reconcile(ctx, &keyScope)
 			Expect(err.Error()).To(ContainSubstring("no kind is registered"))
 		}),
@@ -511,7 +511,6 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					keyScope.Key.Spec.KeyGeneration = 1
 					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
 					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
-
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &keyScope)

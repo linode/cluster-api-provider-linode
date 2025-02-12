@@ -194,7 +194,6 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				Result("success", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 					Expect(err).NotTo(HaveOccurred())
-
 					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
 					Expect(mck.Logs()).NotTo(ContainSubstring("failed to create Firewall"))

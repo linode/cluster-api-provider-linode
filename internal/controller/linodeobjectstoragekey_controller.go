@@ -312,7 +312,7 @@ func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, op
 		WithOptions(options).
 		Owns(&corev1.Secret{}).
 		WithEventFilter(predicate.And(
-			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
 		)).
 		Watches(
