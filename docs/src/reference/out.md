@@ -1120,6 +1120,7 @@ _Appears in:_
 | `nodeBalancerFirewallID` _integer_ | NodeBalancerFirewallID is the id of NodeBalancer Firewall. |  |  |
 | `apiserverNodeBalancerConfigID` _integer_ | apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer config. |  |  |
 | `additionalPorts` _[LinodeNBPortConfig](#linodenbportconfig) array_ | additionalPorts contains list of ports to be configured with NodeBalancer. |  |  |
+| `subnetName` _string_ | subnetName is the name/ label of the VPC subnet to be used by the cluster |  |  |
 | `useVlan` _boolean_ | UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally. |  |  |
 
 
