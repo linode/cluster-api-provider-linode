@@ -445,7 +445,6 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		if subnetID == 0 {
 			logger.Info("Failed to fetch subnet ID for specified subnet name")
 		}
-
 	} else {
 		subnetID = linodeVPC.Spec.Subnets[0].SubnetID // get first subnet if nothing specified
 	}
