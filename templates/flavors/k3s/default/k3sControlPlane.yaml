@@ -35,7 +35,7 @@ spec:
                 enabled: true
               routingMode: native
               kubeProxyReplacement: true
-              ipv4NativeRoutingCIDR: 10.0.0.0/8
+              ipv4NativeRoutingCIDR: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
               tunnelProtocol: ""
               enableIPv4Masquerade: true
               k8sServiceHost: 10.0.0.2
