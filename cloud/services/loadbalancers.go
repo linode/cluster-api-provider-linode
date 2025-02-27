@@ -228,7 +228,7 @@ func EnsureNodeBalancerConfigs(
 	return nbConfigs, nil
 }
 
-func processAndCreateNodeBalancerNodes(ctx context.Context, ipAddress string, clusterScope *scope.ClusterScope, nodeBalancerNodes []linodego.NodeBalancerNode, subnetID int, logger logr.Logger) error {
+func processAndCreateNodeBalancerNodes(ctx context.Context, ipAddress string, clusterScope *scope.ClusterScope, nodeBalancerNodes []linodego.NodeBalancerNode, subnetID int) error {
 
 	apiserverLBPort := DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
@@ -301,7 +301,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 		for _, IPs := range linodeMachine.Status.Addresses {
 			// Look for internal IPs that are NOT 192.168.* (likely VPC IPs)
 			if IPs.Type == v1beta1.MachineInternalIP && !strings.Contains(IPs.Address, "192.168") {
-				if err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID, logger); err != nil {
+				if err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID); err != nil {
 					return err
 				}
 				return nil // Return early if we found and used a VPC IP
@@ -317,7 +317,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 		}
 		internalIPFound = true
 
-		err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID, logger)
+		err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID)
 		if err != nil {
 			return err
 		}
