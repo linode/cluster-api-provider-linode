@@ -229,7 +229,6 @@ func EnsureNodeBalancerConfigs(
 }
 
 func processAndCreateNodeBalancerNodes(ctx context.Context, ipAddress string, clusterScope *scope.ClusterScope, nodeBalancerNodes []linodego.NodeBalancerNode, subnetID int) error {
-
 	apiserverLBPort := DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiserverLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
