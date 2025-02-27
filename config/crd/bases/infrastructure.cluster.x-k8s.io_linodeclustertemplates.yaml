@@ -165,8 +165,8 @@ spec:
                             description: NodeBalancerID is the id of NodeBalancer.
                             type: integer
                           subnetName:
-                            description: subnetName is the name/ label of the VPC
-                              subnet to be used by the cluster
+                            description: subnetName is the name/label of the VPC subnet
+                              to be used by the cluster
                             type: string
                           useVlan:
                             description: UseVlan provisions a cluster that uses VLANs

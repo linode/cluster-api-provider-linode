@@ -174,7 +174,7 @@ type NetworkSpec struct {
 	// additionalPorts contains list of ports to be configured with NodeBalancer.
 	// +optional
 	AdditionalPorts []LinodeNBPortConfig `json:"additionalPorts,omitempty"`
-	// subnetName is the name/ label of the VPC subnet to be used by the cluster
+	// subnetName is the name/label of the VPC subnet to be used by the cluster
 	// +optional
 	SubnetName string `json:"subnetName,omitempty"`
 

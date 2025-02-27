@@ -61,6 +61,11 @@ spec:
 
 Reference to LinodeVPC object is added to LinodeCluster object which then uses the specified VPC to provision resources.
 
+### Additional Configuration
+By default, the VPC will use the subnet with the `default` label for deploying clusters. To modify this behavior, set the `SUBNET_NAME` environment variable to match the label of the subnet to be used. Make sure the subnet is set up in the LinodeVPC manifest.
+
+Additionally, the `VPC_NETWORK_CIDR` and `K8S_CLUSTER_CIDR` environment variables can be used to change which CIDR blocks are used by the VPC and its clusters. `VPC_NETWORK_CIDR` designates the range used by the VPC, while `K8S_CLUSTER_CIDR` designates the range used by clusters for nodes. The `K8S_CLUSTER_CIDR` should be within the `VPC_NETWORK_CIDR`.
+
 ## Troubleshooting
 ### If pod-to-pod connectivity is failing
 If a pod can't ping pod ips on different node, check and make sure pod CIDRs are added to ip_ranges of VPC interface.
