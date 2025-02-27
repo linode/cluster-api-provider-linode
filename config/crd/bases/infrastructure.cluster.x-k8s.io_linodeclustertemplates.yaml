@@ -164,6 +164,11 @@ spec:
                           nodeBalancerID:
                             description: NodeBalancerID is the id of NodeBalancer.
                             type: integer
+                          subnetRange:
+                            description: |-
+                              subnetRange is the range of we want to provide for creating nodebalancer in VPC.
+                              example: 10.10.10.0/30
+                            type: string
                           useVlan:
                             description: UseVlan provisions a cluster that uses VLANs
                               instead of VPCs. IPAM is managed internally.

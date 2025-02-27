@@ -1121,6 +1121,7 @@ _Appears in:_
 | `apiserverNodeBalancerConfigID` _integer_ | apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer config. |  |  |
 | `additionalPorts` _[LinodeNBPortConfig](#linodenbportconfig) array_ | additionalPorts contains list of ports to be configured with NodeBalancer. |  |  |
 | `useVlan` _boolean_ | UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally. |  |  |
+| `subnetRange` _string_ | subnetRange is the range of we want to provide for creating nodebalancer in VPC.<br />example: 10.10.10.0/30 |  |  |
 
 
 #### ObjectStorageACL

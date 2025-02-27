@@ -44,6 +44,23 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 		Tags:   []string{string(clusterScope.LinodeCluster.UID)},
 	}
 
+	// if subnetRange is set, create the NodeBalancer in the specified VPC
+	// This feature is in beta and only available when nb-vpc tag is on the account
+	if clusterScope.LinodeCluster.Spec.Network.SubnetRange != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil {
+		logger.Info("Creating NodeBalancer in VPC", "subnetRange", clusterScope.LinodeCluster.Spec.Network.SubnetRange)
+		subnetID, err := getSubnetID(ctx, clusterScope, logger)
+		if err != nil {
+			logger.Error(err, "Failed to fetch Linode Subnet ID")
+			return nil, err
+		}
+		createConfig.VPCs = []linodego.NodeBalancerVPCOptions{
+			{
+				IPv4Range: clusterScope.LinodeCluster.Spec.Network.SubnetRange,
+				SubnetID:  subnetID,
+			},
+		}
+	}
+
 	// get firewall ID from firewallRef if it exists
 	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
 		firewallID, err := getFirewallID(ctx, clusterScope, logger)
@@ -68,6 +85,48 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	}
 
 	return clusterScope.LinodeClient.CreateNodeBalancer(ctx, createConfig)
+}
+
+// getSubnetID returns the subnetID of the first subnet in the LinodeVPC.
+// If no subnets or subnetID is found, it returns an error.
+func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (int, error) {
+	name := clusterScope.LinodeCluster.Spec.VPCRef.Name
+	namespace := clusterScope.LinodeCluster.Spec.VPCRef.Namespace
+	if namespace == "" {
+		namespace = clusterScope.LinodeCluster.Namespace
+	}
+
+	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
+
+	linodeVPC := &v1alpha2.LinodeVPC{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+
+	objectKey := client.ObjectKeyFromObject(linodeVPC)
+	err := clusterScope.Client.Get(ctx, objectKey, linodeVPC)
+	if err != nil {
+		logger.Error(err, "Failed to fetch LinodeVPC")
+		return -1, err
+	}
+	if len(linodeVPC.Spec.Subnets) == 0 {
+		err = errors.New("No subnets found in LinodeVPC")
+		logger.Error(err, "Failed to fetch LinodeVPC")
+		return -1, err
+	}
+
+	// We are using the first subnet as the default one
+	// get the subnetID from the linodeVPC object
+	subnetID := linodeVPC.Spec.Subnets[0].SubnetID
+	if subnetID == 0 {
+		err = errors.New("Subnet ID is 0")
+		logger.Error(err, "Failed to fetch subnetID from LinodeVPC")
+		return -1, err
+	}
+
+	return subnetID, nil
 }
 
 func getFirewallID(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (int, error) {
@@ -169,60 +228,100 @@ func EnsureNodeBalancerConfigs(
 	return nbConfigs, nil
 }
 
-// AddNodesToNB adds backend Nodes on the Node Balancer configuration
-func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope, eachMachine v1alpha2.LinodeMachine, nodeBalancerNodes []linodego.NodeBalancerNode) error {
+func processAndCreateNodeBalancerNodes(ctx context.Context, ipAddress string, clusterScope *scope.ClusterScope, nodeBalancerNodes []linodego.NodeBalancerNode, subnetID int, logger logr.Logger) error {
+
 	apiserverLBPort := DefaultApiserverLBPort
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiserverLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
 	}
 
+	// Set the port number and NB config ID for standard ports
+	portsToBeAdded := make([]map[string]int, 0)
+	standardPort := map[string]int{"configID": *clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID, "port": apiserverLBPort}
+	portsToBeAdded = append(portsToBeAdded, standardPort)
+
+	// Set the port number and NB config ID for any additional ports
+	for _, portConfig := range clusterScope.LinodeCluster.Spec.Network.AdditionalPorts {
+		portsToBeAdded = append(portsToBeAdded, map[string]int{"configID": *portConfig.NodeBalancerConfigID, "port": portConfig.Port})
+	}
+
+	// Cycle through all ports to be added
+	for _, ports := range portsToBeAdded {
+		ipPortCombo := fmt.Sprintf("%s:%d", ipAddress, ports["port"])
+		ipPortComboExists := false
+
+		for _, nodes := range nodeBalancerNodes {
+			// Create the node if the IP:Port combination does not exist
+			if nodes.Address == ipPortCombo {
+				ipPortComboExists = true
+				break
+			}
+		}
+
+		if !ipPortComboExists {
+			createConfig := linodego.NodeBalancerNodeCreateOptions{
+				Label:   clusterScope.Cluster.Name,
+				Address: ipPortCombo,
+				Mode:    linodego.ModeAccept,
+			}
+			if subnetID != 0 {
+				createConfig.SubnetID = subnetID
+			}
+			_, err := clusterScope.LinodeClient.CreateNodeBalancerNode(
+				ctx,
+				*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
+				ports["configID"],
+				createConfig,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// AddNodesToNB adds backend Nodes on the Node Balancer configuration.
+func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope, linodeMachine v1alpha2.LinodeMachine, nodeBalancerNodes []linodego.NodeBalancerNode) error {
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
 		return errors.New("nil NodeBalancer Config ID")
 	}
 
+	// if subnetRange is set, we want to prioritize finding the VPC IP address
+	// otherwise, we will use the private IP address
+	subnetID := 0
+	useVPCIps := clusterScope.LinodeCluster.Spec.Network.SubnetRange != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil
+	if useVPCIps {
+		// Get subnetID
+		subnetID, err := getSubnetID(ctx, clusterScope, logger)
+		if err != nil {
+			logger.Error(err, "Failed to fetch Linode Subnet ID")
+			return err
+		}
+		for _, IPs := range linodeMachine.Status.Addresses {
+			// Look for internal IPs that are NOT 192.168.* (likely VPC IPs)
+			if IPs.Type == v1beta1.MachineInternalIP && !strings.Contains(IPs.Address, "192.168") {
+				if err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID, logger); err != nil {
+					return err
+				}
+				return nil // Return early if we found and used a VPC IP
+			}
+		}
+	}
+
+	// We will use private IP address as the default
 	internalIPFound := false
-	for _, IPs := range eachMachine.Status.Addresses {
+	for _, IPs := range linodeMachine.Status.Addresses {
 		if IPs.Type != v1beta1.MachineInternalIP || !strings.Contains(IPs.Address, "192.168") {
 			continue
 		}
 		internalIPFound = true
 
-		// Set the port number and NB config ID for standard ports
-		portsToBeAdded := make([]map[string]int, 0)
-		standardPort := map[string]int{"configID": *clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID, "port": apiserverLBPort}
-		portsToBeAdded = append(portsToBeAdded, standardPort)
-
-		// Set the port number and NB config ID for any additional ports
-		for _, portConfig := range clusterScope.LinodeCluster.Spec.Network.AdditionalPorts {
-			portsToBeAdded = append(portsToBeAdded, map[string]int{"configID": *portConfig.NodeBalancerConfigID, "port": portConfig.Port})
+		err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID, logger)
+		if err != nil {
+			return err
 		}
-
-		// Cycle through all ports to be added
-		for _, ports := range portsToBeAdded {
-			ipPortComboExists := false
-			for _, nodes := range nodeBalancerNodes {
-				// Create the node if the IP:Port combination does not exist
-				if nodes.Address == fmt.Sprintf("%s:%d", IPs.Address, ports["port"]) {
-					ipPortComboExists = true
-					break
-				}
-			}
-			if !ipPortComboExists {
-				_, err := clusterScope.LinodeClient.CreateNodeBalancerNode(
-					ctx,
-					*clusterScope.LinodeCluster.Spec.Network.NodeBalancerID,
-					ports["configID"],
-					linodego.NodeBalancerNodeCreateOptions{
-						Label:   clusterScope.Cluster.Name,
-						Address: fmt.Sprintf("%s:%d", IPs.Address, ports["port"]),
-						Mode:    linodego.ModeAccept,
-					},
-				)
-				if err != nil {
-					return err
-				}
-			}
-		}
+		break // Use the first matching IP
 	}
 	if !internalIPFound {
 		return errors.New("no private IP address")
