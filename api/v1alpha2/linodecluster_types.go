@@ -174,6 +174,9 @@ type NetworkSpec struct {
 	// additionalPorts contains list of ports to be configured with NodeBalancer.
 	// +optional
 	AdditionalPorts []LinodeNBPortConfig `json:"additionalPorts,omitempty"`
+	// subnetName is the name/label of the VPC subnet to be used by the cluster
+	// +optional
+	SubnetName string `json:"subnetName,omitempty"`
 
 	// UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
