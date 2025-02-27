@@ -1985,6 +1985,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				DNSRootDomain:       "lkedevs.net",
 				DNSUniqueIdentifier: "abc123",
 				DNSTTLSec:           30,
+				SubnetName:          "test",
 			},
 			VPCRef: &corev1.ObjectReference{
 				Namespace: "default",
@@ -2218,6 +2219,83 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Purpose: linodego.InterfacePurposePublic,
 				Primary: true,
 			}}))
+	})
+	It("creates an instance with vpc with a specific subnet", func(ctx SpecContext) {
+		linodeMachine := infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "mock",
+				Namespace: defaultNamespace,
+				UID:       "12345",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				ProviderID: ptr.To("linode://0"),
+				Type:       "g6-nanode-1",
+				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
+					{
+						Primary: true,
+					},
+				},
+			},
+			Status: infrav1alpha2.LinodeMachineStatus{
+				CloudinitMetadataSupport: true,
+			},
+		}
+		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+		mockLinodeClient.EXPECT().
+			ListVPCs(ctx, gomock.Any()).
+			Return([]linodego.VPC{}, nil)
+		mockLinodeClient.EXPECT().
+			CreateVPC(ctx, gomock.Any()).
+			Return(&linodego.VPC{ID: 1, Subnets: []linodego.VPCSubnet{{
+				ID:    1,
+				Label: "primary",
+				IPv4:  "192.16.0.0/24",
+			},
+				{
+					ID:    27,
+					Label: "test",
+					IPv4:  "10.0.0.0/24",
+				},
+			}}, nil)
+		helper, err := patch.NewHelper(&linodeVPC, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
+			PatchHelper:  helper,
+			Client:       k8sClient,
+			LinodeClient: mockLinodeClient,
+			LinodeVPC:    &linodeVPC,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+
+		mScope := scope.MachineScope{
+			Client:        k8sClient,
+			LinodeClient:  mockLinodeClient,
+			Cluster:       &cluster,
+			Machine:       &machine,
+			LinodeCluster: &linodeCluster,
+			LinodeMachine: &linodeMachine,
+		}
+
+		patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		mScope.PatchHelper = patchHelper
+
+		createOpts, err := newCreateConfig(ctx, &mScope, gzipCompressionFlag, logger)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(createOpts).NotTo(BeNil())
+		Expect(createOpts.Interfaces).To(Equal([]linodego.InstanceConfigInterfaceCreateOptions{
+			{
+				Purpose:  linodego.InterfacePurposeVPC,
+				Primary:  true,
+				SubnetID: ptr.To(27),
+				IPv4:     &linodego.VPCIPv4{NAT1To1: ptr.To("any")},
+			},
+			{
+				Primary: true,
+			},
+		}))
 	})
 })
 

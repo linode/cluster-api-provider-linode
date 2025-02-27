@@ -431,7 +431,24 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		return nil, errors.New("failed to find subnet")
 	}
 
-	subnetID := linodeVPC.Spec.Subnets[0].SubnetID
+	var subnetID int
+
+	subnetName := machineScope.LinodeCluster.Spec.Network.SubnetName // name of subnet to use
+
+	if subnetName != "" {
+		for _, subnet := range linodeVPC.Spec.Subnets {
+			if subnet.Label == subnetName {
+				subnetID = subnet.SubnetID
+			}
+		}
+
+		if subnetID == 0 {
+			logger.Info("Failed to fetch subnet ID for specified subnet name")
+		}
+	} else {
+		subnetID = linodeVPC.Spec.Subnets[0].SubnetID // get first subnet if nothing specified
+	}
+
 	if subnetID == 0 {
 		return nil, errors.New("failed to find subnet as subnet id set is 0")
 	}

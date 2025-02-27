@@ -164,6 +164,10 @@ spec:
                           nodeBalancerID:
                             description: NodeBalancerID is the id of NodeBalancer.
                             type: integer
+                          subnetName:
+                            description: subnetName is the name/label of the VPC subnet
+                              to be used by the cluster
+                            type: string
                           subnetRange:
                             description: |-
                               subnetRange is the range of we want to provide for creating nodebalancer in VPC.
