@@ -45,8 +45,8 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	}
 
 	// if subnetRange is set, create the NodeBalancer in the specified VPC
-	if clusterScope.LinodeCluster.Spec.Network.SubnetRange != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil {
-		logger.Info("Creating NodeBalancer in VPC", "subnetRange", clusterScope.LinodeCluster.Spec.Network.SubnetRange)
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil {
+		logger.Info("Creating NodeBalancer in VPC", "subnetRange", clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range)
 		subnetID, err := getSubnetID(ctx, clusterScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to fetch Linode Subnet ID")
@@ -54,7 +54,7 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 		}
 		createConfig.VPCs = []linodego.NodeBalancerVPCOptions{
 			{
-				IPv4Range: clusterScope.LinodeCluster.Spec.Network.SubnetRange,
+				IPv4Range: clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range,
 				SubnetID:  subnetID,
 			},
 		}
@@ -302,7 +302,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 	// if subnetRange is set, we want to prioritize finding the VPC IP address
 	// otherwise, we will use the private IP address
 	subnetID := 0
-	useVPCIps := clusterScope.LinodeCluster.Spec.Network.SubnetRange != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil
+	useVPCIps := clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil
 	if useVPCIps {
 		// Get subnetID
 		subnetID, err := getSubnetID(ctx, clusterScope, logger)

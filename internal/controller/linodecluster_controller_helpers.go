@@ -90,7 +90,7 @@ func getIPPortCombo(cscope *scope.ClusterScope) (ipPortComboList []string) {
 	}
 
 	// Check if we're using VPC
-	useVPCIps := cscope.LinodeCluster.Spec.Network.SubnetRange != "" && cscope.LinodeCluster.Spec.VPCRef != nil
+	useVPCIps := cscope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && cscope.LinodeCluster.Spec.VPCRef != nil
 
 	for _, eachMachine := range cscope.LinodeMachines.Items {
 		// First try to find VPC IPs if we're using VPC

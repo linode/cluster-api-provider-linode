@@ -181,10 +181,10 @@ type NetworkSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	UseVlan bool `json:"useVlan,omitempty"`
-	// subnetRange is the range of we want to provide for creating nodebalancer in VPC.
+	// NodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
 	// example: 10.10.10.0/30
 	// +optional
-	SubnetRange string `json:"subnetRange,omitempty"`
+	NodeBalancerBackendIPv4Range string `json:"NodeBalancerBackendIPv4Range,omitempty"`
 }
 
 type LinodeNBPortConfig struct {

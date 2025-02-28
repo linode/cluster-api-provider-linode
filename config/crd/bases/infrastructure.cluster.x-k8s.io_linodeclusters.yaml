@@ -92,6 +92,11 @@ spec:
                 description: NetworkSpec encapsulates all things related to Linode
                   network.
                 properties:
+                  NodeBalancerBackendIPv4Range:
+                    description: |-
+                      NodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
+                      example: 10.10.10.0/30
+                    type: string
                   additionalPorts:
                     description: additionalPorts contains list of ports to be configured
                       with NodeBalancer.
@@ -173,11 +178,6 @@ spec:
                   subnetName:
                     description: subnetName is the name/label of the VPC subnet to
                       be used by the cluster
-                    type: string
-                  subnetRange:
-                    description: |-
-                      subnetRange is the range of we want to provide for creating nodebalancer in VPC.
-                      example: 10.10.10.0/30
                     type: string
                   useVlan:
                     description: UseVlan provisions a cluster that uses VLANs instead
