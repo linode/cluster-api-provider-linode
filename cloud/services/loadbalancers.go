@@ -45,7 +45,6 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	}
 
 	// if subnetRange is set, create the NodeBalancer in the specified VPC
-	// This feature is in beta and only available when nb-vpc tag is on the account
 	if clusterScope.LinodeCluster.Spec.Network.SubnetRange != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil {
 		logger.Info("Creating NodeBalancer in VPC", "subnetRange", clusterScope.LinodeCluster.Spec.Network.SubnetRange)
 		subnetID, err := getSubnetID(ctx, clusterScope, logger)
