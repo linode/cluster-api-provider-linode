@@ -171,7 +171,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, log, machineScope)
 }
 
-func (r *LinodeMachineReconciler) pauseReferencedFirewall(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, isPaused bool, conditionChanged bool) error {
+func (r *LinodeMachineReconciler) pauseReferencedFirewall(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, isPaused, conditionChanged bool) error {
 	if machineScope.LinodeMachine.Spec.FirewallRef == nil {
 		logger.Info("Paused reconciliation is skipped due to missing Firewall ref")
 		return nil
@@ -196,7 +196,7 @@ func (r *LinodeMachineReconciler) pauseReferencedFirewall(ctx context.Context, l
 		logger.Info("CAPI cluster is paused, pausing Firewall too")
 		// if we're paused, we should slap the pause annotation on our children
 		// get the firewall & add the annotation
-		annotations[clusterv1.PausedAnnotation] = "true"
+		annotations[clusterv1.PausedAnnotation] = pauseAnnotationValue
 	} else if conditionChanged {
 		// we are not paused here, but were previously paused
 		logger.Info("CAPI cluster is no longer paused, removing pause annotation from Firewall")
@@ -213,7 +213,7 @@ func (r *LinodeMachineReconciler) pauseReferencedFirewall(ctx context.Context, l
 	return nil
 }
 
-func (r *LinodeMachineReconciler) pauseReferencedPlacementGroup(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, isPaused bool, conditionChanged bool) error {
+func (r *LinodeMachineReconciler) pauseReferencedPlacementGroup(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, isPaused, conditionChanged bool) error {
 	if machineScope.LinodeMachine.Spec.PlacementGroupRef == nil {
 		logger.Info("Paused reconciliation is skipped due to missing placement group ref")
 		return nil
@@ -238,7 +238,7 @@ func (r *LinodeMachineReconciler) pauseReferencedPlacementGroup(ctx context.Cont
 		logger.Info("CAPI cluster is paused, pausing Placement Group too")
 		// if we're paused, we should slap the pause annotation on our children
 		// get the firewall & add the annotation
-		annotations[clusterv1.PausedAnnotation] = "true"
+		annotations[clusterv1.PausedAnnotation] = pauseAnnotationValue
 	} else if conditionChanged {
 		// we are not paused here, but were previously paused
 		logger.Info("CAPI cluster is no longer paused, removing pause annotation from Placement Group ")
