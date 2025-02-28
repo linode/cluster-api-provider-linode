@@ -184,7 +184,7 @@ type NetworkSpec struct {
 	// NodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
 	// example: 10.10.10.0/30
 	// +optional
-	NodeBalancerBackendIPv4Range string `json:"NodeBalancerBackendIPv4Range,omitempty"`
+	NodeBalancerBackendIPv4Range string `json:"nodeBalancerBackendIPv4Range,omitempty"`
 }
 
 type LinodeNBPortConfig struct {
