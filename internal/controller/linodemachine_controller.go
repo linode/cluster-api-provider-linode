@@ -171,21 +171,11 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, log, machineScope)
 }
 
-func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
-	// Pausing a machine Pauses the firewall referred by the machine
-	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, machineScope.Client, machineScope.Cluster, machineScope.LinodeMachine)
-
-	if err == nil && !isPaused && !conditionChanged {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
+func (r *LinodeMachineReconciler) pauseReferencedFirewall(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, isPaused bool, conditionChanged bool) error {
 	if machineScope.LinodeMachine.Spec.FirewallRef == nil {
 		logger.Info("Paused reconciliation is skipped due to missing Firewall ref")
 		return nil
 	}
-
 	linodeFW := infrav1alpha2.LinodeFirewall{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: machineScope.LinodeMachine.Spec.FirewallRef.Namespace,
@@ -207,8 +197,8 @@ func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger log
 		// if we're paused, we should slap the pause annotation on our children
 		// get the firewall & add the annotation
 		annotations[clusterv1.PausedAnnotation] = "true"
-	} else {
-		// we are not paused here, but were previously paused (we can get here only if conditionChanged is true.
+	} else if conditionChanged {
+		// we are not paused here, but were previously paused
 		logger.Info("CAPI cluster is no longer paused, removing pause annotation from Firewall")
 		delete(annotations, clusterv1.PausedAnnotation)
 	}
@@ -217,7 +207,72 @@ func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger log
 	if err != nil {
 		return fmt.Errorf("failed to create patch helper for firewalls: %w", err)
 	}
-	return fwPatchHelper.Patch(ctx, &linodeFW)
+	if err := fwPatchHelper.Patch(ctx, &linodeFW); err != nil {
+		return fmt.Errorf("failed to patch firewall: %w", err)
+	}
+	return nil
+}
+
+func (r *LinodeMachineReconciler) pauseReferencedPlacementGroup(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, isPaused bool, conditionChanged bool) error {
+	if machineScope.LinodeMachine.Spec.PlacementGroupRef == nil {
+		logger.Info("Paused reconciliation is skipped due to missing placement group ref")
+		return nil
+	}
+	linodePG := infrav1alpha2.LinodePlacementGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: machineScope.LinodeMachine.Spec.PlacementGroupRef.Namespace,
+			Name:      machineScope.LinodeMachine.Spec.PlacementGroupRef.Name,
+		},
+	}
+
+	if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodePG), &linodePG); err != nil {
+		return err
+	}
+
+	annotations := linodePG.ObjectMeta.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	if isPaused {
+		logger.Info("CAPI cluster is paused, pausing Placement Group too")
+		// if we're paused, we should slap the pause annotation on our children
+		// get the firewall & add the annotation
+		annotations[clusterv1.PausedAnnotation] = "true"
+	} else if conditionChanged {
+		// we are not paused here, but were previously paused
+		logger.Info("CAPI cluster is no longer paused, removing pause annotation from Placement Group ")
+		delete(annotations, clusterv1.PausedAnnotation)
+	}
+
+	linodePG.SetAnnotations(annotations)
+	fwPatchHelper, err := patch.NewHelper(&linodePG, machineScope.Client)
+	if err != nil {
+		return fmt.Errorf("failed to create patch helper for firewalls: %w", err)
+	}
+	if err := fwPatchHelper.Patch(ctx, &linodePG); err != nil {
+		return fmt.Errorf("failed to patch firewall: %w", err)
+	}
+	return nil
+}
+
+func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
+	// Pausing a machine Pauses the firewall referred by the machine
+	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, machineScope.Client, machineScope.Cluster, machineScope.LinodeMachine)
+
+	if err == nil && !isPaused && !conditionChanged {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := r.pauseReferencedFirewall(ctx, logger, machineScope, isPaused, conditionChanged); err != nil {
+		return fmt.Errorf("failed to pause referenced firewall: %w", err)
+	}
+	if err := r.pauseReferencedPlacementGroup(ctx, logger, machineScope, isPaused, conditionChanged); err != nil {
+		return fmt.Errorf("failed to pause referenced placement group: %w", err)
+	}
+	return nil
 }
 
 func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res ctrl.Result, err error) {
