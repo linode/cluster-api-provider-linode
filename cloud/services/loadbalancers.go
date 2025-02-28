@@ -116,13 +116,27 @@ func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger l
 		return -1, err
 	}
 
-	// We are using the first subnet as the default one
-	// get the subnetID from the linodeVPC object
-	subnetID := linodeVPC.Spec.Subnets[0].SubnetID
+	subnetID := 0
+	subnetName := clusterScope.LinodeCluster.Spec.Network.SubnetName
+
+	// If subnet name specified, find matching subnet; otherwise use first subnet
+	if subnetName != "" {
+		for _, subnet := range linodeVPC.Spec.Subnets {
+			if subnet.Label == subnetName {
+				subnetID = subnet.SubnetID
+				break
+			}
+		}
+		if subnetID == 0 {
+			return -1, fmt.Errorf("subnet with label %s not found in VPC", subnetName)
+		}
+	} else {
+		subnetID = linodeVPC.Spec.Subnets[0].SubnetID
+	}
+
+	// Validate the selected subnet ID
 	if subnetID == 0 {
-		err = errors.New("Subnet ID is 0")
-		logger.Error(err, "Failed to fetch subnetID from LinodeVPC")
-		return -1, err
+		return -1, errors.New("selected subnet ID is 0")
 	}
 
 	return subnetID, nil
