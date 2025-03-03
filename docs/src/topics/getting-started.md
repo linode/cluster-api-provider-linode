@@ -48,6 +48,13 @@ to provision the node. If you are using a custom image ensure the [cloud_init](h
 By default, clusters are provisioned within VPC with disk encryption enabled. For Regions which do not have [VPC support](https://www.linode.com/docs/products/networking/vpc/#availability) yet, use the [VPCLess](./flavors/vpcless.md) flavor to have clusters provisioned. For disabling disk encryption, set `spec.template.spec.diskEncryption=disabled` in your generated LinodeMachineTemplate resources when creating a CAPL cluster.
 ~~~
 
+## Setup management cluster
+A clusterAPI management cluster is a kubernetes cluster that is responsible for managing the lifecycle of other child k8s clusters provisioned using Cluster API (CAPI). It serves as a control plane for provisioning, scaling, upgrading and deleting child kubernetes clusters.
+
+Use any of the following to have a base management cluster:
+- Provision k8s cluster using [LKE](https://techdocs.akamai.com/cloud-computing/docs/getting-started-with-lke-linode-kubernetes-engine)
+- Bring/Use your own provisioned k8s cluster to be configured as management cluster
+
 ## Install CAPL on your management cluster
 ```admonish warning
 The `linode-linode` infrastructure provider requires clusterctl version 1.7.2 or higher
@@ -55,15 +62,26 @@ The `linode-linode` infrastructure provider requires clusterctl version 1.7.2 or
 Install CAPL and enable the helm addon provider which is used by the majority of the CAPL flavors
 
 ```bash
+export KUBECONFIG=<mgmt-cluster-kubeconfig>
 clusterctl init --infrastructure linode-linode --addon helm
-# Fetching providers
-# Installing cert-manager Version="v1.14.5"
-# Waiting for cert-manager to be available...
-# Installing Provider="cluster-api" Version="v1.7.3" TargetNamespace="capi-system"
-# Installing Provider="bootstrap-kubeadm" Version="v1.7.3" TargetNamespace="capi-kubeadm-bootstrap-system"
-# Installing Provider="control-plane-kubeadm" Version="v1.7.3" TargetNamespace="capi-kubeadm-control-plane-system"
-# Installing Provider="infrastructure-linode-linode" Version="v0.4.0" TargetNamespace="capl-system"
-# Installing Provider="addon-helm" Version="v0.2.4" TargetNamespace="caaph-system"
+```
+
+Output will be something like:
+```bash
+Fetching providers
+Installing cert-manager version="v1.16.0"
+Waiting for cert-manager to be available...
+Installing provider="cluster-api" version="v1.9.5" targetNamespace="capi-system"
+Installing provider="bootstrap-kubeadm" version="v1.9.5" targetNamespace="capi-kubeadm-bootstrap-system"
+Installing provider="control-plane-kubeadm" version="v1.9.5" targetNamespace="capi-kubeadm-control-plane-system"
+Installing provider="infrastructure-linode-linode" version="v0.8.4" targetNamespace="capl-system"
+Installing provider="addon-helm" version="v0.3.1" targetNamespace="caaph-system"
+
+Your management cluster has been initialized successfully!
+
+You can now create your first workload cluster by running the following:
+
+  clusterctl generate cluster [name] --kubernetes-version [version] | kubectl apply -f -
 ```
 
 ## Deploying your first cluster
