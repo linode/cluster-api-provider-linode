@@ -13,7 +13,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
-	github.com/linode/linodego v1.47.0
+	github.com/linode/linodego v1.48.0
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/stretchr/testify v1.10.0
@@ -153,5 +153,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
-
-replace github.com/linode/linodego => github.com/komer3/linodego v0.0.0-20250227220343-52b6893987ba
