@@ -108,12 +108,12 @@ func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger l
 	err := clusterScope.Client.Get(ctx, objectKey, linodeVPC)
 	if err != nil {
 		logger.Error(err, "Failed to fetch LinodeVPC")
-		return -1, err
+		return 0, err
 	}
 	if len(linodeVPC.Spec.Subnets) == 0 {
 		err = errors.New("No subnets found in LinodeVPC")
 		logger.Error(err, "Failed to fetch LinodeVPC")
-		return -1, err
+		return 0, err
 	}
 
 	subnetID := 0
@@ -128,7 +128,7 @@ func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger l
 			}
 		}
 		if subnetID == 0 {
-			return -1, fmt.Errorf("subnet with label %s not found in VPC", subnetName)
+			return 0, fmt.Errorf("subnet with label %s not found in VPC", subnetName)
 		}
 	} else {
 		subnetID = linodeVPC.Spec.Subnets[0].SubnetID
@@ -136,7 +136,7 @@ func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger l
 
 	// Validate the selected subnet ID
 	if subnetID == 0 {
-		return -1, errors.New("selected subnet ID is 0")
+		return 0, errors.New("selected subnet ID is 0")
 	}
 
 	return subnetID, nil
