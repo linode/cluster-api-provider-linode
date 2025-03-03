@@ -19,6 +19,8 @@ imports = ["/etc/containerd/conf.d/*.toml"]
     SystemdCgroup = true
   [plugins."io.containerd.grpc.v1.cri".registry]
      config_path = "/etc/containerd/certs.d"
+  [plugins."io.containerd.grpc.v1.cri".containerd]
+     discard_unpacked_layers = false
 EOF
 
 chmod 644 /etc/containerd/config.toml
