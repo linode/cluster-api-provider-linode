@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -311,8 +310,8 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 			return err
 		}
 		for _, IPs := range linodeMachine.Status.Addresses {
-			// Look for internal IPs that are NOT 192.168.* (likely VPC IPs)
-			if IPs.Type == v1beta1.MachineInternalIP && !strings.Contains(IPs.Address, "192.168") {
+			// Look for internal IPs that are NOT linode private IPs (likely VPC IPs)
+			if IPs.Type == v1beta1.MachineInternalIP && !util.IsLinodePrivateIP(IPs.Address) {
 				if err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID); err != nil {
 					return err
 				}
@@ -324,7 +323,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 	// We will use private IP address as the default
 	internalIPFound := false
 	for _, IPs := range linodeMachine.Status.Addresses {
-		if IPs.Type != v1beta1.MachineInternalIP || !strings.Contains(IPs.Address, "192.168") {
+		if IPs.Type != v1beta1.MachineInternalIP || !util.IsLinodePrivateIP(IPs.Address) {
 			continue
 		}
 		internalIPFound = true

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -98,7 +97,7 @@ func getIPPortCombo(cscope *scope.ClusterScope) (ipPortComboList []string) {
 			vpcIPFound := false
 			for _, IPs := range eachMachine.Status.Addresses {
 				// Look for internal IPs that are NOT 192.168.* (likely VPC IPs)
-				if IPs.Type == clusterv1.MachineInternalIP && !strings.Contains(IPs.Address, "192.168") {
+				if IPs.Type == clusterv1.MachineInternalIP && !util.IsLinodePrivateIP(IPs.Address) {
 					vpcIPFound = true
 					ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, apiserverLBPort))
 					for _, portConfig := range cscope.LinodeCluster.Spec.Network.AdditionalPorts {
@@ -116,7 +115,7 @@ func getIPPortCombo(cscope *scope.ClusterScope) (ipPortComboList []string) {
 
 		// Fall back to original behavior for this machine if no VPC IP found or not using VPC
 		for _, IPs := range eachMachine.Status.Addresses {
-			if IPs.Type != clusterv1.MachineInternalIP || !strings.Contains(IPs.Address, "192.168") {
+			if IPs.Type != clusterv1.MachineInternalIP || !util.IsLinodePrivateIP(IPs.Address) {
 				continue
 			}
 			ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, apiserverLBPort))
