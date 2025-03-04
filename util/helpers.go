@@ -3,6 +3,7 @@ package util
 import (
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -62,4 +63,23 @@ func GetInstanceID(providerID *string) (int, error) {
 		return -1, err
 	}
 	return instanceID, nil
+}
+
+// IsLinodePrivateIP checks if an IP address belongs to the Linode private IP range (192.168.128.0/17)
+func IsLinodePrivateIP(ipAddress string) bool {
+	// Parse the IP address
+	ip := net.ParseIP(ipAddress)
+	if ip == nil {
+		return false
+	}
+
+	// Define the Linode private IP CIDR (192.168.128.0/17)
+	_, linodePrivateNet, err := net.ParseCIDR("192.168.128.0/17")
+	if err != nil {
+		// This should never happen with a hardcoded valid CIDR
+		return false
+	}
+
+	// Check if the IP is contained in the Linode private network
+	return linodePrivateNet.Contains(ip)
 }

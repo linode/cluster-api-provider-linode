@@ -145,3 +145,104 @@ func TestGetInstanceID(t *testing.T) {
 		})
 	}
 }
+
+func TestIsLinodePrivateIP(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		ip       string
+		expected bool
+	}{
+		// Valid IPs in the Linode private range (192.168.128.0/17)
+		{
+			name:     "valid IP at start of range",
+			ip:       "192.168.128.0",
+			expected: true,
+		},
+		{
+			name:     "valid IP in middle of range",
+			ip:       "192.168.200.123",
+			expected: true,
+		},
+		{
+			name:     "valid IP at end of range",
+			ip:       "192.168.255.255",
+			expected: true,
+		},
+		{
+			name:     "valid IP at boundary of range",
+			ip:       "192.168.255.254",
+			expected: true,
+		},
+
+		// Valid IPs outside the Linode private range
+		{
+			name:     "valid IP below range",
+			ip:       "192.168.127.255",
+			expected: false,
+		},
+		{
+			name:     "valid IP above range",
+			ip:       "192.169.0.0",
+			expected: false,
+		},
+		{
+			name:     "private IP from different range (10.0.0.0/8)",
+			ip:       "10.0.0.1",
+			expected: false,
+		},
+		{
+			name:     "public IP",
+			ip:       "203.0.113.1",
+			expected: false,
+		},
+		{
+			name:     "localhost IP",
+			ip:       "127.0.0.1",
+			expected: false,
+		},
+
+		// Invalid IP formats
+		{
+			name:     "empty string",
+			ip:       "",
+			expected: false,
+		},
+		{
+			name:     "invalid format",
+			ip:       "not-an-ip",
+			expected: false,
+		},
+		{
+			name:     "incomplete IP",
+			ip:       "192.168",
+			expected: false,
+		},
+		{
+			name:     "IPv6 address",
+			ip:       "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+			expected: false,
+		},
+		{
+			name:     "IP with invalid segments",
+			ip:       "192.168.256.1",
+			expected: false,
+		},
+		{
+			name:     "IP with extra segments",
+			ip:       "192.168.1.1.5",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			result := IsLinodePrivateIP(testcase.ip)
+			if result != testcase.expected {
+				t.Errorf("IsLinodePrivateIP(%q) = %v, want %v", testcase.ip, result, testcase.expected)
+			}
+		})
+	}
+}

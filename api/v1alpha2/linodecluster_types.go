@@ -177,11 +177,14 @@ type NetworkSpec struct {
 	// subnetName is the name/label of the VPC subnet to be used by the cluster
 	// +optional
 	SubnetName string `json:"subnetName,omitempty"`
-
 	// UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	UseVlan bool `json:"useVlan,omitempty"`
+	// NodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
+	// example: 10.10.10.0/30
+	// +optional
+	NodeBalancerBackendIPv4Range string `json:"nodeBalancerBackendIPv4Range,omitempty"`
 }
 
 type LinodeNBPortConfig struct {

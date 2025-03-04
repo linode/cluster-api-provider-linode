@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -88,15 +87,42 @@ func getIPPortCombo(cscope *scope.ClusterScope) (ipPortComboList []string) {
 	if cscope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
 		apiserverLBPort = cscope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
 	}
+
+	// Check if we're using VPC
+	useVPCIps := cscope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && cscope.LinodeCluster.Spec.VPCRef != nil
+
 	for _, eachMachine := range cscope.LinodeMachines.Items {
+		// First try to find VPC IPs if we're using VPC
+		if useVPCIps {
+			vpcIPFound := false
+			for _, IPs := range eachMachine.Status.Addresses {
+				// Look for internal IPs that are NOT 192.168.* (likely VPC IPs)
+				if IPs.Type == clusterv1.MachineInternalIP && !util.IsLinodePrivateIP(IPs.Address) {
+					vpcIPFound = true
+					ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, apiserverLBPort))
+					for _, portConfig := range cscope.LinodeCluster.Spec.Network.AdditionalPorts {
+						ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, portConfig.Port))
+					}
+					break // Use first VPC IP found for this machine
+				}
+			}
+
+			// If we found a VPC IP for this machine, continue to the next machine
+			if vpcIPFound {
+				continue
+			}
+		}
+
+		// Fall back to original behavior for this machine if no VPC IP found or not using VPC
 		for _, IPs := range eachMachine.Status.Addresses {
-			if IPs.Type != clusterv1.MachineInternalIP || !strings.Contains(IPs.Address, "192.168") {
+			if IPs.Type != clusterv1.MachineInternalIP || !util.IsLinodePrivateIP(IPs.Address) {
 				continue
 			}
 			ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, apiserverLBPort))
 			for _, portConfig := range cscope.LinodeCluster.Spec.Network.AdditionalPorts {
 				ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, portConfig.Port))
 			}
+			break // Use first 192.168.* IP found for this machine
 		}
 	}
 	return ipPortComboList
