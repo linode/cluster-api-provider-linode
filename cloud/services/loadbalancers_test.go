@@ -1364,8 +1364,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 							Status: infrav1alpha2.LinodeMachineStatus{
 								Addresses: []clusterv1.MachineAddress{
 									{
-										Type:    "InternalIP",
-										Address: "192.168.10.10",
+										Type:    clusterv1.MachineInternalIP,
+										Address: "192.168.128.10",
 									},
 								},
 							},
@@ -1380,6 +1380,206 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 			},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
 				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+			},
+		},
+		{
+			name: "Success - Prioritizes VPC IP over private IP when NodeBalancerBackendIPv4Range is set",
+			clusterScope: &scope.ClusterScope{
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
+						},
+					},
+				},
+				LinodeMachines: infrav1alpha2.LinodeMachineList{
+					Items: []infrav1alpha2.LinodeMachine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test-machine",
+								UID:  "test-uid",
+							},
+							Spec: infrav1alpha2.LinodeMachineSpec{
+								ProviderID: ptr.To("linode://123"),
+								InstanceID: ptr.To(123),
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{
+									{
+										Type:    clusterv1.MachineInternalIP,
+										Address: "10.0.0.5", // VPC IP (not a Linode private IP)
+									},
+									{
+										Type:    clusterv1.MachineInternalIP,
+										Address: "192.168.128.10", // Linode private IP
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedError: nil,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				// Linode API calls for node balancer
+				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil).AnyTimes()
+				mockClient.EXPECT().CreateNodeBalancerNode(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Do(func(_ context.Context, _ int, _ int, options linodego.NodeBalancerNodeCreateOptions) {
+					// Verify the VPC IP is used
+					require.Contains(t, options.Address, "10.0.0.5:")
+					require.Equal(t, 5678, options.SubnetID)
+				}).Return(&linodego.NodeBalancerNode{}, nil).AnyTimes()
+			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClientGetForVPC(t, mockK8sClient, false)
+			},
+		},
+		{
+			name: "Error - getSubnetID() fails when VPCRef is set",
+			clusterScope: &scope.ClusterScope{
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
+						},
+					},
+				},
+				LinodeMachines: infrav1alpha2.LinodeMachineList{
+					Items: []infrav1alpha2.LinodeMachine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test-machine",
+								UID:  "test-uid",
+							},
+							Spec: infrav1alpha2.LinodeMachineSpec{
+								ProviderID: ptr.To("linode://123"),
+								InstanceID: ptr.To(123),
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{
+									{
+										Type:    clusterv1.MachineInternalIP,
+										Address: "10.0.0.5", // VPC IP
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedError: fmt.Errorf("Failed to fetch LinodeVPC"),
+			expects: func(mockClient *mock.MockLinodeClient) {
+				// We shouldn't get to any Linode API calls as the K8s Get will fail
+			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClientGetForVPC(t, mockK8sClient, true)
+			},
+		},
+		{
+			name: "Success - Falls back to private IP when no VPC IP is found",
+			clusterScope: &scope.ClusterScope{
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
+						},
+					},
+				},
+				LinodeMachines: infrav1alpha2.LinodeMachineList{
+					Items: []infrav1alpha2.LinodeMachine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test-machine",
+								UID:  "test-uid",
+							},
+							Spec: infrav1alpha2.LinodeMachineSpec{
+								ProviderID: ptr.To("linode://123"),
+								InstanceID: ptr.To(123),
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{
+									{
+										Type:    clusterv1.MachineInternalIP,
+										Address: "192.168.128.10", // Only Linode private IP, no VPC IP
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedError: nil,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				// Linode API calls for node balancer
+				mockClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil).AnyTimes()
+				mockClient.EXPECT().CreateNodeBalancerNode(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Do(func(_ context.Context, _ int, _ int, options linodego.NodeBalancerNodeCreateOptions) {
+					// Verify the private IP is used
+					require.Contains(t, options.Address, "192.168.128.10:")
+					require.Equal(t, 0, options.SubnetID) // No subnet ID for private IP
+				}).Return(&linodego.NodeBalancerNode{}, nil).AnyTimes()
+			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClientGetForVPC(t, mockK8sClient, false)
 			},
 		},
 	}
@@ -1602,6 +1802,39 @@ func TestDeleteNodeFromNB(t *testing.T) {
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
+		})
+	}
+}
+
+// Create a helper function to mock K8s client Get for VPC
+func mockK8sClientGetForVPC(t *testing.T, mockK8sClient *mock.MockK8sClient, shouldFail bool) {
+	mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+
+	if shouldFail {
+		mockK8sClient.EXPECT().Get(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+		).Return(fmt.Errorf("Failed to fetch LinodeVPC"))
+	} else {
+		mockK8sClient.EXPECT().Get(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+		).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj interface{}, opts ...client.GetOption) error {
+			vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
+			if !ok {
+				return fmt.Errorf("expected *infrav1alpha2.LinodeVPC, got %T", obj)
+			}
+
+			// Set the VPC subnets
+			vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+				{
+					Label:    "test-subnet",
+					SubnetID: 5678,
+				},
+			}
+			return nil
 		})
 	}
 }
