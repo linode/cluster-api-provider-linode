@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,10 +20,6 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
-)
-
-const (
-// ... existing code ...
 )
 
 func TestEnsureNodeBalancer(t *testing.T) {
@@ -647,9 +644,9 @@ func TestGetSubnetID(t *testing.T) {
 
 			got, err := getSubnetID(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != "" {
-				assert.ErrorContains(t, err, testcase.expectedError)
+				require.ErrorContains(t, err, testcase.expectedError)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, testcase.expectedID, got)
 			}
 		})
@@ -890,9 +887,9 @@ func TestProcessAndCreateNodeBalancerNodes(t *testing.T) {
 			)
 
 			if testcase.expectedError != "" {
-				assert.ErrorContains(t, err, testcase.expectedError)
+				require.ErrorContains(t, err, testcase.expectedError)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
