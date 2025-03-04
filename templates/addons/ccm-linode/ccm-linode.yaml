@@ -9,7 +9,7 @@ spec:
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
   chartName: ccm-linode
   namespace: kube-system
-  version: ${LINODE_CCM_VERSION:=v0.4.24}
+  version: ${LINODE_CCM_VERSION:=v0.4.25}
   options:
     waitForJobs: true
     wait: true
@@ -30,6 +30,8 @@ spec:
         value: ${LINODE_URL:="https://api.linode.com"}
       - name: SSL_CERT_DIR
         value: "/tls"
+      - name: LINODE_API_VERSION
+        value: v4beta
     volumeMounts:
       - name: cacert
         mountPath: /tls
