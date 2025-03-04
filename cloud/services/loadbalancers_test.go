@@ -21,6 +21,10 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util"
 )
 
+const (
+// ... existing code ...
+)
+
 func TestEnsureNodeBalancer(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -263,6 +267,104 @@ func TestEnsureNodeBalancer(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("Firewall not found"),
 		},
+		{
+			name: "Success - Create NodeBalancer in VPC",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Region: "us-east",
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				// Mock K8s client Get call for VPC
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
+					if !ok {
+						return fmt.Errorf("expected *infrav1alpha2.LinodeVPC, got %T", obj)
+					}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							Label:    "subnet-1",
+							SubnetID: 1001,
+						},
+					}
+					return nil
+				})
+
+				// Mock CreateNodeBalancer call with VPC options
+				mockClient.EXPECT().CreateNodeBalancer(
+					gomock.Any(),
+					gomock.Eq(linodego.NodeBalancerCreateOptions{
+						Label:  util.Pointer("test-cluster"),
+						Region: "us-east",
+						Tags:   []string{"test-uid"},
+						VPCs: []linodego.NodeBalancerVPCOptions{
+							{
+								IPv4Range: "10.0.0.0/24",
+								SubnetID:  1001,
+							},
+						},
+					}),
+				).Return(&linodego.NodeBalancer{
+					ID:    1234,
+					Label: util.Pointer("test-cluster"),
+				}, nil)
+			},
+			expectedNodeBalancer: &linodego.NodeBalancer{
+				ID:    1234,
+				Label: util.Pointer("test-cluster"),
+			},
+		},
+		{
+			name: "Error - Failed to get subnet ID for VPC",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Region: "us-east",
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				// Mock K8s client Get call for VPC with error
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(fmt.Errorf("Failed to fetch LinodeVPC"))
+			},
+			expectedError: fmt.Errorf("Failed to fetch LinodeVPC"),
+		},
 	}
 	for _, tt := range tests {
 		testcase := tt
@@ -286,6 +388,511 @@ func TestEnsureNodeBalancer(t *testing.T) {
 			} else {
 				assert.NotEmpty(t, got)
 				assert.Equal(t, testcase.expectedNodeBalancer, got)
+			}
+		})
+	}
+}
+
+func TestGetSubnetID(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		clusterScope  *scope.ClusterScope
+		expects       func(*mock.MockK8sClient)
+		expectedID    int
+		expectedError string
+	}{
+		{
+			name: "Success - Get first subnet when no subnet name specified",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			expects: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
+					if !ok {
+						return fmt.Errorf("expected *infrav1alpha2.LinodeVPC, got %T", obj)
+					}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							Label:    "subnet-1",
+							SubnetID: 1001,
+						},
+						{
+							Label:    "subnet-2",
+							SubnetID: 1002,
+						},
+					}
+					return nil
+				})
+			},
+			expectedID: 1001,
+		},
+		{
+			name: "Success - Get subnet by name",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+						Network: infrav1alpha2.NetworkSpec{
+							SubnetName: "subnet-2",
+						},
+					},
+				},
+			},
+			expects: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
+					if !ok {
+						return fmt.Errorf("expected *infrav1alpha2.LinodeVPC, got %T", obj)
+					}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							Label:    "subnet-1",
+							SubnetID: 1001,
+						},
+						{
+							Label:    "subnet-2",
+							SubnetID: 1002,
+						},
+					}
+					return nil
+				})
+			},
+			expectedID: 1002,
+		},
+		{
+			name: "Error - Failed to fetch VPC",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "non-existent-vpc",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			expects: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).Return(fmt.Errorf("Failed to fetch LinodeVPC"))
+			},
+			expectedError: "Failed to fetch LinodeVPC",
+		},
+		{
+			name: "Error - No subnets in VPC",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			expects: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
+					if !ok {
+						return fmt.Errorf("expected *infrav1alpha2.LinodeVPC, got %T", obj)
+					}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{} // Empty subnets
+					return nil
+				})
+			},
+			expectedError: "No subnets found in LinodeVPC",
+		},
+		{
+			name: "Error - Subnet with specific name not found",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+						Network: infrav1alpha2.NetworkSpec{
+							SubnetName: "non-existent-subnet",
+						},
+					},
+				},
+			},
+			expects: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
+					if !ok {
+						return fmt.Errorf("expected *infrav1alpha2.LinodeVPC, got %T", obj)
+					}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							Label:    "subnet-1",
+							SubnetID: 1001,
+						},
+						{
+							Label:    "subnet-2",
+							SubnetID: 1002,
+						},
+					}
+					return nil
+				})
+			},
+			expectedError: "subnet with label non-existent-subnet not found in VPC",
+		},
+		{
+			name: "Error - Selected subnet ID is 0",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCRef: &corev1.ObjectReference{
+							Name:      "test-vpc",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+			expects: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+					gomock.Any(),
+				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+					vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
+					if !ok {
+						return fmt.Errorf("expected *infrav1alpha2.LinodeVPC, got %T", obj)
+					}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							Label:    "subnet-1",
+							SubnetID: 0, // Invalid subnet ID
+						},
+					}
+					return nil
+				})
+			},
+			expectedError: "selected subnet ID is 0",
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			testcase.clusterScope.Client = mockK8sClient
+
+			testcase.expects(mockK8sClient)
+
+			got, err := getSubnetID(context.Background(), testcase.clusterScope, logr.Discard())
+			if testcase.expectedError != "" {
+				assert.ErrorContains(t, err, testcase.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, testcase.expectedID, got)
+			}
+		})
+	}
+}
+
+func TestProcessAndCreateNodeBalancerNodes(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		ipAddress         string
+		clusterScope      *scope.ClusterScope
+		nodeBalancerNodes []linodego.NodeBalancerNode
+		subnetID          int
+		expects           func(*mock.MockLinodeClient)
+		expectedError     string
+	}{
+		{
+			name:      "Success - Create node with standard port only",
+			ipAddress: "192.168.1.10",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(123),
+							ApiserverNodeBalancerConfigID: ptr.To(456),
+							ApiserverLoadBalancerPort:     6443,
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+				},
+			},
+			nodeBalancerNodes: []linodego.NodeBalancerNode{},
+			subnetID:          0,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().CreateNodeBalancerNode(
+					gomock.Any(),
+					123,
+					456,
+					linodego.NodeBalancerNodeCreateOptions{
+						Label:   "test-cluster",
+						Address: "192.168.1.10:6443",
+						Mode:    linodego.ModeAccept,
+					},
+				).Return(&linodego.NodeBalancerNode{}, nil)
+			},
+		},
+		{
+			name:      "Success - Create node with standard and additional ports",
+			ipAddress: "192.168.1.10",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(123),
+							ApiserverNodeBalancerConfigID: ptr.To(456),
+							ApiserverLoadBalancerPort:     6443,
+							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
+								{
+									Port:                 8132,
+									NodeBalancerConfigID: ptr.To(789),
+								},
+							},
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+				},
+			},
+			nodeBalancerNodes: []linodego.NodeBalancerNode{},
+			subnetID:          0,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				// Expect call for standard port
+				mockClient.EXPECT().CreateNodeBalancerNode(
+					gomock.Any(),
+					123,
+					456,
+					linodego.NodeBalancerNodeCreateOptions{
+						Label:   "test-cluster",
+						Address: "192.168.1.10:6443",
+						Mode:    linodego.ModeAccept,
+					},
+				).Return(&linodego.NodeBalancerNode{}, nil)
+
+				// Expect call for additional port
+				mockClient.EXPECT().CreateNodeBalancerNode(
+					gomock.Any(),
+					123,
+					789,
+					linodego.NodeBalancerNodeCreateOptions{
+						Label:   "test-cluster",
+						Address: "192.168.1.10:8132",
+						Mode:    linodego.ModeAccept,
+					},
+				).Return(&linodego.NodeBalancerNode{}, nil)
+			},
+		},
+		{
+			name:      "Success - Node already exists for standard port",
+			ipAddress: "192.168.1.10",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(123),
+							ApiserverNodeBalancerConfigID: ptr.To(456),
+							ApiserverLoadBalancerPort:     6443,
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+				},
+			},
+			nodeBalancerNodes: []linodego.NodeBalancerNode{
+				{
+					ID:      789,
+					Address: "192.168.1.10:6443", // Node with this address already exists
+					Label:   "test-cluster",
+				},
+			},
+			subnetID: 0,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				// No API calls expected as node already exists
+			},
+		},
+		{
+			name:      "Success - Create node with SubnetID",
+			ipAddress: "192.168.1.10",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(123),
+							ApiserverNodeBalancerConfigID: ptr.To(456),
+							ApiserverLoadBalancerPort:     6443,
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+				},
+			},
+			nodeBalancerNodes: []linodego.NodeBalancerNode{},
+			subnetID:          1001, // Subnet ID is set
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().CreateNodeBalancerNode(
+					gomock.Any(),
+					123,
+					456,
+					linodego.NodeBalancerNodeCreateOptions{
+						Label:    "test-cluster",
+						Address:  "192.168.1.10:6443",
+						Mode:     linodego.ModeAccept,
+						SubnetID: 1001,
+					},
+				).Return(&linodego.NodeBalancerNode{}, nil)
+			},
+		},
+		{
+			name:      "Error - CreateNodeBalancerNode fails",
+			ipAddress: "192.168.1.10",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(123),
+							ApiserverNodeBalancerConfigID: ptr.To(456),
+							ApiserverLoadBalancerPort:     6443,
+						},
+					},
+				},
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+				},
+			},
+			nodeBalancerNodes: []linodego.NodeBalancerNode{},
+			subnetID:          0,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().CreateNodeBalancerNode(
+					gomock.Any(),
+					123,
+					456,
+					gomock.Any(),
+				).Return(nil, fmt.Errorf("Failed to create NodeBalancerNode"))
+			},
+			expectedError: "Failed to create NodeBalancerNode",
+		},
+	}
+
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mock.NewMockLinodeClient(ctrl)
+			testcase.clusterScope.LinodeClient = mockClient
+
+			testcase.expects(mockClient)
+
+			err := processAndCreateNodeBalancerNodes(
+				context.Background(),
+				testcase.ipAddress,
+				testcase.clusterScope,
+				testcase.nodeBalancerNodes,
+				testcase.subnetID,
+			)
+
+			if testcase.expectedError != "" {
+				assert.ErrorContains(t, err, testcase.expectedError)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
