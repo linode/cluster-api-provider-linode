@@ -1808,6 +1808,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 
 // Create a helper function to mock K8s client Get for VPC
 func mockK8sClientGetForVPC(t *testing.T, mockK8sClient *mock.MockK8sClient, shouldFail bool) {
+	t.Helper()
 	mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
 
 	if shouldFail {
