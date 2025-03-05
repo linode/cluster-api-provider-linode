@@ -313,6 +313,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 			// Look for internal IPs that are NOT linode private IPs (likely VPC IPs)
 			if IPs.Type == v1beta1.MachineInternalIP && !util.IsLinodePrivateIP(IPs.Address) {
 				if err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID); err != nil {
+					logger.Error(err, "Failed to process and create NB nodes")
 					return err
 				}
 				return nil // Return early if we found and used a VPC IP
@@ -330,6 +331,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 
 		err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID)
 		if err != nil {
+			logger.Error(err, "Failed to process and create NB nodes")
 			return err
 		}
 		break // Use the first matching IP
