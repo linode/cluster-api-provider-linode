@@ -102,6 +102,7 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	setupLog.Info(fmt.Sprintf("CAPL version: %s", version.GetVersion()))
+	setupLog.Info(fmt.Sprintf("API URL: %s", os.Getenv("LINODE_URL")))
 
 	linodeClientConfig, dnsClientConfig := validateEnvironment()
 	mgr := setupManager(flags, linodeClientConfig, dnsClientConfig)
