@@ -29,6 +29,7 @@ func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error
 	}
 	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
 		if err := services.EnsureDNSEntries(ctx, clusterScope, "create"); err != nil {
+			logger.Error(err, "Failed to ensure DNS entries")
 			return err
 		}
 		return nil
@@ -46,11 +47,13 @@ func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error
 		&linodego.ListOptions{},
 	)
 	if err != nil {
+		logger.Error(err, "Failed to list NB nodes")
 		return err
 	}
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
 		err = services.AddNodesToNB(ctx, logger, clusterScope, eachMachine, nodeBalancerNodes)
 		if err != nil {
+			logger.Error(err, "Failed to add nodes to NB")
 			return err
 		}
 	}
@@ -58,6 +61,7 @@ func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error
 	for _, node := range nodeBalancerNodes {
 		if !slices.Contains(ipPortCombo, node.Address) {
 			if err := clusterScope.LinodeClient.DeleteNodeBalancerNode(ctx, node.NodeBalancerID, node.ConfigID, node.ID); err != nil {
+				logger.Error(err, "Failed to delete NB node")
 				return err
 			}
 		}
