@@ -122,12 +122,11 @@ func (r *LinodeClusterReconciler) reconcilePause(ctx context.Context, clusterSco
 	// Pausing a cluster pauses the VPC as well.
 	// First thing to do is handle a paused Cluster. Paused clusters shouldn't be deleted.
 	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, clusterScope.Client, clusterScope.Cluster, clusterScope.LinodeCluster)
-	if err == nil && !isPaused && !conditionChanged {
-		return nil
-	}
-
 	if err != nil {
 		return err
+	}
+	if !(isPaused || conditionChanged) {
+		return nil
 	}
 
 	if clusterScope.LinodeCluster.Spec.VPCRef == nil {

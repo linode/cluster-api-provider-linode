@@ -259,13 +259,13 @@ func (r *LinodeMachineReconciler) pauseReferencedPlacementGroup(ctx context.Cont
 func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
 	// Pausing a machine Pauses the firewall referred by the machine
 	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, machineScope.Client, machineScope.Cluster, machineScope.LinodeMachine)
-
-	if err == nil && !isPaused && !conditionChanged {
-		return nil
-	}
 	if err != nil {
 		return err
 	}
+	if !(isPaused || conditionChanged) {
+		return nil
+	}
+
 	if err := r.pauseReferencedFirewall(ctx, logger, machineScope, isPaused, conditionChanged); err != nil {
 		return fmt.Errorf("failed to pause referenced firewall: %w", err)
 	}
