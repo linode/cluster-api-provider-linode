@@ -51,8 +51,8 @@ import (
 )
 
 const (
-	lbTypeDNS string = "dns"
-
+	lbTypeDNS                               string = "dns"
+	pauseAnnotationValue                    string = "true"
 	ConditionPreflightLinodeVPCReady        string = "PreflightLinodeVPCReady"
 	ConditionPreflightLinodeNBFirewallReady string = "PreflightLinodeNBFirewallReady"
 )
@@ -122,12 +122,11 @@ func (r *LinodeClusterReconciler) reconcilePause(ctx context.Context, clusterSco
 	// Pausing a cluster pauses the VPC as well.
 	// First thing to do is handle a paused Cluster. Paused clusters shouldn't be deleted.
 	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, clusterScope.Client, clusterScope.Cluster, clusterScope.LinodeCluster)
-	if err == nil && !isPaused && !conditionChanged {
-		return nil
-	}
-
 	if err != nil {
 		return err
+	}
+	if !(isPaused || conditionChanged) {
+		return nil
 	}
 
 	if clusterScope.LinodeCluster.Spec.VPCRef == nil {
@@ -155,7 +154,7 @@ func (r *LinodeClusterReconciler) reconcilePause(ctx context.Context, clusterSco
 		logger.Info("CAPI cluster is paused, pausing VPC")
 		// if we're paused, we should slap the pause annotation on our children
 		// get the vpc & add the annotation
-		annotations[clusterv1.PausedAnnotation] = "true"
+		annotations[clusterv1.PausedAnnotation] = pauseAnnotationValue
 	} else {
 		// we are not paused here, but were previously paused (we can get here only if conditionChanged is true.
 		logger.Info("CAPI cluster is no longer paused, removing pause annotation from VPC")

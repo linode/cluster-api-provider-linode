@@ -173,13 +173,13 @@ linters:
     # - revive
     - staticcheck
     # - stylecheck
-    - tenv
     - thelper
     - typecheck
     - unconvert
     - unparam
     - unused
     - usestdlibvars
+    - usetesting
     - varnamelen
     - whitespace
     # - wrapcheck
