@@ -17,12 +17,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-	. "github.com/linode/cluster-api-provider-linode/clients"
+
 	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+
+	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // FirewallScope defines the basic context for an actuator to operate upon.
