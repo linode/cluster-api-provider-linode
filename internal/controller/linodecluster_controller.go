@@ -150,8 +150,8 @@ func (r *LinodeClusterReconciler) reconcile(
 		return res, err
 	}
 
-	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, clusterScope.Client, clusterScope.Cluster, clusterScope.LinodeCluster)
-	if err != nil || isPaused || conditionChanged {
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, clusterScope.Client, clusterScope.Cluster, clusterScope.LinodeCluster)
+	if err != nil || isPaused {
 		return res, err
 	}
 

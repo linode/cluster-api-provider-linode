@@ -148,8 +148,8 @@ func (r *LinodeFirewallReconciler) reconcile(
 	}
 
 	// Pause (its ok if `fwScope.Cluster is nil here - its handled internally)
-	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, fwScope.Client, fwScope.Cluster, fwScope.LinodeFirewall)
-	if err != nil || isPaused || conditionChanged {
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, fwScope.Client, fwScope.Cluster, fwScope.LinodeFirewall)
+	if err != nil || isPaused {
 		return res, err
 	}
 

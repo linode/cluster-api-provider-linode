@@ -160,8 +160,8 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	}
 
 	// Pause (its ok if `pgScope.Cluster is nil here - its handled internally)
-	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, pgScope.Client, pgScope.Cluster, pgScope.LinodePlacementGroup)
-	if err != nil || isPaused || conditionChanged {
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, pgScope.Client, pgScope.Cluster, pgScope.LinodePlacementGroup)
+	if err != nil || isPaused {
 		return res, err
 	}
 

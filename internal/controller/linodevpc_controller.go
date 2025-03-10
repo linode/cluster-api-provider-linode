@@ -166,8 +166,8 @@ func (r *LinodeVPCReconciler) reconcile(
 	}
 
 	// Pause (its ok if `vpcScope.Cluster is nil here - its handled internally)
-	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
-	if err != nil || isPaused || conditionChanged {
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
+	if err != nil || isPaused {
 		return res, err
 	}
 
