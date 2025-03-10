@@ -170,7 +170,6 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, log, machineScope)
 }
 
-//nolint:cyclop // can't make it any simpler currently
 func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res ctrl.Result, err error) {
 	failureReason := util.UnknownError
 	//nolint:dupl // Code duplication is simplicity in this case.
