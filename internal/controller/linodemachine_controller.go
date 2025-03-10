@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"slices"
 	"strings"
 	"time"
@@ -36,7 +37,6 @@ import (
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
-	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -256,25 +256,6 @@ func (r *LinodeMachineReconciler) pauseReferencedPlacementGroup(ctx context.Cont
 	return nil
 }
 
-func (r *LinodeMachineReconciler) reconcilePause(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) error {
-	// Pausing a machine Pauses the firewall referred by the machine
-	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, machineScope.Client, machineScope.Cluster, machineScope.LinodeMachine)
-	if err != nil {
-		return err
-	}
-	if !(isPaused || conditionChanged) {
-		return nil
-	}
-
-	if err := r.pauseReferencedFirewall(ctx, logger, machineScope, isPaused, conditionChanged); err != nil {
-		return fmt.Errorf("failed to pause referenced firewall: %w", err)
-	}
-	if err := r.pauseReferencedPlacementGroup(ctx, logger, machineScope, isPaused, conditionChanged); err != nil {
-		return fmt.Errorf("failed to pause referenced placement group: %w", err)
-	}
-	return nil
-}
-
 func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res ctrl.Result, err error) {
 	failureReason := util.UnknownError
 	//nolint:dupl // Code duplication is simplicity in this case.
@@ -323,8 +304,9 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	}
 
 	// Pause
-	if err := r.reconcilePause(ctx, logger, machineScope); err != nil {
-		return ctrl.Result{}, err
+	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, machineScope.Client, machineScope.Cluster, machineScope.LinodeMachine)
+	if err != nil || isPaused || conditionChanged {
+		return res, err
 	}
 
 	// Delete

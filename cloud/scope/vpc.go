@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -36,12 +37,14 @@ type VPCScope struct {
 	PatchHelper  *patch.Helper
 	LinodeClient LinodeClient
 	LinodeVPC    *infrav1alpha2.LinodeVPC
+	Cluster      *clusterv1.Cluster
 }
 
 // VPCScopeParams defines the input parameters used to create a new Scope.
 type VPCScopeParams struct {
 	Client    K8sClient
 	LinodeVPC *infrav1alpha2.LinodeVPC
+	Cluster   *clusterv1.Cluster
 }
 
 func validateVPCScopeParams(params VPCScopeParams) error {
@@ -77,6 +80,7 @@ func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VP
 		LinodeClient: linodeClient,
 		LinodeVPC:    params.LinodeVPC,
 		PatchHelper:  helper,
+		Cluster:      params.Cluster,
 	}, nil
 }
 

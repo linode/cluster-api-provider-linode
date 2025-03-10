@@ -32,7 +32,6 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
-	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -118,56 +117,6 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, clusterScope, logger)
 }
 
-func (r *LinodeClusterReconciler) reconcilePause(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) error {
-	// Pausing a cluster pauses the VPC as well.
-	// First thing to do is handle a paused Cluster. Paused clusters shouldn't be deleted.
-	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, clusterScope.Client, clusterScope.Cluster, clusterScope.LinodeCluster)
-	if err != nil {
-		return err
-	}
-	if !(isPaused || conditionChanged) {
-		return nil
-	}
-
-	if clusterScope.LinodeCluster.Spec.VPCRef == nil {
-		logger.Info("Paused reconciliation is skipped due to missing VPC ref")
-		return nil
-	}
-
-	linodeVPC := infrav1alpha2.LinodeVPC{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: clusterScope.LinodeCluster.Spec.VPCRef.Namespace,
-			Name:      clusterScope.LinodeCluster.Spec.VPCRef.Name,
-		},
-	}
-
-	if err := clusterScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
-		return err
-	}
-
-	annotations := linodeVPC.ObjectMeta.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-
-	if isPaused {
-		logger.Info("CAPI cluster is paused, pausing VPC")
-		// if we're paused, we should slap the pause annotation on our children
-		// get the vpc & add the annotation
-		annotations[clusterv1.PausedAnnotation] = pauseAnnotationValue
-	} else {
-		// we are not paused here, but were previously paused (we can get here only if conditionChanged is true.
-		logger.Info("CAPI cluster is no longer paused, removing pause annotation from VPC")
-		delete(annotations, clusterv1.PausedAnnotation)
-	}
-	linodeVPC.SetAnnotations(annotations)
-	vpcPatchHelper, err := patch.NewHelper(&linodeVPC, clusterScope.Client)
-	if err != nil {
-		return fmt.Errorf("failed to build patch helper for linode VPC object: %w", err)
-	}
-	return vpcPatchHelper.Patch(ctx, &linodeVPC)
-}
-
 //nolint:cyclop // can't make it simpler with existing API
 func (r *LinodeClusterReconciler) reconcile(
 	ctx context.Context,
@@ -201,7 +150,8 @@ func (r *LinodeClusterReconciler) reconcile(
 		return res, err
 	}
 
-	if err := r.reconcilePause(ctx, clusterScope, logger); err != nil {
+	isPaused, conditionChanged, err := paused.EnsurePausedCondition(ctx, clusterScope.Client, clusterScope.Cluster, clusterScope.LinodeCluster)
+	if err != nil || isPaused || conditionChanged {
 		return res, err
 	}
 

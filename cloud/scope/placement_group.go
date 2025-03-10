@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -36,12 +37,14 @@ type PlacementGroupScope struct {
 	PatchHelper          *patch.Helper
 	LinodeClient         LinodeClient
 	LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
+	Cluster              *clusterv1.Cluster
 }
 
 // PlacementGroupScopeParams defines the input parameters used to create a new Scope.
 type PlacementGroupScopeParams struct {
 	Client               K8sClient
 	LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
+	Cluster              *clusterv1.Cluster
 }
 
 func validatePlacementGroupScope(params PlacementGroupScopeParams) error {
@@ -118,6 +121,7 @@ func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig
 		LinodeClient:         linodeClient,
 		LinodePlacementGroup: params.LinodePlacementGroup,
 		PatchHelper:          helper,
+		Cluster:              params.Cluster,
 	}, nil
 }
 
