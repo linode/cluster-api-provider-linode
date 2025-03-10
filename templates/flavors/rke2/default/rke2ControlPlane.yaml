@@ -24,8 +24,8 @@ spec:
         - "kubeProxy"
   agentConfig:
     nodeName: '{{ ds.meta_data.label }}'
-    cisProfile: ${CIS_PROFILE:-"cis-1.23"}
-    protectKernelDefaults: true
+    cisProfile: ${CIS_PROFILE:-""}
+    protectKernelDefaults: ${CIS_ENABLED:-false}
   preRKE2Commands:
     - sed -i '/swap/d' /etc/fstab
     - swapoff -a
