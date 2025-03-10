@@ -34,6 +34,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -87,12 +88,23 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 
+	var capiCluster *clusterv1.Cluster = nil
+	var err error
+	if _, ok := linodeplacementgroup.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+		capiCluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeplacementgroup.ObjectMeta)
+		if err != nil {
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, err
+		}
+	}
+
 	pgScope, err := scope.NewPlacementGroupScope(
 		ctx,
 		r.LinodeClientConfig,
 		scope.PlacementGroupScopeParams{
 			Client:               r.TracedClient(),
 			LinodePlacementGroup: linodeplacementgroup,
+			Cluster:              capiCluster,
 		},
 	)
 	if err != nil {
@@ -144,6 +156,12 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	// Override the controller credentials with ones from the Placement Groups's Secret reference (if supplied).
 	if err := pgScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
 		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return res, err
+	}
+
+	// Pause (its ok if `pgScope.Cluster is nil here - its handled internally)
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, pgScope.Client, pgScope.Cluster, pgScope.LinodePlacementGroup)
+	if err != nil || isPaused {
 		return res, err
 	}
 

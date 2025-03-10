@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"k8s.io/client-go/util/retry"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -29,8 +30,8 @@ import (
 
 // FirewallScope defines the basic context for an actuator to operate upon.
 type FirewallScope struct {
-	Client K8sClient
-
+	Client         K8sClient
+	Cluster        *clusterv1.Cluster
 	PatchHelper    *patch.Helper
 	LinodeClient   LinodeClient
 	LinodeFirewall *infrav1alpha2.LinodeFirewall
@@ -40,6 +41,7 @@ type FirewallScope struct {
 type FirewallScopeParams struct {
 	Client         K8sClient
 	LinodeFirewall *infrav1alpha2.LinodeFirewall
+	Cluster        *clusterv1.Cluster
 }
 
 func validateFirewallScopeParams(params FirewallScopeParams) error {

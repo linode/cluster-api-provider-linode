@@ -32,6 +32,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -78,6 +79,15 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	var capiCluster *clusterv1.Cluster = nil
+	var err error
+	if _, ok := linodeFirewall.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+		capiCluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeFirewall.ObjectMeta)
+		if err != nil {
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, err
+		}
+	}
 
 	// Create the firewall scope.
 	fwScope, err := scope.NewFirewallScope(
@@ -86,6 +96,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		scope.FirewallScopeParams{
 			Client:         r.TracedClient(),
 			LinodeFirewall: linodeFirewall,
+			Cluster:        capiCluster,
 		})
 	if err != nil {
 		log.Error(err, "failed to create firewall scope")
@@ -96,6 +107,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.reconcile(ctx, log, fwScope)
 }
 
+//nolint:cyclop // can't make it any simpler currently
 func (r *LinodeFirewallReconciler) reconcile(
 	ctx context.Context,
 	logger logr.Logger,
@@ -134,6 +146,12 @@ func (r *LinodeFirewallReconciler) reconcile(
 	if err := fwScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
 		logger.Error(err, "failed to update linode client token from Credential Ref")
 		return ctrl.Result{}, err
+	}
+
+	// Pause (its ok if `fwScope.Cluster is nil here - its handled internally)
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, fwScope.Client, fwScope.Cluster, fwScope.LinodeFirewall)
+	if err != nil || isPaused {
+		return res, err
 	}
 
 	// Delete

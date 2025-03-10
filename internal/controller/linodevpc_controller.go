@@ -33,6 +33,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -93,12 +94,23 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
+	var capiCluster *clusterv1.Cluster = nil
+	var err error
+	if _, ok := linodeVPC.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+		capiCluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeVPC.ObjectMeta)
+		if err != nil {
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, err
+		}
+	}
+
 	vpcScope, err := scope.NewVPCScope(
 		ctx,
 		r.LinodeClientConfig,
 		scope.VPCScopeParams{
 			Client:    r.TracedClient(),
 			LinodeVPC: linodeVPC,
+			Cluster:   capiCluster,
 		},
 	)
 	if err != nil {
@@ -150,6 +162,12 @@ func (r *LinodeVPCReconciler) reconcile(
 	// Override the controller credentials with ones from the VPC's Secret reference (if supplied).
 	if err := vpcScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
 		logger.Error(err, "failed to update linode client token from Credential Ref")
+		return res, err
+	}
+
+	// Pause (its ok if `vpcScope.Cluster is nil here - its handled internally)
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
+	if err != nil || isPaused {
 		return res, err
 	}
 
