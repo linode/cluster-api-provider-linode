@@ -24,8 +24,6 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeVPC
 metadata:
     name: ($vpc)
-    labels:
-       cluster.x-k8s.io/cluster-name: ($cluster)
 spec:
     region: us-sea
     subnets:

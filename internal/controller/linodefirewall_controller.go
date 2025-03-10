@@ -107,6 +107,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.reconcile(ctx, log, fwScope)
 }
 
+//nolint:cyclop // can't make it any simpler currently
 func (r *LinodeFirewallReconciler) reconcile(
 	ctx context.Context,
 	logger logr.Logger,
