@@ -1,13 +1,6 @@
 # RKE2
 
-This flavor uses RKE2 for the kubernetes distribution. By default it configures the cluster
-with the [CIS profile](https://docs.rke2.io/security/hardening_guide#rke2-configuration):
-> Using the generic cis profile will ensure that the cluster passes the CIS benchmark (rke2-cis-1.XX-profile-hardened) associated with the Kubernetes version that RKE2 is running. For example, RKE2 v1.28.XX with the profile: cis will pass the rke2-cis-1.7-profile-hardened in Rancher.
-
-```admonish warning
-Until [this upstream PR](https://github.com/rancher-sandbox/cluster-api-provider-rke2/pull/301) is merged, CIS profile enabling
-will not work for RKE2 versions >= v1.29.
-```
+This flavor uses RKE2 for the kubernetes distribution.
 
 ## Specification
 | Control Plane                 | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
@@ -20,6 +13,15 @@ will not work for RKE2 versions >= v1.29.
   ```shell
   clusterctl init --bootstrap rke2 --control-plane rke2
   ```
+
+### CIS Hardening
+The default configuration does not enable [CIS hardening](https://docs.rke2.io/security/hardening_guide#rke2-configuration).
+To enable this, set the following variables:
+```bash
+export CIS_PROFILE=cis
+export CIS_ENABLED=true
+```
+
 ## Usage
 1. Generate cluster yaml
     ```bash
@@ -32,3 +34,4 @@ will not work for RKE2 versions >= v1.29.
     ```bash
     kubectl apply -f test-rke2-cluster.yaml
     ```
+
