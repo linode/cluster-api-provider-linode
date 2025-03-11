@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"k8s.io/client-go/util/retry"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -34,12 +35,14 @@ type FirewallScope struct {
 	PatchHelper    *patch.Helper
 	LinodeClient   LinodeClient
 	LinodeFirewall *infrav1alpha2.LinodeFirewall
+	Cluster        *clusterv1.Cluster
 }
 
 // FirewallScopeParams defines the input parameters used to create a new Scope.
 type FirewallScopeParams struct {
 	Client         K8sClient
 	LinodeFirewall *infrav1alpha2.LinodeFirewall
+	Cluster        *clusterv1.Cluster
 }
 
 func validateFirewallScopeParams(params FirewallScopeParams) error {
@@ -75,6 +78,7 @@ func NewFirewallScope(ctx context.Context, linodeClientConfig ClientConfig, para
 		LinodeClient:   linodeClient,
 		LinodeFirewall: params.LinodeFirewall,
 		PatchHelper:    helper,
+		Cluster:        params.Cluster,
 	}, nil
 }
 

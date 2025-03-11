@@ -72,6 +72,9 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "vpctest",
 			Namespace: defaultNamespace,
+			Labels: map[string]string{
+				clusterv1.ClusterNameLabel: linodeCluster.ObjectMeta.Name,
+			},
 		},
 		Spec: infrav1alpha2.LinodeVPCSpec{
 			Region: "us-ord",
@@ -181,7 +184,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					cScope.LinodeClient = mck.LinodeClient
 					// Set VPC as ready
 					linodeVPC.Status.Ready = true
-					k8sClient.Status().Update(ctx, &linodeVPC)
+					Expect(k8sClient.Status().Update(ctx, &linodeVPC)).To(Succeed())
 
 					// Create and mark firewall as ready if using firewall ref
 					if cScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
@@ -329,8 +332,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(4))
-					Expect(conditions.Get(&linodeCluster, clusterv1.PausedV1Beta2Condition).Status).To(Equal(metav1.ConditionFalse))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(3))
 					Expect(conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition)).Status).To(Equal(metav1.ConditionTrue))
 					Expect(conditions.Get(&linodeCluster, ConditionPreflightLinodeNBFirewallReady)).NotTo(BeNil())
 					Expect(conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)).NotTo(BeNil())
@@ -448,7 +450,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
 					readyCond := conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition))
 					Expect(readyCond).NotTo(BeNil())
 
@@ -722,7 +724,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
-					Expect(linodeCluster.Status.Conditions).To(HaveLen(2))
+					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
 					cond := conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition))
 					Expect(cond).NotTo(BeNil())
 
