@@ -32,6 +32,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -78,7 +79,15 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-
+	var err error
+	var cluster *clusterv1.Cluster
+	if _, ok := linodeFirewall.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeFirewall.ObjectMeta)
+		if err != nil {
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, err
+		}
+	}
 	// Create the firewall scope.
 	fwScope, err := scope.NewFirewallScope(
 		ctx,
@@ -86,6 +95,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		scope.FirewallScopeParams{
 			Client:         r.TracedClient(),
 			LinodeFirewall: linodeFirewall,
+			Cluster:        cluster,
 		})
 	if err != nil {
 		log.Error(err, "failed to create firewall scope")
@@ -93,6 +103,14 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, fwScope.Client, fwScope.Cluster, fwScope.LinodeFirewall)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if isPaused {
+		log.Info("linodefirewall or linked cluster is paused, skipping reconciliation")
+		return ctrl.Result{}, nil
+	}
 	return r.reconcile(ctx, log, fwScope)
 }
 

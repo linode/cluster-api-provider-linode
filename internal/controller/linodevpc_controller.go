@@ -33,6 +33,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -83,7 +84,6 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	defer cancel()
 
 	log := ctrl.LoggerFrom(ctx).WithName("LinodeVPCReconciler").WithValues("name", req.NamespacedName.String())
-
 	linodeVPC := &infrav1alpha2.LinodeVPC{}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeVPC); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
@@ -92,19 +92,36 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		return ctrl.Result{}, err
 	}
-
+	var cluster *clusterv1.Cluster
+	var err error
+	if _, ok := linodeVPC.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeVPC.ObjectMeta)
+		if err != nil {
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, err
+		}
+	}
 	vpcScope, err := scope.NewVPCScope(
 		ctx,
 		r.LinodeClientConfig,
 		scope.VPCScopeParams{
 			Client:    r.TracedClient(),
 			LinodeVPC: linodeVPC,
+			Cluster:   cluster,
 		},
 	)
 	if err != nil {
 		log.Error(err, "Failed to create VPC scope")
 
 		return ctrl.Result{}, fmt.Errorf("failed to create VPC scope: %w", err)
+	}
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if isPaused {
+		log.Info("linodeVPC or linked cluster is paused, skipping reconciliation")
+		return ctrl.Result{}, nil
 	}
 
 	return r.reconcile(ctx, log, vpcScope)

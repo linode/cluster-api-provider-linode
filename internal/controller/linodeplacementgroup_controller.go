@@ -34,6 +34,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -86,6 +87,15 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 
 		return ctrl.Result{}, err
 	}
+	var cluster *clusterv1.Cluster
+	var err error
+	if _, ok := linodeplacementgroup.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeplacementgroup.ObjectMeta)
+		if err != nil {
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, err
+		}
+	}
 
 	pgScope, err := scope.NewPlacementGroupScope(
 		ctx,
@@ -93,12 +103,21 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 		scope.PlacementGroupScopeParams{
 			Client:               r.TracedClient(),
 			LinodePlacementGroup: linodeplacementgroup,
+			Cluster:              cluster,
 		},
 	)
 	if err != nil {
 		log.Error(err, "Failed to create Placement Group scope")
 
 		return ctrl.Result{}, fmt.Errorf("failed to create Placement Group scope: %w", err)
+	}
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, pgScope.Client, pgScope.Cluster, pgScope.LinodePlacementGroup)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if isPaused {
+		log.Info("linodeplacementgroup or linked cluster is paused, skipping reconciliation")
+		return ctrl.Result{}, nil
 	}
 
 	return r.reconcile(ctx, log, pgScope)
