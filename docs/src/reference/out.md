@@ -613,7 +613,7 @@ _Appears in:_
 | `firewallID` _integer_ |  |  |  |
 | `osDisk` _[InstanceDisk](#instancedisk)_ | OSDisk is configuration for the root disk that includes the OS,<br />if not specified this defaults to whatever space is not taken up by the DataDisks |  |  |
 | `dataDisks` _object (keys:string, values:[InstanceDisk](#instancedisk))_ | DataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on a linodes plan |  |  |
-| `diskEncryption` _string_ | DiskEncryption determines if the disks of the instance should be encrypted. |  | Enum: [enabled disabled] <br /> |
+| `diskEncryption` _string_ | DiskEncryption determines if the disks of the instance should be encrypted. The default is disabled. |  | Enum: [enabled disabled] <br /> |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials<br />to use for provisioning this machine. If not supplied then these<br />credentials will be used in-order:<br />  1. LinodeMachine<br />  2. Owner LinodeCluster<br />  3. Controller |  |  |
 | `configuration` _[InstanceConfiguration](#instanceconfiguration)_ | Configuration is the Akamai instance configuration OS,<br />if not specified this defaults to the default configuration associated to the instance. |  |  |
 | `placementGroupRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | PlacementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group. |  |  |

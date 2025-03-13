@@ -77,7 +77,7 @@ type LinodeMachineSpec struct {
 	DataDisks map[string]*InstanceDisk `json:"dataDisks,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:Enum=enabled;disabled
-	// DiskEncryption determines if the disks of the instance should be encrypted.
+	// DiskEncryption determines if the disks of the instance should be encrypted. The default is disabled.
 	DiskEncryption string `json:"diskEncryption,omitempty"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials

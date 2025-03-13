@@ -44,9 +44,6 @@ Please refer to it for more details on environment variables used for client con
 For Regions and Images that do not yet support Akamai's cloud-init datasource CAPL will automatically use a stackscript shim
 to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
 ```
-~~~admonish warning
-By default, clusters are provisioned within VPC with disk encryption enabled. For Regions which do not have [VPC support](https://www.linode.com/docs/products/networking/vpc/#availability) yet, use the [VPCLess](./flavors/vpcless.md) flavor to have clusters provisioned. For disabling disk encryption, set `spec.template.spec.diskEncryption=disabled` in your generated LinodeMachineTemplate resources when creating a CAPL cluster.
-~~~
 
 ## Setup management cluster
 A clusterAPI management cluster is a kubernetes cluster that is responsible for managing the lifecycle of other child k8s clusters provisioned using Cluster API (CAPI). It serves as a control plane for provisioning, scaling, upgrading and deleting child kubernetes clusters.
