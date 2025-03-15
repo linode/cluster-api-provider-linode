@@ -377,9 +377,7 @@ GOVULNC_VERSION          ?= v1.1.1
 MOCKGEN_VERSION          ?= v0.4.0
 GOWRAP_VERSION           ?= v1.4.0
 S5CMD_VERSION            ?= v2.2.2
-
-# v0.31.xxx is not supported by go 1.23. Use v0.32.0-alpha.3 instead. Update this version when the next release is available.
-CONVERSION_GEN_VERSION   ?= v0.32.0-alpha.3
+CONVERSION_GEN_VERSION   ?= v0.32.2
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
