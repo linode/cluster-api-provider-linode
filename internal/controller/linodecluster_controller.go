@@ -320,12 +320,13 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		}
 		// VPC exists, verify it has at least one subnet
 		if len(vpc.Subnets) == 0 {
+			err := fmt.Errorf("VPC with ID %d has no subnets", vpcID)
 			logger.Error(err, "Failed preflight check: VPC has no subnets")
 			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
 				Type:    ConditionPreflightLinodeVPCReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  util.CreateError,
-				Message: fmt.Sprintf("VPC with ID %d has no subnets", vpcID),
+				Message: err.Error(),
 			})
 			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, err
 		}
