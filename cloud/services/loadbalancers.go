@@ -43,7 +43,7 @@ func FindSubnet(subnetName string, isDirectVPC bool, subnets interface{}) (int, 
 
 	// Validate the selected subnet ID
 	if subnetID == 0 {
-		return 0, errors.New("selected subnet ID is 0")
+		return 0, errors.New("invalid subnet ID: selected subnet ID is 0")
 	}
 
 	return subnetID, nil
@@ -53,7 +53,7 @@ func FindSubnet(subnetName string, isDirectVPC bool, subnets interface{}) (int, 
 func findDirectVPCSubnet(subnetName string, subnets interface{}) (int, error) {
 	vpcSubnets, ok := subnets.([]linodego.VPCSubnet)
 	if !ok {
-		return 0, fmt.Errorf("invalid subnet data type for direct VPC")
+		return 0, fmt.Errorf("invalid subnet data type for direct VPC: expected []linodego.VPCSubnet")
 	}
 
 	if len(vpcSubnets) == 0 {
@@ -69,7 +69,7 @@ func findDirectVPCSubnet(subnetName string, subnets interface{}) (int, error) {
 func findVPCRefSubnet(subnetName string, subnets interface{}) (int, error) {
 	vpcRefSubnets, ok := subnets.([]v1alpha2.VPCSubnetCreateOptions)
 	if !ok {
-		return 0, fmt.Errorf("invalid subnet data type for VPC reference")
+		return 0, fmt.Errorf("invalid subnet data type for VPC reference: expected []v1alpha2.VPCSubnetCreateOptions")
 	}
 
 	if len(vpcRefSubnets) == 0 {
@@ -84,10 +84,10 @@ func findVPCRefSubnet(subnetName string, subnets interface{}) (int, error) {
 // selectSubnet is a generic helper to select a subnet by name or use the first one
 func selectSubnet[T any](subnetName string, subnets []T, getProps func(T) (string, int)) (int, error) {
 	if len(subnets) == 0 {
-		return 0, errors.New("no subnets available")
+		return 0, errors.New("no subnets available in the VPC")
 	}
 
-	// If subnet name specified, find matching subnet; otherwise use first subnet
+	// If subnet name specified, find matching subnet
 	if subnetName != "" {
 		for _, subnet := range subnets {
 			label, id := getProps(subnet)
@@ -95,10 +95,11 @@ func selectSubnet[T any](subnetName string, subnets []T, getProps func(T) (strin
 				return id, nil
 			}
 		}
+		// Keep the original error message format for compatibility with tests
 		return 0, fmt.Errorf("subnet with label %s not found in VPC", subnetName)
 	}
 
-	// Use the first subnet
+	// Use the first subnet when no specific name is provided
 	_, id := getProps(subnets[0])
 	return id, nil
 }
@@ -180,12 +181,21 @@ func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger l
 			return 0, err
 		}
 
-		return FindSubnet(subnetName, true, vpc.Subnets)
+		if len(vpc.Subnets) == 0 {
+			return 0, errors.New("no subnets found in VPC")
+		}
+
+		subnetID, err := FindSubnet(subnetName, true, vpc.Subnets)
+		if err != nil {
+			logger.Error(err, "Failed to find subnet in VPC", "vpcID", vpcID, "subnetName", subnetName)
+			return 0, err
+		}
+		return subnetID, nil
 	}
 
 	// Otherwise, use the VPCRef
 	if clusterScope.LinodeCluster.Spec.VPCRef == nil {
-		return 0, errors.New("neither VPCID nor VPCRef is specified")
+		return 0, errors.New("neither VPCID nor VPCRef is specified in LinodeCluster")
 	}
 
 	name := clusterScope.LinodeCluster.Spec.VPCRef.Name
@@ -194,7 +204,9 @@ func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger l
 		namespace = clusterScope.LinodeCluster.Namespace
 	}
 
-	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
+	if name == "" {
+		return 0, errors.New("VPCRef name is not specified in LinodeCluster")
+	}
 
 	linodeVPC := &v1alpha2.LinodeVPC{
 		ObjectMeta: metav1.ObjectMeta{
@@ -205,8 +217,12 @@ func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger l
 
 	objectKey := client.ObjectKeyFromObject(linodeVPC)
 	if err := clusterScope.Client.Get(ctx, objectKey, linodeVPC); err != nil {
-		logger.Error(err, "Failed to fetch LinodeVPC")
-		return 0, err
+		logger.Error(err, "Failed to fetch LinodeVPC", "name", name, "namespace", namespace)
+		return 0, fmt.Errorf("failed to fetch LinodeVPC %s/%s: %w", namespace, name, err)
+	}
+
+	if len(linodeVPC.Spec.Subnets) == 0 {
+		return 0, errors.New("no subnets found in LinodeVPC")
 	}
 
 	return FindSubnet(subnetName, false, linodeVPC.Spec.Subnets)
