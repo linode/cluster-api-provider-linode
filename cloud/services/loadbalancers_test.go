@@ -17,7 +17,6 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -2554,7 +2553,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 	tests := []struct {
 		name              string
 		clusterScope      *scope.ClusterScope
-		linodeMachine     v1alpha2.LinodeMachine
+		linodeMachine     infrav1alpha2.LinodeMachine
 		nodeBalancerNodes []linodego.NodeBalancerNode
 		expectedError     error
 		expectedErrorMsg  string
@@ -2587,7 +2586,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 				},
 				Client: nil, // Will be mocked
 			},
-			linodeMachine: v1alpha2.LinodeMachine{
+			linodeMachine: infrav1alpha2.LinodeMachine{
 				Status: infrav1alpha2.LinodeMachineStatus{
 					Addresses: []clusterv1.MachineAddress{
 						{
@@ -2658,7 +2657,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 				},
 				Client: nil, // Will be mocked
 			},
-			linodeMachine: v1alpha2.LinodeMachine{
+			linodeMachine: infrav1alpha2.LinodeMachine{
 				Status: infrav1alpha2.LinodeMachineStatus{
 					Addresses: []clusterv1.MachineAddress{
 						{
@@ -2733,7 +2732,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 				},
 				Client: nil, // Will be mocked
 			},
-			linodeMachine: v1alpha2.LinodeMachine{
+			linodeMachine: infrav1alpha2.LinodeMachine{
 				Status: infrav1alpha2.LinodeMachineStatus{
 					Addresses: []clusterv1.MachineAddress{},
 				},
@@ -2768,7 +2767,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 				},
 				Client: nil, // Will be mocked
 			},
-			linodeMachine: v1alpha2.LinodeMachine{
+			linodeMachine: infrav1alpha2.LinodeMachine{
 				Status: infrav1alpha2.LinodeMachineStatus{
 					Addresses: []clusterv1.MachineAddress{
 						{
@@ -2805,7 +2804,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 				},
 				Client: nil, // Will be mocked
 			},
-			linodeMachine: v1alpha2.LinodeMachine{
+			linodeMachine: infrav1alpha2.LinodeMachine{
 				Status: infrav1alpha2.LinodeMachineStatus{
 					Addresses: []clusterv1.MachineAddress{},
 				},
@@ -2842,7 +2841,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 				},
 				Client: nil, // Will be mocked
 			},
-			linodeMachine: v1alpha2.LinodeMachine{
+			linodeMachine: infrav1alpha2.LinodeMachine{
 				Status: infrav1alpha2.LinodeMachineStatus{
 					Addresses: []clusterv1.MachineAddress{
 						{
@@ -2899,7 +2898,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 				},
 				Client: nil, // Will be mocked
 			},
-			linodeMachine: v1alpha2.LinodeMachine{
+			linodeMachine: infrav1alpha2.LinodeMachine{
 				Status: infrav1alpha2.LinodeMachineStatus{
 					Addresses: []clusterv1.MachineAddress{
 						{

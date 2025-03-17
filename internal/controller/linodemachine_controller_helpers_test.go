@@ -528,6 +528,41 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 	}
 }
 
+// validateInterfaceExpectations is a helper function to check VPC interface expectations in tests
+func validateInterfaceExpectations(
+	t *testing.T,
+	err error,
+	iface *linodego.InstanceConfigInterfaceCreateOptions,
+	expectErr bool,
+	expectErrMsg string,
+	expectInterface bool,
+	expectSubnetID int,
+	interfaces interface{},
+) {
+	t.Helper()
+
+	if expectErr {
+		require.Error(t, err)
+		require.Contains(t, err.Error(), expectErrMsg)
+		require.Nil(t, iface)
+		return
+	}
+
+	require.NoError(t, err)
+	if expectInterface {
+		require.NotNil(t, iface)
+		require.Equal(t, linodego.InterfacePurposeVPC, iface.Purpose)
+		require.True(t, iface.Primary)
+		require.NotNil(t, iface.SubnetID)
+		require.Equal(t, expectSubnetID, *iface.SubnetID)
+		require.NotNil(t, iface.IPv4)
+		require.NotNil(t, iface.IPv4.NAT1To1)
+		require.Equal(t, "any", *iface.IPv4.NAT1To1)
+	} else {
+		require.Nil(t, iface)
+	}
+}
+
 func TestGetVPCInterfaceConfigFromDirectID(t *testing.T) {
 	t.Parallel()
 
@@ -698,29 +733,12 @@ func TestGetVPCInterfaceConfigFromDirectID(t *testing.T) {
 			iface, err := getVPCInterfaceConfigFromDirectID(ctx, machineScope, tc.interfaces, logger, tc.vpcID)
 
 			// Check expectations
-			if tc.expectErr {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tc.expectErrMsg)
-				require.Nil(t, iface)
-			} else {
-				require.NoError(t, err)
-				if tc.expectInterface {
-					require.NotNil(t, iface)
-					require.Equal(t, linodego.InterfacePurposeVPC, iface.Purpose)
-					require.True(t, iface.Primary)
-					require.NotNil(t, iface.SubnetID)
-					require.Equal(t, tc.expectSubnetID, *iface.SubnetID)
-					require.NotNil(t, iface.IPv4)
-					require.NotNil(t, iface.IPv4.NAT1To1)
-					require.Equal(t, "any", *iface.IPv4.NAT1To1)
-				} else {
-					require.Nil(t, iface)
-					// For existing interface case, verify the interface was updated
-					if len(tc.interfaces) > 0 && tc.interfaces[0].Purpose == linodego.InterfacePurposeVPC {
-						require.NotNil(t, tc.interfaces[0].SubnetID)
-						require.Equal(t, tc.expectSubnetID, *tc.interfaces[0].SubnetID)
-					}
-				}
+			validateInterfaceExpectations(t, err, iface, tc.expectErr, tc.expectErrMsg, tc.expectInterface, tc.expectSubnetID, tc.interfaces)
+
+			// Additional check for interface updates
+			if !tc.expectErr && !tc.expectInterface && len(tc.interfaces) > 0 && tc.interfaces[0].Purpose == linodego.InterfacePurposeVPC {
+				require.NotNil(t, tc.interfaces[0].SubnetID)
+				require.Equal(t, tc.expectSubnetID, *tc.interfaces[0].SubnetID)
 			}
 		})
 	}
@@ -840,10 +858,10 @@ func TestAddVPCInterfaceFromDirectID(t *testing.T) {
 				require.NoError(t, err)
 				if tc.expectNoIface {
 					// If interface already existed, count should remain the same
-					require.Equal(t, originalCount, len(tc.createConfig.Interfaces))
+					require.Len(t, tc.createConfig.Interfaces, originalCount)
 				} else {
 					// If interface was added, count should increase
-					require.Equal(t, originalCount+1, len(tc.createConfig.Interfaces))
+					require.Len(t, tc.createConfig.Interfaces, originalCount+1)
 					require.Equal(t, linodego.InterfacePurposeVPC, tc.createConfig.Interfaces[0].Purpose)
 					require.True(t, tc.createConfig.Interfaces[0].Primary)
 				}
@@ -1026,11 +1044,11 @@ func TestConfigureVPCInterface(t *testing.T) {
 				require.NoError(t, err)
 				if tc.expectInterface {
 					// If interface was added, count should increase
-					require.Equal(t, originalCount+1, len(tc.createConfig.Interfaces))
+					require.Len(t, tc.createConfig.Interfaces, originalCount+1)
 					require.Equal(t, linodego.InterfacePurposeVPC, tc.createConfig.Interfaces[0].Purpose)
 				} else {
 					// If no interface was added, count should remain the same
-					require.Equal(t, originalCount, len(tc.createConfig.Interfaces))
+					require.Len(t, tc.createConfig.Interfaces, originalCount)
 				}
 			}
 		})
@@ -1293,29 +1311,12 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 			iface, err := getVPCInterfaceConfig(ctx, machineScope, tc.interfaces, logger, tc.vpcRef)
 
 			// Check expectations
-			if tc.expectErr {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tc.expectErrMsg)
-				require.Nil(t, iface)
-			} else {
-				require.NoError(t, err)
-				if tc.expectInterface {
-					require.NotNil(t, iface)
-					require.Equal(t, linodego.InterfacePurposeVPC, iface.Purpose)
-					require.True(t, iface.Primary)
-					require.NotNil(t, iface.SubnetID)
-					require.Equal(t, tc.expectSubnetID, *iface.SubnetID)
-					require.NotNil(t, iface.IPv4)
-					require.NotNil(t, iface.IPv4.NAT1To1)
-					require.Equal(t, "any", *iface.IPv4.NAT1To1)
-				} else {
-					require.Nil(t, iface)
-					// For existing interface case, verify the interface was updated
-					if len(tc.interfaces) > 0 && tc.interfaces[0].Purpose == linodego.InterfacePurposeVPC {
-						require.NotNil(t, tc.interfaces[0].SubnetID)
-						require.Equal(t, tc.expectSubnetID, *tc.interfaces[0].SubnetID)
-					}
-				}
+			validateInterfaceExpectations(t, err, iface, tc.expectErr, tc.expectErrMsg, tc.expectInterface, tc.expectSubnetID, tc.interfaces)
+
+			// Additional check for interface updates
+			if !tc.expectErr && !tc.expectInterface && len(tc.interfaces) > 0 && tc.interfaces[0].Purpose == linodego.InterfacePurposeVPC {
+				require.NotNil(t, tc.interfaces[0].SubnetID)
+				require.Equal(t, tc.expectSubnetID, *tc.interfaces[0].SubnetID)
 			}
 		})
 	}
