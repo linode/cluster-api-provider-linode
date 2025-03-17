@@ -331,6 +331,84 @@ func TestEnsureNodeBalancer(t *testing.T) {
 			},
 		},
 		{
+			name: "Success - Create NodeBalancer with direct VPCID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Region: "us-east",
+						VPCID:  ptr.To(456),
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				// Mock GetVPC call
+				mockClient.EXPECT().GetVPC(gomock.Any(), 456).Return(&linodego.VPC{
+					ID: 456,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    2001,
+							Label: "direct-subnet",
+						},
+					},
+				}, nil)
+
+				// Mock CreateNodeBalancer call with direct VPC options
+				mockClient.EXPECT().CreateNodeBalancer(
+					gomock.Any(),
+					gomock.Eq(linodego.NodeBalancerCreateOptions{
+						Label:  util.Pointer("test-cluster"),
+						Region: "us-east",
+						Tags:   []string{"test-uid"},
+						VPCs: []linodego.NodeBalancerVPCOptions{
+							{
+								IPv4Range: "10.0.0.0/24",
+								SubnetID:  2001,
+							},
+						},
+					}),
+				).Return(&linodego.NodeBalancer{
+					ID:    1234,
+					Label: util.Pointer("test-cluster"),
+				}, nil)
+			},
+			expectedNodeBalancer: &linodego.NodeBalancer{
+				ID:    1234,
+				Label: util.Pointer("test-cluster"),
+			},
+		},
+		{
+			name: "Error - Failed to get subnet ID with direct VPCID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						UID:       "test-uid",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Region: "us-east",
+						VPCID:  ptr.To(789),
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				// Mock GetVPC call with error
+				mockClient.EXPECT().GetVPC(gomock.Any(), 789).Return(nil, fmt.Errorf("VPC not found"))
+			},
+			expectedError: fmt.Errorf("VPC not found"),
+		},
+		{
 			name: "Error - Failed to get subnet ID for VPC",
 			clusterScope: &scope.ClusterScope{
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
@@ -543,7 +621,7 @@ func TestGetSubnetID(t *testing.T) {
 					return nil
 				})
 			},
-			expectedError: "No subnets found in LinodeVPC",
+			expectedError: "no subnets found in LinodeVPC",
 		},
 		{
 			name: "Error - Subnet with specific name not found",
@@ -641,6 +719,175 @@ func TestGetSubnetID(t *testing.T) {
 			testcase.clusterScope.Client = mockK8sClient
 
 			testcase.expects(mockK8sClient)
+
+			got, err := getSubnetID(context.Background(), testcase.clusterScope, logr.Discard())
+			if testcase.expectedError != "" {
+				require.ErrorContains(t, err, testcase.expectedError)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, testcase.expectedID, got)
+			}
+		})
+	}
+}
+
+func TestGetSubnetIDWithVPCID(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		clusterScope  *scope.ClusterScope
+		expects       func(*mock.MockLinodeClient)
+		expectedID    int
+		expectedError string
+	}{
+		{
+			name: "Success - Get first subnet with direct VPCID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCID: ptr.To(123),
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    1001,
+							Label: "subnet-1",
+						},
+						{
+							ID:    1002,
+							Label: "subnet-2",
+						},
+					},
+				}, nil)
+			},
+			expectedID: 1001,
+		},
+		{
+			name: "Success - Get subnet by name with direct VPCID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCID: ptr.To(123),
+						Network: infrav1alpha2.NetworkSpec{
+							SubnetName: "subnet-2",
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    1001,
+							Label: "subnet-1",
+						},
+						{
+							ID:    1002,
+							Label: "subnet-2",
+						},
+					},
+				}, nil)
+			},
+			expectedID: 1002,
+		},
+		{
+			name: "Error - Failed to fetch VPC with direct VPCID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCID: ptr.To(999),
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetVPC(gomock.Any(), 999).Return(nil, fmt.Errorf("VPC not found"))
+			},
+			expectedError: "VPC not found",
+		},
+		{
+			name: "Error - No subnets in VPC with direct VPCID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCID: ptr.To(123),
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID:      123,
+					Subnets: []linodego.VPCSubnet{}, // Empty subnets
+				}, nil)
+			},
+			expectedError: "no subnets found in VPC",
+		},
+		{
+			name: "Error - Subnet with specific name not found with direct VPCID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCID: ptr.To(123),
+						Network: infrav1alpha2.NetworkSpec{
+							SubnetName: "non-existent-subnet",
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    1001,
+							Label: "subnet-1",
+						},
+						{
+							ID:    1002,
+							Label: "subnet-2",
+						},
+					},
+				}, nil)
+			},
+			expectedError: "subnet with label non-existent-subnet not found in VPC",
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mock.NewMockLinodeClient(ctrl)
+			testcase.clusterScope.LinodeClient = mockClient
+
+			testcase.expects(mockClient)
 
 			got, err := getSubnetID(context.Background(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != "" {

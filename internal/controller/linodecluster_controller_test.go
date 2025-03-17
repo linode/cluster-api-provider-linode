@@ -736,3 +736,239 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 		),
 	)
 })
+
+var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-vpcid"), func() {
+	clusterName := "cluster-with-direct-vpcid"
+	ownerRef := metav1.OwnerReference{
+		Name:       clusterName,
+		APIVersion: "cluster.x-k8s.io/v1beta1",
+		Kind:       "Cluster",
+		UID:        "00000000-000-0000-0000-000000000001",
+	}
+	ownerRefs := []metav1.OwnerReference{ownerRef}
+	metadata := metav1.ObjectMeta{
+		Name:            clusterName,
+		Namespace:       defaultNamespace,
+		OwnerReferences: ownerRefs,
+	}
+	linodeCluster := infrav1alpha2.LinodeCluster{
+		ObjectMeta: metadata,
+		Spec: infrav1alpha2.LinodeClusterSpec{
+			Region: "us-ord",
+			VPCID:  ptr.To(12345),
+		},
+	}
+
+	ctlrSuite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
+	reconciler := LinodeClusterReconciler{}
+	cScope := &scope.ClusterScope{}
+	clusterKey := client.ObjectKeyFromObject(&linodeCluster)
+
+	BeforeAll(func(ctx SpecContext) {
+		cScope.Client = k8sClient
+		Expect(k8sClient.Create(ctx, &linodeCluster)).To(Succeed())
+	})
+
+	ctlrSuite.BeforeEach(func(ctx context.Context, mck Mock) {
+		reconciler.Recorder = mck.Recorder()
+
+		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
+		cScope.LinodeCluster = &linodeCluster
+
+		// Create patch helper with latest state of resource.
+		patchHelper, err := patch.NewHelper(&linodeCluster, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		cScope.PatchHelper = patchHelper
+	})
+
+	ctlrSuite.Run(
+		OneOf(
+			Path(
+				Call("direct VPCID exists and has subnets", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+
+					// Mock GetVPC call to return a VPC with subnets
+					mck.LinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(12345)).
+						Return(&linodego.VPC{
+							ID:     12345,
+							Label:  "test-vpc",
+							Region: "us-ord",
+							Subnets: []linodego.VPCSubnet{
+								{
+									ID:    1001,
+									Label: "subnet-1",
+								},
+							},
+						}, nil)
+
+					// Mock the CreateNodeBalancer call to avoid unexpected call error
+					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
+						Return(&linodego.NodeBalancer{
+							ID:     12345,
+							Label:  ptr.To("test-nodebalancer"),
+							Region: "us-ord",
+							IPv4:   ptr.To("192.168.1.2"),
+						}, nil).
+						AnyTimes()
+
+					// Mock the GetNodeBalancer call
+					mck.LinodeClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).
+						Return(&linodego.NodeBalancer{
+							ID:     12345,
+							Label:  ptr.To("test-nodebalancer"),
+							Region: "us-ord",
+							IPv4:   ptr.To("192.168.1.2"),
+						}, nil).
+						AnyTimes()
+
+					// Mock the CreateNodeBalancerConfig call
+					mck.LinodeClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&linodego.NodeBalancerConfig{
+							ID:           123,
+							Port:         6443,
+							Protocol:     "tcp",
+							Algorithm:    "roundrobin",
+							Stickiness:   "none",
+							Check:        "connection",
+							CheckPassive: true,
+						}, nil).
+						AnyTimes()
+
+					// Mock the GetNodeBalancerConfig call
+					mck.LinodeClient.EXPECT().GetNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&linodego.NodeBalancerConfig{
+							ID:           123,
+							Port:         6443,
+							Protocol:     "tcp",
+							Algorithm:    "roundrobin",
+							Stickiness:   "none",
+							Check:        "connection",
+							CheckPassive: true,
+						}, nil).
+						AnyTimes()
+
+					// Mock the CreateNodeBalancerNode call
+					mck.LinodeClient.EXPECT().CreateNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(&linodego.NodeBalancerNode{
+							ID:      456,
+							Label:   "test-node",
+							Address: "192.168.1.2:6443",
+							Status:  "UP",
+							Weight:  100,
+						}, nil).
+						AnyTimes()
+
+					// Mock the ListNodeBalancerNodes call
+					mck.LinodeClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return([]linodego.NodeBalancerNode{
+							{
+								ID:      456,
+								Label:   "test-node",
+								Address: "192.168.1.2:6443",
+								Status:  "UP",
+								Weight:  100,
+							},
+						}, nil).
+						AnyTimes()
+
+					// Mock the DeleteNodeBalancerNode call
+					mck.LinodeClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil).
+						AnyTimes()
+				}),
+				Result("VPC preflight check passes", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeTrue())
+				}),
+			),
+			Path(
+				Call("direct VPCID exists but has no subnets", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+
+					// Set the condition to false initially
+					conditions.Set(cScope.LinodeCluster, metav1.Condition{
+						Type:   ConditionPreflightLinodeVPCReady,
+						Status: metav1.ConditionFalse,
+						Reason: "InitialState",
+					})
+
+					// Mock GetVPC call to return a VPC with no subnets
+					mck.LinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(12345)).
+						Return(&linodego.VPC{
+							ID:      12345,
+							Label:   "test-vpc",
+							Region:  "us-ord",
+							Subnets: []linodego.VPCSubnet{},
+						}, nil)
+
+					// Mock the ListNodeBalancerNodes call
+					mck.LinodeClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return([]linodego.NodeBalancerNode{
+							{
+								ID:      456,
+								Label:   "test-node",
+								Address: "192.168.1.2:6443",
+								Status:  "UP",
+								Weight:  100,
+							},
+						}, nil).
+						AnyTimes()
+
+					// Mock the DeleteNodeBalancerNode call
+					mck.LinodeClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil).
+						AnyTimes()
+				}),
+				Result("VPC preflight check fails", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("VPC with ID 12345 has no subnets"))
+					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+					condition := conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)
+					Expect(condition).NotTo(BeNil())
+					Expect(condition.Message).To(ContainSubstring("VPC with ID 12345 has no subnets"))
+				}),
+			),
+			Path(
+				Call("direct VPCID does not exist", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+
+					// Mock GetVPC call to return an error
+					mck.LinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(12345)).
+						Return(nil, errors.New("VPC not found"))
+
+					// Mock the ListNodeBalancerNodes call
+					mck.LinodeClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return([]linodego.NodeBalancerNode{
+							{
+								ID:      456,
+								Label:   "test-node",
+								Address: "192.168.1.2:6443",
+								Status:  "UP",
+								Weight:  100,
+							},
+						}, nil).
+						AnyTimes()
+
+					// Mock the DeleteNodeBalancerNode call
+					mck.LinodeClient.EXPECT().DeleteNodeBalancerNode(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil).
+						AnyTimes()
+				}),
+				Result("VPC preflight check fails", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("VPC not found"))
+					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+					condition := conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)
+					Expect(condition).NotTo(BeNil())
+					Expect(condition.Message).To(ContainSubstring("VPC not found"))
+				}),
+			),
+		),
+	)
+})

@@ -221,23 +221,22 @@ func (r *LinodeClusterReconciler) reconcile(
 }
 
 func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
-	if clusterScope.LinodeCluster.Spec.VPCRef != nil {
+	// Check VPC configuration - either direct ID or reference
+	if clusterScope.LinodeCluster.Spec.VPCID != nil || clusterScope.LinodeCluster.Spec.VPCRef != nil {
 		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
 			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
-				conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-					Type:   ConditionPreflightLinodeVPCReady,
-					Status: metav1.ConditionFalse,
-					Reason: "LinodeVPCNotYetAvailable", // We have to set the reason to not fail object patching
-				})
+				// The condition is already set in reconcilePreflightLinodeVPCCheck, so we don't need to set it again
 				return res, err
 			}
+
+			// Only set to true if there was no error
+			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+				Type:   ConditionPreflightLinodeVPCReady,
+				Status: metav1.ConditionTrue,
+				Reason: "LinodeVPCReady", // We have to set the reason to not fail object patching
+			})
 		}
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-			Type:   ConditionPreflightLinodeVPCReady,
-			Status: metav1.ConditionTrue,
-			Reason: "LinodeVPCReady", // We have to set the reason to not fail object patching
-		})
 	}
 
 	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
@@ -251,12 +250,14 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 				})
 				return res, err
 			}
+
+			// Only set to true if there was no error
+			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+				Type:   ConditionPreflightLinodeNBFirewallReady,
+				Status: metav1.ConditionTrue,
+				Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+			})
 		}
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
-			Type:   ConditionPreflightLinodeNBFirewallReady,
-			Status: metav1.ConditionTrue,
-			Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
-		})
 	}
 
 	return ctrl.Result{}, nil
@@ -303,6 +304,36 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 }
 
 func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
+	// If VPCID is directly specified, check if it exists
+	if clusterScope.LinodeCluster.Spec.VPCID != nil {
+		vpcID := *clusterScope.LinodeCluster.Spec.VPCID
+		vpc, err := clusterScope.LinodeClient.GetVPC(ctx, vpcID)
+		if err != nil {
+			logger.Error(err, "Failed to get VPC with provided ID", "vpcID", vpcID)
+			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+				Type:    ConditionPreflightLinodeVPCReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  util.CreateError,
+				Message: fmt.Sprintf("VPC with ID %d not found: %v", vpcID, err),
+			})
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, err
+		}
+		// VPC exists, verify it has at least one subnet
+		if len(vpc.Subnets) == 0 {
+			logger.Error(err, "Failed preflight check: VPC has no subnets")
+			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+				Type:    ConditionPreflightLinodeVPCReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  util.CreateError,
+				Message: fmt.Sprintf("VPC with ID %d has no subnets", vpcID),
+			})
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, err
+		}
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), fmt.Sprintf("VPC with ID %d is available", vpcID))
+		return ctrl.Result{}, nil
+	}
+
+	// Otherwise, check for VPCRef
 	name := clusterScope.LinodeCluster.Spec.VPCRef.Name
 	namespace := clusterScope.LinodeCluster.Spec.VPCRef.Namespace
 	if namespace == "" {

@@ -342,7 +342,64 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	return ctrl.Result{}, nil
 }
 
+// validateVPC checks if a VPC exists and has subnets
+// Returns error if VPC does not exist or has no subnets
+func (r *LinodeMachineReconciler) validateVPC(ctx context.Context, vpcID int, machineScope *scope.MachineScope, logger logr.Logger, source string) error {
+	vpc, err := machineScope.LinodeClient.GetVPC(ctx, vpcID)
+	if err != nil {
+		errMsg := fmt.Sprintf("%s VPC with ID %d not found: %v", source, vpcID, err)
+		logger.Error(err, "Failed to fetch VPC from Linode API", "vpcID", vpcID)
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    ConditionPreflightLinodeVPCReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  util.CreateError,
+			Message: errMsg,
+		})
+		return fmt.Errorf("%s", errMsg)
+	}
+
+	// VPC exists, check it has at least one subnet
+	if len(vpc.Subnets) == 0 {
+		errMsg := fmt.Sprintf("%s VPC with ID %d has no subnets", source, vpcID)
+		logger.Error(errors.New(errMsg), "Failed preflight check: VPC has no subnets")
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    ConditionPreflightLinodeVPCReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  util.CreateError,
+			Message: errMsg,
+		})
+		return fmt.Errorf("%s", errMsg)
+	}
+
+	// VPC exists and has subnets
+	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, string(clusterv1.ReadyCondition),
+		fmt.Sprintf("%s VPC with ID %d is available", source, vpcID))
+	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		Type:   ConditionPreflightLinodeVPCReady,
+		Status: metav1.ConditionTrue,
+		Reason: "LinodeVPCReady",
+	})
+	return nil
+}
+
 func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, vpcRef *corev1.ObjectReference) (ctrl.Result, error) {
+	// Check if machine has direct VPCID
+	if machineScope.LinodeMachine.Spec.VPCID != nil {
+		if err := r.validateVPC(ctx, *machineScope.LinodeMachine.Spec.VPCID, machineScope, logger, "Machine"); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Check if cluster has direct VPCID
+	if machineScope.LinodeCluster.Spec.VPCID != nil {
+		if err := r.validateVPC(ctx, *machineScope.LinodeCluster.Spec.VPCID, machineScope, logger, "Cluster"); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// If we get here, we need to use the VPCRef (existing code)
 	name := vpcRef.Name
 	namespace := vpcRef.Namespace
 	if namespace == "" {

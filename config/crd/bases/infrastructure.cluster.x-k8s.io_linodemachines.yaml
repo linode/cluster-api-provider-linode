@@ -374,6 +374,13 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              vpcID:
+                description: VPCID is the ID of an existing VPC in Linode. This allows
+                  using a VPC that is not managed by CAPL.
+                type: integer
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               vpcRef:
                 description: |-
                   VPCRef is a reference to a LinodeVPC resource. If specified, this takes precedence over

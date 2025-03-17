@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -235,6 +236,117 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefMachine.Spec.CredentialsRef, credentialsRefMachine.GetNamespace())
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
+	t.Parallel()
+
+	var (
+		invalidMachine = &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
+				VPCID:  ptr.To(12345),
+				VPCRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeVPC",
+				},
+			},
+		}
+		validMachineWithVPCID = &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
+				VPCID:  ptr.To(12345),
+			},
+		}
+		validMachineWithVPCRef = &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
+				VPCRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeVPC",
+				},
+			},
+		}
+		validator = &linodeMachineValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid with VPCID", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&linodego.LinodeType{
+						ID:    "g6-standard-1",
+						Disk:  50 * 1024, // 50GB
+						Label: "Linode 2GB",
+					}, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Any()).Return(&linodego.VPC{
+						ID: 12345,
+						Subnets: []linodego.VPCSubnet{
+							{
+								ID:    1001,
+								Label: "subnet-1",
+							},
+						},
+					}, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCID.Spec)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("valid with VPCRef", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&linodego.LinodeType{
+						ID:    "g6-standard-1",
+						Disk:  50 * 1024, // 50GB
+						Label: "Linode 2GB",
+					}, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCRef.Spec)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("both VPCID and VPCRef set", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&linodego.LinodeType{
+						ID:    "g6-standard-1",
+						Disk:  50 * 1024, // 50GB
+						Label: "Linode 2GB",
+					}, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec)
+					require.NotEmpty(t, errs)
+					require.Contains(t, errs[0].Error(), "Cannot specify both VPCID and VPCRef")
 				}),
 			),
 		),
