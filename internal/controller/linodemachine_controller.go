@@ -383,16 +383,13 @@ func (r *LinodeMachineReconciler) validateVPC(ctx context.Context, vpcID int, ma
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, vpcRef *corev1.ObjectReference) (ctrl.Result, error) {
-	// Check if machine has direct VPCID
+	// LinodeMachine VPCID takes precedence over LinodeCluster VPCID
 	if machineScope.LinodeMachine.Spec.VPCID != nil {
 		if err := r.validateVPC(ctx, *machineScope.LinodeMachine.Spec.VPCID, machineScope, logger, "Machine"); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	}
-
-	// Check if cluster has direct VPCID
-	if machineScope.LinodeCluster.Spec.VPCID != nil {
+	} else if machineScope.LinodeCluster.Spec.VPCID != nil {
 		if err := r.validateVPC(ctx, *machineScope.LinodeCluster.Spec.VPCID, machineScope, logger, "Cluster"); err != nil {
 			return ctrl.Result{}, err
 		}

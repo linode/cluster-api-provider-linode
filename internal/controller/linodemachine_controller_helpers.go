@@ -152,13 +152,10 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 
 // configureVPCInterface handles all VPC configuration scenarios and adds the appropriate interface
 func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
-	// First check if a direct VPCID is specified on the machine
+	// First check if a direct VPCID is specified on the machine then the cluster
 	if machineScope.LinodeMachine.Spec.VPCID != nil {
 		return addVPCInterfaceFromDirectID(ctx, machineScope, createConfig, logger, *machineScope.LinodeMachine.Spec.VPCID)
-	}
-
-	// Next check if a direct VPCID is specified on the cluster
-	if machineScope.LinodeCluster.Spec.VPCID != nil {
+	} else if machineScope.LinodeCluster.Spec.VPCID != nil {
 		return addVPCInterfaceFromDirectID(ctx, machineScope, createConfig, logger, *machineScope.LinodeCluster.Spec.VPCID)
 	}
 
