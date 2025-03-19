@@ -66,6 +66,37 @@ By default, the VPC will use the subnet with the `default` label for deploying c
 
 Additionally, the `VPC_NETWORK_CIDR` and `K8S_CLUSTER_CIDR` environment variables can be used to change which CIDR blocks are used by the VPC and its clusters. `VPC_NETWORK_CIDR` designates the range used by the VPC, while `K8S_CLUSTER_CIDR` designates the range used by clusters for nodes. The `K8S_CLUSTER_CIDR` should be within the `VPC_NETWORK_CIDR`.
 
+### VPC Configuration Precedence
+
+When configuring VPCs, you can specify either a direct `VPCID` or a `VPCRef` in both `LinodeMachine` and `LinodeCluster` resources. If both are specified, the following precedence rules apply:
+
+#### LinodeMachine VPC Precedence
+
+For `LinodeMachine` resources, the precedence order is:
+
+1. Machine's direct `VPCID` (highest precedence)
+2. Cluster's direct `VPCID`
+3. VPC reference (`VPCRef`) from either machine or cluster
+
+If multiple options are specified, the highest precedence option will be used.
+
+#### LinodeCluster VPC Precedence
+
+For `LinodeCluster` resources, the precedence order is:
+
+1. Direct `VPCID` (highest precedence)
+2. `VPCRef`
+
+If both are specified, the direct `VPCID` will be used.
+
+```admonish note
+This VPC precedence behavior differs from firewall configuration, where references take precedence over direct IDs. For VPCs, direct IDs always take precedence over references.
+```
+
+```admonish warning
+While you can specify both direct IDs and references, it's recommended to use only one approach for clarity and to avoid confusion.
+```
+
 ## Troubleshooting
 ### If pod-to-pod connectivity is failing
 If a pod can't ping pod ips on different node, check and make sure pod CIDRs are added to ip_ranges of VPC interface.

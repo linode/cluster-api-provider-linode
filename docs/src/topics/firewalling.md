@@ -186,3 +186,25 @@ spec:
       region: us-ord
       type: g6-standard-4
 ```
+
+### Firewall Configuration Precedence
+
+When configuring firewalls, you can specify either a direct `firewallID` or a `firewallRef` in both `LinodeMachine` and `LinodeCluster` resources. If both are specified, the following precedence rules apply:
+
+#### LinodeMachine Firewall Precedence
+
+For `LinodeMachine` resources, when both `firewallID` and `firewallRef` are specified:
+
+- `firewallRef` takes precedence over `firewallID`
+- The ID from the referenced `LinodeFirewall` will be used instead of the directly specified `firewallID`
+
+#### LinodeCluster NodeBalancer Firewall Precedence
+
+For `LinodeCluster` resources, when both `NodeBalancerFirewallID` and `NodeBalancerFirewallRef` are specified:
+
+- `NodeBalancerFirewallRef` takes precedence over `NodeBalancerFirewallID`
+- The ID from the referenced `LinodeFirewall` will be used instead of the directly specified `NodeBalancerFirewallID`
+
+```admonish warning
+While you can specify both direct IDs and references, it's recommended to use only one approach for clarity and to avoid confusion.
+```
