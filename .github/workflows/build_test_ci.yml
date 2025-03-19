@@ -106,12 +106,12 @@ jobs:
         exclude:
           - flavor: src
         include:
-          - flavor: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
+          - flavor: 'all'
     uses: ./.github/workflows/e2e-test.yaml
     secrets: inherit
     with:
       e2e-selector: ${{ matrix.flavor }}
-      e2e-flags: ${{ matrix.flavor == 'quick' && ''  || '--assert-timeout 15m0s'}}
+      e2e-flags: ${{ matrix.flavor == 'quick' && ''  || '--assert-timeout 20m0s'}}
 
 
   docker-build:
