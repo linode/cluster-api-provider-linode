@@ -245,6 +245,28 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 }
 
 func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
+	// If NodeBalancerFirewallID is directly specified, check if it exists
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
+		firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
+		_, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
+		if err != nil {
+			logger.Error(err, "Failed to get NodeBalancer firewall with provided ID", "firewallID", firewallID)
+			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+				Type:    ConditionPreflightLinodeNBFirewallReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  util.CreateError,
+				Message: err.Error(),
+			})
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		}
+		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			Type:   ConditionPreflightLinodeNBFirewallReady,
+			Status: metav1.ConditionTrue,
+			Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+		})
+		return ctrl.Result{}, nil
+	}
+
 	name := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Name
 	namespace := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Namespace
 	if namespace == "" {

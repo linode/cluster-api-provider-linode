@@ -442,6 +442,28 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
+	// If NodeBalancerFirewallID is directly specified, check if it exists
+	if machineScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
+		firewallID := *machineScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
+		_, err := machineScope.LinodeClient.GetFirewall(ctx, firewallID)
+		if err != nil {
+			logger.Error(err, "Failed to get NodeBalancer firewall with provided ID", "firewallID", firewallID)
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    ConditionPreflightLinodeFirewallReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  util.CreateError,
+				Message: err.Error(),
+			})
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		}
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:   ConditionPreflightLinodeFirewallReady,
+			Status: metav1.ConditionTrue,
+			Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+		})
+		return ctrl.Result{}, nil
+	}
+
 	name := machineScope.LinodeMachine.Spec.FirewallRef.Name
 	namespace := machineScope.LinodeMachine.Spec.FirewallRef.Namespace
 	if namespace == "" {
