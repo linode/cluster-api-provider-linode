@@ -527,3 +527,797 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 		})
 	}
 }
+
+// validateInterfaceExpectations is a helper function to check VPC interface expectations in tests
+func validateInterfaceExpectations(
+	t *testing.T,
+	err error,
+	iface *linodego.InstanceConfigInterfaceCreateOptions,
+	expectErr bool,
+	expectErrMsg string,
+	expectInterface bool,
+	expectSubnetID int,
+	interfaces interface{},
+) {
+	t.Helper()
+
+	if expectErr {
+		require.Error(t, err)
+		require.Contains(t, err.Error(), expectErrMsg)
+		require.Nil(t, iface)
+		return
+	}
+
+	require.NoError(t, err)
+	if expectInterface {
+		require.NotNil(t, iface)
+		require.Equal(t, linodego.InterfacePurposeVPC, iface.Purpose)
+		require.True(t, iface.Primary)
+		require.NotNil(t, iface.SubnetID)
+		require.Equal(t, expectSubnetID, *iface.SubnetID)
+		require.NotNil(t, iface.IPv4)
+		require.NotNil(t, iface.IPv4.NAT1To1)
+		require.Equal(t, "any", *iface.IPv4.NAT1To1)
+	} else {
+		require.Nil(t, iface)
+	}
+}
+
+func TestGetVPCInterfaceConfigFromDirectID(t *testing.T) {
+	t.Parallel()
+
+	// Setup test cases
+	testCases := []struct {
+		name            string
+		vpcID           int
+		interfaces      []linodego.InstanceConfigInterfaceCreateOptions
+		subnetName      string
+		mockSetup       func(mockLinodeClient *mock.MockLinodeClient)
+		expectErr       bool
+		expectErrMsg    string
+		expectInterface bool
+		expectSubnetID  int
+	}{
+		{
+			name:       "Success - Valid VPC with subnets, no subnet name",
+			vpcID:      123,
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+						{
+							ID:    789,
+							Label: "subnet-2",
+						},
+					},
+				}, nil)
+			},
+			expectErr:       false,
+			expectInterface: true,
+			expectSubnetID:  456, // First subnet ID
+		},
+		{
+			name:       "Success - Valid VPC with subnets, specific subnet name",
+			vpcID:      123,
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			subnetName: "subnet-2",
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+						{
+							ID:    789,
+							Label: "subnet-2",
+						},
+					},
+				}, nil)
+			},
+			expectErr:       false,
+			expectInterface: true,
+			expectSubnetID:  789, // Matching subnet ID
+		},
+		{
+			name:  "Success - VPC interface already exists",
+			vpcID: 123,
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{
+				{
+					Purpose: linodego.InterfacePurposeVPC,
+				},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			},
+			expectErr:       false,
+			expectInterface: false,
+			expectSubnetID:  456,
+		},
+		{
+			name:       "Error - VPC does not exist",
+			vpcID:      999,
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 999).Return(nil, fmt.Errorf("VPC not found"))
+			},
+			expectErr:       true,
+			expectErrMsg:    "VPC not found",
+			expectInterface: false,
+		},
+		{
+			name:       "Error - VPC has no subnets",
+			vpcID:      123,
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID:      123,
+					Subnets: []linodego.VPCSubnet{},
+				}, nil)
+			},
+			expectErr:       true,
+			expectErrMsg:    "no subnets found in VPC",
+			expectInterface: false,
+		},
+		{
+			name:       "Error - Subnet name not found",
+			vpcID:      123,
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			subnetName: "non-existent",
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			},
+			expectErr:       true,
+			expectErrMsg:    "subnet with label non-existent not found in VPC",
+			expectInterface: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Setup mock controller and client
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			tc.mockSetup(mockLinodeClient)
+
+			// Create test context
+			ctx := context.TODO()
+			logger := testr.New(t)
+
+			// Create machine scope
+			machineScope := &scope.MachineScope{
+				LinodeClient: mockLinodeClient,
+				Client:       mockK8sClient,
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							SubnetName: tc.subnetName,
+						},
+					},
+				},
+			}
+
+			// Call the function being tested
+			iface, err := getVPCInterfaceConfigFromDirectID(ctx, machineScope, tc.interfaces, logger, tc.vpcID)
+
+			// Check expectations
+			validateInterfaceExpectations(t, err, iface, tc.expectErr, tc.expectErrMsg, tc.expectInterface, tc.expectSubnetID, tc.interfaces)
+
+			// Additional check for interface updates
+			if !tc.expectErr && !tc.expectInterface && len(tc.interfaces) > 0 && tc.interfaces[0].Purpose == linodego.InterfacePurposeVPC {
+				require.NotNil(t, tc.interfaces[0].SubnetID)
+				require.Equal(t, tc.expectSubnetID, *tc.interfaces[0].SubnetID)
+			}
+		})
+	}
+}
+
+func TestAddVPCInterfaceFromDirectID(t *testing.T) {
+	t.Parallel()
+
+	// Setup test cases
+	testCases := []struct {
+		name          string
+		vpcID         int
+		createConfig  *linodego.InstanceCreateOptions
+		mockSetup     func(mockLinodeClient *mock.MockLinodeClient)
+		expectErr     bool
+		expectErrMsg  string
+		expectNoIface bool
+	}{
+		{
+			name:  "Success - Interface added correctly",
+			vpcID: 123,
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			},
+			expectErr: false,
+		},
+		{
+			name:  "Error - getVPCInterfaceConfigFromDirectID returns error",
+			vpcID: 999,
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 999).Return(nil, fmt.Errorf("VPC not found"))
+			},
+			expectErr:    true,
+			expectErrMsg: "VPC not found",
+		},
+		{
+			name:  "Success - Interface already exists",
+			vpcID: 123,
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{
+					{
+						Purpose: linodego.InterfacePurposeVPC,
+					},
+				},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			},
+			expectErr:     false,
+			expectNoIface: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Setup mock controller and client
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			tc.mockSetup(mockLinodeClient)
+
+			// Create test context
+			ctx := context.TODO()
+			logger := testr.New(t)
+
+			// Create machine scope
+			machineScope := &scope.MachineScope{
+				LinodeClient: mockLinodeClient,
+				Client:       mockK8sClient,
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{},
+				},
+			}
+
+			// Store original interface count
+			originalCount := len(tc.createConfig.Interfaces)
+
+			// Call the function being tested
+			err := addVPCInterfaceFromDirectID(ctx, machineScope, tc.createConfig, logger, tc.vpcID)
+
+			// Check expectations
+			if tc.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectErrMsg)
+			} else {
+				require.NoError(t, err)
+				if tc.expectNoIface {
+					// If interface already existed, count should remain the same
+					require.Len(t, tc.createConfig.Interfaces, originalCount)
+				} else {
+					// If interface was added, count should increase
+					require.Len(t, tc.createConfig.Interfaces, originalCount+1)
+					require.Equal(t, linodego.InterfacePurposeVPC, tc.createConfig.Interfaces[0].Purpose)
+					require.True(t, tc.createConfig.Interfaces[0].Primary)
+				}
+			}
+		})
+	}
+}
+
+func TestConfigureVPCInterface(t *testing.T) {
+	t.Parallel()
+
+	vpcRef := &corev1.ObjectReference{
+		Name:      "test-vpc",
+		Namespace: "default",
+	}
+
+	subnetID := 456
+
+	// Setup test cases
+	testCases := []struct {
+		name            string
+		machineVPCID    *int
+		clusterVPCID    *int
+		vpcRef          *corev1.ObjectReference
+		createConfig    *linodego.InstanceCreateOptions
+		mockSetup       func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient)
+		expectErr       bool
+		expectErrMsg    string
+		expectInterface bool
+	}{
+		{
+			name:         "Success - VPCID on machine",
+			machineVPCID: ptr.To(123),
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			},
+			expectErr:       false,
+			expectInterface: true,
+		},
+		{
+			name:         "Success - VPCID on cluster",
+			clusterVPCID: ptr.To(123),
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			},
+			expectErr:       false,
+			expectInterface: true,
+		},
+		{
+			name:   "Success - VPC reference",
+			vpcRef: vpcRef,
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
+					vpc.Status.Ready = true
+					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							SubnetID: subnetID,
+							Label:    "subnet-1",
+						},
+					}
+					return nil
+				})
+			},
+			expectErr:       false,
+			expectInterface: true,
+		},
+		{
+			name: "Success - No VPC configuration",
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				// No expectations needed
+			},
+			expectErr:       false,
+			expectInterface: false,
+		},
+		{
+			name:         "Error - VPCID on machine, VPC not found",
+			machineVPCID: ptr.To(999),
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 999).Return(nil, fmt.Errorf("VPC not found"))
+			},
+			expectErr:    true,
+			expectErrMsg: "VPC not found",
+		},
+		{
+			name:         "Error - VPCID on cluster, VPC not found",
+			clusterVPCID: ptr.To(999),
+			createConfig: &linodego.InstanceCreateOptions{
+				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 999).Return(nil, fmt.Errorf("VPC not found"))
+			},
+			expectErr:    true,
+			expectErrMsg: "VPC not found",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Setup mock controller and clients
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+			tc.mockSetup(mockLinodeClient, mockK8sClient)
+
+			// Create test context
+			ctx := context.TODO()
+			logger := testr.New(t)
+
+			// Create machine scope
+			machineScope := &scope.MachineScope{
+				LinodeClient: mockLinodeClient,
+				Client:       mockK8sClient,
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						VPCID:  tc.machineVPCID,
+						VPCRef: tc.vpcRef,
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						VPCID:  tc.clusterVPCID,
+						VPCRef: tc.vpcRef,
+					},
+				},
+			}
+
+			// Store original interface count
+			originalCount := len(tc.createConfig.Interfaces)
+
+			// Call the function being tested
+			err := configureVPCInterface(ctx, machineScope, tc.createConfig, logger)
+
+			// Check expectations
+			if tc.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectErrMsg)
+			} else {
+				require.NoError(t, err)
+				if tc.expectInterface {
+					// If interface was added, count should increase
+					require.Len(t, tc.createConfig.Interfaces, originalCount+1)
+					require.Equal(t, linodego.InterfacePurposeVPC, tc.createConfig.Interfaces[0].Purpose)
+				} else {
+					// If no interface was added, count should remain the same
+					require.Len(t, tc.createConfig.Interfaces, originalCount)
+				}
+			}
+		})
+	}
+}
+
+func TestGetVPCInterfaceConfig(t *testing.T) {
+	t.Parallel()
+
+	// Setup test cases
+	testCases := []struct {
+		name            string
+		vpcRef          *corev1.ObjectReference
+		interfaces      []linodego.InstanceConfigInterfaceCreateOptions
+		subnetName      string
+		mockSetup       func(mockK8sClient *mock.MockK8sClient)
+		expectErr       bool
+		expectErrMsg    string
+		expectInterface bool
+		expectSubnetID  int
+	}{
+		{
+			name: "Success - Finding VPC with default namespace",
+			vpcRef: &corev1.ObjectReference{
+				Name: "test-vpc",
+			},
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "test-vpc",
+					Namespace: "default", // Default namespace
+				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
+					vpc.Status.Ready = true
+					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							SubnetID: 456,
+							Label:    "subnet-1",
+						},
+					}
+					return nil
+				})
+			},
+			expectErr:       false,
+			expectInterface: true,
+			expectSubnetID:  456, // First subnet ID
+		},
+		{
+			name: "Success - Finding VPC with specific namespace",
+			vpcRef: &corev1.ObjectReference{
+				Name:      "test-vpc",
+				Namespace: "custom-namespace",
+			},
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "test-vpc",
+					Namespace: "custom-namespace",
+				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
+					vpc.Status.Ready = true
+					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							SubnetID: 456,
+							Label:    "subnet-1",
+						},
+					}
+					return nil
+				})
+			},
+			expectErr:       false,
+			expectInterface: true,
+			expectSubnetID:  456,
+		},
+		{
+			name: "Success - With subnet name specified and found",
+			vpcRef: &corev1.ObjectReference{
+				Name: "test-vpc",
+			},
+			subnetName: "subnet-2",
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
+					vpc.Status.Ready = true
+					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							SubnetID: 456,
+							Label:    "subnet-1",
+						},
+						{
+							SubnetID: 789,
+							Label:    "subnet-2",
+						},
+					}
+					return nil
+				})
+			},
+			expectErr:       false,
+			expectInterface: true,
+			expectSubnetID:  789,
+		},
+		{
+			name: "Success - VPC interface already exists",
+			vpcRef: &corev1.ObjectReference{
+				Name: "test-vpc",
+			},
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{
+				{
+					Purpose: linodego.InterfacePurposeVPC,
+				},
+			},
+			mockSetup: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
+					vpc.Status.Ready = true
+					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							SubnetID: 456,
+							Label:    "subnet-1",
+						},
+					}
+					return nil
+				})
+			},
+			expectErr:       false,
+			expectInterface: false,
+			expectSubnetID:  456,
+		},
+		{
+			name: "Error - Failed to fetch LinodeVPC",
+			vpcRef: &corev1.ObjectReference{
+				Name: "nonexistent-vpc",
+			},
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "nonexistent-vpc",
+					Namespace: "default",
+				}, gomock.Any()).Return(fmt.Errorf("vpc not found"))
+			},
+			expectErr:       true,
+			expectErrMsg:    "vpc not found",
+			expectInterface: false,
+		},
+		{
+			name: "Error - VPC is not ready",
+			vpcRef: &corev1.ObjectReference{
+				Name: "test-vpc",
+			},
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
+					vpc.Status.Ready = false
+					vpc.Spec.VPCID = ptr.To(123)
+					return nil
+				})
+			},
+			expectErr:       true,
+			expectErrMsg:    "vpc is not available",
+			expectInterface: false,
+		},
+		{
+			name: "Error - VPC has no subnets",
+			vpcRef: &corev1.ObjectReference{
+				Name: "test-vpc",
+			},
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
+					vpc.Status.Ready = true
+					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{}
+					return nil
+				})
+			},
+			expectErr:       true,
+			expectErrMsg:    "failed to find subnet",
+			expectInterface: false,
+		},
+		{
+			name: "Error - Subnet name not found",
+			vpcRef: &corev1.ObjectReference{
+				Name: "test-vpc",
+			},
+			subnetName: "nonexistent-subnet",
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			mockSetup: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
+					vpc.Status.Ready = true
+					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							SubnetID: 456,
+							Label:    "subnet-1",
+						},
+					}
+					return nil
+				})
+			},
+			expectErr:       true,
+			expectErrMsg:    "failed to find subnet as subnet id set is 0",
+			expectInterface: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Setup mock controller and client
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+
+			tc.mockSetup(mockK8sClient)
+
+			// Create test context
+			ctx := context.TODO()
+			logger := testr.New(t)
+
+			// Create machine scope
+			machineScope := &scope.MachineScope{
+				LinodeClient: mockLinodeClient,
+				Client:       mockK8sClient,
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeMachineSpec{},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							SubnetName: tc.subnetName,
+						},
+					},
+				},
+			}
+
+			// Call the function being tested
+			iface, err := getVPCInterfaceConfig(ctx, machineScope, tc.interfaces, logger, tc.vpcRef)
+
+			// Check expectations
+			validateInterfaceExpectations(t, err, iface, tc.expectErr, tc.expectErrMsg, tc.expectInterface, tc.expectSubnetID, tc.interfaces)
+
+			// Additional check for interface updates
+			if !tc.expectErr && !tc.expectInterface && len(tc.interfaces) > 0 && tc.interfaces[0].Purpose == linodego.InterfacePurposeVPC {
+				require.NotNil(t, tc.interfaces[0].SubnetID)
+				require.Equal(t, tc.expectSubnetID, *tc.interfaces[0].SubnetID)
+			}
+		})
+	}
+}

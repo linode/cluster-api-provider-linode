@@ -47,6 +47,11 @@ type LinodeClusterSpec struct {
 	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL.
+	// +optional
+	VPCID *int `json:"vpcID,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	// NodeBalancerFirewallRef is a reference to a NodeBalancer Firewall object. This makes the linode use the specified NodeBalancer Firewall.
 	NodeBalancerFirewallRef *corev1.ObjectReference `json:"nodeBalancerFirewallRef,omitempty"`

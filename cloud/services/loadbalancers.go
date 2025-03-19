@@ -22,6 +22,88 @@ const (
 	DefaultKonnectivityLBPort = 8132
 )
 
+// FindSubnet selects a subnet from the provided subnets based on the subnet name
+// It handles both direct VPC subnets and VPCRef subnets
+// If subnet name is provided, it looks for a matching subnet; otherwise, it uses the first subnet
+// Returns the subnet ID and any error encountered
+func FindSubnet(subnetName string, isDirectVPC bool, subnets interface{}) (int, error) {
+	var subnetID int
+	var err error
+
+	// Different handling based on whether we're dealing with a direct VPC or VPCRef
+	if isDirectVPC {
+		subnetID, err = findDirectVPCSubnet(subnetName, subnets)
+	} else {
+		subnetID, err = findVPCRefSubnet(subnetName, subnets)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	// Validate the selected subnet ID
+	if subnetID == 0 {
+		return 0, errors.New("invalid subnet ID: selected subnet ID is 0")
+	}
+
+	return subnetID, nil
+}
+
+// findDirectVPCSubnet finds a subnet in direct VPC subnets
+func findDirectVPCSubnet(subnetName string, subnets interface{}) (int, error) {
+	vpcSubnets, ok := subnets.([]linodego.VPCSubnet)
+	if !ok {
+		return 0, fmt.Errorf("invalid subnet data type for direct VPC: expected []linodego.VPCSubnet")
+	}
+
+	if len(vpcSubnets) == 0 {
+		return 0, errors.New("no subnets found in VPC")
+	}
+
+	return selectSubnet(subnetName, vpcSubnets, func(subnet linodego.VPCSubnet) (string, int) {
+		return subnet.Label, subnet.ID
+	})
+}
+
+// findVPCRefSubnet finds a subnet in VPCRef subnets
+func findVPCRefSubnet(subnetName string, subnets interface{}) (int, error) {
+	vpcRefSubnets, ok := subnets.([]v1alpha2.VPCSubnetCreateOptions)
+	if !ok {
+		return 0, fmt.Errorf("invalid subnet data type for VPC reference: expected []v1alpha2.VPCSubnetCreateOptions")
+	}
+
+	if len(vpcRefSubnets) == 0 {
+		return 0, errors.New("no subnets found in LinodeVPC")
+	}
+
+	return selectSubnet(subnetName, vpcRefSubnets, func(subnet v1alpha2.VPCSubnetCreateOptions) (string, int) {
+		return subnet.Label, subnet.SubnetID
+	})
+}
+
+// selectSubnet is a generic helper to select a subnet by name or use the first one
+func selectSubnet[T any](subnetName string, subnets []T, getProps func(T) (string, int)) (int, error) {
+	if len(subnets) == 0 {
+		return 0, errors.New("no subnets available in the VPC")
+	}
+
+	// If subnet name specified, find matching subnet
+	if subnetName != "" {
+		for _, subnet := range subnets {
+			label, id := getProps(subnet)
+			if label == subnetName {
+				return id, nil
+			}
+		}
+		// Keep the original error message format for compatibility with tests
+		return 0, fmt.Errorf("subnet with label %s not found in VPC", subnetName)
+	}
+
+	// Use the first subnet when no specific name is provided
+	_, id := getProps(subnets[0])
+	return id, nil
+}
+
 // EnsureNodeBalancer creates a new NodeBalancer if one doesn't exist or returns the existing NodeBalancer
 func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancer, error) {
 	nbID := clusterScope.LinodeCluster.Spec.Network.NodeBalancerID
@@ -44,7 +126,7 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	}
 
 	// if NodeBalancerBackendIPv4Range is set, create the NodeBalancer in the specified VPC
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil {
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && (clusterScope.LinodeCluster.Spec.VPCRef != nil || clusterScope.LinodeCluster.Spec.VPCID != nil) {
 		logger.Info("Creating NodeBalancer in VPC", "NodeBalancerBackendIPv4Range", clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range)
 		subnetID, err := getSubnetID(ctx, clusterScope, logger)
 		if err != nil {
@@ -88,13 +170,43 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 // getSubnetID returns the subnetID of the first subnet in the LinodeVPC.
 // If no subnets or subnetID is found, it returns an error.
 func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (int, error) {
+	subnetName := clusterScope.LinodeCluster.Spec.Network.SubnetName
+
+	// If direct VPCID is specified, get the VPC and subnets directly from Linode API
+	if clusterScope.LinodeCluster.Spec.VPCID != nil {
+		vpcID := *clusterScope.LinodeCluster.Spec.VPCID
+		vpc, err := clusterScope.LinodeClient.GetVPC(ctx, vpcID)
+		if err != nil {
+			logger.Error(err, "Failed to fetch VPC from Linode API", "vpcID", vpcID)
+			return 0, err
+		}
+
+		if len(vpc.Subnets) == 0 {
+			return 0, errors.New("no subnets found in VPC")
+		}
+
+		subnetID, err := FindSubnet(subnetName, true, vpc.Subnets)
+		if err != nil {
+			logger.Error(err, "Failed to find subnet in VPC", "vpcID", vpcID, "subnetName", subnetName)
+			return 0, err
+		}
+		return subnetID, nil
+	}
+
+	// Otherwise, use the VPCRef
+	if clusterScope.LinodeCluster.Spec.VPCRef == nil {
+		return 0, errors.New("neither VPCID nor VPCRef is specified in LinodeCluster")
+	}
+
 	name := clusterScope.LinodeCluster.Spec.VPCRef.Name
 	namespace := clusterScope.LinodeCluster.Spec.VPCRef.Namespace
 	if namespace == "" {
 		namespace = clusterScope.LinodeCluster.Namespace
 	}
 
-	logger = logger.WithValues("vpcName", name, "vpcNamespace", namespace)
+	if name == "" {
+		return 0, errors.New("VPCRef name is not specified in LinodeCluster")
+	}
 
 	linodeVPC := &v1alpha2.LinodeVPC{
 		ObjectMeta: metav1.ObjectMeta{
@@ -104,41 +216,16 @@ func getSubnetID(ctx context.Context, clusterScope *scope.ClusterScope, logger l
 	}
 
 	objectKey := client.ObjectKeyFromObject(linodeVPC)
-	err := clusterScope.Client.Get(ctx, objectKey, linodeVPC)
-	if err != nil {
-		logger.Error(err, "Failed to fetch LinodeVPC")
-		return 0, err
+	if err := clusterScope.Client.Get(ctx, objectKey, linodeVPC); err != nil {
+		logger.Error(err, "Failed to fetch LinodeVPC", "name", name, "namespace", namespace)
+		return 0, fmt.Errorf("failed to fetch LinodeVPC %s/%s: %w", namespace, name, err)
 	}
+
 	if len(linodeVPC.Spec.Subnets) == 0 {
-		err = errors.New("No subnets found in LinodeVPC")
-		logger.Error(err, "Failed to fetch LinodeVPC")
-		return 0, err
+		return 0, errors.New("no subnets found in LinodeVPC")
 	}
 
-	subnetID := 0
-	subnetName := clusterScope.LinodeCluster.Spec.Network.SubnetName
-
-	// If subnet name specified, find matching subnet; otherwise use first subnet
-	if subnetName != "" {
-		for _, subnet := range linodeVPC.Spec.Subnets {
-			if subnet.Label == subnetName {
-				subnetID = subnet.SubnetID
-				break
-			}
-		}
-		if subnetID == 0 {
-			return 0, fmt.Errorf("subnet with label %s not found in VPC", subnetName)
-		}
-	} else {
-		subnetID = linodeVPC.Spec.Subnets[0].SubnetID
-	}
-
-	// Validate the selected subnet ID
-	if subnetID == 0 {
-		return 0, errors.New("selected subnet ID is 0")
-	}
-
-	return subnetID, nil
+	return FindSubnet(subnetName, false, linodeVPC.Spec.Subnets)
 }
 
 func getFirewallID(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (int, error) {

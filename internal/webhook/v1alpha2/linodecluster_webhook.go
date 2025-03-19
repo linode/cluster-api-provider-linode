@@ -133,6 +133,14 @@ func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, 
 		})
 	}
 
+	if spec.VPCID != nil && spec.VPCRef != nil {
+		errs = append(errs, &field.Error{
+			Field:  "spec.vpcID/spec.vpcRef",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Cannot specify both VPCID and VPCRef",
+		})
+	}
+
 	if len(errs) == 0 {
 		return nil
 	}

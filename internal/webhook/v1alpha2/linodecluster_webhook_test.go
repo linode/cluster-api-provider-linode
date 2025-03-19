@@ -21,6 +21,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -286,5 +287,98 @@ func TestValidateVlanAndVPC(t *testing.T) {
 				require.Contains(t, err.Error(), "Cannot use VLANs and VPCs together")
 			}
 		}),
+	)
+}
+
+func TestValidateVPCIDAndVPCRef(t *testing.T) {
+	t.Parallel()
+
+	var (
+		invalidCluster = &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				VPCID:  ptr.To(12345),
+				VPCRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeVPC",
+				},
+			},
+		}
+		validClusterWithVPCID = &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				VPCID:  ptr.To(12345),
+			},
+		}
+		validClusterWithVPCRef = &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				VPCRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeVPC",
+				},
+			},
+		}
+		validator = &linodeClusterValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid with VPCID", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Any()).Return(&linodego.VPC{
+						ID: 12345,
+						Subnets: []linodego.VPCSubnet{
+							{
+								ID:    1001,
+								Label: "subnet-1",
+							},
+						},
+					}, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithVPCID.Spec)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("valid with VPCRef", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithVPCRef.Spec)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("both VPCID and VPCRef set", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, invalidCluster.Spec)
+					require.NotEmpty(t, errs)
+					require.Contains(t, errs[0].Error(), "Cannot specify both VPCID and VPCRef")
+				}),
+			),
+		),
 	)
 }
