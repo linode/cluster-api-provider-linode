@@ -84,8 +84,13 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if _, ok := linodeFirewall.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeFirewall.ObjectMeta)
 		if err != nil {
-			log.Error(err, "failed to fetch cluster from metadata")
-			return ctrl.Result{}, err
+			// If we're deleting and cluster isn't found, that's okay
+			if !linodeFirewall.DeletionTimestamp.IsZero() && apierrors.IsNotFound(err) {
+				log.Info("Cluster not found but LinodeFirewall is being deleted, continuing with deletion")
+			} else {
+				log.Error(err, "failed to fetch cluster from metadata")
+				return ctrl.Result{}, err
+			}
 		}
 	}
 	// Create the firewall scope.
@@ -103,13 +108,16 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 
-	isPaused, _, err := paused.EnsurePausedCondition(ctx, fwScope.Client, fwScope.Cluster, fwScope.LinodeFirewall)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if isPaused {
-		log.Info("linodefirewall or linked cluster is paused, skipping reconciliation")
-		return ctrl.Result{}, nil
+	// Only check pause if not deleting or if cluster still exists
+	if linodeFirewall.DeletionTimestamp.IsZero() || cluster != nil {
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, fwScope.Client, fwScope.Cluster, fwScope.LinodeFirewall)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if isPaused {
+			log.Info("linodefirewall or linked cluster is paused, skipping reconciliation")
+			return ctrl.Result{}, nil
+		}
 	}
 	return r.reconcile(ctx, log, fwScope)
 }
