@@ -202,7 +202,7 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 
 	// check if a node has vpc specific ip and store it
 	for _, vpcIP := range addresses.IPv4.VPC {
-		if *vpcIP.Address != "" {
+		if vpcIP.Address != nil && *vpcIP.Address != "" {
 			ips = append(ips, clusterv1.MachineAddress{
 				Address: *vpcIP.Address,
 				Type:    clusterv1.MachineInternalIP,
