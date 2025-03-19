@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"go4.org/netipx"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -103,23 +104,11 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 	var linodeclient LinodeClient = defaultLinodeClient
 	skipAPIValidation := false
 
+	// Handle credentials if provided
 	if spec.CredentialsRef != nil {
-		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, vpc.GetNamespace())
-		if err != nil {
-			// Check if this is a SecretNotFound error, which might happen during clusterctl move operations
-			if apierrors.IsNotFound(err) {
-				linodevpclog.Info("credentials secret not found, skipping API validation", "name", vpc.Name, "secret", spec.CredentialsRef.Name)
-				skipAPIValidation = true
-			} else {
-				// For other errors, fail validation
-				linodevpclog.Error(err, "failed getting credentials from secret ref", "name", vpc.Name)
-				return nil, err
-			}
-		} else {
-			linodevpclog.Info("creating a verified linode client for create request", "name", vpc.Name)
-			linodeclient.SetToken(string(apiToken))
-		}
+		skipAPIValidation, linodeclient = r.setupClientWithCredentials(ctx, spec.CredentialsRef, vpc)
 	}
+
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
@@ -300,4 +289,28 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 		return nil, field.InternalError(path, fmt.Errorf("build ip set: %w", err))
 	}
 	return set, nil
+}
+
+// Helper function to setup client with credentials and determine if API validation should be skipped
+func (r *linodeVPCValidator) setupClientWithCredentials(ctx context.Context, credRef *corev1.SecretReference, vpc *infrav1alpha2.LinodeVPC) (bool, LinodeClient) {
+	client := defaultLinodeClient
+
+	apiToken, err := getCredentialDataFromRef(ctx, r.Client, *credRef, vpc.GetNamespace())
+	if err == nil {
+		linodevpclog.Info("creating a verified linode client for create request", "name", vpc.Name)
+		client.SetToken(string(apiToken))
+		return false, client
+	}
+
+	// Handle error cases
+	if apierrors.IsNotFound(err) {
+		linodevpclog.Info("credentials secret not found, skipping API validation",
+			"name", vpc.Name, "secret", credRef.Name)
+		return true, client
+	}
+
+	// For other errors, log the error but return the default client
+	// The caller should handle validation with the default client
+	linodevpclog.Error(err, "failed getting credentials from secret ref", "name", vpc.Name)
+	return false, client
 }
