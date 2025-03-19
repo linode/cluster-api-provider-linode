@@ -28,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -59,7 +58,6 @@ type LinodePlacementGroupReconciler struct {
 	Recorder           record.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
-	Scheme             *runtime.Scheme
 	ReconcileTimeout   time.Duration
 }
 
@@ -92,8 +90,13 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 	if _, ok := linodeplacementgroup.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeplacementgroup.ObjectMeta)
 		if err != nil {
-			log.Error(err, "failed to fetch cluster from metadata")
-			return ctrl.Result{}, err
+			// If we're deleting and cluster isn't found, that's okay
+			if !linodeplacementgroup.DeletionTimestamp.IsZero() && apierrors.IsNotFound(err) {
+				log.Info("Cluster not found but LinodePlacementGroup is being deleted, continuing with deletion")
+			} else {
+				log.Error(err, "failed to fetch cluster from metadata")
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
@@ -111,13 +114,17 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 
 		return ctrl.Result{}, fmt.Errorf("failed to create Placement Group scope: %w", err)
 	}
-	isPaused, _, err := paused.EnsurePausedCondition(ctx, pgScope.Client, pgScope.Cluster, pgScope.LinodePlacementGroup)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if isPaused {
-		log.Info("linodeplacementgroup or linked cluster is paused, skipping reconciliation")
-		return ctrl.Result{}, nil
+
+	// Only check pause if not deleting or if cluster still exists
+	if linodeplacementgroup.DeletionTimestamp.IsZero() || cluster != nil {
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, pgScope.Client, pgScope.Cluster, pgScope.LinodePlacementGroup)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if isPaused {
+			log.Info("linodeplacementgroup or linked cluster is paused, skipping reconciliation")
+			return ctrl.Result{}, nil
+		}
 	}
 
 	return r.reconcile(ctx, log, pgScope)
