@@ -101,20 +101,35 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 	linodevpclog.Info("validate create", "name", vpc.Name)
 
 	var linodeclient LinodeClient = defaultLinodeClient
+	skipAPIValidation := false
 
 	if spec.CredentialsRef != nil {
 		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, vpc.GetNamespace())
 		if err != nil {
-			linodevpclog.Error(err, "failed getting credentials from secret ref", "name", vpc.Name)
-			return nil, err
+			// Check if this is a SecretNotFound error, which might happen during clusterctl move operations
+			if apierrors.IsNotFound(err) {
+				linodevpclog.Info("credentials secret not found, skipping API validation", "name", vpc.Name, "secret", spec.CredentialsRef.Name)
+				skipAPIValidation = true
+			} else {
+				// For other errors, fail validation
+				linodevpclog.Error(err, "failed getting credentials from secret ref", "name", vpc.Name)
+				return nil, err
+			}
+		} else {
+			linodevpclog.Info("creating a verified linode client for create request", "name", vpc.Name)
+			linodeclient.SetToken(string(apiToken))
 		}
-		linodevpclog.Info("creating a verified linode client for create request", "name", vpc.Name)
-		linodeclient.SetToken(string(apiToken))
 	}
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if err := r.validateLinodeVPCSpec(ctx, linodeclient, spec); err != nil {
+	if !skipAPIValidation {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if err := r.validateLinodeVPCSubnets(spec); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
