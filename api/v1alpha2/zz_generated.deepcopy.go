@@ -422,6 +422,11 @@ func (in *LinodeClusterSpec) DeepCopyInto(out *LinodeClusterSpec) {
 		*out = new(v1.ObjectReference)
 		**out = **in
 	}
+	if in.VPCID != nil {
+		in, out := &in.VPCID, &out.VPCID
+		*out = new(int)
+		**out = **in
+	}
 	if in.NodeBalancerFirewallRef != nil {
 		in, out := &in.NodeBalancerFirewallRef, &out.NodeBalancerFirewallRef
 		*out = new(v1.ObjectReference)
@@ -866,6 +871,11 @@ func (in *LinodeMachineSpec) DeepCopyInto(out *LinodeMachineSpec) {
 	if in.VPCRef != nil {
 		in, out := &in.VPCRef, &out.VPCRef
 		*out = new(v1.ObjectReference)
+		**out = **in
+	}
+	if in.VPCID != nil {
+		in, out := &in.VPCID, &out.VPCID
+		*out = new(int)
 		**out = **in
 	}
 }

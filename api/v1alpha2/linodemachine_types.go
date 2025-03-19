@@ -106,6 +106,11 @@ type LinodeMachineSpec struct {
 	// VPCRef is a reference to a LinodeVPC resource. If specified, this takes precedence over
 	// the cluster-level VPC configuration for multi-region support.
 	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL.
+	// +optional
+	VPCID *int `json:"vpcID,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance

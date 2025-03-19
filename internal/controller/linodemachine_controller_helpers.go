@@ -110,9 +110,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
 	if createConfig == nil {
 		err = errors.New("failed to convert machine spec to create instance config")
-
 		logger.Error(err, "Panic! Struct of LinodeMachineSpec is different than InstanceCreateOptions")
-
 		return nil, err
 	}
 
@@ -123,53 +121,83 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 
 	fillCreateConfig(createConfig, machineScope)
 
-	// Check for VPC configuration - first machine level, then cluster level
-	if vpcRef := getVPCRefFromScope(machineScope); vpcRef != nil {
-		iface, err := getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger, vpcRef)
-		if err != nil {
-			logger.Error(err, "Failed to get VPC interface config")
-			return nil, err
-		}
-		if iface != nil {
-			// add VPC interface as first interface
-			createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
-		}
+	// Configure VPC interface if needed
+	if err := configureVPCInterface(ctx, machineScope, createConfig, logger); err != nil {
+		return nil, err
 	}
 
-	// if vlan is enabled, attach additional interface as eth0 to linode
+	// Configure VLAN interface if needed
 	if machineScope.LinodeCluster.Spec.Network.UseVlan {
-		iface, err := getVlanInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
-		if err != nil {
-			logger.Error(err, "Failed to get VLAN interface config")
+		if err := configureVlanInterface(ctx, machineScope, createConfig, logger); err != nil {
 			return nil, err
-		}
-		if iface != nil {
-			// add VLAN interface as first interface
-			createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
 		}
 	}
 
+	// Configure placement group if needed
 	if machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
-		pgID, err := getPlacementGroupID(ctx, machineScope, logger)
-		if err != nil {
-			logger.Error(err, "Failed to get Placement Group config")
+		if err := configurePlacementGroup(ctx, machineScope, createConfig, logger); err != nil {
 			return nil, err
-		}
-		createConfig.PlacementGroup = &linodego.InstanceCreatePlacementGroupOptions{
-			ID: pgID,
 		}
 	}
 
+	// Configure firewall if needed
 	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
-		fwID, err := getFirewallID(ctx, machineScope, logger)
-		if err != nil {
-			logger.Error(err, "Failed to get Firewall config")
+		if err := configureFirewall(ctx, machineScope, createConfig, logger); err != nil {
 			return nil, err
 		}
-		createConfig.FirewallID = fwID
 	}
 
 	return createConfig, nil
+}
+
+// configureVPCInterface handles all VPC configuration scenarios and adds the appropriate interface
+func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	// First check if a direct VPCID is specified on the machine then the cluster
+	if machineScope.LinodeMachine.Spec.VPCID != nil {
+		return addVPCInterfaceFromDirectID(ctx, machineScope, createConfig, logger, *machineScope.LinodeMachine.Spec.VPCID)
+	} else if machineScope.LinodeCluster.Spec.VPCID != nil {
+		return addVPCInterfaceFromDirectID(ctx, machineScope, createConfig, logger, *machineScope.LinodeCluster.Spec.VPCID)
+	}
+
+	// Finally check for VPC reference
+	if vpcRef := getVPCRefFromScope(machineScope); vpcRef != nil {
+		return addVPCInterfaceFromReference(ctx, machineScope, createConfig, logger, vpcRef)
+	}
+
+	// No VPC configuration found, nothing to do
+	return nil
+}
+
+// addVPCInterfaceFromDirectID handles adding a VPC interface from a direct ID
+func addVPCInterfaceFromDirectID(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger, vpcID int) error {
+	iface, err := getVPCInterfaceConfigFromDirectID(ctx, machineScope, createConfig.Interfaces, logger, vpcID)
+	if err != nil {
+		logger.Error(err, "Failed to get VPC interface config from direct ID")
+		return err
+	}
+
+	if iface != nil {
+		// add VPC interface as first interface
+		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+	}
+
+	return nil
+}
+
+// addVPCInterfaceFromReference handles adding a VPC interface from a reference
+func addVPCInterfaceFromReference(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger, vpcRef *corev1.ObjectReference) error {
+	iface, err := getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger, vpcRef)
+	if err != nil {
+		logger.Error(err, "Failed to get VPC interface config")
+		return err
+	}
+
+	if iface != nil {
+		// add VPC interface as first interface
+		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+	}
+
+	return nil
 }
 
 func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, instanceID int) ([]clusterv1.MachineAddress, error) {
@@ -398,6 +426,7 @@ func getVlanInterfaceConfig(ctx context.Context, machineScope *scope.MachineScop
 	}, nil
 }
 
+// getVPCInterfaceConfig returns the interface configuration for a VPC based on the provided VPC reference
 func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger, vpcRef *corev1.ObjectReference) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
 	// Get namespace from VPC ref or default to machine namespace
 	namespace := vpcRef.Namespace
@@ -460,6 +489,61 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		}
 	}
 
+	return &linodego.InstanceConfigInterfaceCreateOptions{
+		Purpose:  linodego.InterfacePurposeVPC,
+		Primary:  true,
+		SubnetID: &subnetID,
+		IPv4: &linodego.VPCIPv4{
+			NAT1To1: ptr.To("any"),
+		},
+	}, nil
+}
+
+// getVPCInterfaceConfigFromDirectID returns the interface configuration for a VPC based on a direct VPC ID
+func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger, vpcID int) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+	vpc, err := machineScope.LinodeClient.GetVPC(ctx, vpcID)
+	if err != nil {
+		logger.Error(err, "Failed to fetch VPC from Linode API", "vpcID", vpcID)
+		return nil, err
+	}
+
+	if len(vpc.Subnets) == 0 {
+		logger.Error(nil, "Failed to find subnet in VPC")
+		return nil, errors.New("no subnets found in VPC")
+	}
+
+	var subnetID int
+	var subnetName string
+
+	// Safety check for when LinodeCluster is nil (e.g., when using direct VPCID without cluster)
+	if machineScope.LinodeCluster != nil && machineScope.LinodeCluster.Spec.Network.SubnetName != "" {
+		subnetName = machineScope.LinodeCluster.Spec.Network.SubnetName
+	}
+
+	// If subnet name specified, find matching subnet; otherwise use first subnet
+	if subnetName != "" {
+		for _, subnet := range vpc.Subnets {
+			if subnet.Label == subnetName {
+				subnetID = subnet.ID
+				break
+			}
+		}
+		if subnetID == 0 {
+			return nil, fmt.Errorf("subnet with label %s not found in VPC", subnetName)
+		}
+	} else {
+		subnetID = vpc.Subnets[0].ID
+	}
+
+	// Check if a VPC interface already exists
+	for i, netInterface := range interfaces {
+		if netInterface.Purpose == linodego.InterfacePurposeVPC {
+			interfaces[i].SubnetID = &subnetID
+			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
+		}
+	}
+
+	// Create a new VPC interface
 	return &linodego.InstanceConfigInterfaceCreateOptions{
 		Purpose:  linodego.InterfacePurposeVPC,
 		Primary:  true,
@@ -876,4 +960,48 @@ func getVPCRefFromScope(machineScope *scope.MachineScope) *corev1.ObjectReferenc
 		return machineScope.LinodeMachine.Spec.VPCRef
 	}
 	return machineScope.LinodeCluster.Spec.VPCRef
+}
+
+// configureVlanInterface adds a VLAN interface to the configuration
+func configureVlanInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	iface, err := getVlanInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
+	if err != nil {
+		logger.Error(err, "Failed to get VLAN interface config")
+		return err
+	}
+
+	if iface != nil {
+		// add VLAN interface as first interface
+		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+	}
+
+	return nil
+}
+
+// configurePlacementGroup adds placement group configuration
+func configurePlacementGroup(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	pgID, err := getPlacementGroupID(ctx, machineScope, logger)
+	if err != nil {
+		logger.Error(err, "Failed to get Placement Group config")
+		return err
+	}
+
+	createConfig.PlacementGroup = &linodego.InstanceCreatePlacementGroupOptions{
+		ID: pgID,
+	}
+
+	return nil
+}
+
+// configureFirewall adds firewall configuration
+func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	fwID, err := getFirewallID(ctx, machineScope, logger)
+	if err != nil {
+		logger.Error(err, "Failed to get Firewall config")
+		return err
+	}
+
+	createConfig.FirewallID = fwID
+
+	return nil
 }

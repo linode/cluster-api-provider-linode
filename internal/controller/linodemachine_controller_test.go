@@ -35,6 +35,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -2472,5 +2473,527 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
 		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+	})
+})
+
+var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), Ordered, func() {
+	var (
+		reconciler      LinodeMachineReconciler
+		linodeMachine   infrav1alpha2.LinodeMachine
+		machineKey      client.ObjectKey
+		bootstrapSecret corev1.Secret
+	)
+
+	BeforeAll(func(ctx SpecContext) {
+		reconciler = LinodeMachineReconciler{
+			Client:   k8sClient,
+			Recorder: record.NewFakeRecorder(100),
+		}
+
+		linodeMachine = infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-with-direct-vpcid",
+				Namespace: defaultNamespace,
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Type:   "g6-nanode-1",
+				Image:  "linode/ubuntu22.04",
+				Region: "us-east",
+				VPCID:  ptr.To(12345),
+			},
+		}
+		machineKey = client.ObjectKeyFromObject(&linodeMachine)
+
+		bootstrapSecret = corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bootstrap-secret-vpcid",
+				Namespace: defaultNamespace,
+			},
+			Data: map[string][]byte{
+				"value": []byte("userdata"),
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, &bootstrapSecret)).To(Succeed())
+		Expect(k8sClient.Create(ctx, &linodeMachine)).To(Succeed())
+	})
+
+	AfterAll(func(ctx SpecContext) {
+		Expect(k8sClient.Delete(ctx, &linodeMachine)).To(Succeed())
+		Expect(k8sClient.Delete(ctx, &bootstrapSecret)).To(Succeed())
+	})
+
+	It("creates a machine with direct VPCID", func(ctx SpecContext) {
+		mockCtrl := gomock.NewController(GinkgoT())
+		defer mockCtrl.Finish()
+
+		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+		mockLinodeClient.EXPECT().
+			GetRegion(gomock.Any(), gomock.Any()).
+			Return(&linodego.Region{ID: "us-east", Capabilities: []string{"Metadata"}}, nil).
+			AnyTimes()
+		mockLinodeClient.EXPECT().
+			GetImage(gomock.Any(), gomock.Any()).
+			Return(&linodego.Image{ID: "linode/ubuntu22.04", Capabilities: []string{"cloud-init"}}, nil).
+			AnyTimes()
+		mockLinodeClient.EXPECT().
+			GetVPC(gomock.Any(), gomock.Eq(12345)).
+			Return(&linodego.VPC{
+				ID:     12345,
+				Label:  "test-vpc",
+				Region: "us-east",
+				Subnets: []linodego.VPCSubnet{
+					{
+						ID:    1001,
+						Label: "subnet-1",
+					},
+				},
+			}, nil).
+			AnyTimes()
+		mockLinodeClient.EXPECT().
+			CreateInstance(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error) {
+				// Verify that the instance is created with the correct VPC interface
+				Expect(opts.Interfaces).To(HaveLen(1))
+				Expect(opts.Interfaces[0].Purpose).To(Equal(linodego.InterfacePurposeVPC))
+				Expect(*opts.Interfaces[0].SubnetID).To(Equal(1001))
+
+				return &linodego.Instance{
+					ID:     12345,
+					Label:  opts.Label,
+					Region: opts.Region,
+					Status: linodego.InstanceRunning,
+					IPv4:   []*net.IP{ptr.To(net.ParseIP("192.168.1.2"))},
+					IPv6:   "2001:db8::2",
+				}, nil
+			}).
+			AnyTimes()
+		mockLinodeClient.EXPECT().
+			OnAfterResponse(gomock.Any()).
+			Return().
+			AnyTimes()
+		mockLinodeClient.EXPECT().
+			ListInstanceConfigs(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]linodego.InstanceConfig{
+				{
+					ID:      1,
+					Label:   "My Config",
+					Devices: &linodego.InstanceConfigDeviceMap{},
+				},
+			}, nil).
+			AnyTimes()
+		mockLinodeClient.EXPECT().
+			GetInstanceIPAddresses(gomock.Any(), gomock.Any()).
+			Return(&linodego.InstanceIPAddressResponse{
+				IPv4: &linodego.InstanceIPv4Response{
+					Public:  []*linodego.InstanceIP{{Address: "192.168.1.2"}},
+					Private: []*linodego.InstanceIP{},
+				},
+				IPv6: &linodego.InstanceIPv6Response{
+					SLAAC: &linodego.InstanceIP{Address: "2001:db8::2"},
+				},
+			}, nil).
+			AnyTimes()
+		mockLinodeClient.EXPECT().
+			BootInstance(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil).
+			AnyTimes()
+
+		// Create a machine scope with the mock client
+		machine := &clusterv1.Machine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-with-direct-vpcid",
+				Namespace: defaultNamespace,
+			},
+			Spec: clusterv1.MachineSpec{
+				Bootstrap: clusterv1.Bootstrap{
+					DataSecretName: ptr.To("bootstrap-secret-vpcid"),
+				},
+			},
+		}
+
+		cluster := &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cluster",
+				Namespace: defaultNamespace,
+			},
+		}
+
+		// Get the LinodeMachine
+		Expect(k8sClient.Get(ctx, machineKey, &linodeMachine)).To(Succeed())
+
+		// Create a machine scope
+		patchHelper, err := patch.NewHelper(&linodeMachine, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create a LinodeCluster for the machineScope
+		linodeCluster := &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cluster",
+				Namespace: defaultNamespace,
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-east",
+			},
+		}
+
+		// Set the VPC preflight check condition to true
+		conditions.Set(&linodeMachine, metav1.Condition{
+			Type:   ConditionPreflightLinodeVPCReady,
+			Status: metav1.ConditionTrue,
+			Reason: "VPCReady",
+		})
+
+		mScope := &scope.MachineScope{
+			Client:        k8sClient,
+			Cluster:       cluster,
+			Machine:       machine,
+			LinodeMachine: &linodeMachine,
+			LinodeCluster: linodeCluster, // Add the LinodeCluster to the scope
+			PatchHelper:   patchHelper,
+			LinodeClient:  mockLinodeClient,
+		}
+
+		// Reconcile the machine
+		result, err := reconciler.reconcile(ctx, logr.Discard(), mScope)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.IsZero()).To(BeTrue())
+
+		// Verify that the preflight check for VPC is successful
+		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeTrue())
+	})
+})
+
+var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), Ordered, func() {
+	var mockCtrl *gomock.Controller
+	var mockLinodeClient *mock.MockLinodeClient
+	var mockK8sClient *mock.MockK8sClient
+	var mockRecorder *record.FakeRecorder
+	var reconciler *LinodeMachineReconciler
+	var logger logr.Logger
+	var machineScope *scope.MachineScope
+	var linodeMachine *infrav1alpha2.LinodeMachine
+	var linodeCluster *infrav1alpha2.LinodeCluster
+	var ctx context.Context
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		mockCtrl = gomock.NewController(GinkgoT())
+		mockLinodeClient = mock.NewMockLinodeClient(mockCtrl)
+		mockK8sClient = mock.NewMockK8sClient(mockCtrl)
+		mockRecorder = record.NewFakeRecorder(10)
+		logger = zap.New()
+
+		linodeMachine = &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-machine",
+				Namespace: "default",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{},
+		}
+
+		linodeCluster = &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cluster",
+				Namespace: "default",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{},
+		}
+
+		machineScope = &scope.MachineScope{
+			LinodeClient:  mockLinodeClient,
+			Client:        mockK8sClient,
+			LinodeMachine: linodeMachine,
+			LinodeCluster: linodeCluster,
+		}
+
+		reconciler = &LinodeMachineReconciler{
+			Client:   mockK8sClient,
+			Recorder: mockRecorder,
+		}
+	})
+
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
+
+	Describe("validateVPC", func() {
+		Context("when VPC exists with subnets", func() {
+			BeforeEach(func() {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(123)).Return(&linodego.VPC{
+					ID:     123,
+					Label:  "test-vpc",
+					Region: "us-east",
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			})
+
+			It("should succeed and set condition to true", func() {
+				err := reconciler.validateVPC(ctx, 123, machineScope, logger, "Test")
+				Expect(err).NotTo(HaveOccurred())
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			})
+		})
+
+		Context("when VPC exists with no subnets", func() {
+			BeforeEach(func() {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(123)).Return(&linodego.VPC{
+					ID:      123,
+					Label:   "test-vpc",
+					Region:  "us-east",
+					Subnets: []linodego.VPCSubnet{},
+				}, nil)
+			})
+
+			It("should fail and set condition to false", func() {
+				err := reconciler.validateVPC(ctx, 123, machineScope, logger, "Test")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Test VPC with ID 123 has no subnets"))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			})
+		})
+
+		Context("when VPC does not exist", func() {
+			BeforeEach(func() {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(123)).Return(nil, errors.New("VPC not found"))
+			})
+
+			It("should fail and set condition to false", func() {
+				err := reconciler.validateVPC(ctx, 123, machineScope, logger, "Test")
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Test VPC with ID 123 not found"))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			})
+		})
+	})
+
+	Describe("reconcilePreflightVPC", func() {
+		Context("when machine has direct VPCID and it exists with subnets", func() {
+			BeforeEach(func() {
+				machineScope.LinodeMachine.Spec.VPCID = ptr.To(123)
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(123)).Return(&linodego.VPC{
+					ID:     123,
+					Label:  "test-vpc",
+					Region: "us-east",
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			})
+
+			It("should succeed", func() {
+				vpcRef := &corev1.ObjectReference{Name: "test-vpc"}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			})
+		})
+
+		Context("when machine has direct VPCID but it does not exist", func() {
+			BeforeEach(func() {
+				machineScope.LinodeMachine.Spec.VPCID = ptr.To(123)
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(123)).Return(nil, errors.New("VPC not found"))
+			})
+
+			It("should fail", func() {
+				vpcRef := &corev1.ObjectReference{Name: "test-vpc"}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Machine VPC with ID 123 not found"))
+				Expect(result).To(Equal(ctrl.Result{}))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			})
+		})
+
+		Context("when cluster has direct VPCID and it exists with subnets", func() {
+			BeforeEach(func() {
+				machineScope.LinodeCluster.Spec.VPCID = ptr.To(456)
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(456)).Return(&linodego.VPC{
+					ID:     456,
+					Label:  "test-vpc",
+					Region: "us-east",
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    789,
+							Label: "subnet-1",
+						},
+					},
+				}, nil)
+			})
+
+			It("should succeed", func() {
+				vpcRef := &corev1.ObjectReference{Name: "test-vpc"}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			})
+		})
+
+		Context("when cluster has direct VPCID but it does not exist", func() {
+			BeforeEach(func() {
+				machineScope.LinodeCluster.Spec.VPCID = ptr.To(456)
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(456)).Return(nil, errors.New("VPC not found"))
+			})
+
+			It("should fail", func() {
+				vpcRef := &corev1.ObjectReference{Name: "test-vpc"}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("Cluster VPC with ID 456 not found"))
+				Expect(result).To(Equal(ctrl.Result{}))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			})
+		})
+
+		Context("when using VPC reference and it exists and is ready", func() {
+			BeforeEach(func() {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, _ interface{}, vpc *infrav1alpha2.LinodeVPC, _ ...interface{}) error {
+						vpc.Status.Ready = true
+						return nil
+					})
+			})
+
+			It("should succeed and trigger an event", func() {
+				vpcRef := &corev1.ObjectReference{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+
+				// Check if an event was recorded
+				select {
+				case event := <-mockRecorder.Events:
+					Expect(event).To(ContainSubstring("LinodeVPC is now available"))
+				default:
+					Fail("Expected event, but none was recorded")
+				}
+
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			})
+		})
+
+		Context("when using VPC reference with empty namespace", func() {
+			BeforeEach(func() {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Namespace: "default", // Should use machine's namespace
+					Name:      "test-vpc",
+				}, gomock.Any()).DoAndReturn(
+					func(_ context.Context, _ interface{}, vpc *infrav1alpha2.LinodeVPC, _ ...interface{}) error {
+						vpc.Status.Ready = true
+						return nil
+					})
+			})
+
+			It("should succeed and use machine's namespace", func() {
+				vpcRef := &corev1.ObjectReference{
+					Name: "test-vpc",
+					// Namespace intentionally omitted
+				}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			})
+		})
+
+		Context("when using VPC reference and it exists but is not ready", func() {
+			BeforeEach(func() {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, _ interface{}, vpc *infrav1alpha2.LinodeVPC, _ ...interface{}) error {
+						vpc.Status.Ready = false
+						return nil
+					})
+			})
+
+			It("should requeue with delay", func() {
+				vpcRef := &corev1.ObjectReference{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{RequeueAfter: rutil.DefaultClusterControllerReconcileDelay}))
+			})
+		})
+
+		Context("when using VPC reference and it is not found with no stale condition", func() {
+			BeforeEach(func() {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("VPC not found"))
+			})
+
+			It("should requeue with delay", func() {
+				vpcRef := &corev1.ObjectReference{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{RequeueAfter: rutil.DefaultClusterControllerReconcileDelay}))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			})
+		})
+
+		Context("when using VPC reference and it is not found with stale condition", func() {
+			BeforeEach(func() {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("VPC not found"))
+
+				// Set stale condition
+				oldTime := metav1.NewTime(time.Now().Add(-24 * time.Hour)) // 24 hours ago
+				conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+					Type:               ConditionPreflightLinodeVPCReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "TestReason",
+					Message:            "Test message",
+					LastTransitionTime: oldTime,
+				})
+			})
+
+			It("should fail", func() {
+				vpcRef := &corev1.ObjectReference{
+					Name:      "test-vpc",
+					Namespace: "default",
+				}
+				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("VPC not found"))
+				Expect(result).To(Equal(ctrl.Result{}))
+				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			})
+		})
 	})
 })

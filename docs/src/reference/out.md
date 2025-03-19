@@ -358,6 +358,7 @@ _Appears in:_
 | `controlPlaneEndpoint` _[APIEndpoint](#apiendpoint)_ | ControlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane.<br />If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used. |  |  |
 | `network` _[NetworkSpec](#networkspec)_ | NetworkSpec encapsulates all things related to Linode network. |  |  |
 | `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ |  |  |  |
+| `vpcID` _integer_ | VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
 | `nodeBalancerFirewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | NodeBalancerFirewallRef is a reference to a NodeBalancer Firewall object. This makes the linode use the specified NodeBalancer Firewall. |  |  |
 | `objectStore` _[ObjectStore](#objectstore)_ | ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for<br />bootstrapping (e.g. Cloud-init). |  |  |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not<br />supplied then the credentials of the controller will be used. |  |  |
@@ -619,6 +620,7 @@ _Appears in:_
 | `placementGroupRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | PlacementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group. |  |  |
 | `firewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall. |  |  |
 | `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | VPCRef is a reference to a LinodeVPC resource. If specified, this takes precedence over<br />the cluster-level VPC configuration for multi-region support. |  |  |
+| `vpcID` _integer_ | VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
 
 
 #### LinodeMachineStatus
