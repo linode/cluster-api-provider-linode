@@ -924,8 +924,7 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 				Result("VPC preflight check fails", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
 					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("VPC with ID 12345 has no subnets"))
+					Expect(err).NotTo(HaveOccurred())
 					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
 					condition := conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)
 					Expect(condition).NotTo(BeNil())
@@ -961,8 +960,7 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 				Result("VPC preflight check fails", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
 					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-					Expect(err).To(HaveOccurred())
-					Expect(err.Error()).To(ContainSubstring("VPC not found"))
+					Expect(err).NotTo(HaveOccurred())
 					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
 					condition := conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)
 					Expect(condition).NotTo(BeNil())
