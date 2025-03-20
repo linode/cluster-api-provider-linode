@@ -97,8 +97,13 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if _, ok := linodeVPC.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeVPC.ObjectMeta)
 		if err != nil {
-			log.Error(err, "failed to fetch cluster from metadata")
-			return ctrl.Result{}, err
+			// If we're deleting and cluster isn't found, that's okay
+			if !linodeVPC.DeletionTimestamp.IsZero() && apierrors.IsNotFound(err) {
+				log.Info("Cluster not found but LinodeVPC is being deleted, continuing with deletion")
+			} else {
+				log.Error(err, "failed to fetch cluster from metadata")
+				return ctrl.Result{}, err
+			}
 		}
 	}
 	vpcScope, err := scope.NewVPCScope(
@@ -115,13 +120,17 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		return ctrl.Result{}, fmt.Errorf("failed to create VPC scope: %w", err)
 	}
-	isPaused, _, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if isPaused {
-		log.Info("linodeVPC or linked cluster is paused, skipping reconciliation")
-		return ctrl.Result{}, nil
+
+	// Only check pause if not deleting or if cluster still exists
+	if linodeVPC.DeletionTimestamp.IsZero() || cluster != nil {
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if isPaused {
+			log.Info("linodeVPC or linked cluster is paused, skipping reconciliation")
+			return ctrl.Result{}, nil
+		}
 	}
 
 	return r.reconcile(ctx, log, vpcScope)

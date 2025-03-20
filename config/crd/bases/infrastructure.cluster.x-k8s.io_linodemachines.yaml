@@ -155,7 +155,7 @@ spec:
                 type: object
               diskEncryption:
                 description: DiskEncryption determines if the disks of the instance
-                  should be encrypted.
+                  should be encrypted. The default is disabled.
                 enum:
                 - enabled
                 - disabled
