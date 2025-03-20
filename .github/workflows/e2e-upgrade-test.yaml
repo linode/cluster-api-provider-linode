@@ -84,6 +84,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check current code version
+        run: |
+          echo "Current branch: $(git branch --show-current)"
+          echo "Current commit: $(git rev-parse HEAD)"
+
       - name: Run Upgrade Test
         env:
           LINODE_REGION: us-sea
