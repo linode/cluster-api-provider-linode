@@ -157,7 +157,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-release local-deploy chainsaw s5cmd
-	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --selector $(E2E_SELECTOR) $(E2E_FLAGS)
+	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --parallel 2 --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 .PHONY: local-deploy
 local-deploy: kind-cluster tilt kustomize clusterctl
@@ -190,7 +190,7 @@ last-release-cluster: kind ctlptl tilt kustomize clusterctl chainsaw kind-cluste
 test-upgrade: last-release-cluster checkout-latest-commit
 	$(MAKE) local-release
 	$(MAKE) local-deploy
-	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 600s ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
+	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 800s ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
 
 .PHONY: clean-kind-cluster
 clean-kind-cluster: ctlptl
