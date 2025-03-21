@@ -110,8 +110,7 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 	}
 
 	// TODO: instrument with tracing, might need refactor to preserve readibility
-	var errs field.ErrorList
-	errs = r.validateLinodeVPCSpec(ctx, linodeclient, spec, skipAPIValidation)
+	errs := r.validateLinodeVPCSpec(ctx, linodeclient, spec, skipAPIValidation)
 
 	if len(errs) == 0 {
 		return nil, nil

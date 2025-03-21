@@ -138,7 +138,6 @@ func getCredentials(ctx context.Context, crClient K8sClient, credentialsRef core
 // and API validation should be skipped
 func setupClientWithCredentials(ctx context.Context, crClient K8sClient, credRef *corev1.SecretReference,
 	resourceName, namespace string, logger logr.Logger) (bool, LinodeClient) {
-
 	client := defaultLinodeClient
 
 	apiToken, err := getCredentialDataFromRef(ctx, crClient, *credRef, namespace)
