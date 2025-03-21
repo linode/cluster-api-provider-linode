@@ -26,7 +26,6 @@ import (
 	"strings"
 
 	"go4.org/netipx"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -106,25 +105,18 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 
 	// Handle credentials if provided
 	if spec.CredentialsRef != nil {
-		skipAPIValidation, linodeclient = r.setupClientWithCredentials(ctx, spec.CredentialsRef, vpc)
+		skipAPIValidation, linodeclient = setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+			vpc.Name, vpc.GetNamespace(), linodevpclog)
 	}
 
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
-
-	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	if err := r.validateLinodeVPCSubnets(spec); err != nil {
-		errs = slices.Concat(errs, err)
-	}
+	errs = r.validateLinodeVPCSpec(ctx, linodeclient, spec, skipAPIValidation)
 
 	if len(errs) == 0 {
 		return nil, nil
 	}
+
 	return nil, apierrors.NewInvalid(
 		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
 		vpc.Name, errs)
@@ -154,12 +146,14 @@ func (r *linodeVPCValidator) ValidateDelete(ctx context.Context, obj runtime.Obj
 	return nil, nil
 }
 
-func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeVPCSpec) field.ErrorList {
+func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeVPCSpec, skipAPIValidation bool) field.ErrorList {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
-		errs = append(errs, err)
+	if !skipAPIValidation {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	if err := r.validateLinodeVPCSubnets(spec); err != nil {
 		errs = slices.Concat(errs, err)
@@ -289,28 +283,4 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 		return nil, field.InternalError(path, fmt.Errorf("build ip set: %w", err))
 	}
 	return set, nil
-}
-
-// Helper function to setup client with credentials and determine if API validation should be skipped
-func (r *linodeVPCValidator) setupClientWithCredentials(ctx context.Context, credRef *corev1.SecretReference, vpc *infrav1alpha2.LinodeVPC) (bool, LinodeClient) {
-	client := defaultLinodeClient
-
-	apiToken, err := getCredentialDataFromRef(ctx, r.Client, *credRef, vpc.GetNamespace())
-	if err == nil {
-		linodevpclog.Info("creating a verified linode client for create request", "name", vpc.Name)
-		client.SetToken(string(apiToken))
-		return false, client
-	}
-
-	// Handle error cases
-	if apierrors.IsNotFound(err) {
-		linodevpclog.Info("credentials secret not found, skipping API validation",
-			"name", vpc.Name, "secret", credRef.Name)
-		return true, client
-	}
-
-	// For other errors, log the error but return the default client
-	// The caller should handle validation with the default client
-	linodevpclog.Error(err, "failed getting credentials from secret ref", "name", vpc.Name)
-	return false, client
 }
