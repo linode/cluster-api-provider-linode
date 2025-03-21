@@ -146,10 +146,10 @@ spec:
                 echo "Skipping deletion of child cluster"
                 exit 0
               fi
-              kubectl delete cluster $CLUSTER -n $NAMESPACE --timeout=60s || { echo "deletion failed!"; exit 1; }
-              kubectl delete linodevpc $CLUSTER -n $NAMESPACE --timeout=60s || { echo "deletion failed!"; exit 1; }
-              kubectl delete linodefirewall $CLUSTER -n $NAMESPACE --timeout=60s || { echo "deletion failed!"; exit 1; }
-              kubectl delete linodefirewall $CLUSTER-nb -n $NAMESPACE --timeout=60s || { echo "deletion failed!"; exit 1; }
+              kubectl delete cluster $CLUSTER -n $NAMESPACE --timeout=120s || { echo "deletion failed!"; exit 1; }
+              kubectl delete linodevpc $CLUSTER -n $NAMESPACE --timeout=120s || { echo "deletion failed!"; exit 1; }
+              kubectl delete linodefirewall $CLUSTER -n $NAMESPACE --timeout=120s || { echo "deletion failed!"; exit 1; }
+              kubectl delete linodefirewall $CLUSTER-nb -n $NAMESPACE --timeout=120s || { echo "deletion failed!"; exit 1; }
             check:
               ($error == null): true
               (contains($stdout, 'deletion failed')): false

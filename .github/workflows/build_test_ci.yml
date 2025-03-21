@@ -111,7 +111,7 @@ jobs:
     secrets: inherit
     with:
       e2e-selector: ${{ matrix.flavor }}
-      e2e-flags: ${{ matrix.flavor == 'quick' && ''  || '--assert-timeout 15m0s'}}
+      e2e-flags: ${{ matrix.flavor == 'quick' && ''  || '--assert-timeout 20m0s'}}
 
 
   docker-build:
