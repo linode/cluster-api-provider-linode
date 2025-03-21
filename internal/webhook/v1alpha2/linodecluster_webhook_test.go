@@ -70,7 +70,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -81,7 +81,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec)
+			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec, SkipAPIValidation)
 			for _, err := range errs {
 				assert.ErrorContains(t, err, expectedErrorSubString)
 			}
@@ -209,7 +209,7 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validCluster.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validCluster.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -220,7 +220,7 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, inValidCluster.Spec)
+			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, inValidCluster.Spec, SkipAPIValidation)
 			for _, err := range errs {
 				require.Contains(t, err.Error(), "dnsRootDomain")
 			}
@@ -271,7 +271,7 @@ func TestValidateVlanAndVPC(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validCluster.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validCluster.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -282,7 +282,7 @@ func TestValidateVlanAndVPC(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, inValidCluster.Spec)
+			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, inValidCluster.Spec, SkipAPIValidation)
 			for _, err := range errs {
 				require.Contains(t, err.Error(), "Cannot use VLANs and VPCs together")
 			}
@@ -352,7 +352,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithVPCID.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithVPCID.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -363,7 +363,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithVPCRef.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithVPCRef.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -374,7 +374,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, invalidCluster.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, invalidCluster.Spec, SkipAPIValidation)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both VPCID and VPCRef")
 				}),

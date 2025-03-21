@@ -73,6 +73,10 @@ func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	var linodeclient LinodeClient = defaultLinodeClient
+	var errs field.ErrorList
+	skipAPIValidation := false
+
 	machine, ok := obj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
@@ -80,20 +84,13 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime
 	spec := machine.Spec
 	linodemachinelog.Info("validate create", "name", machine.Name)
 
-	var linodeclient LinodeClient = defaultLinodeClient
-
+	// Handle credentials if provided
 	if spec.CredentialsRef != nil {
-		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, machine.GetNamespace())
-		if err != nil {
-			linodemachinelog.Error(err, "failed getting credentials from secret ref", "name", machine.Name)
-			return nil, err
-		}
-		linodemachinelog.Info("creating a verified linode client for create request", "name", machine.Name)
-		linodeclient.SetToken(string(apiToken))
+		skipAPIValidation, linodeclient = setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+			machine.Name, machine.GetNamespace(), linodemachinelog)
 	}
-	var errs field.ErrorList
 
-	if err := r.validateLinodeMachineSpec(ctx, linodeclient, spec); err != nil {
+	if err := r.validateLinodeMachineSpec(ctx, linodeclient, spec, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -129,18 +126,20 @@ func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime
 	return nil, nil
 }
 
-func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeMachineSpec) field.ErrorList {
+func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeMachineSpec, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
-	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
-		errs = append(errs, err)
-	}
-	plan, err := validateLinodeType(ctx, linodeclient, spec.Type, field.NewPath("spec").Child("type"))
-	if err != nil {
-		errs = append(errs, err)
-	}
-	if err := r.validateLinodeMachineDisks(plan, spec); err != nil {
-		errs = append(errs, err)
+	if !skipAPIValidation {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
+			errs = append(errs, err)
+		}
+		plan, err := validateLinodeType(ctx, linodeclient, spec.Type, field.NewPath("spec").Child("type"))
+		if err != nil {
+			errs = append(errs, err)
+		}
+		if err := r.validateLinodeMachineDisks(plan, spec); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	if spec.VPCID != nil && spec.VPCRef != nil {

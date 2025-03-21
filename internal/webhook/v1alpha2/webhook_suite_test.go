@@ -56,6 +56,8 @@ var (
 	testEnv   *envtest.Environment
 )
 
+var SkipAPIValidation = false
+
 func TestAPIs(t *testing.T) {
 	t.Parallel()
 	RegisterFailHandler(Fail)

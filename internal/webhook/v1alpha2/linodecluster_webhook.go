@@ -61,20 +61,18 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, obj runtime
 	linodeclusterlog.Info("validate create", "name", cluster.Name)
 
 	var linodeclient LinodeClient = defaultLinodeClient
+	skipAPIValidation := false
 
+	// Handle credentials if provided
 	if spec.CredentialsRef != nil {
-		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, cluster.GetNamespace())
-		if err != nil {
-			linodeclusterlog.Error(err, "failed getting credentials from secret ref", "name", cluster.Name)
-			return nil, err
-		}
-		linodeclusterlog.Info("creating a verified linode client for create request", "name", cluster.Name)
-		linodeclient.SetToken(string(apiToken))
+		skipAPIValidation, linodeclient = setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+			cluster.Name, cluster.GetNamespace(), linodeclusterlog)
 	}
+
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if err := r.validateLinodeClusterSpec(ctx, linodeclient, spec); err != nil {
+	if err := r.validateLinodeClusterSpec(ctx, linodeclient, spec, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -110,11 +108,13 @@ func (r *linodeClusterValidator) ValidateDelete(ctx context.Context, obj runtime
 	return nil, nil
 }
 
-func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeClusterSpec) field.ErrorList {
+func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeClusterSpec, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
-	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
-		errs = append(errs, err)
+	if !skipAPIValidation {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	if spec.Network.LoadBalancerType == "dns" {

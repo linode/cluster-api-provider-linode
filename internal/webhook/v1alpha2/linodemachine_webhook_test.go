@@ -73,7 +73,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 				Call("valid with disks", func(ctx context.Context, mck Mock) {
@@ -84,7 +84,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
 					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": disk.DeepCopy()}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -100,7 +100,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+			errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 			for _, err := range errs {
 				require.Error(t, err)
 			}
@@ -114,7 +114,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("os disk too large", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, strconv.Itoa(plan_zero.Disk))
 					}
@@ -129,7 +129,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
 					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": disk.DeepCopy(), "sdc": disk.DeepCopy()}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
@@ -143,7 +143,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sda": disk.DeepCopy()}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskDataDiskInvalid)
 					}
@@ -157,7 +157,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk_zero.DeepCopy()
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskOSDiskInvalid)
 					}
@@ -312,7 +312,7 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCID.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCID.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -328,7 +328,7 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCRef.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCRef.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -344,7 +344,7 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec, SkipAPIValidation)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both VPCID and VPCRef")
 				}),
