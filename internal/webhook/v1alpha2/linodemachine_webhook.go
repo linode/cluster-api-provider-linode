@@ -151,6 +151,14 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 		})
 	}
 
+	if spec.FirewallID != 0 && spec.FirewallRef != nil {
+		errs = append(errs, &field.Error{
+			Field:  "spec.firewallID/spec.firewallRef",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Cannot specify both FirewallID and FirewallRef",
+		})
+	}
+
 	if len(errs) == 0 {
 		return nil
 	}

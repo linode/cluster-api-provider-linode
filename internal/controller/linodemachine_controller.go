@@ -442,6 +442,28 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
+	// First check if a direct FirewallID is specified
+	if machineScope.LinodeMachine.Spec.FirewallID != 0 {
+		logger.Info("Verifying direct FirewallID", "firewallID", machineScope.LinodeMachine.Spec.FirewallID)
+		_, err := machineScope.LinodeClient.GetFirewall(ctx, machineScope.LinodeMachine.Spec.FirewallID)
+		if err != nil {
+			logger.Error(err, "Failed to get firewall with provided ID", "firewallID", machineScope.LinodeMachine.Spec.FirewallID)
+			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				Type:    ConditionPreflightLinodeFirewallReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  util.CreateError,
+				Message: err.Error(),
+			})
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		}
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:   ConditionPreflightLinodeFirewallReady,
+			Status: metav1.ConditionTrue,
+			Reason: "LinodeFirewallReady",
+		})
+		return ctrl.Result{}, nil
+	}
+
 	// If NodeBalancerFirewallID is directly specified, check if it exists
 	if machineScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
 		firewallID := *machineScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID

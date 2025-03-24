@@ -248,6 +248,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	// If NodeBalancerFirewallID is directly specified, check if it exists
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
 		firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
+		logger.Info("Verifying direct NodeBalancerFirewallID", "firewallID", firewallID)
 		_, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
 		if err != nil {
 			logger.Error(err, "Failed to get NodeBalancer firewall with provided ID", "firewallID", firewallID)

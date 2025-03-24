@@ -382,3 +382,91 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 		),
 	)
 }
+
+func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) {
+	t.Parallel()
+
+	var (
+		invalidCluster = &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				Network: infrav1alpha2.NetworkSpec{
+					NodeBalancerFirewallID: ptr.To(5678),
+				},
+				NodeBalancerFirewallRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeFirewall",
+				},
+			},
+		}
+		validClusterWithFirewallID = &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				Network: infrav1alpha2.NetworkSpec{
+					NodeBalancerFirewallID: ptr.To(5678),
+				},
+			},
+		}
+		validClusterWithFirewallRef = &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				NodeBalancerFirewallRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeFirewall",
+				},
+			},
+		}
+		validator = &linodeClusterValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid with NodeBalancerFirewallID", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithFirewallID.Spec)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("valid with NodeBalancerFirewallRef", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithFirewallRef.Spec)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("both NodeBalancerFirewallID and NodeBalancerFirewallRef set", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, invalidCluster.Spec)
+					require.NotEmpty(t, errs)
+					require.Contains(t, errs[0].Error(), "Cannot specify both NodeBalancerFirewallID and NodeBalancerFirewallRef")
+				}),
+			),
+		),
+	)
+}

@@ -141,6 +141,14 @@ func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, 
 		})
 	}
 
+	if spec.Network.NodeBalancerFirewallID != nil && spec.NodeBalancerFirewallRef != nil {
+		errs = append(errs, &field.Error{
+			Field:  "spec.network.nodeBalancerFirewallID/spec.nodeBalancerFirewallRef",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Cannot specify both NodeBalancerFirewallID and NodeBalancerFirewallRef",
+		})
+	}
+
 	if len(errs) == 0 {
 		return nil
 	}

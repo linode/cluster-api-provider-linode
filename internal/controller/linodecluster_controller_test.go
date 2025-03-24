@@ -190,10 +190,6 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					if cScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
 						linodeFirewall.Spec.FirewallID = util.Pointer(123)
 						k8sClient.Update(ctx, &linodeFirewall)
-
-						// Mock GetFirewall call
-						mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), gomock.Any()).
-							Return(&linodego.Firewall{ID: 123}, nil)
 					}
 
 					// If using direct firewall ID
@@ -224,10 +220,6 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				Call("cluster is not created because nb was nil", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 
-					// Mock GetFirewall call
-					mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), gomock.Any()).
-						Return(&linodego.Firewall{ID: 123}, nil)
-
 					// Mock CreateNodeBalancer to return nil
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(nil, nil)
@@ -245,10 +237,6 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Path(
 				Call("cluster is not created because nb config was nil", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
-
-					// Mock GetFirewall call
-					mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), gomock.Any()).
-						Return(&linodego.Firewall{ID: 123}, nil)
 
 					// Mock CreateNodeBalancerConfig to return nil
 					mck.LinodeClient.EXPECT().CreateNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).

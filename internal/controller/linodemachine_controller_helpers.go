@@ -141,7 +141,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 	}
 
 	// Configure firewall if needed
-	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
+	if machineScope.LinodeMachine.Spec.FirewallRef != nil || machineScope.LinodeMachine.Spec.FirewallID != 0 {
 		if err := configureFirewall(ctx, machineScope, createConfig, logger); err != nil {
 			return nil, err
 		}
@@ -995,13 +995,21 @@ func configurePlacementGroup(ctx context.Context, machineScope *scope.MachineSco
 
 // configureFirewall adds firewall configuration
 func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	// First check if a direct FirewallID is specified
+	if machineScope.LinodeMachine.Spec.FirewallID != 0 {
+		// Direct FirewallID is provided, use it
+		logger.Info("Using direct FirewallID", "firewallID", machineScope.LinodeMachine.Spec.FirewallID)
+		createConfig.FirewallID = machineScope.LinodeMachine.Spec.FirewallID
+		return nil
+	}
+
+	// If no direct FirewallID, use FirewallRef
 	fwID, err := getFirewallID(ctx, machineScope, logger)
 	if err != nil {
-		logger.Error(err, "Failed to get Firewall config")
+		logger.Error(err, "Failed to get Firewall config from reference")
 		return err
 	}
 
 	createConfig.FirewallID = fwID
-
 	return nil
 }
