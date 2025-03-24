@@ -24,8 +24,10 @@ import (
 	"slices"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -129,4 +131,31 @@ func getCredentials(ctx context.Context, crClient K8sClient, credentialsRef core
 	}
 
 	return &credSecret, nil
+}
+
+// setupClientWithCredentials configures a Linode client with credentials from a secret reference
+// Returns (skipAPIValidation, client) - skipAPIValidation will be true if credentials cannot be found
+// and API validation should be skipped
+func setupClientWithCredentials(ctx context.Context, crClient K8sClient, credRef *corev1.SecretReference,
+	resourceName, namespace string, logger logr.Logger) (bool, LinodeClient) {
+	client := defaultLinodeClient
+
+	apiToken, err := getCredentialDataFromRef(ctx, crClient, *credRef, namespace)
+	if err == nil {
+		logger.Info("creating a verified linode client for create request", "name", resourceName)
+		client.SetToken(string(apiToken))
+		return false, client
+	}
+
+	// Handle error cases
+	if apierrors.IsNotFound(err) {
+		logger.Info("credentials secret not found, skipping API validation",
+			"name", resourceName, "secret", credRef.Name)
+		return true, client
+	}
+
+	// For other errors, log the error but return the default client
+	// The caller should handle validation with the default client
+	logger.Error(err, "failed getting credentials from secret ref", "name", resourceName)
+	return false, client
 }

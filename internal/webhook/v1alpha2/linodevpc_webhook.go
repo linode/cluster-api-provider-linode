@@ -101,26 +101,21 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 	linodevpclog.Info("validate create", "name", vpc.Name)
 
 	var linodeclient LinodeClient = defaultLinodeClient
+	skipAPIValidation := false
 
+	// Handle credentials if provided
 	if spec.CredentialsRef != nil {
-		apiToken, err := getCredentialDataFromRef(ctx, r.Client, *spec.CredentialsRef, vpc.GetNamespace())
-		if err != nil {
-			linodevpclog.Error(err, "failed getting credentials from secret ref", "name", vpc.Name)
-			return nil, err
-		}
-		linodevpclog.Info("creating a verified linode client for create request", "name", vpc.Name)
-		linodeclient.SetToken(string(apiToken))
+		skipAPIValidation, linodeclient = setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+			vpc.Name, vpc.GetNamespace(), linodevpclog)
 	}
-	// TODO: instrument with tracing, might need refactor to preserve readibility
-	var errs field.ErrorList
 
-	if err := r.validateLinodeVPCSpec(ctx, linodeclient, spec); err != nil {
-		errs = slices.Concat(errs, err)
-	}
+	// TODO: instrument with tracing, might need refactor to preserve readibility
+	errs := r.validateLinodeVPCSpec(ctx, linodeclient, spec, skipAPIValidation)
 
 	if len(errs) == 0 {
 		return nil, nil
 	}
+
 	return nil, apierrors.NewInvalid(
 		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
 		vpc.Name, errs)
@@ -150,12 +145,14 @@ func (r *linodeVPCValidator) ValidateDelete(ctx context.Context, obj runtime.Obj
 	return nil, nil
 }
 
-func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeVPCSpec) field.ErrorList {
+func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeVPCSpec, skipAPIValidation bool) field.ErrorList {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
-		errs = append(errs, err)
+	if !skipAPIValidation {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	if err := r.validateLinodeVPCSubnets(spec); err != nil {
 		errs = slices.Concat(errs, err)
