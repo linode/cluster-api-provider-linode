@@ -440,7 +440,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithFirewallID.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithFirewallID.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -451,7 +451,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithFirewallRef.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithFirewallRef.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -462,7 +462,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, invalidCluster.Spec)
+					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, invalidCluster.Spec, SkipAPIValidation)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both NodeBalancerFirewallID and NodeBalancerFirewallRef")
 				}),

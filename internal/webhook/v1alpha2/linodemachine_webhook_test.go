@@ -414,7 +414,7 @@ func TestValidateFirewallIDAndFirewallRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallID.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallID.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -430,7 +430,7 @@ func TestValidateFirewallIDAndFirewallRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallRef.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallRef.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -446,7 +446,7 @@ func TestValidateFirewallIDAndFirewallRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec, SkipAPIValidation)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both FirewallID and FirewallRef")
 				}),
