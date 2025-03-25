@@ -195,16 +195,27 @@ When configuring firewalls, you can specify either a direct `firewallID` or a `f
 
 For `LinodeMachine` resources, when both `firewallID` and `firewallRef` are specified:
 
-- `firewallRef` takes precedence over `firewallID`
-- The ID from the referenced `LinodeFirewall` will be used instead of the directly specified `firewallID`
+- `firewallID` takes precedence over `firewallRef`
+- The directly specified `firewallID` will be used instead of the referenced `LinodeFirewall`
 
 #### LinodeCluster NodeBalancer Firewall Precedence
 
 For `LinodeCluster` resources, when both `NodeBalancerFirewallID` and `NodeBalancerFirewallRef` are specified:
 
-- `NodeBalancerFirewallRef` takes precedence over `NodeBalancerFirewallID`
-- The ID from the referenced `LinodeFirewall` will be used instead of the directly specified `NodeBalancerFirewallID`
+- `NodeBalancerFirewallID` takes precedence over `NodeBalancerFirewallRef`
+- The directly specified `NodeBalancerFirewallID` will be used instead of the referenced `LinodeFirewall`
 
 ```admonish warning
-While you can specify both direct IDs and references, it's recommended to use only one approach for clarity and to avoid confusion.
+While describing the precedence rules above, please note that specifying both direct IDs and references in the same resource is not recommended and will be rejected by the webhook validator. You should use either a direct ID or a reference, but not both.
+```
+
+```admonish note title="Migration Note for Existing Clusters"
+In previous versions, the behavior was reversed - references took precedence over direct IDs, and the resolved ID from a reference was stored back in the direct ID field. 
+
+If you have existing clusters that were created with references, you may need to:
+1. Clear the direct ID field (`firewallID` or `NodeBalancerFirewallID`)
+2. Keep only the reference field (`firewallRef` or `NodeBalancerFirewallRef`)
+3. Allow the cluster to reconcile with the new behavior
+
+This ensures that changes to your references will be properly respected.
 ```

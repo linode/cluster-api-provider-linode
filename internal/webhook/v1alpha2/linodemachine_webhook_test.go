@@ -352,3 +352,105 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 		),
 	)
 }
+
+func TestValidateFirewallIDAndFirewallRef(t *testing.T) {
+	t.Parallel()
+
+	var (
+		invalidMachine = &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region:     "us-ord",
+				Type:       "g6-standard-1",
+				FirewallID: 5678,
+				FirewallRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeFirewall",
+				},
+			},
+		}
+		validMachineWithFirewallID = &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region:     "us-ord",
+				Type:       "g6-standard-1",
+				FirewallID: 5678,
+			},
+		}
+		validMachineWithFirewallRef = &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
+				FirewallRef: &corev1.ObjectReference{
+					Namespace: "example",
+					Name:      "example",
+					Kind:      "LinodeFirewall",
+				},
+			},
+		}
+		validator = &linodeMachineValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid with FirewallID", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&linodego.LinodeType{
+						ID:    "g6-standard-1",
+						Disk:  50 * 1024, // 50GB
+						Label: "Linode 2GB",
+					}, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallID.Spec, SkipAPIValidation)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("valid with FirewallRef", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&linodego.LinodeType{
+						ID:    "g6-standard-1",
+						Disk:  50 * 1024, // 50GB
+						Label: "Linode 2GB",
+					}, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallRef.Spec, SkipAPIValidation)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("both FirewallID and FirewallRef set", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&linodego.LinodeType{
+						ID:    "g6-standard-1",
+						Disk:  50 * 1024, // 50GB
+						Label: "Linode 2GB",
+					}, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec, SkipAPIValidation)
+					require.NotEmpty(t, errs)
+					require.Contains(t, errs[0].Error(), "Cannot specify both FirewallID and FirewallRef")
+				}),
+			),
+		),
+	)
+}

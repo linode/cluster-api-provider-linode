@@ -162,11 +162,6 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					return nil
 				})
 
-				// Mock GetFirewall call
-				mockClient.EXPECT().GetFirewall(gomock.Any(), 5678).Return(&linodego.Firewall{
-					ID: 5678,
-				}, nil)
-
 				// Mock CreateNodeBalancer call
 				mockClient.EXPECT().CreateNodeBalancer(
 					gomock.Any(),
