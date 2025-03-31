@@ -341,31 +341,6 @@ func (_d LinodeClientWithTracing) CreatePlacementGroup(ctx context.Context, opts
 	return _d.LinodeClient.CreatePlacementGroup(ctx, opts)
 }
 
-// CreateStackscript implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) CreateStackscript(ctx context.Context, opts linodego.StackscriptCreateOptions) (sp1 *linodego.Stackscript, err error) {
-	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateStackscript")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":  ctx,
-				"opts": opts}, map[string]interface{}{
-				"sp1": sp1,
-				"err": err})
-		}
-
-		if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.CreateStackscript(ctx, opts)
-}
-
 // CreateVPC implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (vp1 *linodego.VPC, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateVPC")
@@ -1168,31 +1143,6 @@ func (_d LinodeClientWithTracing) ListPlacementGroups(ctx context.Context, optio
 		_span.End()
 	}()
 	return _d.LinodeClient.ListPlacementGroups(ctx, options)
-}
-
-// ListStackscripts implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) ListStackscripts(ctx context.Context, opts *linodego.ListOptions) (sa1 []linodego.Stackscript, err error) {
-	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListStackscripts")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":  ctx,
-				"opts": opts}, map[string]interface{}{
-				"sa1": sa1,
-				"err": err})
-		}
-
-		if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.ListStackscripts(ctx, opts)
 }
 
 // ListVPCs implements _sourceClients.LinodeClient

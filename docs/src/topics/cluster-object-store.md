@@ -103,6 +103,5 @@ infrastructure Linode via one of the following services:
 | Service                                                                                       | Bootstrap Data Limit                                                                       |
 | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | [Metadata](https://techdocs.akamai.com/cloud-computing/docs/overview-of-the-metadata-service) | [65535 bytes](https://techdocs.akamai.com/linode-api/reference/post-linode-instance)       |
-| [Stackscripts](https://www.linode.com/products/stackscripts/)                                 | [65,535 characters](https://techdocs.akamai.com/linode-api/reference/post-linode-instance) |
 
 These data limits are bypassed when the Cluster Object Store feature is enabled.

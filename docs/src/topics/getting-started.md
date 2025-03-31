@@ -12,7 +12,6 @@ Make sure to create the token with at least the following read/write permissions
   - VPCs
   - IPs
   - Object Storage
-  - Stackscripts
   - Firewalls
 - clusterctl is [installed](https://cluster-api.sigs.k8s.io/user/quick-start#installation)
 - Cluster API [management cluster](https://cluster-api.sigs.k8s.io/user/quick-start#install-andor-configure-a-kubernetes-cluster) is created
@@ -38,11 +37,6 @@ Consider also setting the following environment variables: `CONTROL_PLANE_MACHIN
 ```admonish info
 This project uses [linodego](https://github.com/linode/linodego) for Linode API interaction. 
 Please refer to it for more details on environment variables used for client configuration.
-```
-
-```admonish warning
-For Regions and Images that do not yet support Akamai's cloud-init datasource CAPL will automatically use a stackscript shim
-to provision the node. If you are using a custom image ensure the [cloud_init](https://www.linode.com/docs/api/images/#image-create) flag is set correctly on it
 ```
 
 ## Setup management cluster
