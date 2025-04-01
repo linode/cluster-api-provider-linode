@@ -55,9 +55,8 @@ import (
 )
 
 const (
-	maxBootstrapDataBytesCloudInit   = 16384
-	maxBootstrapDataBytesStackscript = 65535
-	vlanIPFormat                     = "%s/11"
+	maxBootstrapDataBytesCloudInit = 16384
+	vlanIPFormat                   = "%s/11"
 )
 
 var (
@@ -606,24 +605,10 @@ func setUserData(ctx context.Context, machineScope *scope.MachineScope, createCo
 		return err
 	}
 
-	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
-		createConfig.Metadata = &linodego.InstanceMetadataOptions{
-			UserData: b64.StdEncoding.EncodeToString(bootstrapData),
-		}
-	} else {
-		logger.Info("using StackScripts for bootstrapping")
-		// WARNING: label, region and type are currently supported as cloud-init variables,
-		// any changes to this could be potentially backwards incompatible and should be noted through a backwards incompatible version update
-		instanceData := fmt.Sprintf("label: %s\nregion: %s\ntype: %s", machineScope.LinodeMachine.Name, machineScope.LinodeMachine.Spec.Region, machineScope.LinodeMachine.Spec.Type)
-		createConfig.StackScriptData = map[string]string{
-			"instancedata": b64.StdEncoding.EncodeToString([]byte(instanceData)),
-			"userdata":     b64.StdEncoding.EncodeToString(bootstrapData),
-		}
-		createConfig.StackScriptID, err = services.EnsureStackscript(ctx, machineScope)
-		if err != nil {
-			return fmt.Errorf("ensure stackscript: %w", err)
-		}
+	createConfig.Metadata = &linodego.InstanceMetadataOptions{
+		UserData: b64.StdEncoding.EncodeToString(bootstrapData),
 	}
+
 	return nil
 }
 
@@ -639,12 +624,8 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 		limit      int
 	)
 
-	// Determine limits for delivery service, e.g. Metadata vs. Stackscript.
-	if machineScope.LinodeMachine.Status.CloudinitMetadataSupport {
-		limit = maxBootstrapDataBytesCloudInit
-	} else {
-		limit = maxBootstrapDataBytesStackscript
-	}
+	// Determine limits for delivery service
+	limit = maxBootstrapDataBytesCloudInit
 
 	// Determine the delivery mechanism for the bootstrap data based on limits. This informs the formatting of the
 	// bootstrap data.
@@ -653,7 +634,7 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 	case size < limit:
 		return bootstrapdata, nil
 	// Compromise case (Metadata): Use compression.
-	case machineScope.LinodeMachine.Status.CloudinitMetadataSupport && gzipCompressionEnabled:
+	case gzipCompressionEnabled:
 		if compressed, err = compressUserData(bootstrapdata); err != nil {
 			// Break and use the Cluster Object Store workaround on compression failure.
 			logger.Info(fmt.Sprintf("Failed to compress bootstrap data: %v. Using Cluster Object Store instead.", err))

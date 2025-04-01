@@ -104,8 +104,7 @@ func TestSetUserData(t *testing.T) {
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
+				Spec: infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
@@ -124,45 +123,6 @@ func TestSetUserData(t *testing.T) {
 			},
 		},
 		{
-			name: "Success - SetUserData StackScript",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
-					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
-						DataSecretName: ptr.To("test-data"),
-					},
-					InfrastructureRef: corev1.ObjectReference{},
-				},
-			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster",
-					Namespace: "default",
-				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-east", Image: "linode/ubuntu22.04", Type: "g6-standard-1"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: false},
-			}},
-			createConfig: &linodego.InstanceCreateOptions{},
-			wantConfig: &linodego.InstanceCreateOptions{StackScriptID: 1234, StackScriptData: map[string]string{
-				"instancedata": b64.StdEncoding.EncodeToString([]byte("label: test-cluster\nregion: us-east\ntype: g6-standard-1")),
-				"userdata":     b64.StdEncoding.EncodeToString([]byte("test-data")),
-			}},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Client *mock.MockS3Client, s3PresignedClient *mock.MockS3PresignClient) {
-				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"value": []byte("test-data"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-				mockClient.EXPECT().ListStackscripts(gomock.Any(), &linodego.ListOptions{Filter: "{\"label\":\"CAPL-dev\"}"}).Return([]linodego.Stackscript{{
-					Label: "CAPI Test 1",
-					ID:    1234,
-				}}, nil)
-			},
-		},
-		{
 			name: "Success - SetUserData metadata and cluster object store (large bootstrap data)",
 			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
 				Spec: v1beta1.MachineSpec{
@@ -177,8 +137,7 @@ func TestSetUserData(t *testing.T) {
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
+				Spec: infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
 			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
 				Spec: infrav1alpha2.LinodeClusterSpec{
 					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
@@ -221,68 +180,6 @@ https://object.bucket.example.com
 			},
 		},
 		{
-			name: "Success - SetUserData StackScript and Cluster Object Store (large bootstrap data)",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
-					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
-						DataSecretName: ptr.To("test-data"),
-					},
-					InfrastructureRef: corev1.ObjectReference{},
-				},
-			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster",
-					Namespace: "default",
-				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04", Type: "g6-standard-2"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: false},
-			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
-				Spec: infrav1alpha2.LinodeClusterSpec{
-					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
-				},
-			}},
-			createConfig: &linodego.InstanceCreateOptions{},
-			wantConfig: &linodego.InstanceCreateOptions{
-				StackScriptData: map[string]string{
-					"instancedata": b64.StdEncoding.EncodeToString([]byte("label: test-cluster\nregion: us-ord\ntype: g6-standard-2")),
-					"userdata": b64.StdEncoding.EncodeToString([]byte(`#include
-https://object.bucket.example.com
-`)),
-				},
-			},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Mock *mock.MockS3Client, s3PresignedMock *mock.MockS3PresignClient) {
-				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					largeData := make([]byte, maxBootstrapDataBytesStackscript*10)
-					_, rerr := rand.Read(largeData)
-					require.NoError(t, rerr, "Failed to create bootstrap data")
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"value": largeData,
-						},
-					}
-					*obj = cred
-					return nil
-				})
-				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"bucket_name":     []byte("fake"),
-							"bucket_endpoint": []byte("fake.example.com"),
-							"s3_endpoint":     []byte("example.com"),
-							"access_key":      []byte("fake"),
-							"secret_key":      []byte("fake"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-				s3Mock.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
-				s3PresignedMock.EXPECT().PresignGetObject(gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{URL: "https://object.bucket.example.com"}, nil)
-				mockClient.EXPECT().ListStackscripts(gomock.Any(), gomock.Any()).Return([]linodego.Stackscript{{}}, nil)
-			},
-		},
-		{
 			name: "Error - SetUserData get bootstrap data",
 			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
 				Spec: v1beta1.MachineSpec{
@@ -308,43 +205,6 @@ https://object.bucket.example.com
 			expectedError: fmt.Errorf("bootstrap data secret is nil for LinodeMachine default/test-cluster"),
 		},
 		{
-			name: "Error - SetUserData failed to get stackscripts",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
-					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
-						DataSecretName: ptr.To("test-data"),
-					},
-					InfrastructureRef: corev1.ObjectReference{},
-				},
-			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cluster",
-					Namespace: "default",
-				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-east", Image: "linode/ubuntu22.04", Type: "g6-standard-1"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: false},
-			}},
-			createConfig: &linodego.InstanceCreateOptions{},
-			wantConfig: &linodego.InstanceCreateOptions{StackScriptID: 1234, StackScriptData: map[string]string{
-				"instancedata": b64.StdEncoding.EncodeToString([]byte("label: test-cluster\nregion: us-east\ntype: g6-standard-1")),
-				"userdata":     b64.StdEncoding.EncodeToString([]byte("test-data")),
-			}},
-			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Client *mock.MockS3Client, s3PresignedClient *mock.MockS3PresignClient) {
-				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					cred := corev1.Secret{
-						Data: map[string][]byte{
-							"value": []byte("test-data"),
-						},
-					}
-					*obj = cred
-					return nil
-				})
-				mockClient.EXPECT().ListStackscripts(gomock.Any(), &linodego.ListOptions{Filter: "{\"label\":\"CAPL-dev\"}"}).Return(nil, fmt.Errorf("failed to get stackscripts"))
-			},
-			expectedError: fmt.Errorf("ensure stackscript: failed to get stackscript with label CAPL-dev: failed to get stackscripts"),
-		},
-		{
 			name: "Error - SetUserData failed to upload to Cluster Object Store",
 			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
 				Spec: v1beta1.MachineSpec{
@@ -359,8 +219,7 @@ https://object.bucket.example.com
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
+				Spec: infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
 			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
 				Spec: infrav1alpha2.LinodeClusterSpec{
 					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
@@ -370,7 +229,7 @@ https://object.bucket.example.com
 			wantConfig:   &linodego.InstanceCreateOptions{},
 			expects: func(mockClient *mock.MockLinodeClient, kMock *mock.MockK8sClient, s3Mock *mock.MockS3Client, s3PresignedMock *mock.MockS3PresignClient) {
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
-					largeData := make([]byte, max(maxBootstrapDataBytesCloudInit, maxBootstrapDataBytesStackscript)*10)
+					largeData := make([]byte, maxBootstrapDataBytesCloudInit*10)
 					_, rerr := rand.Read(largeData)
 					require.NoError(t, rerr, "Failed to create bootstrap data")
 					cred := corev1.Secret{
@@ -423,8 +282,6 @@ https://object.bucket.example.com
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
 				assert.Equal(t, testcase.wantConfig.Metadata, testcase.createConfig.Metadata)
-				assert.Equal(t, testcase.wantConfig.StackScriptID, testcase.createConfig.StackScriptID)
-				assert.Equal(t, testcase.wantConfig.StackScriptData, testcase.createConfig.StackScriptData)
 			}
 		})
 	}
