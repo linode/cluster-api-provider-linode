@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -530,26 +529,19 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
-	region, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
+	_, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to fetch region %s", machineScope.LinodeMachine.Spec.Region))
 		return retryIfTransient(err, logger)
 	}
-	regionMetadataSupport := slices.Contains(region.Capabilities, linodego.CapabilityMetadata)
 	imageName := reconciler.DefaultMachineControllerLinodeImage
 	if machineScope.LinodeMachine.Spec.Image != "" {
 		imageName = machineScope.LinodeMachine.Spec.Image
 	}
-	image, err := machineScope.LinodeClient.GetImage(ctx, imageName)
+	_, err = machineScope.LinodeClient.GetImage(ctx, imageName)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to fetch image %s", imageName))
 		return retryIfTransient(err, logger)
-	}
-	imageMetadataSupport := slices.Contains(image.Capabilities, "cloud-init")
-	machineScope.LinodeMachine.Status.CloudinitMetadataSupport = true
-	if !imageMetadataSupport || !regionMetadataSupport {
-		logger.Info("cloud-init metadata support not available", "imageMetadataSupport", imageMetadataSupport, "regionMetadataSupport", regionMetadataSupport)
-		machineScope.LinodeMachine.Status.CloudinitMetadataSupport = false
 	}
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   ConditionPreflightMetadataSupportConfigured,

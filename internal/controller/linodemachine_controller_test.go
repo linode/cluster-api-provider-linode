@@ -1353,7 +1353,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						Name:      "test-missing-fw",
 						Namespace: namespace,
 					}
-					linodeMachine.Status.CloudinitMetadataSupport = true
 					conditions.Set(mScope.LinodeMachine, metav1.Condition{
 						Type:   ConditionPreflightMetadataSupportConfigured,
 						Status: metav1.ConditionTrue,
@@ -1371,7 +1370,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 			Path(
 				Call("machine is not created because there were too many requests", func(ctx context.Context, mck Mock) {
 					linodeMachine.Spec.FirewallRef = nil
-					linodeMachine.Status.CloudinitMetadataSupport = true
 				}),
 				OneOf(
 					Path(Result("create requeues when failing to create instance", func(ctx context.Context, mck Mock) {
@@ -1899,9 +1897,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 					Name:      "test-fw",
 				},
 			},
-			Status: infrav1alpha2.LinodeMachineStatus{
-				CloudinitMetadataSupport: true,
-			},
 		}
 
 		lpgReconciler = &LinodePlacementGroupReconciler{
@@ -2091,9 +2086,6 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 					},
 				},
 			},
-			Status: infrav1alpha2.LinodeMachineStatus{
-				CloudinitMetadataSupport: true,
-			},
 		}
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		mockLinodeClient.EXPECT().
@@ -2167,9 +2159,6 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 					},
 				},
 			},
-			Status: infrav1alpha2.LinodeMachineStatus{
-				CloudinitMetadataSupport: true,
-			},
 		}
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		mockLinodeClient.EXPECT().
@@ -2236,9 +2225,6 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 						Primary: true,
 					},
 				},
-			},
-			Status: infrav1alpha2.LinodeMachineStatus{
-				CloudinitMetadataSupport: true,
 			},
 		}
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)

@@ -104,8 +104,7 @@ func TestSetUserData(t *testing.T) {
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
+				Spec: infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
 			wantConfig: &linodego.InstanceCreateOptions{Metadata: &linodego.InstanceMetadataOptions{
@@ -138,8 +137,7 @@ func TestSetUserData(t *testing.T) {
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
+				Spec: infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
 			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
 				Spec: infrav1alpha2.LinodeClusterSpec{
 					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
@@ -221,8 +219,7 @@ https://object.bucket.example.com
 					Name:      "test-cluster",
 					Namespace: "default",
 				},
-				Spec:   infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
-				Status: infrav1alpha2.LinodeMachineStatus{CloudinitMetadataSupport: true},
+				Spec: infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
 			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
 				Spec: infrav1alpha2.LinodeClusterSpec{
 					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},

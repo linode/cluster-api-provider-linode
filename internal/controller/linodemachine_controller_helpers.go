@@ -634,7 +634,7 @@ func resolveBootstrapData(ctx context.Context, machineScope *scope.MachineScope,
 	case size < limit:
 		return bootstrapdata, nil
 	// Compromise case (Metadata): Use compression.
-	case machineScope.LinodeMachine.Status.CloudinitMetadataSupport && gzipCompressionEnabled:
+	case gzipCompressionEnabled:
 		if compressed, err = compressUserData(bootstrapdata); err != nil {
 			// Break and use the Cluster Object Store workaround on compression failure.
 			logger.Info(fmt.Sprintf("Failed to compress bootstrap data: %v. Using Cluster Object Store instead.", err))
