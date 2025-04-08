@@ -9,6 +9,7 @@ CCM is linode specific implementation of [Cloud Controller Manager](https://kube
 * Node Controller: used for managing node objects in k8s cluster
 * Service Controller: used for managing services and exposing them to outside world
 * Route Controller: used for managing routes when running k8s cluster within VPC
+* Node IPAM Controller: if enabled, it allocates pod cidrs to nodes
 
 ## Installing CCM in custom environments (linode specific only)
 
