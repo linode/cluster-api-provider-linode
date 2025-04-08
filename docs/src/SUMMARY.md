@@ -17,6 +17,7 @@
       - [rke2](./topics/flavors/rke2.md)
       - [vpcless](./topics/flavors/vpcless.md)
       - [konnectivity (kubeadm)](./topics/flavors/konnectivity.md)
+      - [NodeIPAM CCM (kubeadm)](./topics/flavors/nodeipam-ccm.md)
       - [DNS based apiserver Load Balancing](./topics/flavors/dns-loadbalancing.md)
       - [Flatcar](./topics/flavors/flatcar.md)
     - [Etcd](./topics/etcd.md)
