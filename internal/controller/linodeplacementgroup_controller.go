@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -259,47 +258,67 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 	logger.Info("deleting Placement Group")
 
 	if pgScope.LinodePlacementGroup.Spec.PGID != nil {
-		pg, err := pgScope.LinodeClient.GetPlacementGroup(ctx, *pgScope.LinodePlacementGroup.Spec.PGID)
-		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-			logger.Error(err, "Failed to fetch Placement Group")
+		pgID := *pgScope.LinodePlacementGroup.Spec.PGID
+		logger = logger.WithValues("pgID", pgID)
 
-			if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
-				logger.Info("re-queuing Placement Group deletion")
-
-				return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
+		pg, err := pgScope.LinodeClient.GetPlacementGroup(ctx, pgID)
+		if err != nil {
+			// Handle 404 Not Found - treat as deleted
+			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) == nil {
+				logger.Info("Placement Group not found via API, assuming already deleted")
+				// Skip to finalizer removal outside this block
+			} else {
+				// Handle other Get errors
+				logger.Error(err, "Failed to fetch Placement Group from API")
+				if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
+					logger.Info("Re-queuing Placement Group deletion due to fetch error")
+					return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
+				}
+				return ctrl.Result{}, fmt.Errorf("failed to fetch placement group %d after timeout: %w", pgID, err)
 			}
-
-			return ctrl.Result{}, err
 		}
 
 		if pg != nil {
 			if len(pg.Members) > 0 {
-				logger.Info("Placement Group still has node(s) attached, unassigning them")
-				members := make([]int, 0, len(pg.Members))
-				for _, member := range pg.Members {
-					members = append(members, member.LinodeID)
-				}
-
-				_, err := pgScope.LinodeClient.UnassignPlacementGroupLinodes(ctx, pg.ID, linodego.PlacementGroupUnAssignOptions{
-					Linodes: members,
-				})
-
-				if err != nil {
-					return ctrl.Result{}, fmt.Errorf("unassigning linodes from pg %d: %w", pg.ID, err)
-				}
-			}
-
-			err = pgScope.LinodeClient.DeletePlacementGroup(ctx, *pgScope.LinodePlacementGroup.Spec.PGID)
-			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-				logger.Error(err, "Failed to delete Placement Group")
-
-				if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
-					logger.Info("re-queuing Placement Group deletion")
-
+				logger.Info("Placement Group still has node(s) attached", "count", len(pg.Members))
+				waitTimeout := reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerWaitForHasNodesTimeout)
+				if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(waitTimeout).After(time.Now()) {
+					logger.Info("Placement Group has node(s) attached, re-queuing deletion to wait for detachment", "requeueAfter", reconciler.DefaultPGControllerReconcilerDelay)
 					return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
 				}
 
-				return ctrl.Result{}, err
+				// Wait timeout exceeded, fail the deletion
+				logger.Error(nil, "Placement Group deletion timed out waiting for node(s) to detach", "timeout", waitTimeout)
+				conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+					Type:    string(clusterv1.ReadyCondition),
+					Status:  metav1.ConditionFalse,
+					Reason:  string(clusterv1.DeletionFailedReason),
+					Message: fmt.Sprintf("skipped due to %d node(s) still attached after %s timeout", len(pg.Members), waitTimeout),
+				})
+				r.Recorder.Eventf(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, clusterv1.DeletionFailedReason, "Will not delete Placement Group %d with %d node(s) attached after %s timeout", pg.ID, len(pg.Members), waitTimeout)
+				return ctrl.Result{}, errors.New("will not delete Placement Group with node(s) attached")
+			}
+
+			// PG exists and is empty, proceed with deletion
+			logger.Info("Placement Group is empty, attempting API deletion")
+			err = pgScope.LinodeClient.DeletePlacementGroup(ctx, pgID)
+			if err != nil {
+				// Handle 404 Not Found during delete - treat as deleted
+				if util.IgnoreLinodeAPIError(err, http.StatusNotFound) == nil {
+					logger.Info("Placement Group already deleted (API 404 on delete call)")
+					// Skip to finalizer removal outside this block
+				} else {
+					// Handle other delete errors
+					logger.Error(err, "Failed to delete Placement Group via API")
+					if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
+						logger.Info("Re-queuing Placement Group deletion due to API delete error")
+						return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
+					}
+					return ctrl.Result{}, fmt.Errorf("failed to delete placement group %d after timeout: %w", pgID, err)
+				}
+			} else {
+				logger.Info("Placement Group deleted successfully via API")
+				// Continue to finalizer removal outside this block
 			}
 		}
 	} else {
@@ -313,24 +332,22 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 		Message: "Placement Group deleted",
 	})
 
-	r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, clusterv1.DeletedReason, "Placement Group has cleaned up")
+	r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, clusterv1.DeletedReason, "Placement Group has been cleaned up")
 
 	pgScope.LinodePlacementGroup.Spec.PGID = nil
 
 	if err := pgScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
-		logger.Error(err, "Failed to update credentials secret")
-
+		logger.Error(err, "Failed to remove credentials secret finalizer")
 		if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
-			logger.Info("re-queuing Placement Group deletion")
-
+			logger.Info("Re-queuing Placement Group deletion due to credential finalizer removal error")
 			return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
 		}
-
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to remove credential finalizer after timeout: %w", err)
 	}
 
 	controllerutil.RemoveFinalizer(pgScope.LinodePlacementGroup, infrav1alpha2.PlacementGroupFinalizer)
-	// TODO: remove this check and removal later
+
+	// Restore original main finalizer removal logic
 	if controllerutil.ContainsFinalizer(pgScope.LinodePlacementGroup, infrav1alpha2.GroupVersion.String()) {
 		controllerutil.RemoveFinalizer(pgScope.LinodePlacementGroup, infrav1alpha2.GroupVersion.String())
 	}

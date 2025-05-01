@@ -173,7 +173,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 			),
 			Path(
 				Call("with nodes still assigned", func(ctx context.Context, mck Mock) {
-					getpg := mck.LinodeClient.EXPECT().GetPlacementGroup(ctx, gomock.Any()).Return(&linodego.PlacementGroup{
+					mck.LinodeClient.EXPECT().GetPlacementGroup(ctx, gomock.Any()).Return(&linodego.PlacementGroup{
 						ID:     1,
 						Label:  "pg1",
 						Region: "us-ord",
@@ -188,15 +188,13 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 							},
 						},
 					}, nil)
-					unassignCall := mck.LinodeClient.EXPECT().UnassignPlacementGroupLinodes(ctx, 1, gomock.Any()).After(getpg).Return(nil, nil)
-					mck.LinodeClient.EXPECT().DeletePlacementGroup(ctx, 1).After(unassignCall).Return(nil)
 				}),
 				OneOf(
-					Path(Result("delete nodes", func(ctx context.Context, mck Mock) {
+					Path(Result("requeues delete", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Logs()).To(ContainSubstring("Placement Group still has node(s) attached, unassigning them"))
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing deletion to wait for detachment"))
 					})),
 				),
 			),
