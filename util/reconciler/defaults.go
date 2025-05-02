@@ -51,7 +51,7 @@ const (
 	// DefaultPGControllerReconcilerDelay is the default requeue delay when Placement Group reconcile operation fails.
 	DefaultPGControllerReconcilerDelay = 5 * time.Second
 	// DefaultPGControllerReconcileTimeout is the default timeout when Placement Group reconcile operations fail.
-	DefaultPGControllerReconcileTimeout = 1 * time.Minute
+	DefaultPGControllerReconcileTimeout = 20 * time.Minute
 	// DefaultPGControllerWaitForHasNodesTimeout is the default timeout when waiting for nodes attached to Placement Group.
 	DefaultPGControllerWaitForHasNodesTimeout = 20 * time.Minute
 
