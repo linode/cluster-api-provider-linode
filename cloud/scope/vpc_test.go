@@ -141,7 +141,7 @@ func TestNewVPCScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewVPCScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewVPCScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -205,7 +205,7 @@ func TestVPCScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
@@ -216,7 +216,7 @@ func TestVPCScopeMethods(t *testing.T) {
 				t.Errorf("NewVPCScope() error = %v", err)
 			}
 
-			if err := vScope.AddFinalizer(context.Background()); err != nil {
+			if err := vScope.AddFinalizer(t.Context()); err != nil {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
@@ -299,7 +299,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
@@ -310,7 +310,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewVPCScope() error = %v", err)
 			}
 
-			if err := vScope.AddCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := vScope.AddCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("VPCScope.AddCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -389,7 +389,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
@@ -400,7 +400,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewVPCScope() error = %v", err)
 			}
 
-			if err := vScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := vScope.RemoveCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("VPCScope.RemoveCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -476,7 +476,7 @@ func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				VPCScopeParams{
 					Client:    mockK8sClient,
@@ -486,7 +486,7 @@ func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			if err != nil {
 				t.Errorf("NewVPCScope() error = %v", err)
 			}
-			if err := vScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+			if err := vScope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})

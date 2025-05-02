@@ -32,9 +32,8 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 const (
@@ -50,7 +49,7 @@ var (
 	)
 )
 
-func validateRegion(ctx context.Context, linodegoclient LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {
+func validateRegion(ctx context.Context, linodegoclient clients.LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {
 	region, err := linodegoclient.GetRegion(ctx, id)
 	if err != nil {
 		return field.NotFound(path, id)
@@ -65,7 +64,7 @@ func validateRegion(ctx context.Context, linodegoclient LinodeClient, id string,
 	return nil
 }
 
-func validateLinodeType(ctx context.Context, linodegoclient LinodeClient, id string, path *field.Path) (*linodego.LinodeType, *field.Error) {
+func validateLinodeType(ctx context.Context, linodegoclient clients.LinodeClient, id string, path *field.Path) (*linodego.LinodeType, *field.Error) {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	plan, err := linodegoclient.GetType(ctx, id)
 	if err != nil {
@@ -86,7 +85,7 @@ func validateLinodeType(ctx context.Context, linodegoclient LinodeClient, id str
 // [Clusters List]: https://www.linode.com/docs/api/object-storage/#clusters-list
 // [Cluster View]: https://www.linode.com/docs/api/object-storage/#cluster-view
 
-func validateObjectStorageRegion(ctx context.Context, linodegoclient LinodeClient, id string, path *field.Path) *field.Error {
+func validateObjectStorageRegion(ctx context.Context, linodegoclient clients.LinodeClient, id string, path *field.Path) *field.Error {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 
 	cexp := regexp.MustCompile("^(([[:lower:]]+-)*[[:lower:]]+)$")
@@ -103,7 +102,7 @@ func validateObjectStorageRegion(ctx context.Context, linodegoclient LinodeClien
 	return validateRegion(ctx, linodegoclient, region, path, LinodeObjectStorageCapability)
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
+func getCredentialDataFromRef(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
 	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return nil, err
@@ -116,7 +115,7 @@ func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentia
 	return rawData, nil
 }
 
-func getCredentials(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
+func getCredentials(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
 	secretRef := client.ObjectKey{
 		Name:      credentialsRef.Name,
 		Namespace: credentialsRef.Namespace,
@@ -136,26 +135,26 @@ func getCredentials(ctx context.Context, crClient K8sClient, credentialsRef core
 // setupClientWithCredentials configures a Linode client with credentials from a secret reference
 // Returns (skipAPIValidation, client) - skipAPIValidation will be true if credentials cannot be found
 // and API validation should be skipped
-func setupClientWithCredentials(ctx context.Context, crClient K8sClient, credRef *corev1.SecretReference,
-	resourceName, namespace string, logger logr.Logger) (bool, LinodeClient) {
-	client := defaultLinodeClient
+func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient, credRef *corev1.SecretReference,
+	resourceName, namespace string, logger logr.Logger) (bool, clients.LinodeClient) {
+	linodeClient := defaultLinodeClient
 
 	apiToken, err := getCredentialDataFromRef(ctx, crClient, *credRef, namespace)
 	if err == nil {
 		logger.Info("creating a verified linode client for create request", "name", resourceName)
-		client.SetToken(string(apiToken))
-		return false, client
+		linodeClient.SetToken(string(apiToken))
+		return false, linodeClient
 	}
 
 	// Handle error cases
 	if apierrors.IsNotFound(err) {
 		logger.Info("credentials secret not found, skipping API validation",
 			"name", resourceName, "secret", credRef.Name)
-		return true, client
+		return true, linodeClient
 	}
 
 	// For other errors, log the error but return the default client
 	// The caller should handle validation with the default client
 	logger.Error(err, "failed getting credentials from secret ref", "name", resourceName)
-	return false, client
+	return false, linodeClient
 }

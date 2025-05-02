@@ -141,7 +141,7 @@ func TestNewFirewallScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewFirewallScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewFirewallScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -205,7 +205,7 @@ func TestFirewallScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			fwScope, err := NewFirewallScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
@@ -216,7 +216,7 @@ func TestFirewallScopeMethods(t *testing.T) {
 				t.Errorf("NewFirewallScope() error = %v", err)
 			}
 
-			if err := fwScope.AddFinalizer(context.Background()); err != nil {
+			if err := fwScope.AddFinalizer(t.Context()); err != nil {
 				t.Errorf("NewFirewallScope.AddFinalizer() error = %v", err)
 			}
 
@@ -299,7 +299,7 @@ func TestFirewallAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewFirewallScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
@@ -310,7 +310,7 @@ func TestFirewallAddCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewFirewallScope() error = %v", err)
 			}
 
-			if err := pgScope.AddCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := pgScope.AddCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("NewFirewallScope.AddCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -389,7 +389,7 @@ func TestFirewallRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewFirewallScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
@@ -400,7 +400,7 @@ func TestFirewallRemoveCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewFirewallScope() error = %v", err)
 			}
 
-			if err := pgScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := pgScope.RemoveCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("FirewallScope.RemoveCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -486,7 +486,7 @@ func TestFirewallSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewFirewallScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
@@ -497,7 +497,7 @@ func TestFirewallSetCredentialRefTokenForLinodeClients(t *testing.T) {
 				t.Errorf("NewFirewallScope() error = %v", err)
 			}
 
-			if err := pgScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+			if err := pgScope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})

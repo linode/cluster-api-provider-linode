@@ -70,7 +70,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	log := ctrl.LoggerFrom(ctx).WithName("LinodeFirewallReconciler").WithValues("name", req.NamespacedName.String())
+	log := ctrl.LoggerFrom(ctx).WithName("LinodeFirewallReconciler").WithValues("name", req.String())
 	linodeFirewall := &infrav1alpha2.LinodeFirewall{}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeFirewall); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
@@ -81,7 +81,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	var err error
 	var cluster *clusterv1.Cluster
-	if _, ok := linodeFirewall.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+	if _, ok := linodeFirewall.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeFirewall.ObjectMeta)
 		if err != nil {
 			// If we're deleting and cluster isn't found, that's okay
@@ -163,7 +163,7 @@ func (r *LinodeFirewallReconciler) reconcile(
 	}
 
 	// Delete
-	if !fwScope.LinodeFirewall.ObjectMeta.DeletionTimestamp.IsZero() {
+	if !fwScope.LinodeFirewall.DeletionTimestamp.IsZero() {
 		failureReason = infrav1alpha2.DeleteFirewallError
 
 		return r.reconcileDelete(ctx, logger, fwScope)

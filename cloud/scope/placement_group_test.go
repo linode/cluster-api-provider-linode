@@ -141,7 +141,7 @@ func TestNewPlacementGroupScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewPlacementGroupScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewPlacementGroupScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -205,7 +205,7 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
@@ -216,7 +216,7 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 				t.Errorf("NewPlacementGroupScope() error = %v", err)
 			}
 
-			if err := pgScope.AddFinalizer(context.Background()); err != nil {
+			if err := pgScope.AddFinalizer(t.Context()); err != nil {
 				t.Errorf("NewPlacementGroupScope.AddFinalizer() error = %v", err)
 			}
 
@@ -299,7 +299,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
@@ -310,7 +310,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewPlacementGroupScope() error = %v", err)
 			}
 
-			if err := pgScope.AddCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := pgScope.AddCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("NewPlacementGroupScope.AddCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -389,7 +389,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
@@ -400,7 +400,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewPlacementGroupScope() error = %v", err)
 			}
 
-			if err := pgScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := pgScope.RemoveCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("PlacementGroupScope.RemoveCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -475,7 +475,7 @@ func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
@@ -485,7 +485,7 @@ func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			if err != nil {
 				t.Errorf("NewPGScope() error = %v", err)
 			}
-			if err := pgScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+			if err := pgScope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})

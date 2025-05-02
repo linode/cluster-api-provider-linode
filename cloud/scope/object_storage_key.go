@@ -17,21 +17,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 type ObjectStorageKeyScopeParams struct {
-	Client K8sClient
+	Client clients.K8sClient
 	Key    *infrav1alpha2.LinodeObjectStorageKey
 	Logger *logr.Logger
 }
 
 type ObjectStorageKeyScope struct {
-	Client       K8sClient
+	Client       clients.K8sClient
 	Key          *infrav1alpha2.LinodeObjectStorageKey
 	Logger       logr.Logger
-	LinodeClient LinodeClient
+	LinodeClient clients.LinodeClient
 	PatchHelper  *patch.Helper
 }
 
@@ -104,7 +103,7 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 		"SecretKey": key.SecretKey,
 	}
 
-	if len(s.Key.Spec.GeneratedSecret.Format) == 0 {
+	if len(s.Key.Spec.Format) == 0 {
 		secretStringData = map[string]string{
 			"access_key": key.AccessKey,
 			"secret_key": key.SecretKey,
@@ -129,7 +128,7 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 		tmplData["S3Endpoint"] = "https://" + strings.TrimPrefix(bucket.Hostname, bucket.Label+".")
 	}
 
-	for key, tmpl := range s.Key.Spec.GeneratedSecret.Format {
+	for key, tmpl := range s.Key.Spec.Format {
 		goTmpl, err := template.New(key).Parse(tmpl)
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate secret; failed to parse template in secret data format for key %s: %w", key, err)
@@ -145,18 +144,18 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.Key.Spec.GeneratedSecret.Name,
-			Namespace: s.Key.Spec.GeneratedSecret.Namespace,
+			Name:      s.Key.Spec.Name,
+			Namespace: s.Key.Spec.Namespace,
 		},
-		Type:       s.Key.Spec.GeneratedSecret.Type,
+		Type:       s.Key.Spec.Type,
 		StringData: secretStringData,
 	}
 
 	// Set an owner reference on a Secret if it will exist in the same namespace as the Key resource.
 	// Kubernetes does not allow cross-namespace ownership so modifications to a Secret in another namespace won't trigger reconciliation.
-	if s.Key.Spec.GeneratedSecret.Namespace == s.Key.Namespace {
+	if s.Key.Spec.Namespace == s.Key.Namespace {
 		if err := controllerutil.SetControllerReference(s.Key, &secret, s.Client.Scheme()); err != nil {
-			return nil, fmt.Errorf("could not set controller ref on access key secret %s/%s: %w", s.Key.Spec.GeneratedSecret.Name, s.Key.Spec.GeneratedSecret.Namespace, err)
+			return nil, fmt.Errorf("could not set controller ref on access key secret %s/%s: %w", s.Key.Spec.Name, s.Key.Spec.Namespace, err)
 		}
 	}
 

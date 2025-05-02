@@ -99,10 +99,7 @@ func (c *ClusterIPs) getNextIP() string {
 	currentIp := prefix.Addr().Next()
 
 	ipString := currentIp.String()
-	for {
-		if !slices.Contains(c.ips, ipString) {
-			break
-		}
+	for slices.Contains(c.ips, ipString) {
 		currentIp = currentIp.Next()
 		ipString = currentIp.String()
 	}

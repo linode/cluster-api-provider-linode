@@ -283,7 +283,7 @@ func linodeClusterToLinodeMachines(logger logr.Logger, tracedClient client.Clien
 			return nil
 		}
 
-		if !linodeCluster.ObjectMeta.DeletionTimestamp.IsZero() {
+		if !linodeCluster.DeletionTimestamp.IsZero() {
 			logger.Info("Cluster has a deletion timestamp, skipping mapping")
 
 			return nil

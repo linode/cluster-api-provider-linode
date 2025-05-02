@@ -30,8 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 var linodeclusterlog = logf.Log.WithName("linodecluster-resource")
@@ -60,7 +59,7 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, obj runtime
 	spec := cluster.Spec
 	linodeclusterlog.Info("validate create", "name", cluster.Name)
 
-	var linodeclient LinodeClient = defaultLinodeClient
+	var linodeclient clients.LinodeClient = defaultLinodeClient
 	skipAPIValidation := false
 
 	// Handle credentials if provided
@@ -108,7 +107,7 @@ func (r *linodeClusterValidator) ValidateDelete(ctx context.Context, obj runtime
 	return nil, nil
 }
 
-func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeClusterSpec, skipAPIValidation bool) field.ErrorList {
+func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeClusterSpec, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
 	if !skipAPIValidation {

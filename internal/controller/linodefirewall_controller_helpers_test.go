@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -169,7 +168,7 @@ func TestProcessACL(t *testing.T) {
 			t.Parallel()
 			logger := logr.Logger{}
 
-			got, err := processACL(context.Background(), k8sClient, logger, tt.firewall)
+			got, err := processACL(t.Context(), k8sClient, logger, tt.firewall)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("processACL() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -536,7 +535,7 @@ func TestProcessInboundRule(t *testing.T) {
 			t.Parallel()
 			logger := logr.Logger{}
 			for _, rule := range tt.firewall.Spec.InboundRules {
-				err := processRule(context.Background(), k8sClient, tt.firewall, logger, rule, ruleTypeInbound, tt.createOpts)
+				err := processRule(t.Context(), k8sClient, tt.firewall, logger, rule, ruleTypeInbound, tt.createOpts)
 				require.NoError(t, err)
 				if !reflect.DeepEqual(tt.createOpts, tt.want) {
 					t.Errorf("processRule (inbound) \n got: %+v\n want %+v", tt.createOpts, tt.want)
@@ -606,7 +605,7 @@ func TestProcessOutboundRule(t *testing.T) {
 			t.Parallel()
 			logger := logr.Logger{}
 			for _, rule := range tt.firewall.Spec.OutboundRules {
-				err := processRule(context.Background(), k8sClient, tt.firewall, logger, rule, ruleTypeOutbound, tt.createOpts)
+				err := processRule(t.Context(), k8sClient, tt.firewall, logger, rule, ruleTypeOutbound, tt.createOpts)
 				require.NoError(t, err)
 				if !reflect.DeepEqual(tt.createOpts, tt.want) {
 					t.Errorf("processRule (outbound) \n got: %+v\n want %+v", tt.createOpts, tt.want)

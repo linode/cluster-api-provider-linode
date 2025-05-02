@@ -36,8 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 var (
@@ -100,7 +99,7 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 	spec := vpc.Spec
 	linodevpclog.Info("validate create", "name", vpc.Name)
 
-	var linodeclient LinodeClient = defaultLinodeClient
+	var linodeclient clients.LinodeClient = defaultLinodeClient
 	skipAPIValidation := false
 
 	// Handle credentials if provided
@@ -145,7 +144,7 @@ func (r *linodeVPCValidator) ValidateDelete(ctx context.Context, obj runtime.Obj
 	return nil, nil
 }
 
-func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeVPCSpec, skipAPIValidation bool) field.ErrorList {
+func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeVPCSpec, skipAPIValidation bool) field.ErrorList {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
@@ -255,7 +254,7 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 	)
 
 	prefix, ferr := netip.ParsePrefix(cidr)
-	if !(ferr == nil && prefix.Addr().Is4()) {
+	if ferr != nil || !prefix.Addr().Is4() {
 		return nil, field.Invalid(path, cidr, errs[0].Error())
 	}
 	if netipx.ComparePrefix(prefix, prefix.Masked()) != 0 {

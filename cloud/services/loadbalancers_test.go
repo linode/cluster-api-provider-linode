@@ -453,7 +453,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 
 			testcase.expects(MockLinodeClient, MockK8sClient)
 
-			got, err := EnsureNodeBalancer(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := EnsureNodeBalancer(t.Context(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
@@ -757,7 +757,7 @@ func TestGetSubnetID(t *testing.T) {
 
 			testcase.expects(mockK8sClient)
 
-			got, err := getSubnetID(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := getSubnetID(t.Context(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != "" {
 				require.ErrorContains(t, err, testcase.expectedError)
 			} else {
@@ -926,7 +926,7 @@ func TestGetSubnetIDWithVPCID(t *testing.T) {
 
 			testcase.expects(mockClient)
 
-			got, err := getSubnetID(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := getSubnetID(t.Context(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != "" {
 				require.ErrorContains(t, err, testcase.expectedError)
 			} else {
@@ -1163,7 +1163,7 @@ func TestProcessAndCreateNodeBalancerNodes(t *testing.T) {
 			testcase.expects(mockClient)
 
 			err := processAndCreateNodeBalancerNodes(
-				context.Background(),
+				t.Context(),
 				testcase.ipAddress,
 				testcase.clusterScope,
 				testcase.nodeBalancerNodes,
@@ -1456,7 +1456,7 @@ func TestEnsureNodeBalancerConfigs(t *testing.T) {
 
 			testcase.expects(MockLinodeClient)
 
-			got, err := EnsureNodeBalancerConfigs(context.Background(), testcase.clusterScope, logr.Discard())
+			got, err := EnsureNodeBalancerConfigs(t.Context(), testcase.clusterScope, logr.Discard())
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
@@ -1570,7 +1570,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 			testcase.expectK8sClient(MockK8sClient)
 
 			for _, eachMachine := range testcase.clusterScope.LinodeMachines.Items {
-				err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope, eachMachine, []linodego.NodeBalancerNode{})
+				err := AddNodesToNB(t.Context(), logr.Discard(), testcase.clusterScope, eachMachine, []linodego.NodeBalancerNode{})
 				if testcase.expectedError != nil {
 					assert.ErrorContains(t, err, testcase.expectedError.Error())
 				}
@@ -1909,7 +1909,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 			testcase.expectK8sClient(MockK8sClient)
 
 			for _, eachMachine := range testcase.clusterScope.LinodeMachines.Items {
-				err := AddNodesToNB(context.Background(), logr.Discard(), testcase.clusterScope, eachMachine, []linodego.NodeBalancerNode{})
+				err := AddNodesToNB(t.Context(), logr.Discard(), testcase.clusterScope, eachMachine, []linodego.NodeBalancerNode{})
 				if testcase.expectedError != nil {
 					assert.ErrorContains(t, err, testcase.expectedError.Error())
 				}
@@ -2200,7 +2200,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 			testcase.clusterScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := DeleteNodesFromNB(context.Background(), logr.Discard(), testcase.clusterScope)
+			err := DeleteNodesFromNB(t.Context(), logr.Discard(), testcase.clusterScope)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
@@ -2528,7 +2528,7 @@ func TestGetFirewallID(t *testing.T) {
 			test.mockSetup(mockK8sClient)
 
 			// Execute
-			result, err := getFirewallID(context.Background(), test.clusterScope, logr.Discard())
+			result, err := getFirewallID(t.Context(), test.clusterScope, logr.Discard())
 
 			// Verify
 			if test.expectedErr {
@@ -2934,7 +2934,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 			test.mockSetup(mockLinodeClient, mockK8sClient)
 
 			// Execute
-			err := AddNodesToNB(context.Background(), logr.Discard(), test.clusterScope, test.linodeMachine, test.nodeBalancerNodes)
+			err := AddNodesToNB(t.Context(), logr.Discard(), test.clusterScope, test.linodeMachine, test.nodeBalancerNodes)
 
 			// Verify
 			if test.expectedError != nil {

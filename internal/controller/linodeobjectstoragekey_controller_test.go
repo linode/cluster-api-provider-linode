@@ -257,7 +257,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 			),
 		),
 		Once("secret type set to cluster resource set fails", func(ctx context.Context, _ Mock) {
-			key.Spec.GeneratedSecret.Type = clusteraddonsv1.ClusterResourceSetSecretType
+			key.Spec.Type = clusteraddonsv1.ClusterResourceSetSecretType
 			Expect(k8sClient.Update(ctx, &key)).NotTo(Succeed())
 		}),
 		Once("resource is deleted", func(ctx context.Context, _ Mock) {
@@ -352,10 +352,10 @@ var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 			Path(
 				Call("with opaque secret", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
-					keyScope.Key.ObjectMeta.Name = "opaque"
-					keyScope.Key.Spec.GeneratedSecret.Name = "opaque-custom-secret"
-					keyScope.Key.Spec.GeneratedSecret.Type = corev1.SecretTypeOpaque
-					keyScope.Key.Spec.GeneratedSecret.Format = map[string]string{
+					keyScope.Key.Name = "opaque"
+					keyScope.Key.Spec.Name = "opaque-custom-secret"
+					keyScope.Key.Spec.Type = corev1.SecretTypeOpaque
+					keyScope.Key.Spec.Format = map[string]string{
 						"data": "{{ .AccessKey }}-{{ .SecretKey }}",
 					}
 
@@ -382,10 +382,10 @@ var _ = Describe("custom-secret", Label("key", "key-custom-secret"), func() {
 			Path(
 				Call("with cluster-resource-set secret", func(ctx context.Context, mck Mock) {
 					keyScope.LinodeClient = mck.LinodeClient
-					keyScope.Key.ObjectMeta.Name = "cluster-resource-set"
-					keyScope.Key.Spec.GeneratedSecret.Name = "cluster-resource-set-custom-secret"
-					keyScope.Key.Spec.GeneratedSecret.Type = clusteraddonsv1.ClusterResourceSetSecretType
-					keyScope.Key.Spec.GeneratedSecret.Format = map[string]string{
+					keyScope.Key.Name = "cluster-resource-set"
+					keyScope.Key.Spec.Name = "cluster-resource-set-custom-secret"
+					keyScope.Key.Spec.Type = clusteraddonsv1.ClusterResourceSetSecretType
+					keyScope.Key.Spec.Format = map[string]string{
 						"data": "{{ .AccessKey }}-{{ .SecretKey }}-{{ .BucketEndpoint }}",
 					}
 
@@ -568,7 +568,7 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 		),
 		Once("finalizer is missing", func(ctx context.Context, _ Mock) {
 			keyScope.Key.Status.AccessKeyRef = ptr.To(1)
-			keyScope.Key.ObjectMeta.Finalizers = []string{}
+			keyScope.Key.Finalizers = []string{}
 		}),
 		Call("revoke key", func(ctx context.Context, mck Mock) {
 			mck.LinodeClient.EXPECT().DeleteObjectStorageKey(gomock.Any(), gomock.Any()).Return(nil)

@@ -46,7 +46,7 @@ func TestOptional(t *testing.T) {
 		assert.Equal(t, val, ret)
 
 		ret = Optional[string](nil)
-		assert.Equal(t, "", ret)
+		assert.Empty(t, ret)
 	})
 
 	t.Run("slice", func(t *testing.T) {

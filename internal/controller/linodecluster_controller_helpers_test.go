@@ -434,7 +434,7 @@ func TestAddMachineToLB(t *testing.T) {
 			testcase.clusterScope.Client = mockK8sClient
 
 			// Create a context with logger
-			ctx := context.Background()
+			ctx := t.Context()
 			logger := testr.New(t)
 			ctx = logr.NewContext(ctx, logger)
 
@@ -594,8 +594,8 @@ func TestLinodeMachineToLinodeCluster(t *testing.T) {
 						Namespace: "default",
 					}, gomock.AssignableToTypeOf(&infrav1alpha2.LinodeCluster{})).
 					DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *infrav1alpha2.LinodeCluster, _ ...client.GetOption) error {
-						obj.ObjectMeta.Name = "test-cluster"
-						obj.ObjectMeta.Namespace = "default"
+						obj.Name = "test-cluster"
+						obj.Namespace = "default"
 						return nil
 					})
 			},
@@ -647,7 +647,7 @@ func TestLinodeMachineToLinodeCluster(t *testing.T) {
 			mapFunc := linodeMachineToLinodeCluster(mockClient, logger)
 
 			// Call the function with the test input
-			ctx := context.Background()
+			ctx := t.Context()
 			result := mapFunc(ctx, testcase.inputObject)
 
 			// Verify the results

@@ -90,10 +90,10 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateDelete(ctx context.Conte
 func (v *LinodeObjectStorageKeyCustomValidator) validateLinodeObjectStorageKey(key *infrav1alpha2.LinodeObjectStorageKey) (admission.Warnings, error) {
 	var errs field.ErrorList
 
-	if key.Spec.GeneratedSecret.Type == clusteraddonsv1.ClusterResourceSetSecretType && len(key.Spec.GeneratedSecret.Format) == 0 {
+	if key.Spec.Type == clusteraddonsv1.ClusterResourceSetSecretType && len(key.Spec.Format) == 0 {
 		errs = append(errs, field.Invalid(
 			field.NewPath("spec").Child("generatedSecret").Child("format"),
-			key.Spec.GeneratedSecret.Format,
+			key.Spec.Format,
 			fmt.Sprintf("must not be empty with Secret type %s", clusteraddonsv1.ClusterResourceSetSecretType),
 		))
 	}
@@ -121,19 +121,19 @@ func (d *LinodeObjectStorageKeyDefaulter) Default(ctx context.Context, obj runti
 	linodeobjectstoragekeylog.Info("Defaulting for LinodeObjectStorageKey", "name", key.GetName())
 
 	// Default name and namespace derived from object metadata.
-	if key.Spec.GeneratedSecret.Name == "" {
-		key.Spec.GeneratedSecret.Name = fmt.Sprintf(defaultKeySecretNameTemplate, key.Name)
+	if key.Spec.Name == "" {
+		key.Spec.Name = fmt.Sprintf(defaultKeySecretNameTemplate, key.Name)
 	}
-	if key.Spec.GeneratedSecret.Namespace == "" {
-		key.Spec.GeneratedSecret.Namespace = key.Namespace
+	if key.Spec.Namespace == "" {
+		key.Spec.Namespace = key.Namespace
 	}
 
 	// Support deprecated fields when specified and updated fields are empty.
-	if key.Spec.SecretType != "" && key.Spec.GeneratedSecret.Type == "" {
-		key.Spec.GeneratedSecret.Type = key.Spec.SecretType
+	if key.Spec.SecretType != "" && key.Spec.Type == "" {
+		key.Spec.Type = key.Spec.SecretType
 	}
-	if len(key.Spec.SecretDataFormat) > 0 && len(key.Spec.GeneratedSecret.Format) == 0 {
-		key.Spec.GeneratedSecret.Format = key.Spec.SecretDataFormat
+	if len(key.Spec.SecretDataFormat) > 0 && len(key.Spec.Format) == 0 {
+		key.Spec.Format = key.Spec.SecretDataFormat
 	}
 
 	return nil

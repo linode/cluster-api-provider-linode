@@ -12,12 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 type MachineScopeParams struct {
-	Client        K8sClient
+	Client        clients.K8sClient
 	Cluster       *clusterv1.Cluster
 	Machine       *clusterv1.Machine
 	LinodeCluster *infrav1alpha2.LinodeCluster
@@ -25,14 +24,14 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client          K8sClient
-	S3Client        S3Client
-	S3PresignClient S3PresignClient
+	Client          clients.K8sClient
+	S3Client        clients.S3Client
+	S3PresignClient clients.S3PresignClient
 	PatchHelper     *patch.Helper
 	Cluster         *clusterv1.Cluster
 	Machine         *clusterv1.Machine
 	TokenHash       string
-	LinodeClient    LinodeClient
+	LinodeClient    clients.LinodeClient
 	LinodeCluster   *infrav1alpha2.LinodeCluster
 	LinodeMachine   *infrav1alpha2.LinodeMachine
 }
