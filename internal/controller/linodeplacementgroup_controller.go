@@ -75,7 +75,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	log := ctrl.LoggerFrom(ctx).WithName("LinodePlacementGroupReconciler").WithValues("name", req.NamespacedName.String())
+	log := ctrl.LoggerFrom(ctx).WithName("LinodePlacementGroupReconciler").WithValues("name", req.String())
 
 	linodeplacementgroup := &infrav1alpha2.LinodePlacementGroup{}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeplacementgroup); err != nil {
@@ -87,7 +87,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 	var cluster *clusterv1.Cluster
 	var err error
-	if _, ok := linodeplacementgroup.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+	if _, ok := linodeplacementgroup.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeplacementgroup.ObjectMeta)
 		if err != nil {
 			// If we're deleting and cluster isn't found, that's okay
@@ -174,7 +174,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	}
 
 	// Delete
-	if !pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.IsZero() {
+	if !pgScope.LinodePlacementGroup.DeletionTimestamp.IsZero() {
 		failureReason = infrav1alpha2.DeletePlacementGroupError
 
 		res, err = r.reconcileDelete(ctx, logger, pgScope)

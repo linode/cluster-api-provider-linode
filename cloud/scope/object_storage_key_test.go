@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	clusteraddonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
+	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -156,7 +156,7 @@ func TestNewObjectStorageKeyScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewObjectStorageKeyScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewObjectStorageKeyScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedErr != nil {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())
@@ -216,7 +216,7 @@ func TestObjectStorageKeyAddFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			keyScope, err := NewObjectStorageKeyScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				ObjectStorageKeyScopeParams{
 					Client: mockK8sClient,
@@ -227,7 +227,7 @@ func TestObjectStorageKeyAddFinalizer(t *testing.T) {
 				t.Errorf("NewObjectStorageBucketScope() error = %v", err)
 			}
 
-			if err := keyScope.AddFinalizer(context.Background()); err != nil {
+			if err := keyScope.AddFinalizer(t.Context()); err != nil {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
@@ -536,7 +536,7 @@ func TestGenerateKeySecret(t *testing.T) {
 				Key:          testcase.Key,
 			}
 
-			secret, err := keyScope.GenerateKeySecret(context.Background(), testcase.key)
+			secret, err := keyScope.GenerateKeySecret(t.Context(), testcase.key)
 			if testcase.expectedErr != nil {
 				require.ErrorContains(t, err, testcase.expectedErr.Error())
 				return
@@ -687,13 +687,13 @@ func TestObjectStorageKeySetCredentialRefTokenForLinodeClients(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			kscope, err := NewObjectStorageKeyScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			kscope, err := NewObjectStorageKeyScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if err != nil {
 				t.Errorf("NewObjectStorageKeyScope() error = %v", err)
 			}
 
-			if err := kscope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+			if err := kscope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())
 			}
 		})

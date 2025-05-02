@@ -26,23 +26,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // VPCScope defines the basic context for an actuator to operate upon.
 type VPCScope struct {
-	Client K8sClient
-
+	Client       clients.K8sClient
 	PatchHelper  *patch.Helper
-	LinodeClient LinodeClient
+	LinodeClient clients.LinodeClient
 	LinodeVPC    *infrav1alpha2.LinodeVPC
 	Cluster      *clusterv1.Cluster
 }
 
 // VPCScopeParams defines the input parameters used to create a new Scope.
 type VPCScopeParams struct {
-	Client    K8sClient
+	Client    clients.K8sClient
 	LinodeVPC *infrav1alpha2.LinodeVPC
 	Cluster   *clusterv1.Cluster
 }

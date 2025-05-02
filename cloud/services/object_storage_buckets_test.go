@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -196,7 +195,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 
 			testcase.expects(mockClient)
 
-			got, err := EnsureAndUpdateObjectStorageBucket(context.Background(), testcase.bScope)
+			got, err := EnsureAndUpdateObjectStorageBucket(t.Context(), testcase.bScope)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {

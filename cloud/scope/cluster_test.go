@@ -158,7 +158,7 @@ func TestClusterScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			cScope, err := NewClusterScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				ClientConfig{Token: "test-key"},
 				ClusterScopeParams{
@@ -171,7 +171,7 @@ func TestClusterScopeMethods(t *testing.T) {
 				t.Errorf("NewClusterScope() error = %v", err)
 			}
 
-			if err := cScope.AddFinalizer(context.Background()); err != nil {
+			if err := cScope.AddFinalizer(t.Context()); err != nil {
 				t.Errorf("ClusterScope.AddFinalizer() error = %v", err)
 			}
 
@@ -267,7 +267,7 @@ func TestNewClusterScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewClusterScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, ClientConfig{Token: testcase.args.dnsApiKey}, testcase.args.params)
+			got, err := NewClusterScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, ClientConfig{Token: testcase.args.dnsApiKey}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -364,7 +364,7 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			cScope, err := NewClusterScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				ClientConfig{Token: "test-key"},
 				ClusterScopeParams{
@@ -377,7 +377,7 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewClusterScope() error = %v", err)
 			}
 
-			if err := cScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := cScope.RemoveCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("ClusterScope.RemoveCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -479,7 +479,7 @@ func TestClusterSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			cScope, err := NewClusterScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "test-key"},
 				ClientConfig{Token: "test-key"},
 				ClusterScopeParams{
@@ -492,7 +492,7 @@ func TestClusterSetCredentialRefTokenForLinodeClients(t *testing.T) {
 				t.Errorf("NewClusterScope() error = %v", err)
 			}
 
-			if err := cScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+			if err := cScope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})

@@ -155,7 +155,7 @@ func linodeMachineToLinodeCluster(tracedClient client.Client, logger logr.Logger
 		if err := tracedClient.Get(
 			ctx,
 			types.NamespacedName{
-				Name:      linodeMachine.ObjectMeta.Labels[clusterv1.ClusterNameLabel],
+				Name:      linodeMachine.Labels[clusterv1.ClusterNameLabel],
 				Namespace: linodeMachine.Namespace,
 			},
 			&linodeCluster); err != nil {

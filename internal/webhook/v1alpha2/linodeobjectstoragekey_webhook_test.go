@@ -17,14 +17,13 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusteraddonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
+	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
@@ -129,16 +128,16 @@ func TestLinodeObjectStorageKeyDefault(t *testing.T) {
 				},
 			}
 
-			err := defaulter.Default(context.TODO(), key)
+			err := defaulter.Default(t.Context(), key)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if key.Spec.GeneratedSecret.Name != testcase.expectedName {
-				t.Errorf("name: expected %s but got %s", testcase.expectedName, key.Spec.GeneratedSecret.Name)
+			if key.Spec.Name != testcase.expectedName {
+				t.Errorf("name: expected %s but got %s", testcase.expectedName, key.Spec.Name)
 			}
-			if key.Spec.GeneratedSecret.Namespace != testcase.expectedNamespace {
-				t.Errorf("name: expected %s but got %s", testcase.expectedNamespace, key.Spec.GeneratedSecret.Namespace)
+			if key.Spec.Namespace != testcase.expectedNamespace {
+				t.Errorf("name: expected %s but got %s", testcase.expectedNamespace, key.Spec.Namespace)
 			}
 		})
 	}

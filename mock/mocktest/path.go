@@ -23,7 +23,7 @@ func (p path) describe() string {
 	for _, c := range p.calls {
 		text = append(text, c.text)
 	}
-	text = append(text, p.result.text)
+	text = append(text, p.text)
 	return strings.Join(text, " > ")
 }
 

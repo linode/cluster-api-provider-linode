@@ -26,13 +26,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
 type ClusterScopeParams struct {
-	Client            K8sClient
+	Client            clients.K8sClient
 	Cluster           *clusterv1.Cluster
 	LinodeCluster     *infrav1alpha2.LinodeCluster
 	LinodeMachineList infrav1alpha2.LinodeMachineList
@@ -89,14 +88,14 @@ func NewClusterScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	Client              K8sClient
+	Client              clients.K8sClient
 	PatchHelper         *patch.Helper
-	LinodeClient        LinodeClient
+	LinodeClient        clients.LinodeClient
 	Cluster             *clusterv1.Cluster
 	LinodeCluster       *infrav1alpha2.LinodeCluster
 	LinodeMachines      infrav1alpha2.LinodeMachineList
-	AkamaiDomainsClient AkamClient
-	LinodeDomainsClient LinodeClient
+	AkamaiDomainsClient clients.AkamClient
+	LinodeDomainsClient clients.LinodeClient
 }
 
 // PatchObject persists the cluster configuration and status.

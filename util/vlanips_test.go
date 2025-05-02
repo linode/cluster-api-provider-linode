@@ -17,7 +17,6 @@ limitations under the License.
 package util
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
@@ -64,7 +63,7 @@ func TestGetNextVlanIP(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			tt.expects(mockK8sClient)
-			got, err := GetNextVlanIP(context.Background(), tt.clusterName, tt.clusterNamespace, mockK8sClient)
+			got, err := GetNextVlanIP(t.Context(), tt.clusterName, tt.clusterNamespace, mockK8sClient)
 			if err != nil {
 				t.Error("error")
 			}

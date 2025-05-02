@@ -82,14 +82,14 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	logger := r.Logger.WithValues("name", req.NamespacedName.String())
+	logger := r.Logger.WithValues("name", req.String())
 
 	tracedClient := r.TracedClient()
 
 	objectStorageKey := &infrav1alpha2.LinodeObjectStorageKey{}
 	if err := tracedClient.Get(ctx, req.NamespacedName, objectStorageKey); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
-			logger.Error(err, "Failed to fetch LinodeObjectStorageKey", "name", req.NamespacedName.String())
+			logger.Error(err, "Failed to fetch LinodeObjectStorageKey", "name", req.String())
 		}
 
 		return ctrl.Result{}, err
@@ -187,8 +187,8 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 	case keyScope.Key.Status.AccessKeyRef != nil:
 		secret := &corev1.Secret{}
 		key := client.ObjectKey{
-			Namespace: keyScope.Key.Spec.GeneratedSecret.Namespace,
-			Name:      keyScope.Key.Spec.GeneratedSecret.Name,
+			Namespace: keyScope.Key.Spec.Namespace,
+			Name:      keyScope.Key.Spec.Name,
 		}
 
 		if err := keyScope.Client.Get(ctx, key, secret); err != nil {
@@ -224,7 +224,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 
 		emptySecret := &corev1.Secret{ObjectMeta: secret.ObjectMeta}
 		operation, err := controllerutil.CreateOrUpdate(ctx, keyScope.Client, emptySecret, func() error {
-			emptySecret.Type = keyScope.Key.Spec.GeneratedSecret.Type
+			emptySecret.Type = keyScope.Key.Spec.Type
 			emptySecret.StringData = secret.StringData
 			emptySecret.Data = nil
 
@@ -267,11 +267,11 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "KeyRevoked", "Object storage key revoked")
 
 	// If this key's Secret was generated in another namespace, manually delete it since it has no owner reference.
-	if keyScope.Key.Spec.GeneratedSecret.Namespace != keyScope.Key.Namespace {
+	if keyScope.Key.Spec.Namespace != keyScope.Key.Namespace {
 		secret := corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      keyScope.Key.Spec.GeneratedSecret.Name,
-				Namespace: keyScope.Key.Spec.GeneratedSecret.Namespace,
+				Name:      keyScope.Key.Spec.Name,
+				Namespace: keyScope.Key.Spec.Namespace,
 			},
 		}
 		if err := keyScope.Client.Delete(ctx, &secret); err != nil {

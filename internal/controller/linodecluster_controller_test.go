@@ -73,7 +73,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Name:      "vpctest",
 			Namespace: defaultNamespace,
 			Labels: map[string]string{
-				clusterv1.ClusterNameLabel: linodeCluster.ObjectMeta.Name,
+				clusterv1.ClusterNameLabel: linodeCluster.Name,
 			},
 		},
 		Spec: infrav1alpha2.LinodeVPCSpec{

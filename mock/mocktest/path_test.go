@@ -566,7 +566,7 @@ func TestRunWithoutTestReporter(t *testing.T) {
 
 	pth := path{}
 	assert.Panics(t, func() {
-		pth.run(context.Background(), Mock{})
+		pth.run(t.Context(), Mock{})
 	})
 }
 
@@ -579,7 +579,7 @@ func TestEvalOnceOnlyCallsOnce(t *testing.T) {
 		toggle = !toggle
 	}}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	mck := Mock{}
 	evalOnce(ctx, mck, &onceFn)
 	evalOnce(ctx, mck, &onceFn)

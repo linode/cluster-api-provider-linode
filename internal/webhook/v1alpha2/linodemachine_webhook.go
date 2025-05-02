@@ -33,8 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 var (
@@ -73,7 +72,7 @@ func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	var linodeclient LinodeClient = defaultLinodeClient
+	var linodeclient clients.LinodeClient = defaultLinodeClient
 	var errs field.ErrorList
 	skipAPIValidation := false
 
@@ -126,7 +125,7 @@ func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime
 	return nil, nil
 }
 
-func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodeMachineSpec, skipAPIValidation bool) field.ErrorList {
+func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeMachineSpec, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
 	if !skipAPIValidation {

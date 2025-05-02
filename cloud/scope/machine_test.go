@@ -442,7 +442,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "apiToken"},
 				MachineScopeParams{
 					Client:        mockK8sClient,
@@ -456,7 +456,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewMachineScope() error = %v", err)
 			}
 
-			if err := mScope.AddCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := mScope.AddCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("MachineScope.AddCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -535,7 +535,7 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "apiToken"},
 				MachineScopeParams{
 					Client:        mockK8sClient,
@@ -549,7 +549,7 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 				t.Errorf("NewMachineScope() error = %v", err)
 			}
 
-			if err := mScope.RemoveCredentialsRefFinalizer(context.Background()); err != nil {
+			if err := mScope.RemoveCredentialsRefFinalizer(t.Context()); err != nil {
 				t.Errorf("MachineScope.RemoveCredentialsRefFinalizer() error = %v", err)
 			}
 		})
@@ -700,7 +700,7 @@ func TestMachineSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				context.Background(),
+				t.Context(),
 				ClientConfig{Token: "apiToken"},
 				MachineScopeParams{
 					Client:        mockK8sClient,
@@ -714,7 +714,7 @@ func TestMachineSetCredentialRefTokenForLinodeClients(t *testing.T) {
 				t.Errorf("NewMachineScope() error = %v", err)
 			}
 
-			if err := mScope.SetCredentialRefTokenForLinodeClients(context.Background()); err != nil {
+			if err := mScope.SetCredentialRefTokenForLinodeClients(t.Context()); err != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
 		})
