@@ -268,8 +268,6 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 				logger.Info("Placement Group not found via API, assuming already deleted")
 				// Skip to finalizer removal outside this block
 			} else {
-				// Handle other Get errors
-				logger.Error(err, "Failed to fetch Placement Group from API")
 				if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
 					logger.Info("Re-queuing Placement Group deletion due to fetch error")
 					return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
@@ -308,9 +306,9 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 					logger.Info("Placement Group already deleted (API 404 on delete call)")
 					// Skip to finalizer removal outside this block
 				} else {
-					// Handle other delete errors
-					logger.Error(err, "Failed to delete Placement Group via API")
 					if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
+						// Need this requeue incase for some reason pg is not empty even though all the nodes are deleted.
+						// This should give enough time for PG to get updated on the backend and we can delete it next time.
 						logger.Info("Re-queuing Placement Group deletion due to API delete error")
 						return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
 					}
@@ -318,7 +316,6 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 				}
 			} else {
 				logger.Info("Placement Group deleted successfully via API")
-				// Continue to finalizer removal outside this block
 			}
 		}
 	} else {
