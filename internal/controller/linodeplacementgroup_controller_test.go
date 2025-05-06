@@ -23,6 +23,7 @@ import (
 
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -135,7 +136,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
-						Expect(mck.Logs()).To(ContainSubstring("Failed to fetch Placement Group"))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to fetch Placement Group from API"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
@@ -160,7 +161,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
-						Expect(mck.Logs()).To(ContainSubstring("Failed to delete Placement Group"))
+						Expect(mck.Logs()).To(ContainSubstring("Failed to delete Placement Group via API"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
@@ -173,7 +174,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 			),
 			Path(
 				Call("with nodes still assigned", func(ctx context.Context, mck Mock) {
-					getpg := mck.LinodeClient.EXPECT().GetPlacementGroup(ctx, gomock.Any()).Return(&linodego.PlacementGroup{
+					mck.LinodeClient.EXPECT().GetPlacementGroup(ctx, gomock.Any()).Return(&linodego.PlacementGroup{
 						ID:     1,
 						Label:  "pg1",
 						Region: "us-ord",
@@ -188,17 +189,39 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 							},
 						},
 					}, nil)
-					unassignCall := mck.LinodeClient.EXPECT().UnassignPlacementGroupLinodes(ctx, 1, gomock.Any()).After(getpg).Return(nil, nil)
-					mck.LinodeClient.EXPECT().DeletePlacementGroup(ctx, 1).After(unassignCall).Return(nil)
 				}),
 				OneOf(
-					Path(Result("delete nodes", func(ctx context.Context, mck Mock) {
+					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(mck.Logs()).To(ContainSubstring("Placement Group has node(s) attached, re-queuing deletion to wait for detachment"))
+					})),
+					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+						reconciler.ReconcileTimeout = time.Nanosecond
+						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Logs()).To(ContainSubstring("Placement Group still has node(s) attached, unassigning them"))
+						Expect(mck.Events()).To(ContainSubstring("Will not delete Placement Group"))
 					})),
 				),
+			),
+			Path(
+				Call("with no nodes attached", func(ctx context.Context, mck Mock) {
+					getPG := mck.LinodeClient.EXPECT().GetPlacementGroup(ctx, gomock.Any()).Return(&linodego.PlacementGroup{
+						ID:      1,
+						Label:   "pg1",
+						Region:  "us-east",
+						Members: []linodego.PlacementGroupMember{},
+					}, nil)
+					mck.LinodeClient.EXPECT().DeletePlacementGroup(ctx, gomock.Any()).After(getPG).Return(nil)
+				}),
+				Result("delete success", func(ctx context.Context, mck Mock) {
+					res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &linodePG))).To(BeTrue())
+				}),
 			),
 		),
 	)

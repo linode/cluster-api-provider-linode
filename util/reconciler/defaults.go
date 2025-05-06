@@ -41,17 +41,19 @@ const (
 
 	// DefaultVPCControllerReconcileDelay is the default requeue delay when a reconcile operation fails.
 	DefaultVPCControllerReconcileDelay = 5 * time.Second
-	// DefaultVPCControllerWaitForHasNodesTimeout is the default timeout when reconcile operations fail.
+	// DefaultVPCControllerReconcileTimeout is the default timeout when VPC reconcile operations fail.
 	DefaultVPCControllerReconcileTimeout = 20 * time.Minute
 	// DefaultVPCControllerWaitForHasNodesDelay is the default requeue delay if a VPC has nodes.
 	DefaultVPCControllerWaitForHasNodesDelay = 5 * time.Second
 	// DefaultVPCControllerWaitForHasNodesTimeout is the default timeout if a VPC still has nodes.
 	DefaultVPCControllerWaitForHasNodesTimeout = 20 * time.Minute
 
-	// DefaultPGControllerReconcilerDelay is the default requeue delay when a reconcile operation fails.
+	// DefaultPGControllerReconcilerDelay is the default requeue delay when Placement Group reconcile operation fails.
 	DefaultPGControllerReconcilerDelay = 5 * time.Second
-	// DefaultPGControllerReconcileTimeout is the default timeout when reconcile operations fail.
+	// DefaultPGControllerReconcileTimeout is the default timeout when Placement Group reconcile operations fail.
 	DefaultPGControllerReconcileTimeout = 20 * time.Minute
+	// DefaultPGControllerWaitForHasNodesTimeout is the default timeout when waiting for nodes attached to Placement Group.
+	DefaultPGControllerWaitForHasNodesTimeout = 20 * time.Minute
 
 	// DefaultFWControllerReconcilerDelay is the default requeue delay when a reconcile operation fails.
 	DefaultFWControllerReconcilerDelay = 5 * time.Second
