@@ -95,7 +95,7 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	if _, ok := objectStorageKey.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+	if _, ok := objectStorageKey.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), objectStorageKey.ObjectMeta)
 		if err != nil {
 			logger.Error(err, "failed to fetch cluster from metadata")

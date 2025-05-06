@@ -94,7 +94,7 @@ func IsLinodePrivateIP(ipAddress string) bool {
 }
 
 // SetOwnerReferenceToLinodeCluster fetches the LinodeCluster and sets it as the owner reference of a given object.
-func SetOwnerReferenceToLinodeCluster(ctx context.Context, client client.Client, cluster *clusterv1.Cluster, obj client.Object, scheme *runtime.Scheme) error {
+func SetOwnerReferenceToLinodeCluster(ctx context.Context, k8sclient client.Client, cluster *clusterv1.Cluster, obj client.Object, scheme *runtime.Scheme) error {
 	logger := log.Log.WithName("SetOwnerReferenceToLinodeCluster")
 
 	if cluster == nil || cluster.Spec.InfrastructureRef == nil {
@@ -107,7 +107,7 @@ func SetOwnerReferenceToLinodeCluster(ctx context.Context, client client.Client,
 		Namespace: cluster.Spec.InfrastructureRef.Namespace,
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
-	if err := client.Get(ctx, key, &linodeCluster); err != nil {
+	if err := k8sclient.Get(ctx, key, &linodeCluster); err != nil {
 		logger.Error(err, "Failed to fetch LinodeCluster")
 		return err
 	}

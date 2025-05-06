@@ -88,7 +88,7 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{}, err
 	}
 
-	if _, ok := objectStorageBucket.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+	if _, ok := objectStorageBucket.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), objectStorageBucket.ObjectMeta)
 		if err != nil {
 			logger.Error(err, "failed to fetch cluster from metadata")
