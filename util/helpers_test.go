@@ -268,10 +268,6 @@ func TestIsLinodePrivateIP(t *testing.T) {
 //nolint:gocognit,cyclop // This is a valid test function with high cognitive and cyclomatic complexity
 func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 	t.Parallel()
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	mockK8sClient := mock.NewMockK8sClient(mockCtrl)
 
 	baseTestScheme := runtime.NewScheme()
 	if err := clusterv1.AddToScheme(baseTestScheme); err != nil {
@@ -427,6 +423,11 @@ func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 		tc := tt // Capture range variable for parallel sub-tests
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockK8sClient := mock.NewMockK8sClient(mockCtrl)
+
 			tc.obj.SetOwnerReferences(nil)
 
 			if tc.k8sClientGet != nil {
