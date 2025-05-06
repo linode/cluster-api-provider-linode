@@ -1,12 +1,25 @@
 package util
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/linode/linodego"
+	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 func TestIgnoreLinodeAPIError(t *testing.T) {
@@ -242,6 +255,203 @@ func TestIsLinodePrivateIP(t *testing.T) {
 			result := IsLinodePrivateIP(testcase.ip)
 			if result != testcase.expected {
 				t.Errorf("IsLinodePrivateIP(%q) = %v, want %v", testcase.ip, result, testcase.expected)
+			}
+		})
+	}
+}
+
+// TestSetOwnerReferenceToLinodeCluster has a high cognitive complexity
+// due to the comprehensive nature of its test cases, covering various scenarios
+// for setting owner references. This level of detail is acceptable and beneficial
+// for a test function ensuring robust functionality.
+//
+//nolint:gocognit,cyclop // This is a valid test function with high cognitive and cyclomatic complexity
+func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
+	t.Parallel()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(mockCtrl)
+
+	baseTestScheme := runtime.NewScheme()
+	if err := clusterv1.AddToScheme(baseTestScheme); err != nil {
+		t.Fatalf("Failed to add clusterv1 to scheme: %v", err)
+	}
+	if err := infrav1alpha2.AddToScheme(baseTestScheme); err != nil {
+		t.Fatalf("Failed to add infrav1alpha2 to scheme: %v", err)
+	}
+	if err := corev1.AddToScheme(baseTestScheme); err != nil {
+		t.Fatalf("Failed to add corev1 to scheme: %v", err)
+	}
+
+	linodeClusterGVK := infrav1alpha2.GroupVersion.WithKind("LinodeCluster")
+
+	validLinodeCluster := &infrav1alpha2.LinodeCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-linodecluster",
+			Namespace: "test-namespace",
+			UID:       types.UID("uid-linodecluster"),
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       linodeClusterGVK.Kind,
+			APIVersion: linodeClusterGVK.GroupVersion().String(),
+		},
+	}
+
+	validCluster := &clusterv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cluster",
+			Namespace: "test-namespace",
+		},
+		Spec: clusterv1.ClusterSpec{
+			InfrastructureRef: &corev1.ObjectReference{
+				Name:       validLinodeCluster.Name,
+				Namespace:  validLinodeCluster.Namespace,
+				Kind:       linodeClusterGVK.Kind,
+				APIVersion: linodeClusterGVK.GroupVersion().String(),
+			},
+		},
+	}
+
+	baseObjToOwn := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cm",
+			Namespace: "test-namespace",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+	}
+
+	tests := []struct {
+		name          string
+		cluster       *clusterv1.Cluster
+		obj           client.Object
+		k8sClientGet  func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
+		scheme        *runtime.Scheme
+		wantErr       bool
+		expectedError string
+		validateObj   func(t *testing.T, obj client.Object)
+	}{
+		{
+			name:    "success",
+			cluster: validCluster,
+			obj:     baseObjToOwn.DeepCopy(),
+			k8sClientGet: func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				lc, ok := obj.(*infrav1alpha2.LinodeCluster)
+				if !ok {
+					return errors.New("object is not of type *infrav1alpha2.LinodeCluster")
+				}
+				*lc = *validLinodeCluster
+				return nil
+			},
+			scheme:  baseTestScheme,
+			wantErr: false,
+			validateObj: func(t *testing.T, obj client.Object) {
+				t.Helper()
+				if len(obj.GetOwnerReferences()) != 1 {
+					t.Fatalf("Expected 1 owner reference, got %d", len(obj.GetOwnerReferences()))
+				}
+				ownerRef := obj.GetOwnerReferences()[0]
+				if ownerRef.APIVersion != validLinodeCluster.APIVersion ||
+					ownerRef.Kind != validLinodeCluster.Kind ||
+					ownerRef.Name != validLinodeCluster.Name ||
+					ownerRef.UID != validLinodeCluster.UID {
+					t.Errorf("OwnerReference mismatch: got GVK=%s/%s Name=%s UID=%s, want GVK=%s/%s Name=%s UID=%s",
+						ownerRef.APIVersion, ownerRef.Kind, ownerRef.Name, ownerRef.UID,
+						validLinodeCluster.APIVersion, validLinodeCluster.Kind, validLinodeCluster.Name, validLinodeCluster.UID)
+				}
+				if ownerRef.Controller == nil || !*ownerRef.Controller {
+					t.Errorf("Expected owner reference to be a controller, but it was not")
+				}
+				if ownerRef.BlockOwnerDeletion == nil || !*ownerRef.BlockOwnerDeletion {
+					t.Errorf("Expected owner reference to block owner deletion, but it did not")
+				}
+			},
+		},
+		{
+			name:          "cluster is nil",
+			cluster:       nil,
+			obj:           baseObjToOwn.DeepCopy(),
+			scheme:        baseTestScheme,
+			wantErr:       true,
+			expectedError: "the Cluster or InfrastructureRef is nil",
+		},
+		{
+			name: "cluster infrastructureRef is nil",
+			cluster: func() *clusterv1.Cluster {
+				c := validCluster.DeepCopy()
+				c.Spec.InfrastructureRef = nil
+				return c
+			}(),
+			obj:           baseObjToOwn.DeepCopy(),
+			scheme:        baseTestScheme,
+			wantErr:       true,
+			expectedError: "the Cluster or InfrastructureRef is nil",
+		},
+		{
+			name:    "k8s client Get returns error",
+			cluster: validCluster,
+			obj:     baseObjToOwn.DeepCopy(),
+			k8sClientGet: func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				return apierrors.NewNotFound(infrav1alpha2.GroupVersion.WithResource("linodeclusters").GroupResource(), "test-linodecluster")
+			},
+			scheme:        baseTestScheme,
+			wantErr:       true,
+			expectedError: "linodeclusters.infrastructure.cluster.x-k8s.io \"test-linodecluster\" not found",
+		},
+		{
+			name:    "SetControllerReference fails because owner type not in scheme",
+			cluster: validCluster,
+			obj:     baseObjToOwn.DeepCopy(),
+			k8sClientGet: func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				lc, ok := obj.(*infrav1alpha2.LinodeCluster)
+				if !ok {
+					return errors.New("object is not of type *infrav1alpha2.LinodeCluster")
+				}
+				*lc = *validLinodeCluster
+				return nil
+			},
+			scheme: func() *runtime.Scheme {
+				s := runtime.NewScheme()
+				corev1.AddToScheme(s)
+				return s
+			}(),
+			wantErr:       true,
+			expectedError: "no kind is registered for the type v1alpha2.LinodeCluster",
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt // Capture range variable for parallel sub-tests
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			tc.obj.SetOwnerReferences(nil)
+
+			if tc.k8sClientGet != nil {
+				key := types.NamespacedName{
+					Namespace: tc.cluster.Spec.InfrastructureRef.Namespace,
+					Name:      tc.cluster.Spec.InfrastructureRef.Name,
+				}
+				mockK8sClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&infrav1alpha2.LinodeCluster{}), gomock.Any()).
+					DoAndReturn(tc.k8sClientGet).Times(1)
+			}
+
+			err := SetOwnerReferenceToLinodeCluster(t.Context(), mockK8sClient, tc.cluster, tc.obj, tc.scheme)
+
+			if (err != nil) != tc.wantErr {
+				t.Errorf("SetOwnerReferenceToLinodeCluster() error = %v, wantErr %v", err, tc.wantErr)
+				return
+			}
+			if tc.wantErr && err != nil {
+				if !strings.Contains(err.Error(), tc.expectedError) {
+					t.Errorf("SetOwnerReferenceToLinodeCluster() error = %q, want error containing %q", err.Error(), tc.expectedError)
+				}
+			}
+
+			if !tc.wantErr && tc.validateObj != nil {
+				tc.validateObj(t, tc.obj)
 			}
 		})
 	}
