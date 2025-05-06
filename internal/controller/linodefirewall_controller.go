@@ -85,7 +85,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeFirewall.ObjectMeta)
 		if err != nil {
 			log.Error(err, "failed to fetch cluster from metadata")
-			return ctrl.Result{}, err
+			return ctrl.Result{}, client.IgnoreNotFound(err)
 		}
 
 		// Set ownerRef to LinodeCluster
