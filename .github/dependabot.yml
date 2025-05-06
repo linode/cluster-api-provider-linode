@@ -12,6 +12,8 @@ updates:
         patterns: [ "k8s.io/*", "sigs.k8s.io/*" ]
       otel:
         patterns: ["go.opentelemetry.io/*"]
+      aws:
+        patterns: ["github.com/aws/*"]
     commit-message:
       prefix: ":seedling:"
     labels:
