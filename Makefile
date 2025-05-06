@@ -129,7 +129,7 @@ gosec: ## Run gosec against code.
 
 .PHONY: lint
 lint: ## Run lint against code.
-	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:latest golangci-lint run -c .golangci.yml --fix
+	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:$(GOLANGCI_LINT_VERSION) golangci-lint run -c .golangci.yml --fix
 
 .PHONY: nilcheck
 nilcheck: nilaway ## Run nil check against code.
@@ -378,6 +378,7 @@ MOCKGEN_VERSION          ?= v0.4.0
 GOWRAP_VERSION           ?= v1.4.0
 S5CMD_VERSION            ?= v2.2.2
 CONVERSION_GEN_VERSION   ?= v0.32.2
+GOLANGCI_LINT_VERSION    ?= v2.1.5
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)

@@ -24,23 +24,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 // FirewallScope defines the basic context for an actuator to operate upon.
 type FirewallScope struct {
-	Client K8sClient
-
+	Client         clients.K8sClient
 	PatchHelper    *patch.Helper
-	LinodeClient   LinodeClient
+	LinodeClient   clients.LinodeClient
 	LinodeFirewall *infrav1alpha2.LinodeFirewall
 	Cluster        *clusterv1.Cluster
 }
 
 // FirewallScopeParams defines the input parameters used to create a new Scope.
 type FirewallScopeParams struct {
-	Client         K8sClient
+	Client         clients.K8sClient
 	LinodeFirewall *infrav1alpha2.LinodeFirewall
 	Cluster        *clusterv1.Cluster
 }

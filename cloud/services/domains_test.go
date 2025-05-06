@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -163,7 +162,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			testcase.clusterScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := EnsureDNSEntries(context.Background(), testcase.clusterScope, "create")
+			err := EnsureDNSEntries(t.Context(), testcase.clusterScope, "create")
 			if testcase.expectedError != nil {
 				require.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
@@ -329,11 +328,11 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			testcase.clusterScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := EnsureDNSEntries(context.Background(), testcase.clusterScope, "delete")
+			err := EnsureDNSEntries(t.Context(), testcase.clusterScope, "delete")
 			if err != nil || testcase.expectedError != nil {
 				require.ErrorContains(t, err, testcase.expectedError.Error())
 			}
-			assert.EqualValues(t, testcase.expectedList, removeElement(testcase.listOfIPS, "10.10.10.11"))
+			assert.Equal(t, testcase.expectedList, removeElement(testcase.listOfIPS, "10.10.10.11"))
 		})
 	}
 }
@@ -831,7 +830,7 @@ func TestAddIPToDNS(t *testing.T) {
 			testcase.clusterScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := EnsureDNSEntries(context.Background(), testcase.clusterScope, "create")
+			err := EnsureDNSEntries(t.Context(), testcase.clusterScope, "create")
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
@@ -1239,7 +1238,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			testcase.clusterScope.Client = MockK8sClient
 			testcase.expectK8sClient(MockK8sClient)
 
-			err := EnsureDNSEntries(context.Background(), testcase.clusterScope, "delete")
+			err := EnsureDNSEntries(t.Context(), testcase.clusterScope, "delete")
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}

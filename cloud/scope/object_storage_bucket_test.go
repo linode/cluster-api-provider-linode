@@ -222,7 +222,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewObjectStorageBucketScope(context.Background(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewObjectStorageBucketScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
 
 			if testcase.expectedErr != nil {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())

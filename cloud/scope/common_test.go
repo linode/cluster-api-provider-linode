@@ -187,7 +187,7 @@ func TestGetCredentialDataFromRef(t *testing.T) {
 			mockClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(testCase.args.funcBehavior)
 
 			// Call getCredentialDataFromRef using the mock client
-			got, err := getCredentialDataFromRef(context.Background(), mockClient, testCase.args.providedCredentialsRef, "default", "apiToken")
+			got, err := getCredentialDataFromRef(t.Context(), mockClient, testCase.args.providedCredentialsRef, "default", "apiToken")
 
 			// Check that the function returned the expected result
 			if testCase.expectedError != "" {
@@ -306,7 +306,7 @@ func Test_addCredentialsFinalizer(t *testing.T) {
 			mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(testCase.args.clientBehavior.Update).AnyTimes()
 
 			// Call addCredentialsFinalizer using the mock client
-			err := addCredentialsFinalizer(context.Background(), mockClient, testCase.args.providedCredentialsRef, "default", "test.test/test.test")
+			err := addCredentialsFinalizer(t.Context(), mockClient, testCase.args.providedCredentialsRef, "default", "test.test/test.test")
 
 			// Check that the function returned the expected result
 			if testCase.expectedError != "" {
@@ -425,7 +425,7 @@ func Test_removeCredentialsFinalizer(t *testing.T) {
 			mockClient.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(testCase.args.clientBehavior.Update).AnyTimes()
 
 			// Call removeCredentialsFinalizer using the mock client
-			err := removeCredentialsFinalizer(context.Background(), mockClient, testCase.args.providedCredentialsRef, "default", "test.test/test.test")
+			err := removeCredentialsFinalizer(t.Context(), mockClient, testCase.args.providedCredentialsRef, "default", "test.test/test.test")
 
 			// Check that the function returned the expected result
 			if testCase.expectedError != "" {

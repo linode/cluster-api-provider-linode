@@ -116,7 +116,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	log := ctrl.LoggerFrom(ctx).WithName("LinodeMachineReconciler").WithValues("name", req.NamespacedName.String())
+	log := ctrl.LoggerFrom(ctx).WithName("LinodeMachineReconciler").WithValues("name", req.String())
 
 	linodeMachine := &infrav1alpha2.LinodeMachine{}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeMachine); err != nil {
@@ -143,7 +143,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 	linodeCluster := &infrav1alpha2.LinodeCluster{}
-	if err := r.Client.Get(ctx, linodeClusterKey, linodeCluster); err != nil {
+	if err := r.Get(ctx, linodeClusterKey, linodeCluster); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
 			return ctrl.Result{}, fmt.Errorf("get linodecluster %q: %w", linodeClusterKey, err)
 		}
@@ -226,7 +226,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	}
 
 	// Delete
-	if !machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.IsZero() {
+	if !machineScope.LinodeMachine.DeletionTimestamp.IsZero() {
 		failureReason = util.DeleteError
 		return r.reconcileDelete(ctx, logger, machineScope)
 	}

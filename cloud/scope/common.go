@@ -26,10 +26,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
 	"github.com/linode/cluster-api-provider-linode/version"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
 )
 
 const (
@@ -63,7 +62,7 @@ type ClientConfig struct {
 	Timeout time.Duration
 }
 
-func CreateLinodeClient(config ClientConfig, opts ...Option) (LinodeClient, error) {
+func CreateLinodeClient(config ClientConfig, opts ...Option) (clients.LinodeClient, error) {
 	if config.Token == "" {
 		return nil, errors.New("token cannot be empty")
 	}
@@ -115,7 +114,7 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (LinodeClient, erro
 	), nil
 }
 
-func CreateS3Clients(ctx context.Context, crClient K8sClient, cluster infrav1alpha2.LinodeCluster) (S3Client, S3PresignClient, error) {
+func CreateS3Clients(ctx context.Context, crClient clients.K8sClient, cluster infrav1alpha2.LinodeCluster) (clients.S3Client, clients.S3PresignClient, error) {
 	var (
 		configOpts = []func(*awsconfig.LoadOptions) error{
 			awsconfig.WithRegion("auto"),
@@ -173,7 +172,7 @@ func setUpEdgeDNSInterface() (dnsInterface dns.DNS, err error) {
 	return dns.Client(sess), nil
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {
+func getCredentialDataFromRef(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {
 	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return nil, err
@@ -186,7 +185,7 @@ func getCredentialDataFromRef(ctx context.Context, crClient K8sClient, credentia
 	return rawData, nil
 }
 
-func addCredentialsFinalizer(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
+func addCredentialsFinalizer(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
 	secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return err
@@ -199,7 +198,7 @@ func addCredentialsFinalizer(ctx context.Context, crClient K8sClient, credential
 	return nil
 }
 
-func removeCredentialsFinalizer(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
+func removeCredentialsFinalizer(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
 	secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return client.IgnoreNotFound(err)
@@ -212,7 +211,7 @@ func removeCredentialsFinalizer(ctx context.Context, crClient K8sClient, credent
 	return nil
 }
 
-func getCredentials(ctx context.Context, crClient K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
+func getCredentials(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
 	secretRef := client.ObjectKey{
 		Name:      credentialsRef.Name,
 		Namespace: credentialsRef.Namespace,

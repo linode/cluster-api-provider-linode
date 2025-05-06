@@ -275,10 +275,11 @@ func processRule(ctx context.Context, k8sClient clients.K8sClient, firewall *inf
 
 	ruleLabel := formatRuleLabel(rule.Action, rule.Label)
 
-	if ruleType == ruleTypeInbound {
+	switch ruleType {
+	case ruleTypeInbound:
 		processIPRules(ruleIPv4s, rule, ruleLabel, linodego.IPTypeIPv4, &createOpts.Rules.Inbound)
 		processIPRules(ruleIPv6s, rule, ruleLabel, linodego.IPTypeIPv6, &createOpts.Rules.Inbound)
-	} else if ruleType == ruleTypeOutbound {
+	case ruleTypeOutbound:
 		processIPRules(ruleIPv4s, rule, ruleLabel, linodego.IPTypeIPv4, &createOpts.Rules.Outbound)
 		processIPRules(ruleIPv6s, rule, ruleLabel, linodego.IPTypeIPv6, &createOpts.Rules.Outbound)
 	}
@@ -374,7 +375,9 @@ func processIPRules(ips []string, rule infrav1alpha2.FirewallRuleSpec, ruleLabel
 	}
 
 	ipchunks := chunkIPs(ips)
-	if ipType == linodego.IPTypeIPv4 {
+	//nolint:exhaustive // This function only handles explicit IPv4 and IPv6 types; other types like IPv6 Pool/Range are not relevant here.
+	switch ipType {
+	case linodego.IPTypeIPv4:
 		for i, chunk := range ipchunks {
 			*rules = append(*rules, linodego.FirewallRule{
 				Action:      rule.Action,
@@ -385,7 +388,7 @@ func processIPRules(ips []string, rule infrav1alpha2.FirewallRuleSpec, ruleLabel
 				Addresses:   linodego.NetworkAddresses{IPv4: &chunk},
 			})
 		}
-	} else if ipType == linodego.IPTypeIPv6 {
+	case linodego.IPTypeIPv6:
 		for i, chunk := range ipchunks {
 			*rules = append(*rules, linodego.FirewallRule{
 				Action:      rule.Action,

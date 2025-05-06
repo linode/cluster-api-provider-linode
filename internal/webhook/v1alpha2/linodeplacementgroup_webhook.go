@@ -34,8 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 var (
@@ -75,7 +74,7 @@ func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context
 	}
 	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon creation", "name", pg.GetName())
 
-	var linodeclient LinodeClient = defaultLinodeClient
+	var linodeclient clients.LinodeClient = defaultLinodeClient
 	skipAPIValidation := false
 
 	// Handle credentials if provided
@@ -124,7 +123,7 @@ func (v *LinodePlacementGroupCustomValidator) ValidateDelete(ctx context.Context
 	return nil, nil
 }
 
-func (v *LinodePlacementGroupCustomValidator) validateLinodePlacementGroupSpec(ctx context.Context, linodeclient LinodeClient, spec infrav1alpha2.LinodePlacementGroupSpec, label string, skipAPIValidation bool) field.ErrorList {
+func (v *LinodePlacementGroupCustomValidator) validateLinodePlacementGroupSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodePlacementGroupSpec, label string, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
 	if !skipAPIValidation {

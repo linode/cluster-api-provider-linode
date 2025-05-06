@@ -277,7 +277,7 @@ https://object.bucket.example.com
 			testcase.expects(mockClient, mockK8sClient, mockS3Client, mockS3PresignClient)
 			logger := testr.New(t)
 
-			err := setUserData(context.Background(), testcase.machineScope, testcase.createConfig, gzipCompressionFlag, logger)
+			err := setUserData(t.Context(), testcase.machineScope, testcase.createConfig, gzipCompressionFlag, logger)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
@@ -567,7 +567,7 @@ func TestGetVPCInterfaceConfigFromDirectID(t *testing.T) {
 			tc.mockSetup(mockLinodeClient)
 
 			// Create test context
-			ctx := context.TODO()
+			ctx := t.Context()
 			logger := testr.New(t)
 
 			// Create machine scope
@@ -686,7 +686,7 @@ func TestAddVPCInterfaceFromDirectID(t *testing.T) {
 			tc.mockSetup(mockLinodeClient)
 
 			// Create test context
-			ctx := context.TODO()
+			ctx := t.Context()
 			logger := testr.New(t)
 
 			// Create machine scope
@@ -866,7 +866,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 			tc.mockSetup(mockLinodeClient, mockK8sClient)
 
 			// Create test context
-			ctx := context.TODO()
+			ctx := t.Context()
 			logger := testr.New(t)
 
 			// Create machine scope
@@ -1142,7 +1142,7 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 			tc.mockSetup(mockK8sClient)
 
 			// Create test context
-			ctx := context.TODO()
+			ctx := t.Context()
 			logger := testr.New(t)
 
 			// Create machine scope

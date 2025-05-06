@@ -48,7 +48,7 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte) 
 	}
 
 	// Key by UUID for shared buckets.
-	key := string(mscope.LinodeMachine.ObjectMeta.UID)
+	key := string(mscope.LinodeMachine.UID)
 
 	if _, err := mscope.S3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
@@ -93,7 +93,7 @@ func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
 	}
 
 	// Key by UUID for shared buckets.
-	key := string(mscope.LinodeMachine.ObjectMeta.UID)
+	key := string(mscope.LinodeMachine.UID)
 
 	_, err = mscope.S3Client.HeadObject(
 		ctx,

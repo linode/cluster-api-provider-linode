@@ -77,7 +77,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.NamespacedName.String())
+	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.String())
 	linodeCluster := &infrav1alpha2.LinodeCluster{}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeCluster); err != nil {
 		logger.Info("Failed to fetch Linode cluster", "error", err.Error())

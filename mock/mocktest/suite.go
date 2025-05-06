@@ -45,7 +45,7 @@ func (s *suite) run(t gomock.TestHelper, ctx context.Context, pth path, mockOpts
 	}
 
 	for _, client := range s.clients {
-		mck.MockClients.Build(client, mockCtrl)
+		mck.Build(client, mockCtrl)
 	}
 
 	for _, opt := range mockOpts {
@@ -99,7 +99,7 @@ func (ss *standardSuite) Run(nodes ...node) {
 		ss.t.Run(pth.describe(), func(t *testing.T) {
 			t.Parallel()
 
-			ss.suite.run(t, context.Background(), pth)
+			ss.run(t, t.Context(), pth)
 		})
 	}
 }
@@ -132,7 +132,7 @@ func (cs *ctlrSuite) Run(nodes ...node) {
 
 	for _, pth := range pths {
 		ginkgo.It(pth.describe(), func(ctx ginkgo.SpecContext) {
-			cs.suite.run(cs.ginkgoT, ctx, pth, func(mck *Mock) {
+			cs.run(cs.ginkgoT, ctx, pth, func(mck *Mock) {
 				// Create a recorder with a buffered channel for consuming event strings.
 				mck.recorder = record.NewFakeRecorder(recorderBufferSize)
 				// Create a logger that writes to both GinkgoWriter and the local logs buffer

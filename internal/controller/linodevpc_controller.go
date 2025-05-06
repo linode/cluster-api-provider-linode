@@ -83,7 +83,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	log := ctrl.LoggerFrom(ctx).WithName("LinodeVPCReconciler").WithValues("name", req.NamespacedName.String())
+	log := ctrl.LoggerFrom(ctx).WithName("LinodeVPCReconciler").WithValues("name", req.String())
 	linodeVPC := &infrav1alpha2.LinodeVPC{}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeVPC); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
@@ -94,7 +94,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	var cluster *clusterv1.Cluster
 	var err error
-	if _, ok := linodeVPC.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+	if _, ok := linodeVPC.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeVPC.ObjectMeta)
 		if err != nil {
 			log.Error(err, "failed to fetch cluster from metadata")
@@ -180,7 +180,7 @@ func (r *LinodeVPCReconciler) reconcile(
 	}
 
 	// Delete
-	if !vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.IsZero() {
+	if !vpcScope.LinodeVPC.DeletionTimestamp.IsZero() {
 		failureReason = infrav1alpha2.DeleteVPCError
 
 		res, err = r.reconcileDelete(ctx, logger, vpcScope)

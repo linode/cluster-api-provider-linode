@@ -77,12 +77,12 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	logger := r.Logger.WithValues("name", req.NamespacedName.String())
+	logger := r.Logger.WithValues("name", req.String())
 
 	objectStorageBucket := &infrav1alpha2.LinodeObjectStorageBucket{}
 	if err := r.TracedClient().Get(ctx, req.NamespacedName, objectStorageBucket); err != nil {
 		if err = client.IgnoreNotFound(err); err != nil {
-			logger.Error(err, "Failed to fetch LinodeObjectStorageBucket", "name", req.NamespacedName.String())
+			logger.Error(err, "Failed to fetch LinodeObjectStorageBucket", "name", req.String())
 		}
 
 		return ctrl.Result{}, err

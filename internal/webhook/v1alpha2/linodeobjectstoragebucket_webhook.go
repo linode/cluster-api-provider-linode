@@ -31,8 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-
-	. "github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
 var (
@@ -94,7 +93,7 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateDelete(ctx context.Co
 	return nil, nil
 }
 
-func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucket(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, client LinodeClient) error {
+func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucket(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, client clients.LinodeClient) error {
 	var errs field.ErrorList
 
 	if err := v.validateLinodeObjectStorageBucketSpec(ctx, bucket, client); err != nil {
@@ -109,7 +108,7 @@ func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBu
 		bucket.Name, errs)
 }
 
-func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucketSpec(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, client LinodeClient) field.ErrorList {
+func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucketSpec(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, client clients.LinodeClient) field.ErrorList {
 	var errs field.ErrorList
 
 	if err := validateObjectStorageRegion(ctx, client, bucket.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
