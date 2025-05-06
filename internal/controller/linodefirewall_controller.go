@@ -84,15 +84,17 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if _, ok := linodeFirewall.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeFirewall.ObjectMeta)
 		if err != nil {
-			// If we're deleting and cluster isn't found, that's okay
-			if !linodeFirewall.DeletionTimestamp.IsZero() && apierrors.IsNotFound(err) {
-				log.Info("Cluster not found but LinodeFirewall is being deleted, continuing with deletion")
-			} else {
-				log.Error(err, "failed to fetch cluster from metadata")
-				return ctrl.Result{}, err
-			}
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, err
+		}
+
+		// Set ownerRef to LinodeCluster
+		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, linodeFirewall, r.Scheme()); err != nil {
+			log.Error(err, "Failed to set owner reference to LinodeCluster")
+			return ctrl.Result{}, err
 		}
 	}
+
 	// Create the firewall scope.
 	fwScope, err := scope.NewFirewallScope(
 		ctx,

@@ -95,6 +95,19 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
+	if _, ok := objectStorageKey.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+		cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), objectStorageKey.ObjectMeta)
+		if err != nil {
+			logger.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+
+		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, objectStorageKey, r.Scheme); err != nil {
+			logger.Error(err, "Failed to set owner reference to LinodeCluster")
+			return ctrl.Result{}, err
+		}
+	}
+
 	keyScope, err := scope.NewObjectStorageKeyScope(
 		ctx,
 		r.LinodeClientConfig,

@@ -90,13 +90,14 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 	if _, ok := linodeplacementgroup.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeplacementgroup.ObjectMeta)
 		if err != nil {
-			// If we're deleting and cluster isn't found, that's okay
-			if !linodeplacementgroup.DeletionTimestamp.IsZero() && apierrors.IsNotFound(err) {
-				log.Info("Cluster not found but LinodePlacementGroup is being deleted, continuing with deletion")
-			} else {
-				log.Error(err, "failed to fetch cluster from metadata")
-				return ctrl.Result{}, err
-			}
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+
+		// Set ownerRef to LinodeCluster
+		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, linodeplacementgroup, r.Scheme()); err != nil {
+			log.Error(err, "Failed to set owner reference to LinodeCluster")
+			return ctrl.Result{}, err
 		}
 	}
 

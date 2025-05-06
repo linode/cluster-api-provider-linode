@@ -89,23 +89,24 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch LinodeVPC")
 		}
-
 		return ctrl.Result{}, err
 	}
+
 	var cluster *clusterv1.Cluster
 	var err error
 	if _, ok := linodeVPC.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeVPC.ObjectMeta)
 		if err != nil {
-			// If we're deleting and cluster isn't found, that's okay
-			if !linodeVPC.DeletionTimestamp.IsZero() && apierrors.IsNotFound(err) {
-				log.Info("Cluster not found but LinodeVPC is being deleted, continuing with deletion")
-			} else {
-				log.Error(err, "failed to fetch cluster from metadata")
-				return ctrl.Result{}, err
-			}
+			log.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+
+		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, linodeVPC, r.Scheme); err != nil {
+			log.Error(err, "Failed to set owner reference to LinodeCluster")
+			return ctrl.Result{}, err
 		}
 	}
+
 	vpcScope, err := scope.NewVPCScope(
 		ctx,
 		r.LinodeClientConfig,
@@ -117,7 +118,6 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	)
 	if err != nil {
 		log.Error(err, "Failed to create VPC scope")
-
 		return ctrl.Result{}, fmt.Errorf("failed to create VPC scope: %w", err)
 	}
 

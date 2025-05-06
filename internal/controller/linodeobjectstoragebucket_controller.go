@@ -88,6 +88,19 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		return ctrl.Result{}, err
 	}
 
+	if _, ok := objectStorageBucket.ObjectMeta.Labels[clusterv1.ClusterNameLabel]; ok {
+		cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), objectStorageBucket.ObjectMeta)
+		if err != nil {
+			logger.Error(err, "failed to fetch cluster from metadata")
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+
+		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, objectStorageBucket, r.Scheme()); err != nil {
+			logger.Error(err, "Failed to set owner reference to LinodeCluster")
+			return ctrl.Result{}, err
+		}
+	}
+
 	bScope, err := scope.NewObjectStorageBucketScope(
 		ctx,
 		r.LinodeClientConfig,
