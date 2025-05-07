@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -58,7 +57,6 @@ type LinodeObjectStorageKeyReconciler struct {
 	Recorder           record.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
-	Scheme             *runtime.Scheme
 	ReconcileTimeout   time.Duration
 }
 
@@ -106,7 +104,7 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 		}
 
 		// It will handle the case where the cluster is not found
-		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, objectStorageKey, r.Scheme); err != nil {
+		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, objectStorageKey, r.Scheme()); err != nil {
 			logger.Error(err, "Failed to set owner reference to LinodeCluster")
 			return ctrl.Result{}, err
 		}

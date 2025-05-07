@@ -328,7 +328,6 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	// LinodeObjectStorageKey Controller
 	if err := (&controller.LinodeObjectStorageKeyReconciler{
 		Client:             mgr.GetClient(),
-		Scheme:             mgr.GetScheme(),
 		Logger:             ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
 		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageKeyReconciler"),
 		WatchFilterValue:   flags.objectStorageKeyWatchFilter,
