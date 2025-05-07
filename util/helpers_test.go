@@ -324,7 +324,7 @@ func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 		name          string
 		cluster       *clusterv1.Cluster
 		obj           client.Object
-		k8sClientGet  func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
+		mockK8sClient func(m *mock.MockK8sClient)
 		scheme        *runtime.Scheme
 		wantErr       bool
 		expectedError string
@@ -334,13 +334,17 @@ func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 			name:    "success",
 			cluster: validCluster,
 			obj:     baseObjToOwn.DeepCopy(),
-			k8sClientGet: func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-				lc, ok := obj.(*infrav1alpha2.LinodeCluster)
-				if !ok {
-					return errors.New("object is not of type *infrav1alpha2.LinodeCluster")
-				}
-				*lc = *validLinodeCluster
-				return nil
+			mockK8sClient: func(m *mock.MockK8sClient) {
+				m.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: validLinodeCluster.Name, Namespace: validLinodeCluster.Namespace}, gomock.AssignableToTypeOf(&infrav1alpha2.LinodeCluster{}), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						lc, ok := obj.(*infrav1alpha2.LinodeCluster)
+						if !ok {
+							return errors.New("object is not of type *infrav1alpha2.LinodeCluster")
+						}
+						*lc = *validLinodeCluster
+						return nil
+					}).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.AssignableToTypeOf(baseObjToOwn.DeepCopy()), gomock.Any()).Return(nil).Times(1)
 			},
 			scheme:  baseTestScheme,
 			wantErr: false,
@@ -367,15 +371,15 @@ func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 			},
 		},
 		{
-			name:          "cluster is nil",
+			name:          "cluster is nil - can happen when deleting",
 			cluster:       nil,
 			obj:           baseObjToOwn.DeepCopy(),
 			scheme:        baseTestScheme,
-			wantErr:       true,
-			expectedError: "the Cluster or InfrastructureRef is nil",
+			wantErr:       false,
+			expectedError: "",
 		},
 		{
-			name: "cluster infrastructureRef is nil",
+			name: "cluster infrastructureRef is nil - can happen when deleting",
 			cluster: func() *clusterv1.Cluster {
 				c := validCluster.DeepCopy()
 				c.Spec.InfrastructureRef = nil
@@ -383,31 +387,75 @@ func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 			}(),
 			obj:           baseObjToOwn.DeepCopy(),
 			scheme:        baseTestScheme,
-			wantErr:       true,
-			expectedError: "the Cluster or InfrastructureRef is nil",
+			wantErr:       false,
+			expectedError: "",
 		},
 		{
-			name:    "k8s client Get returns error",
+			name:    "k8s client Get returns NotFound error",
 			cluster: validCluster,
 			obj:     baseObjToOwn.DeepCopy(),
-			k8sClientGet: func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-				return apierrors.NewNotFound(infrav1alpha2.GroupVersion.WithResource("linodeclusters").GroupResource(), "test-linodecluster")
+			mockK8sClient: func(m *mock.MockK8sClient) {
+				m.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: validLinodeCluster.Name, Namespace: validLinodeCluster.Namespace}, gomock.AssignableToTypeOf(&infrav1alpha2.LinodeCluster{}), gomock.Any()).Return(
+					apierrors.NewNotFound(infrav1alpha2.GroupVersion.WithResource("linodeclusters").GroupResource(), "test-linodecluster"),
+				).Times(1)
+			},
+			scheme:        baseTestScheme,
+			wantErr:       false,
+			expectedError: "",
+			validateObj: func(t *testing.T, obj client.Object) {
+				t.Helper()
+				if len(obj.GetOwnerReferences()) != 0 {
+					t.Fatalf("Expected 0 owner references when LinodeCluster is not found, got %d", len(obj.GetOwnerReferences()))
+				}
+			},
+		},
+		{
+			name:    "k8s client Get returns non-NotFound error",
+			cluster: validCluster,
+			obj:     baseObjToOwn.DeepCopy(),
+			mockK8sClient: func(m *mock.MockK8sClient) {
+				m.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: validLinodeCluster.Name, Namespace: validLinodeCluster.Namespace}, gomock.AssignableToTypeOf(&infrav1alpha2.LinodeCluster{}), gomock.Any()).Return(
+					errors.New("internal server error"),
+				).Times(1)
 			},
 			scheme:        baseTestScheme,
 			wantErr:       true,
-			expectedError: "linodeclusters.infrastructure.cluster.x-k8s.io \"test-linodecluster\" not found",
+			expectedError: "internal server error",
+		},
+		{
+			name:    "k8s client Update returns error",
+			cluster: validCluster,
+			obj:     baseObjToOwn.DeepCopy(),
+			mockK8sClient: func(m *mock.MockK8sClient) {
+				m.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: validLinodeCluster.Name, Namespace: validLinodeCluster.Namespace}, gomock.AssignableToTypeOf(&infrav1alpha2.LinodeCluster{}), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						lc, ok := obj.(*infrav1alpha2.LinodeCluster)
+						if !ok {
+							return errors.New("object is not of type *infrav1alpha2.LinodeCluster")
+						}
+						*lc = *validLinodeCluster
+						return nil
+					}).Times(1)
+				m.EXPECT().Update(gomock.Any(), gomock.AssignableToTypeOf(baseObjToOwn.DeepCopy()), gomock.Any()).Return(errors.New("update failed")).Times(1)
+			},
+			scheme:        baseTestScheme,
+			wantErr:       true,
+			expectedError: "update failed",
 		},
 		{
 			name:    "SetControllerReference fails because owner type not in scheme",
 			cluster: validCluster,
 			obj:     baseObjToOwn.DeepCopy(),
-			k8sClientGet: func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-				lc, ok := obj.(*infrav1alpha2.LinodeCluster)
-				if !ok {
-					return errors.New("object is not of type *infrav1alpha2.LinodeCluster")
-				}
-				*lc = *validLinodeCluster
-				return nil
+			mockK8sClient: func(m *mock.MockK8sClient) {
+				m.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{Name: validLinodeCluster.Name, Namespace: validLinodeCluster.Namespace}), gomock.AssignableToTypeOf(&infrav1alpha2.LinodeCluster{}), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						lc, ok := obj.(*infrav1alpha2.LinodeCluster)
+						if !ok {
+							return errors.New("object is not of type *infrav1alpha2.LinodeCluster")
+						}
+						*lc = *validLinodeCluster
+						return nil
+					}).Times(1)
 			},
 			scheme: func() *runtime.Scheme {
 				s := runtime.NewScheme()
@@ -430,13 +478,8 @@ func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 
 			tc.obj.SetOwnerReferences(nil)
 
-			if tc.k8sClientGet != nil {
-				key := types.NamespacedName{
-					Namespace: tc.cluster.Spec.InfrastructureRef.Namespace,
-					Name:      tc.cluster.Spec.InfrastructureRef.Name,
-				}
-				mockK8sClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&infrav1alpha2.LinodeCluster{}), gomock.Any()).
-					DoAndReturn(tc.k8sClientGet).Times(1)
+			if tc.mockK8sClient != nil {
+				tc.mockK8sClient(mockK8sClient)
 			}
 
 			err := SetOwnerReferenceToLinodeCluster(t.Context(), mockK8sClient, tc.cluster, tc.obj, tc.scheme)

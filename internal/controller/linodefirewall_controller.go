@@ -84,11 +84,15 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if _, ok := linodeFirewall.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeFirewall.ObjectMeta)
 		if err != nil {
-			log.Error(err, "failed to fetch cluster from metadata")
-			return ctrl.Result{}, client.IgnoreNotFound(err)
+			if client.IgnoreNotFound(err) != nil {
+				log.Error(err, "failed to fetch cluster from metadata")
+				return ctrl.Result{}, err
+			}
+			log.Info("Cluster not found but LinodeFirewall is being deleted, continuing with deletion")
 		}
 
 		// Set ownerRef to LinodeCluster
+		// It will handle the case where the cluster is not found
 		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, linodeFirewall, r.Scheme()); err != nil {
 			log.Error(err, "Failed to set owner reference to LinodeCluster")
 			return ctrl.Result{}, err

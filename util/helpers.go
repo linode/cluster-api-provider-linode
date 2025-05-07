@@ -3,7 +3,6 @@ package util
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -99,8 +98,8 @@ func SetOwnerReferenceToLinodeCluster(ctx context.Context, k8sclient client.Clie
 	logger := log.Log.WithName("SetOwnerReferenceToLinodeCluster")
 
 	if cluster == nil || cluster.Spec.InfrastructureRef == nil {
-		logger.Error(nil, "the Cluster or InfrastructureRef is nil, cannot fetch LinodeCluster")
-		return fmt.Errorf("the Cluster or InfrastructureRef is nil")
+		logger.Info("the Cluster or InfrastructureRef is nil, cannot fetch LinodeCluster")
+		return nil
 	}
 
 	var linodeCluster infrav1alpha2.LinodeCluster
@@ -109,12 +108,21 @@ func SetOwnerReferenceToLinodeCluster(ctx context.Context, k8sclient client.Clie
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 	if err := k8sclient.Get(ctx, key, &linodeCluster); err != nil {
-		logger.Error(err, "Failed to fetch LinodeCluster")
-		return err
+		if client.IgnoreNotFound(err) != nil {
+			logger.Error(err, "Failed to fetch LinodeCluster")
+			return err
+		}
+		logger.Info("LinodeCluster not found, skipping owner reference setting")
+		return nil
 	}
 
 	if err := controllerutil.SetControllerReference(&linodeCluster, obj, scheme); err != nil {
 		logger.Error(err, "Failed to set owner reference to LinodeCluster")
+		return err
+	}
+
+	if err := k8sclient.Update(ctx, obj); err != nil {
+		logger.Error(err, "Failed to update object")
 		return err
 	}
 

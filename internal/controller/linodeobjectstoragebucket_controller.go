@@ -91,10 +91,14 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 	if _, ok := objectStorageBucket.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), objectStorageBucket.ObjectMeta)
 		if err != nil {
-			logger.Error(err, "failed to fetch cluster from metadata")
-			return ctrl.Result{}, client.IgnoreNotFound(err)
+			if client.IgnoreNotFound(err) != nil {
+				logger.Error(err, "failed to fetch cluster from metadata")
+				return ctrl.Result{}, err
+			}
+			logger.Info("Cluster not found but LinodeObjectStorageBucket is being deleted, continuing with deletion")
 		}
 
+		// It will handle the case where the cluster is not found
 		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, objectStorageBucket, r.Scheme()); err != nil {
 			logger.Error(err, "Failed to set owner reference to LinodeCluster")
 			return ctrl.Result{}, err
