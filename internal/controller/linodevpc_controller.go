@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -58,7 +57,6 @@ type LinodeVPCReconciler struct {
 	Recorder           record.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
-	Scheme             *runtime.Scheme
 	ReconcileTimeout   time.Duration
 }
 
@@ -89,23 +87,28 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		if err = client.IgnoreNotFound(err); err != nil {
 			log.Error(err, "Failed to fetch LinodeVPC")
 		}
-
 		return ctrl.Result{}, err
 	}
+
 	var cluster *clusterv1.Cluster
 	var err error
 	if _, ok := linodeVPC.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err = kutil.GetClusterFromMetadata(ctx, r.TracedClient(), linodeVPC.ObjectMeta)
 		if err != nil {
-			// If we're deleting and cluster isn't found, that's okay
-			if !linodeVPC.DeletionTimestamp.IsZero() && apierrors.IsNotFound(err) {
-				log.Info("Cluster not found but LinodeVPC is being deleted, continuing with deletion")
-			} else {
+			if client.IgnoreNotFound(err) != nil {
 				log.Error(err, "failed to fetch cluster from metadata")
 				return ctrl.Result{}, err
 			}
+			log.Info("Cluster not found but LinodeVPC is being deleted, continuing with deletion")
+		}
+
+		// It will handle the case where the cluster is not found
+		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, linodeVPC, r.Scheme()); err != nil {
+			log.Error(err, "Failed to set owner reference to LinodeCluster")
+			return ctrl.Result{}, err
 		}
 	}
+
 	vpcScope, err := scope.NewVPCScope(
 		ctx,
 		r.LinodeClientConfig,
@@ -117,7 +120,6 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	)
 	if err != nil {
 		log.Error(err, "Failed to create VPC scope")
-
 		return ctrl.Result{}, fmt.Errorf("failed to create VPC scope: %w", err)
 	}
 

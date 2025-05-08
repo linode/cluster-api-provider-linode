@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -10,6 +11,14 @@ import (
 	"strings"
 
 	"github.com/linode/linodego"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
 // Pointer returns the pointer of any type
@@ -82,4 +91,40 @@ func IsLinodePrivateIP(ipAddress string) bool {
 
 	// Check if the IP is contained in the Linode private network
 	return linodePrivateNet.Contains(ip)
+}
+
+// SetOwnerReferenceToLinodeCluster fetches the LinodeCluster and sets it as the owner reference of a given object.
+func SetOwnerReferenceToLinodeCluster(ctx context.Context, k8sclient client.Client, cluster *clusterv1.Cluster, obj client.Object, scheme *runtime.Scheme) error {
+	logger := log.Log.WithName("SetOwnerReferenceToLinodeCluster")
+
+	if cluster == nil || cluster.Spec.InfrastructureRef == nil {
+		logger.Info("the Cluster or InfrastructureRef is nil, cannot fetch LinodeCluster")
+		return nil
+	}
+
+	var linodeCluster infrav1alpha2.LinodeCluster
+	key := types.NamespacedName{
+		Namespace: cluster.Spec.InfrastructureRef.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}
+	if err := k8sclient.Get(ctx, key, &linodeCluster); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			logger.Error(err, "Failed to fetch LinodeCluster")
+			return err
+		}
+		logger.Info("LinodeCluster not found, skipping owner reference setting")
+		return nil
+	}
+
+	if err := controllerutil.SetControllerReference(&linodeCluster, obj, scheme); err != nil {
+		logger.Error(err, "Failed to set owner reference to LinodeCluster")
+		return err
+	}
+
+	if err := k8sclient.Update(ctx, obj); err != nil {
+		logger.Error(err, "Failed to update object")
+		return err
+	}
+
+	return nil
 }
