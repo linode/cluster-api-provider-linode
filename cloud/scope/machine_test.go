@@ -268,10 +268,10 @@ func TestNewMachineScope(t *testing.T) {
 				Call("cluster object store used", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						secret := corev1.Secret{Data: map[string][]byte{
-							"bucket_name": []byte("fake"),
-							"s3_endpoint": []byte("fake"),
-							"access_key":  []byte("fake"),
-							"secret_key":  []byte("fake"),
+							"bucket":   []byte("fake"),
+							"endpoint": []byte("fake"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
 						}}
 						*obj = secret
 						return nil

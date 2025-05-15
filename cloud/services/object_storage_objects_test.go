@@ -80,10 +80,10 @@ func TestCreateObject(t *testing.T) {
 				Call("empty bucket name", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						secret := corev1.Secret{Data: map[string][]byte{
-							"bucket_name": nil,
-							"s3_endpoint": []byte("fake"),
-							"access_key":  []byte("fake"),
-							"secret_key":  []byte("fake"),
+							"bucket":   nil,
+							"endpoint": []byte("fake"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
 						}}
 						*obj = secret
 						return nil
@@ -108,10 +108,10 @@ func TestCreateObject(t *testing.T) {
 				Call("fail to put object", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						secret := corev1.Secret{Data: map[string][]byte{
-							"bucket_name": []byte("fake"),
-							"s3_endpoint": []byte("fake"),
-							"access_key":  []byte("fake"),
-							"secret_key":  []byte("fake"),
+							"bucket":   []byte("fake"),
+							"endpoint": []byte("fake"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
 						}}
 						*obj = secret
 						return nil
@@ -137,10 +137,10 @@ func TestCreateObject(t *testing.T) {
 				Call("fail to generate presigned url", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						secret := corev1.Secret{Data: map[string][]byte{
-							"bucket_name": []byte("fake"),
-							"s3_endpoint": []byte("fake"),
-							"access_key":  []byte("fake"),
-							"secret_key":  []byte("fake"),
+							"bucket":   []byte("fake"),
+							"endpoint": []byte("fake"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
 						}}
 						*obj = secret
 						return nil
@@ -167,10 +167,10 @@ func TestCreateObject(t *testing.T) {
 				Call("create object", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						secret := corev1.Secret{Data: map[string][]byte{
-							"bucket_name": []byte("fake"),
-							"s3_endpoint": []byte("fake"),
-							"access_key":  []byte("fake"),
-							"secret_key":  []byte("fake"),
+							"bucket":   []byte("fake"),
+							"endpoint": []byte("fake"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
 						}}
 						*obj = secret
 						return nil
@@ -256,10 +256,10 @@ func TestDeleteObject(t *testing.T) {
 				Call("empty bucket name", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						secret := corev1.Secret{Data: map[string][]byte{
-							"bucket_name": nil,
-							"s3_endpoint": []byte("fake"),
-							"access_key":  []byte("fake"),
-							"secret_key":  []byte("fake"),
+							"bucket":   nil,
+							"endpoint": []byte("fake"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
 						}}
 						*obj = secret
 						return nil
@@ -284,10 +284,10 @@ func TestDeleteObject(t *testing.T) {
 				Call("fail to head object", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						secret := corev1.Secret{Data: map[string][]byte{
-							"bucket_name": []byte("fake"),
-							"s3_endpoint": []byte("fake"),
-							"access_key":  []byte("fake"),
-							"secret_key":  []byte("fake"),
+							"bucket":   []byte("fake"),
+							"endpoint": []byte("fake"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
 						}}
 						*obj = secret
 						return nil
@@ -313,10 +313,10 @@ func TestDeleteObject(t *testing.T) {
 				Call("fail to delete object", func(ctx context.Context, mck Mock) {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 						secret := corev1.Secret{Data: map[string][]byte{
-							"bucket_name": []byte("fake"),
-							"s3_endpoint": []byte("fake"),
-							"access_key":  []byte("fake"),
-							"secret_key":  []byte("fake"),
+							"bucket":   []byte("fake"),
+							"endpoint": []byte("fake"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
 						}}
 						*obj = secret
 						return nil
@@ -344,10 +344,10 @@ func TestDeleteObject(t *testing.T) {
 					Path(Call("delete object (no such key)", func(ctx context.Context, mck Mock) {
 						mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 							secret := corev1.Secret{Data: map[string][]byte{
-								"bucket_name": []byte("fake"),
-								"s3_endpoint": []byte("fake"),
-								"access_key":  []byte("fake"),
-								"secret_key":  []byte("fake"),
+								"bucket":   []byte("fake"),
+								"endpoint": []byte("fake"),
+								"access":   []byte("fake"),
+								"secret":   []byte("fake"),
 							}}
 							*obj = secret
 							return nil
@@ -357,10 +357,10 @@ func TestDeleteObject(t *testing.T) {
 					Path(Call("delete object (no such bucket)", func(ctx context.Context, mck Mock) {
 						mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 							secret := corev1.Secret{Data: map[string][]byte{
-								"bucket_name": []byte("fake"),
-								"s3_endpoint": []byte("fake"),
-								"access_key":  []byte("fake"),
-								"secret_key":  []byte("fake"),
+								"bucket":   []byte("fake"),
+								"endpoint": []byte("fake"),
+								"access":   []byte("fake"),
+								"secret":   []byte("fake"),
 							}}
 							*obj = secret
 							return nil
@@ -370,10 +370,10 @@ func TestDeleteObject(t *testing.T) {
 					Path(Call("delete object (not found)", func(ctx context.Context, mck Mock) {
 						mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 							secret := corev1.Secret{Data: map[string][]byte{
-								"bucket_name": []byte("fake"),
-								"s3_endpoint": []byte("fake"),
-								"access_key":  []byte("fake"),
-								"secret_key":  []byte("fake"),
+								"bucket":   []byte("fake"),
+								"endpoint": []byte("fake"),
+								"access":   []byte("fake"),
+								"secret":   []byte("fake"),
 							}}
 							*obj = secret
 							return nil
@@ -383,10 +383,10 @@ func TestDeleteObject(t *testing.T) {
 					Path(Call("delete object", func(ctx context.Context, mck Mock) {
 						mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
 							secret := corev1.Secret{Data: map[string][]byte{
-								"bucket_name": []byte("fake"),
-								"s3_endpoint": []byte("fake"),
-								"access_key":  []byte("fake"),
-								"secret_key":  []byte("fake"),
+								"bucket":   []byte("fake"),
+								"endpoint": []byte("fake"),
+								"access":   []byte("fake"),
+								"secret":   []byte("fake"),
 							}}
 							*obj = secret
 							return nil

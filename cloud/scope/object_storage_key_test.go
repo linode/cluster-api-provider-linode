@@ -267,8 +267,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
 				Label:     "test-key",
-				AccessKey: "access_key",
-				SecretKey: "secret_key",
+				AccessKey: "access",
+				SecretKey: "secret",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
@@ -285,8 +285,8 @@ func TestGenerateKeySecret(t *testing.T) {
 				}).Times(1)
 			},
 			expectedData: map[string]string{
-				"access_key": "access_key",
-				"secret_key": "secret_key",
+				"access": "access",
+				"secret": "secret",
 			},
 			expectedErr: nil,
 		},
@@ -317,8 +317,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
 				Label:     "test-key",
-				AccessKey: "access_key",
-				SecretKey: "secret_key",
+				AccessKey: "access",
+				SecretKey: "secret",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
@@ -364,8 +364,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
 				Label:     "test-key",
-				AccessKey: "access_key",
-				SecretKey: "secret_key",
+				AccessKey: "access",
+				SecretKey: "secret",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
@@ -389,7 +389,7 @@ func TestGenerateKeySecret(t *testing.T) {
 				}, nil)
 			},
 			expectedData: map[string]string{
-				"key": "access_key,secret_key,hostname",
+				"key": "access,secret,hostname",
 			},
 			expectedErr: nil,
 		},
@@ -421,8 +421,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
 				Label:     "test-key",
-				AccessKey: "access_key",
-				SecretKey: "secret_key",
+				AccessKey: "access",
+				SecretKey: "secret",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
@@ -457,8 +457,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
 				Label:     "test-key",
-				AccessKey: "access_key",
-				SecretKey: "secret_key",
+				AccessKey: "access",
+				SecretKey: "secret",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",
@@ -496,8 +496,8 @@ func TestGenerateKeySecret(t *testing.T) {
 			key: &linodego.ObjectStorageKey{
 				ID:        1,
 				Label:     "test-key",
-				AccessKey: "access_key",
-				SecretKey: "secret_key",
+				AccessKey: "access",
+				SecretKey: "secret",
 				BucketAccess: &[]linodego.ObjectStorageKeyBucketAccess{
 					{
 						BucketName:  "bucket",

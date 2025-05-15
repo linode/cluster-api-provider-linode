@@ -138,8 +138,8 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					secretKey := client.ObjectKey{Namespace: "default", Name: "lifecycle-obj-key"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
-					Expect(string(secret.Data["access_key"])).To(Equal("access-key-1"))
-					Expect(string(secret.Data["secret_key"])).To(Equal("secret-key-1"))
+					Expect(string(secret.Data["access"])).To(Equal("access-key-1"))
+					Expect(string(secret.Data["secret"])).To(Equal("secret-key-1"))
 
 					events := mck.Events()
 					Expect(events).To(ContainSubstring("Object storage key assigned"))
@@ -193,8 +193,8 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					secretKey := client.ObjectKey{Namespace: "default", Name: "lifecycle-obj-key"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
-					Expect(string(secret.Data["access_key"])).To(Equal("access-key-2"))
-					Expect(string(secret.Data["secret_key"])).To(Equal("secret-key-2"))
+					Expect(string(secret.Data["access"])).To(Equal("access-key-2"))
+					Expect(string(secret.Data["secret"])).To(Equal("secret-key-2"))
 
 					events := mck.Events()
 					Expect(events).To(ContainSubstring("Object storage key assigned"))
@@ -242,8 +242,8 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					secretKey := client.ObjectKey{Namespace: "default", Name: "lifecycle-obj-key"}
 					Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 					Expect(secret.Data).To(HaveLen(2))
-					Expect(string(secret.Data["access_key"])).To(Equal("access-key-2"))
-					Expect(string(secret.Data["secret_key"])).To(Equal("secret-key-2"))
+					Expect(string(secret.Data["access"])).To(Equal("access-key-2"))
+					Expect(string(secret.Data["secret"])).To(Equal("secret-key-2"))
 
 					events := mck.Events()
 					Expect(events).To(ContainSubstring("Object storage key retrieved"))

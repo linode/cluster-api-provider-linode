@@ -8,8 +8,8 @@ spec:
       permissions: read_only
       region: us-sea
   generatedSecret:
-    name: ($access_key_secret)
+    name: ($access_secret)
     namespace: default
     format:
-      the_access_key: "{{ .AccessKey }}"
-      the_secret_key: "{{ .SecretKey }}"
+      the_access: "{{ .AccessKey }}"
+      the_secret: "{{ .SecretKey }}"
