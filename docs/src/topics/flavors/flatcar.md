@@ -28,7 +28,7 @@ clusterctl init --infrastructure linode-linode --addon helm
 
 Flatcar is not officially provided by Akamai/Linode so it is required to import a Flatcar image. Akamai support is available on Flatcar since the release [4012.0.0][release-4012]: all releases equal or greater than this major release will fit.
 
-To import the image, it is recommended to follow this documentation: https://www.flatcar.org/docs/latest/installing/community-platforms/akamai/#importing-an-image
+To import the image, it is recommended to follow this documentation: https://www.flatcar.org/docs/latest/installing/cloud/akamai/#importing-an-image
 
 By following this import step, you will get the Flatcar image ID stored into `IMAGE_ID`.
 
