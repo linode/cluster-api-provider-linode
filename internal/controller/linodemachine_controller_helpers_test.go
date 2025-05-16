@@ -165,11 +165,11 @@ https://object.bucket.example.com
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
-							"bucket_name":     []byte("fake"),
+							"bucket":          []byte("fake"),
 							"bucket_endpoint": []byte("fake.example.com"),
 							"endpoint":        []byte("example.com"),
-							"access_key":      []byte("fake"),
-							"secret_key":      []byte("fake"),
+							"access":          []byte("fake"),
+							"secret":          []byte("fake"),
 						},
 					}
 					*obj = cred
@@ -243,11 +243,11 @@ https://object.bucket.example.com
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
-							"bucket_name":     []byte("fake"),
+							"bucket":          []byte("fake"),
 							"bucket_endpoint": []byte("fake.example.com"),
-							"s3_endpoint":     []byte("example.com"),
-							"access_key":      []byte("fake"),
-							"secret_key":      []byte("fake"),
+							"endpoint":        []byte("example.com"),
+							"access":          []byte("fake"),
+							"secret":          []byte("fake"),
 						},
 					}
 					*obj = cred

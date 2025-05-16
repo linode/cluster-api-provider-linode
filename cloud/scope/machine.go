@@ -145,7 +145,7 @@ func (m *MachineScope) GetBucketName(ctx context.Context) (string, error) {
 		return "", errors.New("no cluster object store")
 	}
 
-	name, err := getCredentialDataFromRef(ctx, m.Client, m.LinodeCluster.Spec.ObjectStore.CredentialsRef, m.LinodeCluster.GetNamespace(), "bucket_name")
+	name, err := getCredentialDataFromRef(ctx, m.Client, m.LinodeCluster.Spec.ObjectStore.CredentialsRef, m.LinodeCluster.GetNamespace(), "bucket")
 	if err != nil {
 		return "", fmt.Errorf("get bucket name: %w", err)
 	}

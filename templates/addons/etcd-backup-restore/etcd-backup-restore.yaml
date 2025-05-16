@@ -52,7 +52,7 @@ data:
               valueFrom:
                 secretKeyRef:
                   name: ${CLUSTER_NAME}-etcd-backup-obj-key
-                  key: "bucket_name"
+                  key: "bucket"
             - name: "AWS_ENDPOINT"
               valueFrom:
                 secretKeyRef:
@@ -62,12 +62,12 @@ data:
               valueFrom:
                 secretKeyRef:
                   name: ${CLUSTER_NAME}-etcd-backup-obj-key
-                  key: "access_key"
+                  key: "access"
             - name: "AWS_SECRET_ACCESS_KEY"
               valueFrom:
                 secretKeyRef:
                   name: ${CLUSTER_NAME}-etcd-backup-obj-key
-                  key: "secret_key"
+                  key: "secret"
             - name: "AWS_SSE_CUSTOMER_KEY"
               valueFrom:
                 secretKeyRef:
@@ -117,7 +117,7 @@ data:
               valueFrom:
                 secretKeyRef:
                   name: ${CLUSTER_NAME}-etcd-backup-obj-key
-                  key: "bucket_name"
+                  key: "bucket"
             volumeMounts:
             - mountPath: ${CERTPATH}
               name: k8s-certs

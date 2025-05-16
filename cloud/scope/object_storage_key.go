@@ -105,8 +105,8 @@ func (s *ObjectStorageKeyScope) GenerateKeySecret(ctx context.Context, key *lino
 
 	if len(s.Key.Spec.Format) == 0 {
 		secretStringData = map[string]string{
-			"access_key": key.AccessKey,
-			"secret_key": key.SecretKey,
+			"access": key.AccessKey,
+			"secret": key.SecretKey,
 		}
 	} else {
 		// This should never run since the CRD has a validation marker to ensure bucketAccess has at least one item.

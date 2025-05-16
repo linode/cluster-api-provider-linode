@@ -376,8 +376,8 @@ spec:
               set -e
             
               # Getting the keys from the CAPL cluster
-              access_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.access_key}' | base64 -d)
-              secret_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.secret_key}' | base64 -d)
+              access_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.access}' | base64 -d)
+              secret_key=$(KUBECONFIG=$CAPL_KUBECONFIG kubectl get secret $SECRET_NAME -n kube-system -o=jsonpath='{.data.secret}' | base64 -d)
 
               #Storing the keys into a config file
               cat <<EOL > .s5cfg

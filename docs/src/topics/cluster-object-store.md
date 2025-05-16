@@ -29,12 +29,12 @@ kind: Secret
 metadata:
   name: ${CLUSTER_NAME}-object-store-credentials
 data:
-  bucket_name: ${BUCKET_NAME}
+  bucket: ${BUCKET_NAME}
   # Service endpoint
   # See: https://docs.aws.amazon.com/general/latest/gr/s3.html
-  s3_endpoint: ${S3_ENDPOINT}
-  access_key: ${ACCESS_KEY}
-  secret_key: ${SECRET_KEY}
+  endpoint: ${S3_ENDPOINT}
+  access: ${ACCESS_KEY}
+  secret: ${SECRET_KEY}
 ```
 
 Alternatively, the `LinodeObjectStorageBucket` and `LinodeObjectStorageKey` resources can be used:
@@ -86,10 +86,10 @@ spec:
     generatedSecret:
         type: Opaque
         format:
-            bucket_name: '{{ .BucketName }}'
-            s3_endpoint: '{{ .S3Endpoint }}'
-            access_key: '{{ .AccessKey }}'
-            secret_key: '{{ .SecretKey }}'
+            bucket: '{{ .BucketName }}'
+            endpoint: '{{ .S3Endpoint }}'
+            access: '{{ .AccessKey }}'
+            secret: '{{ .SecretKey }}'
 ```
 
 ## Capabilities

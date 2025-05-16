@@ -127,17 +127,17 @@ func CreateS3Clients(ctx context.Context, crClient clients.K8sClient, cluster in
 
 	// If we have a cluster object store bucket, get its configuration.
 	if cluster.Spec.ObjectStore != nil {
-		secret, err := getCredentials(ctx, crClient, cluster.Spec.ObjectStore.CredentialsRef, cluster.GetNamespace())
+		objSecret, err := getCredentials(ctx, crClient, cluster.Spec.ObjectStore.CredentialsRef, cluster.GetNamespace())
 		if err == nil {
 			var (
-				access_key  = string(secret.Data["access_key"])
-				secret_key  = string(secret.Data["secret_key"])
-				s3_endpoint = string(secret.Data["s3_endpoint"])
+				access   = string(objSecret.Data["access"])
+				secret   = string(objSecret.Data["secret"])
+				endpoint = string(objSecret.Data["endpoint"])
 			)
 
-			configOpts = append(configOpts, awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(access_key, secret_key, "")))
+			configOpts = append(configOpts, awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(access, secret, "")))
 			clientOpts = append(clientOpts, func(opts *s3.Options) {
-				opts.BaseEndpoint = aws.String(s3_endpoint)
+				opts.BaseEndpoint = aws.String(endpoint)
 			})
 		}
 	}

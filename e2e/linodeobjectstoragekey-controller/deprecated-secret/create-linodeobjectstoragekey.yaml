@@ -9,8 +9,8 @@ spec:
       region: us-sea
   secretType: Opaque
   secretDataFormat:
-    the_access_key: "{{ .AccessKey }}"
-    the_secret_key: "{{ .SecretKey }}"
+    the_access: "{{ .AccessKey }}"
+    the_secret: "{{ .SecretKey }}"
   generatedSecret:
-    name: ($access_key_secret)
+    name: ($access_secret)
     namespace: default

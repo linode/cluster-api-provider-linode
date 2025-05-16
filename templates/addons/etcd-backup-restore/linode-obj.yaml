@@ -43,11 +43,11 @@ spec:
           name: ${CLUSTER_NAME}-etcd-backup-obj-key
           namespace: kube-system
         stringData:
-          bucket_name: ${CLUSTER_NAME}-etcd-backup
+          bucket: ${CLUSTER_NAME}-etcd-backup
           bucket_region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
           bucket_endpoint: {{ .BucketEndpoint }}
-          access_key: {{ .AccessKey }}
-          secret_key: {{ .SecretKey }}
+          access: {{ .AccessKey }}
+          secret: {{ .SecretKey }}
 ---
 apiVersion: addons.cluster.x-k8s.io/v1beta1
 kind: ClusterResourceSet

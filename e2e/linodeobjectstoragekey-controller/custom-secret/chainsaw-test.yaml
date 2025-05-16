@@ -18,7 +18,7 @@ spec:
       # Format the key name into a valid Kubernetes object name
       # TODO: This is over-truncated to account for the Kubernetes access key Secret
       value: (trim((truncate(($run), `52`)), '-'))
-    - name: access_key_secret
+    - name: access_secret
       value: (join('-', [($key), 'custom']))
   template: true
   steps:
