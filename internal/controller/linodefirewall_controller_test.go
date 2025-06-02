@@ -181,7 +181,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(mck.Logs()).To(ContainSubstring("too many IPs in this ACL"))
-				Expect(res.Requeue).To(BeFalse())
+				Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 			})),
 			Path(
 				Call("able to create", func(ctx context.Context, mck Mock) {
