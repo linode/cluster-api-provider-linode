@@ -42,7 +42,6 @@ func DefaultDecorator() func(span trace.Span, params, results map[string]interfa
 
 		if res, ok := wrappers.GetValue[reconcile.Result](params, RequestParam); ok {
 			attr = append(attr,
-				attribute.Bool("result.requeue", res.Requeue),
 				attribute.String("result.requeue_after", res.RequeueAfter.String()),
 			)
 		}
