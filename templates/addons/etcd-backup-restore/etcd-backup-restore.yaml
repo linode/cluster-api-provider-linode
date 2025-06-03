@@ -94,7 +94,7 @@ data:
             - --cacert=${CERTPATH}/etcd/${CACERTFILE}
             - --cert=${CERTPATH}/etcd/${CERTFILE}
             - --key=${CERTPATH}/etcd/${KEYFILE}
-            image: ${ETCDBR_IMAGE:-europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl:v0.29.0}
+            image: ${ETCDBR_IMAGE:-europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl:v0.36.3}
             securityContext:
               allowPrivilegeEscalation: false
               runAsUser: 0
