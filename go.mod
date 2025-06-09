@@ -7,10 +7,10 @@ toolchain go1.24.1
 require (
 	github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.4.0
 	github.com/aws/aws-sdk-go-v2 v1.36.3
-	github.com/aws/aws-sdk-go-v2/config v1.29.14
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.67
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.76
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.4
+	github.com/aws/aws-sdk-go-v2/config v1.29.15
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.68
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.78
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.80.1
 	github.com/aws/smithy-go v1.22.3
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
@@ -51,7 +51,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.25.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.33.19 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.20 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.2 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
