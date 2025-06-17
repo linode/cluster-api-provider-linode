@@ -813,6 +813,21 @@ func (mr *MockLinodeClientMockRecorder) UpdateFirewallRules(ctx, firewallID, rul
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFirewallRules", reflect.TypeOf((*MockLinodeClient)(nil).UpdateFirewallRules), ctx, firewallID, rules)
 }
 
+// UpdateInstance mocks base method.
+func (m *MockLinodeClient) UpdateInstance(ctx context.Context, linodeId int, opts linodego.InstanceUpdateOptions) (*linodego.Instance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateInstance", ctx, linodeId, opts)
+	ret0, _ := ret[0].(*linodego.Instance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateInstance indicates an expected call of UpdateInstance.
+func (mr *MockLinodeClientMockRecorder) UpdateInstance(ctx, linodeId, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstance", reflect.TypeOf((*MockLinodeClient)(nil).UpdateInstance), ctx, linodeId, opts)
+}
+
 // UpdateInstanceConfig mocks base method.
 func (m *MockLinodeClient) UpdateInstanceConfig(ctx context.Context, linodeID, configID int, opts linodego.InstanceConfigUpdateOptions) (*linodego.InstanceConfig, error) {
 	m.ctrl.T.Helper()
@@ -1260,6 +1275,21 @@ func (m *MockLinodeInstanceClient) ResizeInstanceDisk(ctx context.Context, linod
 func (mr *MockLinodeInstanceClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
+}
+
+// UpdateInstance mocks base method.
+func (m *MockLinodeInstanceClient) UpdateInstance(ctx context.Context, linodeId int, opts linodego.InstanceUpdateOptions) (*linodego.Instance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateInstance", ctx, linodeId, opts)
+	ret0, _ := ret[0].(*linodego.Instance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateInstance indicates an expected call of UpdateInstance.
+func (mr *MockLinodeInstanceClientMockRecorder) UpdateInstance(ctx, linodeId, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).UpdateInstance), ctx, linodeId, opts)
 }
 
 // UpdateInstanceConfig mocks base method.

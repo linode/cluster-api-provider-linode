@@ -68,6 +68,8 @@ const (
 	ConditionPreflightConfigured                = "PreflightConfigured"
 	ConditionPreflightBootTriggered             = "PreflightBootTriggered"
 	ConditionPreflightReady                     = "PreflightReady"
+	machineTagsAnnotation                       = "linode-vm-tags"
+	machineCAPLTagsAnnotation                   = "linode-vm-capl-tags"
 
 	// WaitingForBootstrapDataReason used when machine is waiting for bootstrap data to be ready before proceeding.
 	WaitingForBootstrapDataReason = "WaitingForBootstrapData"
@@ -247,6 +249,11 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 		Status: metav1.ConditionTrue,
 		Reason: "BootstrapDataSecretReady", // We have to set the reason to not fail object patching
 	})
+
+	// sync the tags on the machine with tags configured on machineTagsAnnotation.
+	if err := reconcileTags(ctx, machineScope, logger); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// Update
 	if machineScope.LinodeMachine.Status.InstanceState != nil {

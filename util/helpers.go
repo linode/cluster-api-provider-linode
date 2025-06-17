@@ -74,6 +74,10 @@ func GetInstanceID(providerID *string) (int, error) {
 	return instanceID, nil
 }
 
+func GetAutoGenTags(cluster infrav1alpha2.LinodeCluster) []string {
+	return []string{cluster.Name}
+}
+
 // IsLinodePrivateIP checks if an IP address belongs to the Linode private IP range (192.168.128.0/17)
 func IsLinodePrivateIP(ipAddress string) bool {
 	// Parse the IP address
