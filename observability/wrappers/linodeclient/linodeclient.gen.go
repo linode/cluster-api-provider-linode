@@ -1301,6 +1301,32 @@ func (_d LinodeClientWithTracing) UpdateFirewallRules(ctx context.Context, firew
 	return _d.LinodeClient.UpdateFirewallRules(ctx, firewallID, rules)
 }
 
+// UpdateInstance implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateInstance(ctx context.Context, linodeId int, opts linodego.InstanceUpdateOptions) (ip1 *linodego.Instance, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateInstance")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":      ctx,
+				"linodeId": linodeId,
+				"opts":     opts}, map[string]interface{}{
+				"ip1": ip1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateInstance(ctx, linodeId, opts)
+}
+
 // UpdateInstanceConfig implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, linodeID int, configID int, opts linodego.InstanceConfigUpdateOptions) (ip1 *linodego.InstanceConfig, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateInstanceConfig")

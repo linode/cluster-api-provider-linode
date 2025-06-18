@@ -74,6 +74,7 @@ func GetInstanceID(providerID *string) (int, error) {
 	return instanceID, nil
 }
 
+// GetAutoGenTags returns tags to be added to linods when a cluster is provisioned using CAPL
 func GetAutoGenTags(cluster infrav1alpha2.LinodeCluster) []string {
 	return []string{cluster.Name}
 }
