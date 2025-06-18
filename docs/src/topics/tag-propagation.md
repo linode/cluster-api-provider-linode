@@ -15,7 +15,7 @@ Whenever a cluster is provisioned using CAPL, tags can be added to the linodes t
             linode-vm-tags: "[\"workers\",\"example-tag1\"]"
     ```
 - `KubeadmControlPlane`,  `RKE2ControlPlane` or `KThreesControlPlane` via `spec.machineTemplate.metadata.annotations` (for control plane instances):
-    ```
+    ```yaml
     apiVersion: controlplane.cluster.x-k8s.io/v1beta1
     kind: KubeadmControlPlane
     metadata:
