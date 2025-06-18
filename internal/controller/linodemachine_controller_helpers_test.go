@@ -1178,3 +1178,115 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestReconcileTags(t *testing.T) {
+	t.Parallel()
+	clusterName := "cluster1"
+
+	for _, tc := range []struct {
+		name          string
+		linodeMachine *infrav1alpha2.LinodeMachine
+		mockSetup     func(mockLinodeClient *mock.MockLinodeClient)
+		expectErrMsg  string
+		expMachine    *infrav1alpha2.LinodeMachine
+	}{
+		{
+			name:          "Success - No Tags annotation",
+			linodeMachine: &infrav1alpha2.LinodeMachine{},
+			mockSetup:     func(mockLinodeClient *mock.MockLinodeClient) {},
+		},
+		{
+			name: "Error - failure to unmarshall tags",
+			linodeMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						machineTagsAnnotation: "tag1,tag2",
+					},
+				},
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					ProviderID: ptr.To("linode://1"),
+				},
+			},
+			mockSetup:    func(mockLinodeClient *mock.MockLinodeClient) {},
+			expectErrMsg: "invalid character 'a' in literal true (expecting 'r')",
+		},
+		{
+			name: "Success - Create capl auto-gen tags annotation",
+			linodeMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						machineTagsAnnotation: "[]",
+					},
+				},
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					ProviderID: ptr.To("linode://1"),
+				},
+			},
+			expMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						machineCAPLTagsAnnotation: "[\"" + clusterName + "\"]",
+						machineTagsAnnotation:     "[]",
+					},
+				},
+			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().UpdateInstance(gomock.Any(), gomock.Any(), linodego.InstanceUpdateOptions{Tags: &[]string{clusterName}}).Return(&linodego.Instance{}, nil)
+			},
+		},
+		{
+			name: "Success - Tag machines",
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().UpdateInstance(gomock.Any(), gomock.Any(), linodego.InstanceUpdateOptions{Tags: &[]string{"tag1", "tag2", "tag3", clusterName}}).Return(&linodego.Instance{}, nil)
+			},
+			linodeMachine: &infrav1alpha2.LinodeMachine{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						machineCAPLTagsAnnotation: "[\"" + clusterName + "\"]",
+						machineTagsAnnotation:     "[\"tag1\",\"tag2\",\"tag3\"]",
+					},
+				},
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					ProviderID: ptr.To("linode://1"),
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Setup mock controller and clients
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+
+			tc.mockSetup(mockLinodeClient)
+
+			// Create machine scope
+			machineScope := &scope.MachineScope{
+				LinodeClient:  mockLinodeClient,
+				LinodeMachine: tc.linodeMachine,
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: clusterName,
+					},
+				},
+			}
+
+			// Call the function being tested
+			err := reconcileTags(t.Context(), machineScope, testr.New(t))
+
+			// Check expectations
+			if tc.expectErrMsg != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectErrMsg)
+			} else {
+				require.NoError(t, err)
+				if tc.expMachine != nil {
+					require.Equal(t, tc.expMachine.Annotations, tc.linodeMachine.Annotations)
+				}
+			}
+		})
+	}
+}
