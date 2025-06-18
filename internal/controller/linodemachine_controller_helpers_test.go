@@ -61,10 +61,9 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		},
 		BackupsEnabled: true,
 		PrivateIP:      util.Pointer(true),
-		Tags:           []string{"tag"},
 	}
 
-	createConfig := linodeMachineSpecToInstanceCreateConfig(machineSpec)
+	createConfig := linodeMachineSpecToInstanceCreateConfig(machineSpec, []string{"tag"})
 	assert.NotNil(t, createConfig, "Failed to convert LinodeMachineSpec to InstanceCreateOptions")
 }
 
@@ -1230,15 +1229,11 @@ func TestReconcileTags(t *testing.T) {
 					},
 				},
 			},
-			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
-				mockLinodeClient.EXPECT().UpdateInstance(gomock.Any(), gomock.Any(), linodego.InstanceUpdateOptions{Tags: &[]string{clusterName}}).Return(&linodego.Instance{}, nil)
-			},
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {},
 		},
 		{
-			name: "Success - Tag machines",
-			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
-				mockLinodeClient.EXPECT().UpdateInstance(gomock.Any(), gomock.Any(), linodego.InstanceUpdateOptions{Tags: &[]string{"tag1", "tag2", "tag3", clusterName}}).Return(&linodego.Instance{}, nil)
-			},
+			name:      "Success - Tag machines",
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {},
 			linodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -1275,7 +1270,7 @@ func TestReconcileTags(t *testing.T) {
 			}
 
 			// Call the function being tested
-			err := reconcileTags(t.Context(), machineScope, testr.New(t))
+			_, err := getTags(machineScope)
 
 			// Check expectations
 			if tc.expectErrMsg != "" {
