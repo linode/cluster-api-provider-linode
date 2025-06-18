@@ -1432,6 +1432,8 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							ListInstanceConfigs(ctx, 123, gomock.Any()).
 							After(getAddrs).
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
+						mck.LinodeClient.EXPECT().UpdateInstance(gomock.Any(), gomock.Any(), gomock.Any()).
+							Return(nil, nil)
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))

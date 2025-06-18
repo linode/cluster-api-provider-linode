@@ -91,6 +91,10 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 		createConfig.Tags = []string{}
 	}
 
+	if len(machineScope.LinodeMachine.Annotations) == 0 {
+		machineScope.LinodeMachine.Annotations = make(map[string]string)
+	}
+
 	// populate the tags into the machine-tags annotation.
 	machineCreateTags, err := json.Marshal(createConfig.Tags)
 	if err != nil {
