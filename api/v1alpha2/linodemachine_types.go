@@ -65,6 +65,8 @@ type LinodeMachineSpec struct {
 	BackupsEnabled bool `json:"backupsEnabled,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	PrivateIP *bool `json:"privateIP,omitempty"`
+	// Deprecated: spec.tags is deprecated, use metadata.annotations.linode-vm-tags instead.
+	// +kubebuilder:deprecatedversion:warning="spec.tags is deprecated, use metadata.annotations.linode-vm-tags instead"
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
