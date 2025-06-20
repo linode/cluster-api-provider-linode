@@ -80,7 +80,7 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 	return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 }
 
-func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) error {
+func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
 	if machineScope.LinodeMachine.Spec.PrivateIP != nil {
 		createConfig.PrivateIP = *machineScope.LinodeMachine.Spec.PrivateIP
 	} else {
@@ -90,27 +90,6 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 	if createConfig.Tags == nil {
 		createConfig.Tags = []string{}
 	}
-
-	if len(machineScope.LinodeMachine.Annotations) == 0 {
-		machineScope.LinodeMachine.Annotations = make(map[string]string)
-	}
-
-	// populate the tags into the machine-tags annotation.
-	machineCreateTags, err := json.Marshal(createConfig.Tags)
-	if err != nil {
-		return fmt.Errorf("error in converting tags to string, %w", err)
-	}
-	machineScope.LinodeMachine.Annotations[machineTagsAnnotation] = string(machineCreateTags)
-
-	caplAutogenTags := util.GetAutoGenTags(*machineScope.LinodeCluster)
-	createConfig.Tags = append(createConfig.Tags, caplAutogenTags...)
-
-	// populaate capl generated tags to another annotation.
-	caplGenTags, err := json.Marshal(caplAutogenTags)
-	if err != nil {
-		return fmt.Errorf("error in converting name tag to string, %w", err)
-	}
-	machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation] = string(caplGenTags)
 
 	if createConfig.Label == "" {
 		createConfig.Label = machineScope.LinodeMachine.Name
@@ -122,14 +101,17 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 	if createConfig.RootPass == "" {
 		createConfig.RootPass = uuid.NewString()
 	}
-
-	return nil
 }
 
 func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzipCompressionEnabled bool, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
-	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec)
+	machineTags, err := getTags(machineScope)
+	if err != nil {
+		logger.Error(err, "Failed to get machine tags")
+		return nil, err
+	}
+	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec, machineTags)
 	if createConfig == nil {
 		err = errors.New("failed to convert machine spec to create instance config")
 		logger.Error(err, "Panic! Struct of LinodeMachineSpec is different than InstanceCreateOptions")
@@ -141,9 +123,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 		return nil, err
 	}
 
-	if err := fillCreateConfig(createConfig, machineScope); err != nil {
-		return nil, err
-	}
+	fillCreateConfig(createConfig, machineScope)
 
 	// Configure VPC interface if needed
 	if err := configureVPCInterface(ctx, machineScope, createConfig, logger); err != nil {
@@ -578,7 +558,7 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	}, nil
 }
 
-func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec) *linodego.InstanceCreateOptions {
+func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec, machineTags []string) *linodego.InstanceCreateOptions {
 	interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
 	for idx, iface := range machineSpec.Interfaces {
 		interfaces[idx] = linodego.InstanceConfigInterfaceCreateOptions{
@@ -603,10 +583,9 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 		Image:           machineSpec.Image,
 		Interfaces:      interfaces,
 		PrivateIP:       privateIP,
-		Tags:            machineSpec.Tags,
+		Tags:            machineTags,
 		FirewallID:      machineSpec.FirewallID,
 		DiskEncryption:  linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
-		Group:           machineSpec.Group,
 	}
 }
 
@@ -1020,42 +999,44 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 	return nil
 }
 
-// updates tags on the linode whenever the tags annotation change.
-func reconcileTags(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger) error {
-	if _, ok := machineScope.LinodeMachine.Annotations[machineTagsAnnotation]; !ok {
-		return nil
-	}
-	if machineScope.LinodeMachine.Spec.ProviderID == nil {
-		logger.Info("Skipping tags reconcile as ProviderID is not yet set for", "LinodeMachine", machineScope.LinodeMachine.Name)
-		return nil
+// get tags on the linodemachine
+func getTags(machineScope *scope.MachineScope) ([]string, error) {
+	if len(machineScope.LinodeMachine.Annotations) == 0 {
+		machineScope.LinodeMachine.Annotations = make(map[string]string)
 	}
 
-	var machineTags []string
-	if err := json.Unmarshal([]byte(machineScope.LinodeMachine.Annotations[machineTagsAnnotation]), &machineTags); err != nil {
-		return err
+	// add unique tags from the LinodeMachine linode-vm-tags annotation
+	machineTagSet := map[string]struct{}{}
+	if _, ok := machineScope.LinodeMachine.Annotations[machineTagsAnnotation]; ok {
+		var machineTags []string
+		if err := json.Unmarshal([]byte(machineScope.LinodeMachine.Annotations[machineTagsAnnotation]), &machineTags); err != nil {
+			return nil, err
+		}
+		for _, tag := range machineTags {
+			machineTagSet[tag] = struct{}{}
+		}
 	}
 
+	// add unique tags from the LinodeMachine linode-capl-vm-tags annotation
 	if _, ok := machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation]; !ok {
 		caplGenTags, err := json.Marshal(util.GetAutoGenTags(*machineScope.LinodeCluster))
 		if err != nil {
-			return fmt.Errorf("error in converting name tag to string, %w", err)
+			return nil, fmt.Errorf("error in converting name tag to string, %w", err)
 		}
 		machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation] = string(caplGenTags)
 	}
-
 	var caplAutogenTags []string
 	if err := json.Unmarshal([]byte(machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation]), &caplAutogenTags); err != nil {
-		return err
+		return nil, err
+	}
+	for _, tag := range caplAutogenTags {
+		machineTagSet[tag] = struct{}{}
 	}
 
-	machineTags = append(machineTags, caplAutogenTags...)
-	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
-	if err != nil {
-		return err
+	// use the set to create a slice of unique tags
+	machineTags := make([]string, 0, len(machineTagSet))
+	for tag := range machineTagSet {
+		machineTags = append(machineTags, tag)
 	}
-
-	_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{
-		Tags: &machineTags,
-	})
-	return err
+	return machineTags, nil
 }

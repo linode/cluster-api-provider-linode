@@ -1391,6 +1391,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 								ID:     123,
 								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 								IPv6:   "fd00::",
+								Tags:   []string{"test-cluster-2"},
 								Status: linodego.InstanceOffline,
 							}, nil)
 						mck.LinodeClient.EXPECT().
@@ -1432,8 +1433,6 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							ListInstanceConfigs(ctx, 123, gomock.Any()).
 							After(getAddrs).
 							Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
-						mck.LinodeClient.EXPECT().UpdateInstance(gomock.Any(), gomock.Any(), gomock.Any()).
-							Return(nil, nil)
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
@@ -1654,6 +1653,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							ID:      11111,
 							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 							IPv6:    "fd00::",
+							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceProvisioning,
 							Updated: util.Pointer(time.Now()),
 						}, nil)
@@ -1671,6 +1671,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							ID:      11111,
 							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 							IPv6:    "fd00::",
+							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceRunning,
 							Updated: util.Pointer(time.Now()),
 						}, nil)
@@ -1679,6 +1680,39 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceRunning))
 					Expect(rutil.ConditionTrue(linodeMachine, string(clusterv1.ReadyCondition))).To(BeTrue())
 				})),
+		),
+		Path(
+			Call("machine tag annotation is updated", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, linodego.InstanceUpdateOptions{Tags: &[]string{"test-tag", "test-cluster-2"}}).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2", "test-tag"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+			}),
+			Result("machine tag annotation is updated", func(ctx context.Context, mck Mock) {
+				linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
+				linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceRunning)
+				linodeMachine.Annotations = map[string]string{
+					machineTagsAnnotation: "[\"test-tag\"]",
+				}
+				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(linodeMachine.Annotations[machineTagsAnnotation]).To(Equal("[\"test-tag\"]"))
+				Expect(linodeMachine.Annotations[machineCAPLTagsAnnotation]).To(Equal("[\"test-cluster-2\"]"))
+			}),
 		),
 	)
 })
