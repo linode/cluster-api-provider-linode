@@ -1030,25 +1030,38 @@ func getTags(machineScope *scope.MachineScope) ([]string, error) {
 		machineScope.LinodeMachine.Annotations = make(map[string]string)
 	}
 
-	var machineTags []string
+	// add unique tags from the LinodeMachine linode-vm-tags annotation
+	machineTagSet := map[string]bool{}
 	if _, ok := machineScope.LinodeMachine.Annotations[machineTagsAnnotation]; ok {
+		var machineTags []string
 		if err := json.Unmarshal([]byte(machineScope.LinodeMachine.Annotations[machineTagsAnnotation]), &machineTags); err != nil {
-			return machineTags, err
+			return nil, err
+		}
+		for _, tag := range machineTags {
+			machineTagSet[tag] = true
 		}
 	}
 
+	// add unique tags from the LinodeMachine linode-capl-vm-tags annotation
 	if _, ok := machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation]; !ok {
 		caplGenTags, err := json.Marshal(util.GetAutoGenTags(*machineScope.LinodeCluster))
 		if err != nil {
-			return machineTags, fmt.Errorf("error in converting name tag to string, %w", err)
+			return nil, fmt.Errorf("error in converting name tag to string, %w", err)
 		}
 		machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation] = string(caplGenTags)
 	}
-
 	var caplAutogenTags []string
 	if err := json.Unmarshal([]byte(machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation]), &caplAutogenTags); err != nil {
-		return machineTags, err
+		return nil, err
+	}
+	for _, tag := range caplAutogenTags {
+		machineTagSet[tag] = true
 	}
 
-	return append(machineTags, caplAutogenTags...), nil
+	// use the set to create a slice of unique tags
+	var machineTags []string
+	for tag := range machineTagSet {
+		machineTags = append(machineTags, tag)
+	}
+	return machineTags, nil
 }
