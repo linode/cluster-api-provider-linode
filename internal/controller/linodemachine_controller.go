@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -249,11 +250,6 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 		Status: metav1.ConditionTrue,
 		Reason: "BootstrapDataSecretReady", // We have to set the reason to not fail object patching
 	})
-
-	// sync the tags on the machine with tags configured on machineTagsAnnotation.
-	if err := reconcileTags(ctx, machineScope, logger); err != nil {
-		return ctrl.Result{}, err
-	}
 
 	// Update
 	if machineScope.LinodeMachine.Status.InstanceState != nil {
@@ -751,10 +747,24 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		})
 	}
 
-	// Clean up after instance creation.
+	// update the tags if needed
+	machineTags, err := getTags(machineScope)
+	if err != nil {
+		logger.Error(err, "Failed to get tags for Linode instance")
+		return ctrl.Result{}, err
+	}
+	if cmp.Diff(machineTags, linodeInstance.Tags) != "" {
+		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: &machineTags})
+		if err != nil {
+			logger.Error(err, "Failed to update tags for Linode instance")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+	}
+
+	// Clean up bootstrap data after instance creation.
 	if linodeInstance.Status == linodego.InstanceRunning && machineScope.Machine.Status.Phase == "Running" {
 		if err := deleteBootstrapData(ctx, machineScope); err != nil {
-			logger.Error(err, "Fail to bootstrap data")
+			logger.Error(err, "Fail to delete bootstrap data")
 		}
 	}
 

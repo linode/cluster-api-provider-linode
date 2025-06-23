@@ -610,7 +610,7 @@ _Appears in:_
 | `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ |  |  |  |
 | `backupsEnabled` _boolean_ |  |  |  |
 | `privateIP` _boolean_ |  |  |  |
-| `tags` _string array_ |  |  |  |
+| `tags` _string array_ | Deprecated: spec.tags is deprecated, use metadata.annotations.linode-vm-tags instead. |  |  |
 | `firewallID` _integer_ |  |  |  |
 | `osDisk` _[InstanceDisk](#instancedisk)_ | OSDisk is configuration for the root disk that includes the OS,<br />if not specified this defaults to whatever space is not taken up by the DataDisks |  |  |
 | `dataDisks` _object (keys:string, values:[InstanceDisk](#instancedisk))_ | DataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on a linodes plan |  |  |

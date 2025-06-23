@@ -356,6 +356,8 @@ spec:
                         - message: Value is immutable
                           rule: self == oldSelf
                       tags:
+                        description: 'Deprecated: spec.tags is deprecated, use metadata.annotations.linode-vm-tags
+                          instead.'
                         items:
                           type: string
                         type: array
