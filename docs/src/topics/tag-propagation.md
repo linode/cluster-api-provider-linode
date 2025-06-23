@@ -1,4 +1,4 @@
-# Tag Propogation
+# Tag Propagation
 
 
 Whenever a cluster is provisioned using CAPL, tags can be added to the linodes through one of the following options:
