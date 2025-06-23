@@ -86,6 +86,7 @@ type LinodeObjectStorageClient interface {
 	GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error)
 	CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)
 	DeleteObjectStorageKey(ctx context.Context, keyID int) error
+	DeleteObjectStorageBucket(ctx context.Context, regionID, label string) error
 }
 
 // LinodeDNSClient defines the methods that interact with Linode's Domains service.

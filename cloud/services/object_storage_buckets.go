@@ -5,12 +5,19 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/linode/linodego"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
 )
 
+// EnsureAndUpdateObjectStorageBucket ensures that the bucket exists and updates its access options if necessary.
 func EnsureAndUpdateObjectStorageBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*linodego.ObjectStorageBucket, error) {
 	bucket, err := bScope.LinodeClient.GetObjectStorageBucket(
 		ctx,
@@ -61,4 +68,58 @@ func EnsureAndUpdateObjectStorageBucket(ctx context.Context, bScope *scope.Objec
 	bScope.Logger.Info("Updated Bucket")
 
 	return bucket, nil
+}
+
+// DeleteBucket deletes the bucket and all its objects.
+func DeleteBucket(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
+	s3Client, err := createS3ClientWithAccessKey(ctx, bScope)
+	if err != nil {
+		return fmt.Errorf("failed to create S3 client: %w", err)
+	}
+	if err := PurgeAllObjects(ctx, bScope.Bucket.Name, s3Client, true, true); err != nil {
+		return fmt.Errorf("failed to purge all objects: %w", err)
+	}
+	bScope.Logger.Info("Purged all objects", "bucket", bScope.Bucket.Name)
+
+	if err := bScope.LinodeClient.DeleteObjectStorageBucket(ctx, bScope.Bucket.Spec.Region, bScope.Bucket.Name); err != nil {
+		return fmt.Errorf("failed to delete bucket: %w", err)
+	}
+	bScope.Logger.Info("Deleted empty bucket", "bucket", bScope.Bucket.Name)
+
+	return nil
+}
+
+// createS3ClientWithAccessKey creates a connection to s3 given k8s client and an access key reference.
+func createS3ClientWithAccessKey(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (*s3.Client, error) {
+	if bScope.Bucket.Spec.AccessKeyRef == nil {
+		return nil, fmt.Errorf("accessKeyRef is nil")
+	}
+	objSecret := &corev1.Secret{}
+	if bScope.Bucket.Spec.AccessKeyRef.Namespace == "" {
+		bScope.Bucket.Spec.AccessKeyRef.Namespace = bScope.Bucket.Namespace
+	}
+	if err := bScope.Client.Get(ctx, types.NamespacedName{Name: bScope.Bucket.Spec.AccessKeyRef.Name + "-obj-key", Namespace: bScope.Bucket.Spec.AccessKeyRef.Namespace}, objSecret); err != nil {
+		return nil, fmt.Errorf("failed to get bucket secret: %w", err)
+	}
+
+	awsConfig, err := awsconfig.LoadDefaultConfig(
+		ctx,
+		awsconfig.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				string(objSecret.Data["access"]),
+				string(objSecret.Data["secret"]),
+				""),
+		),
+		awsconfig.WithRegion("auto"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create aws config: %w", err)
+	}
+
+	s3Client := s3.NewFromConfig(awsConfig, func(opts *s3.Options) {
+		opts.BaseEndpoint = aws.String(string(objSecret.Data["endpoint"]))
+		opts.DisableLogOutputChecksumValidationSkipped = true
+	})
+
+	return s3Client, nil
 }
