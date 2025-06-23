@@ -304,8 +304,6 @@ clean-release: clean-release-git
 .PHONY: clean-child-clusters
 clean-child-clusters: kubectl
 	$(KUBECTL) delete clusters -A --all --timeout=180s
-	$(KUBECTL) delete linodevpc -A --all --timeout=60s
-	$(KUBECTL) delete linodefirewall -A --all --timeout=60s
 
 ## --------------------------------------
 ## Build Dependencies
