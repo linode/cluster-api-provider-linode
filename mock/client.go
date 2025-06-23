@@ -326,6 +326,20 @@ func (mr *MockLinodeClientMockRecorder) DeleteNodeBalancerNode(ctx, nodebalancer
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNodeBalancerNode", reflect.TypeOf((*MockLinodeClient)(nil).DeleteNodeBalancerNode), ctx, nodebalancerID, configID, nodeID)
 }
 
+// DeleteObjectStorageBucket mocks base method.
+func (m *MockLinodeClient) DeleteObjectStorageBucket(ctx context.Context, regionID, label string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteObjectStorageBucket", ctx, regionID, label)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteObjectStorageBucket indicates an expected call of DeleteObjectStorageBucket.
+func (mr *MockLinodeClientMockRecorder) DeleteObjectStorageBucket(ctx, regionID, label any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjectStorageBucket", reflect.TypeOf((*MockLinodeClient)(nil).DeleteObjectStorageBucket), ctx, regionID, label)
+}
+
 // DeleteObjectStorageKey mocks base method.
 func (m *MockLinodeClient) DeleteObjectStorageKey(ctx context.Context, keyID int) error {
 	m.ctrl.T.Helper()
@@ -1581,6 +1595,20 @@ func (m *MockLinodeObjectStorageClient) CreateObjectStorageKey(ctx context.Conte
 func (mr *MockLinodeObjectStorageClientMockRecorder) CreateObjectStorageKey(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateObjectStorageKey", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).CreateObjectStorageKey), ctx, opts)
+}
+
+// DeleteObjectStorageBucket mocks base method.
+func (m *MockLinodeObjectStorageClient) DeleteObjectStorageBucket(ctx context.Context, regionID, label string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteObjectStorageBucket", ctx, regionID, label)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteObjectStorageBucket indicates an expected call of DeleteObjectStorageBucket.
+func (mr *MockLinodeObjectStorageClientMockRecorder) DeleteObjectStorageBucket(ctx, regionID, label any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteObjectStorageBucket", reflect.TypeOf((*MockLinodeObjectStorageClient)(nil).DeleteObjectStorageBucket), ctx, regionID, label)
 }
 
 // DeleteObjectStorageKey mocks base method.

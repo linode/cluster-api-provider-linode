@@ -514,6 +514,31 @@ func (_d LinodeClientWithTracing) DeleteNodeBalancerNode(ctx context.Context, no
 	return _d.LinodeClient.DeleteNodeBalancerNode(ctx, nodebalancerID, configID, nodeID)
 }
 
+// DeleteObjectStorageBucket implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) DeleteObjectStorageBucket(ctx context.Context, regionID string, label string) (err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteObjectStorageBucket")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":      ctx,
+				"regionID": regionID,
+				"label":    label}, map[string]interface{}{
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.DeleteObjectStorageBucket(ctx, regionID, label)
+}
+
 // DeleteObjectStorageKey implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteObjectStorageKey(ctx context.Context, keyID int) (err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteObjectStorageKey")

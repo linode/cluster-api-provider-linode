@@ -29,6 +29,8 @@ const (
 	ACLPublicRead        ObjectStorageACL = "public-read"
 	ACLAuthenticatedRead ObjectStorageACL = "authenticated-read"
 	ACLPublicReadWrite   ObjectStorageACL = "public-read-write"
+
+	BucketFinalizer = "linodeobjectstoragebucket.infrastructure.cluster.x-k8s.io"
 )
 
 // LinodeObjectStorageBucketSpec defines the desired state of LinodeObjectStorageBucket
@@ -55,6 +57,14 @@ type LinodeObjectStorageBucketSpec struct {
 	// If not supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef"`
+
+	// AccessKeyRef is a reference to a LinodeObjectStorageBucketKey for the bucket.
+	// +optional
+	AccessKeyRef *corev1.ObjectReference `json:"accessKeyRef"`
+
+	// ForceDeleteBucket enables the object storage bucket used to be deleted even if it contains objects.
+	// +optional
+	ForceDeleteBucket bool `json:"forceDeleteBucket,omitempty"`
 }
 
 // LinodeObjectStorageBucketStatus defines the observed state of LinodeObjectStorageBucket

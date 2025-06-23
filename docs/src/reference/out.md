@@ -794,6 +794,8 @@ _Appears in:_
 | `acl` _[ObjectStorageACL](#objectstorageacl)_ | Acl sets the Access Control Level of the bucket using a canned ACL string | private | Enum: [private public-read authenticated-read public-read-write] <br /> |
 | `corsEnabled` _boolean_ | corsEnabled enables for all origins in the bucket .If set to false, CORS is disabled for all origins in the bucket | true |  |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.<br />If not supplied then the credentials of the controller will be used. |  |  |
+| `accessKeyRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | AccessKeyRef is a reference to a LinodeObjectStorageBucketKey for the bucket. |  |  |
+| `forceDeleteBucket` _boolean_ | ForceDeleteBucket enables the object storage bucket used to be deleted even if it contains objects. |  |  |
 
 
 #### LinodeObjectStorageBucketStatus
