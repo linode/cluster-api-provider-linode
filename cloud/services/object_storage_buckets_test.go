@@ -1,7 +1,13 @@
 package services
 
 import (
+	"context"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	"github.com/linode/linodego"
@@ -200,6 +206,107 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
 				assert.Equal(t, testcase.want, got)
+			}
+		})
+	}
+}
+
+func TestCreateS3ClientWithAccessKey(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		bScope        *scope.ObjectStorageBucketScope
+		expectedError error
+		expects       func(client *mock.MockK8sClient)
+	}{
+		{
+			name: "Success - Successfully create client",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-bucket",
+					},
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
+						AccessKeyRef: &v1.ObjectReference{
+							Name: "test",
+						},
+					},
+				},
+			},
+			expects: func(k8s *mock.MockK8sClient) {
+				k8s.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, name types.NamespacedName, obj *v1.Secret, opts ...client.GetOption) error {
+					secret := v1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-bucket-obj-key",
+						},
+						Data: map[string][]byte{
+							"access": []byte("test-access-key"),
+							"secret": []byte("test-secret-key"),
+							"bucket": []byte("test-bucket"),
+						},
+					}
+					*obj = secret
+					return nil
+				})
+			},
+		},
+		{
+			name: "Error - failed to get access key",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-bucket",
+					},
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
+						AccessKeyRef: &v1.ObjectReference{
+							Name: "test",
+						},
+					},
+				},
+			},
+			expects: func(k8s *mock.MockK8sClient) {
+				k8s.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.NewNotFound(schema.GroupResource{}, ""))
+			},
+			expectedError: fmt.Errorf("failed to get bucket secret"),
+		},
+		{
+			name: "Error - access key is nil",
+			bScope: &scope.ObjectStorageBucketScope{
+				Bucket: &infrav1alpha2.LinodeObjectStorageBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-bucket",
+					},
+					Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+						Region: "test-region",
+					},
+				},
+			},
+			expects:       func(k8s *mock.MockK8sClient) {},
+			expectedError: fmt.Errorf("accessKeyRef is nil"),
+		},
+	}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mock.NewMockK8sClient(ctrl)
+
+			testcase.bScope.Client = mockClient
+
+			testcase.expects(mockClient)
+
+			s3Client, err := createS3ClientWithAccessKey(t.Context(), testcase.bScope)
+			if testcase.expectedError != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
+			} else {
+				assert.NotNil(t, s3Client)
 			}
 		})
 	}
