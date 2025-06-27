@@ -1007,6 +1007,12 @@ func getTags(machineScope *scope.MachineScope) ([]string, error) {
 
 	// add unique tags from the LinodeMachine linode-vm-tags annotation
 	machineTagSet := map[string]struct{}{}
+
+	// TODO: remove post-removal .Spec.Tags removal
+	for _, tag := range machineScope.LinodeMachine.Spec.Tags { //nolint:staticcheck // don't complain until we remove .Spec.Tags
+		machineTagSet[tag] = struct{}{}
+	}
+
 	if _, ok := machineScope.LinodeMachine.Annotations[machineTagsAnnotation]; ok {
 		var machineTags []string
 		if err := json.Unmarshal([]byte(machineScope.LinodeMachine.Annotations[machineTagsAnnotation]), &machineTags); err != nil {
