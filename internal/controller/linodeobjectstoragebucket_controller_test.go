@@ -23,6 +23,7 @@ import (
 
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -49,9 +50,42 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lifecycle",
 			Namespace: "default",
+			Finalizers: []string{
+				infrav1alpha2.BucketFinalizer,
+			},
 		},
 		Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 			Region: "region",
+			AccessKeyRef: &corev1.ObjectReference{
+				Name: "lifecycle-mgmt",
+			},
+		},
+	}
+
+	key := infrav1alpha2.LinodeObjectStorageKey{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lifecycle-mgmt",
+			Namespace: "default",
+		},
+		Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
+			BucketAccess: []infrav1alpha2.BucketAccessRef{{
+				BucketName:  "lifecycle",
+				Permissions: "read_write",
+				Region:      "region",
+			}},
+		},
+	}
+
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lifecycle-mgmt-obj-key",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			"access":   []byte("access-key"),
+			"secret":   []byte("secret-key"),
+			"endpoint": []byte("https://region-1.linodeobjects.com"),
+			"bucket":   []byte("lifecycle"),
 		},
 	}
 
@@ -63,7 +97,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 
 	BeforeAll(func(ctx SpecContext) {
 		bScope.Client = k8sClient
+		Expect(k8sClient.Create(ctx, &key)).To(Succeed())
 		Expect(k8sClient.Create(ctx, &obj)).To(Succeed())
+		Expect(k8sClient.Create(ctx, &secret)).To(Succeed())
 	})
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
@@ -72,6 +108,12 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 
 		objectKey := client.ObjectKey{Name: "lifecycle", Namespace: "default"}
 		Expect(k8sClient.Get(ctx, objectKey, &obj)).To(Succeed())
+
+		accessKey := client.ObjectKey{Name: "lifecycle-mgmt", Namespace: "default"}
+		Expect(k8sClient.Get(ctx, accessKey, &key)).To(Succeed())
+
+		secretKey := client.ObjectKey{Name: "lifecycle-mgmt-obj-key", Namespace: "default"}
+		Expect(k8sClient.Get(ctx, secretKey, &secret)).To(Succeed())
 
 		// Create patch helper with latest state of resource.
 		// This is only needed when relying on envtest's k8sClient.
@@ -97,6 +139,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				Result("resource status is updated", func(ctx context.Context, mck Mock) {
 					objectKey := client.ObjectKeyFromObject(&obj)
 					bScope.LinodeClient = mck.LinodeClient
+					tmpClient := bScope.Client
+					bScope.Client = k8sClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -115,6 +159,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
+
+					bScope.Client = tmpClient
 				}),
 			),
 			Path(
@@ -210,15 +256,37 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				}),
 			),
 		),
-		Call("resource is deleted", func(ctx context.Context, _ Mock) {
-			Expect(k8sClient.Delete(ctx, &obj)).To(Succeed())
-		}),
-		Result("success", func(ctx context.Context, mck Mock) {
-			objectKey := client.ObjectKeyFromObject(&obj)
-			k8sClient.Get(ctx, objectKey, &obj)
-			bScope.LinodeClient = mck.LinodeClient
-			Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &obj))).To(BeTrue())
-		}),
+		OneOf(
+			Path(
+				Call("unable to delete", func(ctx context.Context, mck Mock) {
+					obj.Spec.ForceDeleteBucket = true
+					obj.Spec.AccessKeyRef = &corev1.ObjectReference{Name: "lifecycle-mgmt", Namespace: "default"}
+					obj.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+					Expect(k8sClient.Delete(ctx, &obj)).To(Succeed())
+				}),
+				OneOf(
+					Path(Result("cannot purge bucket", func(ctx context.Context, mck Mock) {
+						_, err := reconciler.reconcile(ctx, &bScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(mck.Logs()).To(ContainSubstring("failed to purge all objects"))
+					})),
+				),
+			),
+			Path(
+				Call("able to delete", func(ctx context.Context, _ Mock) {
+					obj.Spec.ForceDeleteBucket = false
+					obj.Spec.AccessKeyRef = nil
+					obj.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+					Expect(k8sClient.Delete(ctx, &obj)).To(Succeed())
+				}),
+				// TODO: Mock smithy operations so we can test bucket deletion
+				Result("success for preserving bucket", func(ctx context.Context, mck Mock) {
+					res, err := reconciler.reconcile(ctx, &bScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
+				}),
+			),
+		),
 	)
 })
 

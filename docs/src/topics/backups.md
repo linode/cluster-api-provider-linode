@@ -162,4 +162,6 @@ spec:
 
 ### Resource Deletion
 
-When deleting a `LinodeObjectStorageKey` resource, CAPL will deprovision the access key and delete the managed secret. However, when deleting a `LinodeObjectStorageBucket` resource, CAPL will retain the underlying bucket to avoid unintended data loss.
+When deleting a `LinodeObjectStorageKey` resource, CAPL will deprovision the access key and delete the managed secret. However, when deleting a `LinodeObjectStorageBucket` resource, CAPL will retain the underlying bucket to avoid unintended data loss unless `.spec.forceDeleteBucket` is set to `true` in the `LinodeObjectStorageBucket` resource (defaults to `false`).
+
+When using etcd backups, the bucket can be cleaned up on cluster deletion by setting `FORCE_DELETE_OBJ_BUCKETS` to `true` (defaults to `false` to avoid unintended data loss).
