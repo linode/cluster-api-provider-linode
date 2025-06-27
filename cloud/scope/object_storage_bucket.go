@@ -134,12 +134,14 @@ func (s *ObjectStorageBucketScope) getAccessKey(ctx context.Context) (*infrav1al
 		return nil, fmt.Errorf("accessKeyRef is nil for bucket %s", s.Bucket.Name)
 	}
 
+	objKeyNamespace := s.Bucket.Spec.AccessKeyRef.Namespace
+	if s.Bucket.Spec.AccessKeyRef.Namespace == "" {
+		objKeyNamespace = s.Bucket.Namespace
+	}
+
 	objKey := client.ObjectKey{
 		Name:      s.Bucket.Spec.AccessKeyRef.Name,
-		Namespace: s.Bucket.Spec.AccessKeyRef.Namespace,
-	}
-	if s.Bucket.Spec.AccessKeyRef.Namespace == "" {
-		s.Bucket.Spec.AccessKeyRef.Namespace = s.Bucket.GetNamespace()
+		Namespace: objKeyNamespace,
 	}
 
 	objStorageKey := &infrav1alpha2.LinodeObjectStorageKey{}

@@ -56,6 +56,9 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 		},
 		Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
 			Region: "region",
+			AccessKeyRef: &corev1.ObjectReference{
+				Name: "lifecycle-mgmt",
+			},
 		},
 	}
 
@@ -136,6 +139,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				Result("resource status is updated", func(ctx context.Context, mck Mock) {
 					objectKey := client.ObjectKeyFromObject(&obj)
 					bScope.LinodeClient = mck.LinodeClient
+					tmpClient := bScope.Client
+					bScope.Client = k8sClient
 					_, err := reconciler.reconcile(ctx, &bScope)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -154,6 +159,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
+
+					bScope.Client = tmpClient
 				}),
 			),
 			Path(

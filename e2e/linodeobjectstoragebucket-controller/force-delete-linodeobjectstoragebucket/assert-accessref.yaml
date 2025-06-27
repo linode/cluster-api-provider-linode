@@ -1,0 +1,11 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageBucket
+metadata:
+  name: ($bucket)
+spec:
+  region: us-sea
+  forceDeleteBucket: true
+  accessKeyRef:
+    name: ($bucket)
+status:
+  ready: true
