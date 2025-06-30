@@ -69,8 +69,8 @@ const (
 	ConditionPreflightConfigured                = "PreflightConfigured"
 	ConditionPreflightBootTriggered             = "PreflightBootTriggered"
 	ConditionPreflightReady                     = "PreflightReady"
+	machineLastAppliedTagsAnnotation            = "linode-last-applied-vm-tags"
 	machineTagsAnnotation                       = "linode-vm-tags"
-	machineCAPLTagsAnnotation                   = "linode-vm-capl-tags"
 
 	// WaitingForBootstrapDataReason used when machine is waiting for bootstrap data to be ready before proceeding.
 	WaitingForBootstrapDataReason = "WaitingForBootstrapData"
@@ -748,7 +748,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	}
 
 	// update the tags if needed
-	machineTags, err := getTags(machineScope)
+	machineTags, err := getTags(machineScope, linodeInstance.Tags)
 	if err != nil {
 		logger.Error(err, "Failed to get tags for Linode instance")
 		return ctrl.Result{}, err

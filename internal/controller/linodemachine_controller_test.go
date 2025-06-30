@@ -1692,7 +1692,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						Status:  linodego.InstanceRunning,
 						Updated: util.Pointer(time.Now()),
 					}, nil)
-				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, linodego.InstanceUpdateOptions{Tags: &[]string{"test-tag", "test-cluster-2"}}).Return(
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, linodego.InstanceUpdateOptions{Tags: &[]string{"test-cluster-2", "test-tag"}}).Return(
 					&linodego.Instance{
 						ID:      11111,
 						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
@@ -1711,7 +1711,6 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(linodeMachine.Annotations[machineTagsAnnotation]).To(Equal("[\"test-tag\"]"))
-				Expect(linodeMachine.Annotations[machineCAPLTagsAnnotation]).To(Equal("[\"test-cluster-2\"]"))
 			}),
 		),
 	)
