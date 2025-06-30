@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
+	"k8s.io/utils/ptr"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -93,15 +94,28 @@ func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
 
 func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linodego.VPCCreateOptions {
 	subnets := make([]linodego.VPCSubnetCreateOptions, len(vpcSpec.Subnets))
+	vpcIPv6 := []linodego.VPCCreateOptionsIPv6{
+		{
+			Range: ptr.To("/48"),
+		},
+	}
+	subnetIPv6 := []linodego.VPCSubnetCreateOptionsIPv6{
+		{
+			Range: ptr.To("/56"),
+		},
+	}
 	for idx, subnet := range vpcSpec.Subnets {
 		subnets[idx] = linodego.VPCSubnetCreateOptions{
 			Label: subnet.Label,
 			IPv4:  subnet.IPv4,
+			IPv6:  subnetIPv6,
 		}
 	}
+
 	return &linodego.VPCCreateOptions{
 		Description: vpcSpec.Description,
 		Region:      vpcSpec.Region,
 		Subnets:     subnets,
+		IPv6:        vpcIPv6,
 	}
 }
