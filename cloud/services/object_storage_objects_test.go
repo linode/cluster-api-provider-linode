@@ -8,11 +8,13 @@ import (
 	awssigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -407,6 +409,117 @@ func TestDeleteObject(t *testing.T) {
 									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
 						LinodeMachine: &infrav1alpha2.LinodeMachine{},
 					})
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestDeleteAllObjects(t *testing.T) {
+	t.Parallel()
+
+	NewSuite(t, mock.MockK8sClient{}, mock.MockS3Client{}).Run(
+		OneOf(
+			Path(
+				Call("fail to list objects", func(ctx context.Context, mck Mock) {
+					mck.S3Client.EXPECT().ListObjectsV2(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("fail"))
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					err := DeleteAllObjects(ctx, mck.S3Client, "test", true)
+					assert.Error(t, err)
+				}),
+			),
+			Path(
+				Call("no objects", func(ctx context.Context, mck Mock) {
+					mck.S3Client.EXPECT().ListObjectsV2(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectsV2Output{}, nil)
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					err := DeleteAllObjects(ctx, mck.S3Client, "test", true)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestDeleteAllObjectVersionsAndDeleteMarkers(t *testing.T) {
+	t.Parallel()
+
+	NewSuite(t, mock.MockK8sClient{}, mock.MockS3Client{}).Run(
+		OneOf(
+			Path(
+				Call("fail to list object versions", func(ctx context.Context, mck Mock) {
+					mck.S3Client.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("fail"))
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					err := DeleteAllObjectVersionsAndDeleteMarkers(ctx, mck.S3Client, "test", "", true, false)
+					assert.Error(t, err)
+				}),
+			),
+			Path(
+				Call("no objects", func(ctx context.Context, mck Mock) {
+					mck.S3Client.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectVersionsOutput{}, nil)
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					err := DeleteAllObjectVersionsAndDeleteMarkers(ctx, mck.S3Client, "test", "", true, false)
+					assert.NoError(t, err)
+				}),
+			),
+			Path(
+				Call("with an object", func(ctx context.Context, mck Mock) {
+					mck.S3Client.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectVersionsOutput{
+						Name: ptr.To("test"),
+						Versions: []types.ObjectVersion{
+							{
+								IsLatest:  ptr.To(true),
+								Key:       ptr.To("test"),
+								VersionId: ptr.To("version2"),
+							},
+						},
+						ResultMetadata: middleware.Metadata{},
+					}, nil)
+					mck.S3Client.EXPECT().DeleteObjects(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.DeleteObjectsOutput{}, nil)
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					err := DeleteAllObjectVersionsAndDeleteMarkers(ctx, mck.S3Client, "test", "", true, false)
+					assert.NoError(t, err)
+				}),
+			),
+			Path(
+				Call("with versions and delete markers", func(ctx context.Context, mck Mock) {
+					mck.S3Client.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectVersionsOutput{
+						Name: ptr.To("test"),
+						Versions: []types.ObjectVersion{
+							{
+								IsLatest:  ptr.To(false),
+								Key:       ptr.To("test"),
+								VersionId: ptr.To("version1"),
+							},
+							{
+								IsLatest:  ptr.To(true),
+								Key:       ptr.To("test"),
+								VersionId: ptr.To("version2"),
+							},
+						},
+						ResultMetadata: middleware.Metadata{},
+						DeleteMarkers: []types.DeleteMarkerEntry{
+							{
+								IsLatest:  ptr.To(false),
+								Key:       ptr.To("test"),
+								VersionId: ptr.To("version1"),
+							},
+							{
+								IsLatest:  ptr.To(true),
+								Key:       ptr.To("test"),
+								VersionId: ptr.To("version2"),
+							},
+						},
+					}, nil)
+					mck.S3Client.EXPECT().DeleteObjects(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.DeleteObjectsOutput{}, nil)
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					err := DeleteAllObjectVersionsAndDeleteMarkers(ctx, mck.S3Client, "test", "", true, false)
 					assert.NoError(t, err)
 				}),
 			),

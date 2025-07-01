@@ -12,6 +12,7 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 )
 
@@ -142,7 +143,7 @@ func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
 func PurgeAllObjects(
 	ctx context.Context,
 	bucket string,
-	s3client *s3.Client,
+	s3client clients.S3Client,
 	bypassRetention,
 	ignoreNotFound bool,
 ) error {
@@ -172,7 +173,7 @@ func PurgeAllObjects(
 // Versioned objects will get a deletion marker instead of being fully purged.
 func DeleteAllObjects(
 	ctx context.Context,
-	s3client *s3.Client,
+	s3client clients.S3Client,
 	bucketName string,
 	bypassRetention bool,
 ) error {
@@ -208,7 +209,7 @@ func DeleteAllObjects(
 }
 
 // DeleteAllObjectVersionsAndDeleteMarkers deletes all versions of a given object
-func DeleteAllObjectVersionsAndDeleteMarkers(ctx context.Context, client *s3.Client, bucket, prefix string, bypassRetention, ignoreNotFound bool) error {
+func DeleteAllObjectVersionsAndDeleteMarkers(ctx context.Context, client clients.S3Client, bucket, prefix string, bypassRetention, ignoreNotFound bool) error {
 	paginator := s3.NewListObjectVersionsPaginator(client, &s3.ListObjectVersionsInput{
 		Bucket: aws.String(bucket),
 		Prefix: aws.String(prefix),
@@ -217,13 +218,13 @@ func DeleteAllObjectVersionsAndDeleteMarkers(ctx context.Context, client *s3.Cli
 	var objectsToDelete []s3types.ObjectIdentifier
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(ctx)
-		if page == nil {
-			continue
-		}
 		if err != nil {
 			if !IsObjNotFoundErr(err) || !ignoreNotFound {
 				return err
 			}
+		}
+		if page == nil {
+			continue
 		}
 
 		for _, version := range page.Versions {
