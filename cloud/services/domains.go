@@ -297,7 +297,7 @@ func removeElement(stringList []string, elemToRemove string) []string {
 }
 
 func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, eachMachine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string) ([]DNSOptions, error) {
-	// Look up the corresponding CAPI machine, see if its deleted.
+	// Look up the corresponding CAPI machine, see if it is marked for deletion
 	capiMachine, err := kutil.GetOwnerMachine(ctx, cscope.Client, eachMachine.ObjectMeta)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CAPI machine for LinodeMachine %s: %w", eachMachine.Name, err)
