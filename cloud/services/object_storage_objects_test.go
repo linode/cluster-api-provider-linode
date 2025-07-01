@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awssigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -472,9 +473,9 @@ func TestDeleteAllObjectVersionsAndDeleteMarkers(t *testing.T) {
 						Name: ptr.To("test"),
 						Versions: []types.ObjectVersion{
 							{
-								IsLatest:  ptr.To(true),
-								Key:       ptr.To("test"),
-								VersionId: ptr.To("version2"),
+								IsLatest:  aws.Bool(true),
+								Key:       aws.String("test"),
+								VersionId: aws.String("version2"),
 							},
 						},
 						ResultMetadata: middleware.Metadata{},
@@ -492,27 +493,27 @@ func TestDeleteAllObjectVersionsAndDeleteMarkers(t *testing.T) {
 						Name: ptr.To("test"),
 						Versions: []types.ObjectVersion{
 							{
-								IsLatest:  ptr.To(false),
-								Key:       ptr.To("test"),
-								VersionId: ptr.To("version1"),
+								IsLatest:  aws.Bool(false),
+								Key:       aws.String("test"),
+								VersionId: aws.String("version1"),
 							},
 							{
-								IsLatest:  ptr.To(true),
-								Key:       ptr.To("test"),
-								VersionId: ptr.To("version2"),
+								IsLatest:  aws.Bool(true),
+								Key:       aws.String("test"),
+								VersionId: aws.String("version2"),
 							},
 						},
 						ResultMetadata: middleware.Metadata{},
 						DeleteMarkers: []types.DeleteMarkerEntry{
 							{
-								IsLatest:  ptr.To(false),
-								Key:       ptr.To("test"),
-								VersionId: ptr.To("version1"),
+								IsLatest:  aws.Bool(false),
+								Key:       aws.String("test"),
+								VersionId: aws.String("version1"),
 							},
 							{
-								IsLatest:  ptr.To(true),
-								Key:       ptr.To("test"),
-								VersionId: ptr.To("version2"),
+								IsLatest:  aws.Bool(true),
+								Key:       aws.String("test"),
+								VersionId: aws.String("version2"),
 							},
 						},
 					}, nil)

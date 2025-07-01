@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go/middleware"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -391,6 +395,82 @@ func TestDeleteBucket(t *testing.T) {
 			testcase.expects(mockK8s, mockClient)
 
 			err := DeleteBucket(t.Context(), testcase.bScope)
+			if testcase.expectedError != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
+			}
+		})
+	}
+}
+
+func TestPurgeAllObjects(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		bucketName    string
+		s3Client      *mock.MockS3Client
+		forceDelete   bool
+		expectedError error
+		expects       func(s3mock *mock.MockS3Client)
+	}{
+		{
+			name:        "Success - Successfully purge all objects (versioning enabled)",
+			bucketName:  "test-bucket",
+			forceDelete: true,
+			expects: func(s3mock *mock.MockS3Client) {
+				s3mock.EXPECT().GetBucketVersioning(gomock.Any(), gomock.Any()).Return(&s3.GetBucketVersioningOutput{
+					Status:         s3types.BucketVersioningStatusEnabled,
+					ResultMetadata: middleware.Metadata{},
+				}, nil)
+				s3mock.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectVersionsOutput{
+					Versions: []s3types.ObjectVersion{
+						{Key: aws.String("object1"), VersionId: aws.String("version1")},
+						{Key: aws.String("object2"), VersionId: aws.String("version2")},
+					},
+				}, nil)
+				s3mock.EXPECT().DeleteObjects(gomock.Any(), gomock.Any()).Return(&s3.DeleteObjectsOutput{}, nil)
+			},
+		},
+		{
+			name:        "Success - Successfully purge all objects",
+			bucketName:  "test-bucket",
+			forceDelete: true,
+			expects: func(s3mock *mock.MockS3Client) {
+				s3mock.EXPECT().GetBucketVersioning(gomock.Any(), gomock.Any()).Return(&s3.GetBucketVersioningOutput{}, nil)
+				s3mock.EXPECT().ListObjectsV2(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectsV2Output{
+					Contents: []s3types.Object{
+						{Key: aws.String("object1")},
+						{Key: aws.String("object2")},
+					},
+				}, nil)
+				s3mock.EXPECT().DeleteObjects(gomock.Any(), gomock.Any()).Return(&s3.DeleteObjectsOutput{}, nil)
+			},
+		},
+		{
+			name:          "Error - Failed to list objects",
+			bucketName:    "test-bucket",
+			forceDelete:   true,
+			expectedError: fmt.Errorf("failed to list objects"),
+			expects: func(s3mock *mock.MockS3Client) {
+				s3mock.EXPECT().GetBucketVersioning(gomock.Any(), gomock.Any()).Return(&s3.GetBucketVersioningOutput{}, nil)
+				s3mock.EXPECT().ListObjectsV2(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("failed to list objects"))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockS3Client := mock.NewMockS3Client(ctrl)
+			testcase.s3Client = mockS3Client
+			testcase.expects(mockS3Client)
+
+			err := PurgeAllObjects(t.Context(), testcase.bucketName, testcase.s3Client, testcase.forceDelete, false)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			}
