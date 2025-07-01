@@ -296,7 +296,7 @@ func removeElement(stringList []string, elemToRemove string) []string {
 	return stringList
 }
 
-func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, eachMachine v1alpha2.LinodeMachine, dnsTTLSec int) ([]DNSOptions, error) {
+func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, eachMachine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string) ([]DNSOptions, error) {
 	// Look up the corresponding CAPI machine, see if its deleted.
 	capiMachine, err := kutil.GetOwnerMachine(ctx, cscope.Client, eachMachine.ObjectMeta)
 	if err != nil {
@@ -321,7 +321,7 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, eachM
 		if !addr.Is4() {
 			recordType = linodego.RecordTypeAAAA
 		}
-		options = append(options, DNSOptions{getSubDomain(cscope), IPs.Address, recordType, dnsTTLSec})
+		options = append(options, DNSOptions{subdomain, IPs.Address, recordType, dnsTTLSec})
 	}
 	return options, nil
 }
@@ -337,7 +337,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 
 	subDomain := getSubDomain(cscope)
 	for _, eachMachine := range cscope.LinodeMachines.Items {
-		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec)
+		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec, subDomain)
 		if err != nil {
 			return nil, fmt.Errorf("failed to process LinodeMachine %s: %w", eachMachine.Name, err)
 		}
