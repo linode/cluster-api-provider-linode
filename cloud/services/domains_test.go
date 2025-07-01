@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -56,6 +58,14 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -83,7 +93,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -115,6 +125,14 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -142,7 +160,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("create record failed"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 	}
@@ -212,6 +230,14 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -247,7 +273,7 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			expectedError: nil,
 			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -279,6 +305,14 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -308,7 +342,7 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			expectedError: fmt.Errorf("API Down"),
 			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 	}
@@ -347,6 +381,160 @@ func TestAddIPToDNS(t *testing.T) {
 		expectedDomainRecord *linodego.DomainRecord
 		expectedError        error
 	}{
+		{name: "Skip - If a CAPI machine is deleted, don't add its IP to the Domain but include other machines",
+			clusterScope: &scope.ClusterScope{
+				Cluster: &clusterv1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "lkedevs.net",
+							DNSUniqueIdentifier: "test-hash",
+						},
+					},
+				},
+				LinodeMachines: infrav1alpha2.LinodeMachineList{
+					Items: []infrav1alpha2.LinodeMachine{
+						{
+							// This machine's CAPI owner is deleted
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test-deleted-machine",
+								UID:  "test-uid-1",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-deleted-machine",
+										UID:        "test-uid-1",
+									},
+								},
+							},
+							Spec: infrav1alpha2.LinodeMachineSpec{
+								ProviderID: ptr.To("linode://123"),
+								InstanceID: ptr.To(123),
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{
+									{
+										Type:    "ExternalIP",
+										Address: "10.10.10.10",
+									},
+								},
+							},
+						},
+						{
+							// This machine's CAPI owner is NOT deleted and should have DNS entries
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test-active-machine",
+								UID:  "test-uid-2",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-active-machine",
+										UID:        "test-uid-2",
+									},
+								},
+							},
+							Spec: infrav1alpha2.LinodeMachineSpec{
+								ProviderID: ptr.To("linode://456"),
+								InstanceID: ptr.To(456),
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{
+									{
+										Type:    "ExternalIP",
+										Address: "10.20.20.20",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				// The code path should still call ListDomains
+				mockClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{
+					{
+						ID:     1,
+						Domain: "lkedevs.net",
+					},
+				}, nil).AnyTimes()
+
+				// Must mock ListDomainRecords
+				mockClient.EXPECT().ListDomainRecords(gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.DomainRecord{}, nil).AnyTimes()
+
+				// Expect CreateDomainRecord to be called for the active machine's IP (10.20.20.20)
+				// but NOT for the deleted machine's IP (10.10.10.10)
+				mockClient.EXPECT().CreateDomainRecord(gomock.Any(), gomock.Any(), gomock.Eq(linodego.DomainRecordCreateOptions{
+					Type:   "A",
+					Name:   "test-cluster-test-hash",
+					Target: "10.20.20.20",
+					TTLSec: 30,
+				})).Return(&linodego.DomainRecord{
+					ID:     1234,
+					Type:   "A",
+					Name:   "test-cluster",
+					Target: "10.20.20.20",
+					TTLSec: 30,
+				}, nil).AnyTimes()
+				mockClient.EXPECT().CreateDomainRecord(gomock.Any(), gomock.Any(), gomock.Eq(linodego.DomainRecordCreateOptions{
+					Type:   "TXT",
+					Name:   "test-cluster-test-hash",
+					Target: "test-cluster",
+					TTLSec: 30,
+				})).Return(&linodego.DomainRecord{
+					ID:     1234,
+					Type:   "TXT",
+					Name:   "test-cluster",
+					Target: "test-cluster",
+					TTLSec: 30,
+				}, nil).AnyTimes()
+
+				// Make sure there's no expectation for the deleted machine's IP
+				// We don't need an explicit negative expectation since the mock
+				// will fail if any unexpected calls are made
+			},
+			expectedError: nil,
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+
+				// Mock the Get call for GetOwnerMachine to handle both machines
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						// Set the Machine fields based on the machine name
+						machine, ok := obj.(*clusterv1.Machine)
+						if ok {
+							switch key.Name {
+							case "test-deleted-machine":
+								// Set up as a deleted machine
+								machine.Name = "test-deleted-machine"
+								machine.Namespace = "default"
+								// Set DeletionTimestamp to indicate the machine is being deleted
+								deletionTime := metav1.Now()
+								machine.DeletionTimestamp = &deletionTime
+								machine.UID = "test-uid-1"
+							case "test-active-machine":
+								// Set up as an active machine
+								machine.Name = "test-active-machine"
+								machine.Namespace = "default"
+								machine.UID = "test-uid-2"
+								machine.DeletionTimestamp = nil
+							}
+						}
+						return nil
+					}).AnyTimes()
+			},
+		},
 		{
 			name: "Success - If the machine is a control plane node, add the IP to the Domain",
 			clusterScope: &scope.ClusterScope{
@@ -375,6 +563,14 @@ func TestAddIPToDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -413,7 +609,7 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -445,6 +641,14 @@ func TestAddIPToDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -483,7 +687,7 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -514,6 +718,14 @@ func TestAddIPToDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -547,7 +759,7 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("failed to create domain record of type A"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -578,6 +790,14 @@ func TestAddIPToDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -618,7 +838,7 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -649,6 +869,14 @@ func TestAddIPToDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -681,7 +909,7 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("api error"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -712,6 +940,14 @@ func TestAddIPToDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -743,7 +979,7 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -774,6 +1010,14 @@ func TestAddIPToDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -805,7 +1049,7 @@ func TestAddIPToDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("domain lkedevs.net not found in list of domains owned by this account"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 	}
@@ -875,6 +1119,14 @@ func TestDeleteIPFromDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -915,7 +1167,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -946,6 +1198,14 @@ func TestDeleteIPFromDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -986,7 +1246,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("failed to delete record"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -1031,7 +1291,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -1062,6 +1322,14 @@ func TestDeleteIPFromDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -1088,7 +1356,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("cannot get the domain from the api"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -1119,6 +1387,14 @@ func TestDeleteIPFromDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -1150,7 +1426,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("domain lkedevs.net not found in list of domains owned by this account"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 		{
@@ -1181,6 +1457,14 @@ func TestDeleteIPFromDNS(t *testing.T) {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-machine",
 								UID:  "test-uid",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-machine",
+										UID:        "test-uid",
+									},
+								},
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
 								ProviderID: ptr.To("linode://123"),
@@ -1213,7 +1497,7 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("api error"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
-				mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+				mockCAPIMachine(mockK8sClient)
 			},
 		},
 	}
@@ -1244,4 +1528,22 @@ func TestDeleteIPFromDNS(t *testing.T) {
 			}
 		})
 	}
+}
+
+// mockCAPIMachine sets up the k8s client mock to return a CAPI machine for GetOwnerMachine
+func mockCAPIMachine(mockK8sClient *mock.MockK8sClient) {
+	mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+	// Mock the Get call for GetOwnerMachine to return a CAPI machine
+	mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			// Set the Machine fields to make it not deleted
+			machine, ok := obj.(*clusterv1.Machine)
+			if ok {
+				machine.Name = "test-machine"
+				machine.Namespace = "default"
+				machine.DeletionTimestamp = nil
+				machine.UID = "test-uid"
+			}
+			return nil
+		}).AnyTimes()
 }

@@ -13,7 +13,9 @@ import (
 	"github.com/linode/linodego"
 	"golang.org/x/exp/slices"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
+	kutil "sigs.k8s.io/cluster-api/util"
 
+	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
@@ -35,7 +37,7 @@ type DNSOptions struct {
 func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation string) error {
 	// Get the public IP that was assigned
 	var dnss DNSEntries
-	dnsEntries, err := dnss.getDNSEntriesToEnsure(cscope)
+	dnsEntries, err := dnss.getDNSEntriesToEnsure(ctx, cscope)
 	if err != nil {
 		return err
 	}
@@ -172,7 +174,6 @@ func EnsureLinodeDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	if err != nil {
 		return err
 	}
-
 	domainRecords, err := cscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
 	if err != nil {
 		return err
@@ -295,8 +296,38 @@ func removeElement(stringList []string, elemToRemove string) []string {
 	return stringList
 }
 
+func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string) ([]DNSOptions, error) {
+	// Look up the corresponding CAPI machine, see if it is marked for deletion
+	capiMachine, err := kutil.GetOwnerMachine(ctx, cscope.Client, machine.ObjectMeta)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get CAPI machine for LinodeMachine %s: %w", machine.Name, err)
+	}
+
+	if capiMachine == nil || capiMachine.DeletionTimestamp != nil {
+		// If the CAPI machine is deleted, we don't need to create DNS entries for it.
+		return nil, nil
+	}
+
+	options := []DNSOptions{}
+	for _, IPs := range machine.Status.Addresses {
+		recordType := linodego.RecordTypeA
+		if IPs.Type != v1beta1.MachineExternalIP {
+			continue
+		}
+		addr, err := netip.ParseAddr(IPs.Address)
+		if err != nil {
+			return nil, fmt.Errorf("not a valid IP %w", err)
+		}
+		if !addr.Is4() {
+			recordType = linodego.RecordTypeAAAA
+		}
+		options = append(options, DNSOptions{subdomain, IPs.Address, recordType, dnsTTLSec})
+	}
+	return options, nil
+}
+
 // getDNSEntriesToEnsure return DNS entries to create/delete
-func (d *DNSEntries) getDNSEntriesToEnsure(cscope *scope.ClusterScope) ([]DNSOptions, error) {
+func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.ClusterScope) ([]DNSOptions, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 	dnsTTLSec := rutil.DefaultDNSTTLSec
@@ -305,25 +336,12 @@ func (d *DNSEntries) getDNSEntriesToEnsure(cscope *scope.ClusterScope) ([]DNSOpt
 	}
 
 	subDomain := getSubDomain(cscope)
-
 	for _, eachMachine := range cscope.LinodeMachines.Items {
-		for _, IPs := range eachMachine.Status.Addresses {
-			recordType := linodego.RecordTypeA
-			if IPs.Type != v1beta1.MachineExternalIP {
-				continue
-			}
-			addr, err := netip.ParseAddr(IPs.Address)
-			if err != nil {
-				return nil, fmt.Errorf("not a valid IP %w", err)
-			}
-			if !addr.Is4() {
-				recordType = linodego.RecordTypeAAAA
-			}
-			d.options = append(d.options, DNSOptions{subDomain, IPs.Address, recordType, dnsTTLSec})
+		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec, subDomain)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process LinodeMachine %s: %w", eachMachine.Name, err)
 		}
-		if len(d.options) == 0 {
-			continue
-		}
+		d.options = append(d.options, options...)
 	}
 	d.options = append(d.options, DNSOptions{subDomain, cscope.LinodeCluster.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
