@@ -296,11 +296,11 @@ func removeElement(stringList []string, elemToRemove string) []string {
 	return stringList
 }
 
-func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, eachMachine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string) ([]DNSOptions, error) {
+func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string) ([]DNSOptions, error) {
 	// Look up the corresponding CAPI machine, see if it is marked for deletion
-	capiMachine, err := kutil.GetOwnerMachine(ctx, cscope.Client, eachMachine.ObjectMeta)
+	capiMachine, err := kutil.GetOwnerMachine(ctx, cscope.Client, machine.ObjectMeta)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get CAPI machine for LinodeMachine %s: %w", eachMachine.Name, err)
+		return nil, fmt.Errorf("failed to get CAPI machine for LinodeMachine %s: %w", machine.Name, err)
 	}
 
 	if capiMachine == nil || capiMachine.DeletionTimestamp != nil {
@@ -309,7 +309,7 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, eachM
 	}
 
 	options := []DNSOptions{}
-	for _, IPs := range eachMachine.Status.Addresses {
+	for _, IPs := range machine.Status.Addresses {
 		recordType := linodego.RecordTypeA
 		if IPs.Type != v1beta1.MachineExternalIP {
 			continue
