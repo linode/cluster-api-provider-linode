@@ -1,0 +1,27 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageBucket
+metadata:
+  name: ($bucket)
+spec:
+  accessKeyRef:
+    name: ($bucket)
+  forceDeleteBucket: true
+  region: us-sea
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  name: ($bucket)
+spec:
+  bucketAccess:
+  - bucketName: ($bucket)
+    permissions: read_write
+    region: us-sea
+  generatedSecret:
+    format:
+      access: '{{ .AccessKey }}'
+      bucket: '{{ .BucketName }}'
+      endpoint: '{{ .S3Endpoint }}'
+      secret: '{{ .SecretKey }}'
+    type: Opaque

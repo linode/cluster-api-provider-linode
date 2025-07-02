@@ -25,16 +25,22 @@ spec:
       try:
         - assert:
             file: assert-capi-resources.yaml
-    - name: Create LinodeObjectStorageBucket
+    - name: Create LinodeObjectStorageBucket and Key
       try:
         - apply:
-            file: create-lobj.yaml
-        - assert:
-            file: assert-lobj.yaml
-      catch:
-        - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-            kind: LinodeObjectStorageBucket
+            file: create-bucket-and-key.yaml
+    # AFAICT this is the only way not have chainsaw immediately bomb out because resources don't exist
+    # or hang on assertion even after they do
+    - name: Wait for LinodeObjectStorageBucket and Key to be marked ready
+      try:
+        - script:
+            env:
+              - name: BUCKET
+                value: ($bucket)
+            content: |
+              set -e
+              kubectl -n $NAMESPACE wait --for=jsonpath='{.status.ready}'=true lobjkey $BUCKET --timeout=30s
+              kubectl -n $NAMESPACE wait --for=jsonpath='{.status.ready}'=true lobj $BUCKET --timeout=30s
     - name: Check if the bucket was created
       try:
         - script:
@@ -51,16 +57,6 @@ spec:
               ($error): ~
               (json_parse($stdout)):
                 label: ($bucket)
-    - name: Create LinodeObjectStorageKey
-      try:
-        - apply:
-            file: create-lobjkey.yaml
-        - assert:
-            file: assert-lobjkey.yaml
-      catch:
-        - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-            kind: LinodeObjectStorageKey
     - name: Ensure the access key was created
       try:
         - script:
@@ -80,16 +76,6 @@ spec:
                 "https://api.linode.com/v4/$URI/$KEY_ID"
             check:
               ($error): ~
-    - name: Set access key on LinodeObjectStorageBucket
-      try:
-        - apply:
-            file: set-accessref.yaml
-        - assert:
-            file: assert-accessref.yaml
-      catch:
-        - describe:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-            kind: LinodeObjectStorageBucket
     - name: Delete LinodeObjectStorageBucket
       try:
         - delete:
