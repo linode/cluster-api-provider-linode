@@ -14,7 +14,7 @@ spec:
     credentialsRef:
         name: ${CLUSTER_NAME}-credentials
     region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
-    forceDeleteBucket: ${FORCE_DELETE_OBJ_BUCKETS}:=false}
+    forceDeleteBucket: ${FORCE_DELETE_OBJ_BUCKETS:=false}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeObjectStorageKey
