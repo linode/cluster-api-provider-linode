@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
@@ -35,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -60,9 +62,10 @@ type LinodeObjectStorageBucketReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys/finalizers,verbs=update
 
 // +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="",resources=secrets;,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -99,7 +102,9 @@ func (r *LinodeObjectStorageBucketReconciler) Reconcile(ctx context.Context, req
 		}
 
 		// It will handle the case where the cluster is not found
-		if err := util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, objectStorageBucket, r.Scheme()); err != nil {
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			return util.SetOwnerReferenceToLinodeCluster(ctx, r.TracedClient(), cluster, objectStorageBucket, r.Scheme())
+		}); err != nil {
 			logger.Error(err, "Failed to set owner reference to LinodeCluster")
 			return ctrl.Result{}, err
 		}
@@ -133,11 +138,15 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 		}
 	}()
 
-	if err := r.reconcileApply(ctx, bScope); err != nil {
-		return res, err
+	// Handle deleted buckets
+	if !bScope.Bucket.DeletionTimestamp.IsZero() {
+		if err := r.reconcileDelete(ctx, bScope); err != nil {
+			return retryIfTransient(err, bScope.Logger)
+		}
+		return res, nil
 	}
 
-	return res, nil
+	return r.reconcileApply(ctx, bScope)
 }
 
 func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectStorageBucketScope, err error) {
@@ -151,18 +160,31 @@ func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectSto
 	})
 }
 
-func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
+func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context, bScope *scope.ObjectStorageBucketScope) (ctrl.Result, error) {
 	bScope.Logger.Info("Reconciling apply")
 
 	bScope.Bucket.Status.Ready = false
 	bScope.Bucket.Status.FailureMessage = nil
+
+	if bScope.Bucket.Spec.AccessKeyRef != nil {
+		// Only add finalizers if the access key reference is set, without one the bucket can immediately be deleted.
+		if err := bScope.AddFinalizer(ctx); err != nil {
+			bScope.Logger.Error(err, "failed to update bucket finalizer, requeuing")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		}
+		// It's critical to add the access key finalizer, or else the access key could be deleted before the associated bucket with its contents deleted.
+		if err := bScope.AddAccessKeyRefFinalizer(ctx, bScope.Bucket.Name); err != nil {
+			bScope.Logger.Error(err, "failed to update access key finalizer, requeuing")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		}
+	}
 
 	bucket, err := services.EnsureAndUpdateObjectStorageBucket(ctx, bScope)
 	if err != nil {
 		bScope.Logger.Error(err, "Failed to ensure bucket or update bucket")
 		r.setFailure(bScope, err)
 
-		return err
+		return ctrl.Result{}, err
 	}
 
 	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
@@ -175,6 +197,33 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		Status: metav1.ConditionTrue,
 		Reason: "ObjectStorageBucketReady", // We have to set the reason to not fail object patching
 	})
+
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Context, bScope *scope.ObjectStorageBucketScope) error {
+	// Delete the bucket if force deletion is enabled
+	if bScope.Bucket.Spec.ForceDeleteBucket {
+		if err := services.DeleteBucket(ctx, bScope); err != nil {
+			bScope.Logger.Error(err, "failed to delete bucket")
+			r.setFailure(bScope, err)
+			return err
+		}
+	}
+	// Don't delete the bucket if the ForceDeleteBucket is false since there could be data in it that causes deletion to fail.
+
+	if bScope.Bucket.Spec.AccessKeyRef != nil {
+		// Retry on conflict to handle the case where the access key is being updated concurrently.
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			return bScope.RemoveAccessKeyRefFinalizer(ctx, bScope.Bucket.Name)
+		}); err != nil {
+			bScope.Logger.Error(err, "failed to remove access key finalizer")
+			r.setFailure(bScope, err)
+			return err
+		}
+
+		controllerutil.RemoveFinalizer(bScope.Bucket, infrav1alpha2.BucketFinalizer)
+	}
 
 	return nil
 }

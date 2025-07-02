@@ -86,6 +86,7 @@ type LinodeObjectStorageClient interface {
 	GetObjectStorageKey(ctx context.Context, keyID int) (*linodego.ObjectStorageKey, error)
 	CreateObjectStorageKey(ctx context.Context, opts linodego.ObjectStorageKeyCreateOptions) (*linodego.ObjectStorageKey, error)
 	DeleteObjectStorageKey(ctx context.Context, keyID int) error
+	DeleteObjectStorageBucket(ctx context.Context, regionID, label string) error
 }
 
 // LinodeDNSClient defines the methods that interact with Linode's Domains service.
@@ -128,6 +129,10 @@ type S3Client interface {
 	DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
 	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
 	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+	GetBucketVersioning(ctx context.Context, params *s3.GetBucketVersioningInput, optFns ...func(*s3.Options)) (*s3.GetBucketVersioningOutput, error)
+	DeleteObjects(ctx context.Context, params *s3.DeleteObjectsInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectsOutput, error)
+	ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+	ListObjectVersions(ctx context.Context, params *s3.ListObjectVersionsInput, f ...func(*s3.Options)) (*s3.ListObjectVersionsOutput, error)
 }
 
 type S3PresignClient interface {

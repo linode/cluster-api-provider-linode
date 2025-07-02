@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: force-delete-linodeobjectstoragebucket
+  # Label to trigger the test on every PR
+  labels:
+    all:
+    quick:
+    linodeobj:
+spec:
+  bindings:
+    # A short identifier for the E2E test run
+    - name: run
+      value: (join('-', ['e2e', 'force-delete-obj', env('GIT_REF')]))
+    - name: bucket
+      # Format the bucket name into a valid Kubernetes object name
+      # TODO: This is over-truncated to account for the Kubernetes access key Secret
+      value: (trim((truncate(($run), `52`)), '-'))
+    - name: access_secret
+      value: (join('-', [($bucket), 'obj-key']))
+  template: true
+  steps:
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create LinodeObjectStorageBucket and Key
+      try:
+        - apply:
+            file: create-bucket-and-key.yaml
+    # AFAICT this is the only way not have chainsaw immediately bomb out because resources don't exist
+    # or hang on assertion even after they do
+    - name: Wait for LinodeObjectStorageBucket and Key to be marked ready
+      try:
+        - script:
+            env:
+              - name: BUCKET
+                value: ($bucket)
+            content: |
+              set -e
+              kubectl -n $NAMESPACE wait --for=jsonpath='{.status.ready}'=true lobjkey $BUCKET --timeout=30s
+              kubectl -n $NAMESPACE wait --for=jsonpath='{.status.ready}'=true lobj $BUCKET --timeout=30s
+    - name: Check if the bucket was created
+      try:
+        - script:
+            env:
+              - name: BUCKET
+                value: ($bucket)
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                label: ($bucket)
+    - name: Ensure the access key was created
+      try:
+        - script:
+            env:
+              - name: URI
+                value: object-storage/keys
+              - name: OBJ_KEY
+                value: ($access_secret)
+            content: |
+              set -e
+
+              export KEY_ID=$(kubectl -n $NAMESPACE get lobjkey $OBJ_KEY -ojson | jq '.status.accessKeyRef')
+              
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/$URI/$KEY_ID"
+            check:
+              ($error): ~
+    - name: Delete LinodeObjectStorageBucket
+      try:
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeObjectStorageBucket
+              name: ($bucket)
+        - error:
+            file: check-lobj-deletion.yaml
+    - name: Check if the bucket was deleted
+      try:
+        - script:
+            env:
+              - name: BUCKET
+                value: ($bucket)
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "Content-Type: application/json" \
+                "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
+            check:
+              ($stdout): |-
+                {"errors": [{"reason": "Not found"}]}

@@ -13,7 +13,37 @@ metadata:
 spec:
   credentialsRef:
     name: ${CLUSTER_NAME}-credentials
+  accessKeyRef:
+    name: ${CLUSTER_NAME}-etcd-backup-mgmt
+  forceDeleteBucket: ${FORCE_DELETE_OBJ_BUCKETS:=false}
   region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeObjectStorageKey
+metadata:
+  labels:
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+    app.kubernetes.io/instance: ${CLUSTER_NAME}-etcd-backup
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: linodeobjectstoragekey
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+  name: ${CLUSTER_NAME}-etcd-backup-mgmt
+  namespace: default
+spec:
+  bucketAccess:
+    - bucketName: ${CLUSTER_NAME}-etcd-backup
+      permissions: read_write
+      region: ${OBJ_BUCKET_REGION:=${LINODE_REGION}}
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
+  generatedSecret:
+    format:
+      access: '{{ .AccessKey }}'
+      bucket: '{{ .BucketName }}'
+      endpoint: '{{ .S3Endpoint }}'
+      secret: '{{ .SecretKey }}'
+    type: Opaque
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeObjectStorageKey
