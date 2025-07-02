@@ -293,3 +293,197 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 		),
 	)
 })
+
+var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
+	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
+
+	var reconciler LinodeVPCReconciler
+	var vpcScope scope.VPCScope
+	var linodeVPC infrav1alpha2.LinodeVPC
+
+	suite.BeforeEach(func(ctx context.Context, mck Mock) {
+		vpcScope.Client = k8sClient
+		linodeVPC = infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "retained-vpc-",
+				Namespace:    "default",
+				Finalizers:   []string{infrav1alpha2.VPCFinalizer},
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				VPCID:  ptr.To(123),
+				Region: "us-east",
+				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+					{Label: "subnet1", IPv4: "10.0.0.0/8", SubnetID: 1},
+					{Label: "subnet2", IPv4: "10.0.1.0/24", SubnetID: 2},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
+
+		// Add deletion timestamp to trigger reconcileDelete
+		Expect(k8sClient.Delete(ctx, &linodeVPC)).To(Succeed())
+
+		vpcScope.LinodeClient = mck.LinodeClient
+
+		reconciler = LinodeVPCReconciler{
+			Recorder: mck.Recorder(),
+		}
+
+		// Get the resource back to ensure we have the latest state with the deletion timestamp.
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
+		vpcScope.LinodeVPC = &linodeVPC
+
+		// Initialize patch helper with the deleted object.
+		patchHelper, err := patch.NewHelper(&linodeVPC, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		vpcScope.PatchHelper = patchHelper
+	})
+
+	AfterEach(func(ctx SpecContext) {
+		err := k8sClient.Delete(ctx, &linodeVPC)
+		if err != nil {
+			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		}
+	})
+
+	suite.Run(
+		OneOf(
+			Path(
+				Call("retained VPC is not deleted", func(ctx context.Context, mck Mock) {
+					vpcScope.LinodeVPC.Spec.Retain = ptr.To(true)
+
+					// No Linode client calls should be made
+				}),
+				Result("retained success", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC))).To(BeTrue())
+					Expect(mck.Logs()).To(ContainSubstring("VPC has retain flag, skipping VPC deletion"))
+				}),
+			),
+			Path(
+				Call("retained VPC with subnet deletion disabled", func(ctx context.Context, mck Mock) {
+					reconciler.EnableSubnetDeletion = false
+					vpcScope.LinodeVPC.Spec.Retain = ptr.To(true)
+					vpcScope.LinodeVPC.Spec.Subnets[0].Retain = ptr.To(true)
+					vpcScope.LinodeVPC.Spec.Subnets[1].Retain = ptr.To(false)
+
+					// No Linode client calls should be made
+				}),
+				Result("unretained subnets are not deleted", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC))).To(BeTrue())
+					Expect(mck.Logs()).NotTo(ContainSubstring("deleting subnet"))
+				}),
+			),
+			Path(
+				Call("retained VPC with unretained subnet deletion", func(ctx context.Context, mck Mock) {
+					reconciler.EnableSubnetDeletion = true
+					vpcScope.LinodeVPC.Spec.Retain = ptr.To(true)
+					vpcScope.LinodeVPC.Spec.Subnets[0].Retain = ptr.To(true)
+					vpcScope.LinodeVPC.Spec.Subnets[1].Retain = ptr.To(false)
+
+					mck.LinodeClient.EXPECT().GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID).Return(&linodego.VPC{
+						ID: *vpcScope.LinodeVPC.Spec.VPCID,
+						Subnets: []linodego.VPCSubnet{
+							{ID: vpcScope.LinodeVPC.Spec.Subnets[0].SubnetID},
+							{ID: vpcScope.LinodeVPC.Spec.Subnets[1].SubnetID},
+						},
+					}, nil)
+					mck.LinodeClient.EXPECT().DeleteVPCSubnet(ctx, *vpcScope.LinodeVPC.Spec.VPCID, vpcScope.LinodeVPC.Spec.Subnets[1].SubnetID).Return(nil)
+				}),
+				Result("unretained subnets deleted", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC))).To(BeTrue())
+					Expect(mck.Logs()).To(ContainSubstring("deleting subnet"))
+				}),
+			),
+		),
+	)
+})
+
+var _ = Describe("adopt existing VPC", Label("vpc", "lifecycle"), func() {
+	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
+
+	var reconciler LinodeVPCReconciler
+	var vpcScope scope.VPCScope
+	var linodeVPC infrav1alpha2.LinodeVPC
+
+	suite.BeforeEach(func(ctx context.Context, mck Mock) {
+		vpcScope.Client = k8sClient
+		linodeVPC = infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "adopt-vpc-",
+				Namespace:    "default",
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "us-east",
+				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+					{Label: "adopted-subnet", IPv4: "10.0.0.0/8"},
+					{Label: "created-subnet", IPv4: "10.0.1.0/24"},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
+
+		vpcScope.LinodeClient = mck.LinodeClient
+
+		reconciler = LinodeVPCReconciler{
+			Recorder: mck.Recorder(),
+		}
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
+		vpcScope.LinodeVPC = &linodeVPC
+
+		patchHelper, err := patch.NewHelper(&linodeVPC, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		vpcScope.PatchHelper = patchHelper
+	})
+
+	AfterEach(func(ctx SpecContext) {
+		err := k8sClient.Delete(ctx, &linodeVPC)
+		if err != nil {
+			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		}
+	})
+
+	suite.Run(
+		Path(
+			Call("adopt existing VPC and create missing subnet", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{
+					{
+						ID:     1,
+						Label:  "adopt-vpc-",
+						Region: "us-east",
+						Subnets: []linodego.VPCSubnet{
+							{
+								ID:    1,
+								Label: "adopted-subnet",
+								IPv4:  "10.0.0.0/8",
+							},
+						},
+					},
+				}, nil)
+				mck.LinodeClient.EXPECT().CreateVPCSubnet(ctx, gomock.Any(), 1).Return(&linodego.VPCSubnet{
+					ID:    2,
+					Label: "created-subnet",
+					IPv4:  "10.0.1.0/24",
+				}, nil)
+			}),
+			Result("adopt and create success", func(ctx context.Context, mck Mock) {
+				_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
+				Expect(len(linodeVPC.Spec.Subnets)).To(Equal(2))
+				Expect(linodeVPC.Spec.Subnets[0].SubnetID).To(Equal(1))
+				Expect(linodeVPC.Spec.Subnets[1].SubnetID).To(Equal(2))
+			}),
+		),
+	)
+})

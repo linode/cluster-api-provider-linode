@@ -55,7 +55,32 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 	} else if len(vpcs) != 0 {
 		// Labels are unique
 		vpcScope.LinodeVPC.Spec.VPCID = &vpcs[0].ID
-		updateVPCSpecSubnets(vpcScope, &vpcs[0])
+
+		// build a map of existing subnets to easily check for existence
+		existingSubnets := make(map[string]int)
+		for _, subnet := range vpcs[0].Subnets {
+			existingSubnets[subnet.Label] = subnet.ID
+		}
+
+		// adopt or create subnets
+		for i, subnet := range vpcScope.LinodeVPC.Spec.Subnets {
+			if subnet.SubnetID != 0 {
+				continue
+			}
+			if id, ok := existingSubnets[subnet.Label]; ok {
+				vpcScope.LinodeVPC.Spec.Subnets[i].SubnetID = id
+			} else {
+				createSubnetConfig := linodego.VPCSubnetCreateOptions{
+					Label: subnet.Label,
+					IPv4:  subnet.IPv4,
+				}
+				newSubnet, err := vpcScope.LinodeClient.CreateVPCSubnet(ctx, createSubnetConfig, *vpcScope.LinodeVPC.Spec.VPCID)
+				if err != nil {
+					return err
+				}
+				vpcScope.LinodeVPC.Spec.Subnets[i].SubnetID = newSubnet.ID
+			}
+		}
 
 		return nil
 	}
