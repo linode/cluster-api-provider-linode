@@ -1692,7 +1692,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						Status:  linodego.InstanceRunning,
 						Updated: util.Pointer(time.Now()),
 					}, nil)
-				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, linodego.InstanceUpdateOptions{Tags: &[]string{"test-tag", "test-cluster-2"}}).Return(
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
 						ID:      11111,
 						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
@@ -1799,15 +1799,14 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 						linodeMachine.Spec.ProviderID = tmpProviderID
 
 					})),
-					/* TODO: fix this flaking test
-						Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
+					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
-							Return(&linodego.Error{Code: http.StatusInternalServerError})
+							Return(&linodego.Error{Code: http.StatusBadGateway})
 						res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Linode instance deletion"))
-					})), */
+					})),
 				),
 			),
 			Path(
