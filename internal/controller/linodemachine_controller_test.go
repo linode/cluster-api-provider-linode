@@ -1800,6 +1800,7 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 
 					})),
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
+						linodeMachine.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 						mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), gomock.Any()).
 							Return(&linodego.Error{Code: http.StatusBadGateway})
 						res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
