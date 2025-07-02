@@ -88,6 +88,7 @@ type flagVars struct {
 	linodeVPCConcurrency                 int
 	linodePlacementGroupConcurrency      int
 	linodeFirewallConcurrency            int
+	enableSubnetDeletion                 bool
 }
 
 func init() {
@@ -152,6 +153,7 @@ func parseFlags() (flags flagVars, opts zap.Options) {
 	flag.IntVar(&flags.linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault, "Number of LinodeVPCs to process simultaneously")
 	flag.IntVar(&flags.linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault, "Number of Linode Placement Groups to process simultaneously")
 	flag.IntVar(&flags.linodeFirewallConcurrency, "linodefirewall-concurrency", concurrencyDefault, "Number of Linode Firewall to process simultaneously")
+	flag.BoolVar(&flags.enableSubnetDeletion, "enable-subnet-deletion", false, "Enable the deletion of subnets in a retained VPC.")
 
 	opts = zap.Options{Development: true}
 	opts.BindFlags(flag.CommandLine)
@@ -293,10 +295,11 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 
 	// LinodeVPC Controller
 	if err := (&controller.LinodeVPCReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeVPCReconciler"),
-		WatchFilterValue:   flags.clusterWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
+		Client:               mgr.GetClient(),
+		Recorder:             mgr.GetEventRecorderFor("LinodeVPCReconciler"),
+		WatchFilterValue:     flags.clusterWatchFilter,
+		LinodeClientConfig:   linodeClientConfig,
+		EnableSubnetDeletion: flags.enableSubnetDeletion,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeVPCConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)

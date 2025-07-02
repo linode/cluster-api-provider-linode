@@ -63,6 +63,8 @@ type LinodeVPCClient interface {
 	ListVPCs(ctx context.Context, opts *linodego.ListOptions) ([]linodego.VPC, error)
 	CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (*linodego.VPC, error)
 	DeleteVPC(ctx context.Context, vpcID int) error
+	CreateVPCSubnet(ctx context.Context, opts linodego.VPCSubnetCreateOptions, vpcID int) (*linodego.VPCSubnet, error)
+	DeleteVPCSubnet(ctx context.Context, vpcID, subnetID int) error
 }
 
 // LinodeNodeBalancerClient defines the methods that interact with Linode's Node Balancer service.

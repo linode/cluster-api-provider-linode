@@ -366,6 +366,32 @@ func (_d LinodeClientWithTracing) CreateVPC(ctx context.Context, opts linodego.V
 	return _d.LinodeClient.CreateVPC(ctx, opts)
 }
 
+// CreateVPCSubnet implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) CreateVPCSubnet(ctx context.Context, opts linodego.VPCSubnetCreateOptions, vpcID int) (vp1 *linodego.VPCSubnet, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateVPCSubnet")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":   ctx,
+				"opts":  opts,
+				"vpcID": vpcID}, map[string]interface{}{
+				"vp1": vp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.CreateVPCSubnet(ctx, opts, vpcID)
+}
+
 // DeleteDomainRecord implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) DeleteDomainRecord(ctx context.Context, domainID int, domainRecordID int) (err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteDomainRecord")
@@ -609,6 +635,31 @@ func (_d LinodeClientWithTracing) DeleteVPC(ctx context.Context, vpcID int) (err
 		_span.End()
 	}()
 	return _d.LinodeClient.DeleteVPC(ctx, vpcID)
+}
+
+// DeleteVPCSubnet implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) DeleteVPCSubnet(ctx context.Context, vpcID int, subnetID int) (err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.DeleteVPCSubnet")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":      ctx,
+				"vpcID":    vpcID,
+				"subnetID": subnetID}, map[string]interface{}{
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.DeleteVPCSubnet(ctx, vpcID, subnetID)
 }
 
 // GetFirewall implements _sourceClients.LinodeClient

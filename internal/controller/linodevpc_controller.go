@@ -54,10 +54,11 @@ import (
 // LinodeVPCReconciler reconciles a LinodeVPC object
 type LinodeVPCReconciler struct {
 	client.Client
-	Recorder           record.EventRecorder
-	LinodeClientConfig scope.ClientConfig
-	WatchFilterValue   string
-	ReconcileTimeout   time.Duration
+	Recorder             record.EventRecorder
+	LinodeClientConfig   scope.ClientConfig
+	WatchFilterValue     string
+	EnableSubnetDeletion bool
+	ReconcileTimeout     time.Duration
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs,verbs=get;list;watch;create;update;patch;delete
@@ -292,6 +293,35 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 //nolint:nestif,gocognit // As simple as possible.
 func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) (ctrl.Result, error) {
 	logger.Info("deleting VPC")
+
+	if vpcScope.LinodeVPC.Spec.Retain != nil && *vpcScope.LinodeVPC.Spec.Retain {
+		logger.Info("VPC has retain flag, skipping VPC deletion")
+
+		if r.EnableSubnetDeletion && vpcScope.LinodeVPC.Spec.VPCID != nil {
+			logger.Info("subnet deletion enabled, checking subnets")
+			vpc, err := vpcScope.LinodeClient.GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)
+			if err != nil {
+				if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+					return ctrl.Result{}, err
+				}
+			}
+			if vpc != nil {
+				for _, subnet := range vpcScope.LinodeVPC.Spec.Subnets {
+					if subnet.Retain != nil && *subnet.Retain {
+						continue
+					}
+
+					logger.Info("deleting subnet", "subnetID", subnet.SubnetID)
+					if err := vpcScope.LinodeClient.DeleteVPCSubnet(ctx, *vpcScope.LinodeVPC.Spec.VPCID, subnet.SubnetID); util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		}
+
+		controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha2.VPCFinalizer)
+		return ctrl.Result{}, nil
+	}
 
 	if vpcScope.LinodeVPC.Spec.VPCID != nil {
 		vpc, err := vpcScope.LinodeClient.GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)

@@ -242,6 +242,21 @@ func (mr *MockLinodeClientMockRecorder) CreateVPC(ctx, opts any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPC", reflect.TypeOf((*MockLinodeClient)(nil).CreateVPC), ctx, opts)
 }
 
+// CreateVPCSubnet mocks base method.
+func (m *MockLinodeClient) CreateVPCSubnet(ctx context.Context, opts linodego.VPCSubnetCreateOptions, vpcID int) (*linodego.VPCSubnet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVPCSubnet", ctx, opts, vpcID)
+	ret0, _ := ret[0].(*linodego.VPCSubnet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVPCSubnet indicates an expected call of CreateVPCSubnet.
+func (mr *MockLinodeClientMockRecorder) CreateVPCSubnet(ctx, opts, vpcID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPCSubnet", reflect.TypeOf((*MockLinodeClient)(nil).CreateVPCSubnet), ctx, opts, vpcID)
+}
+
 // DeleteDomainRecord mocks base method.
 func (m *MockLinodeClient) DeleteDomainRecord(ctx context.Context, domainID, domainRecordID int) error {
 	m.ctrl.T.Helper()
@@ -380,6 +395,20 @@ func (m *MockLinodeClient) DeleteVPC(ctx context.Context, vpcID int) error {
 func (mr *MockLinodeClientMockRecorder) DeleteVPC(ctx, vpcID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPC", reflect.TypeOf((*MockLinodeClient)(nil).DeleteVPC), ctx, vpcID)
+}
+
+// DeleteVPCSubnet mocks base method.
+func (m *MockLinodeClient) DeleteVPCSubnet(ctx context.Context, vpcID, subnetID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVPCSubnet", ctx, vpcID, subnetID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteVPCSubnet indicates an expected call of DeleteVPCSubnet.
+func (mr *MockLinodeClientMockRecorder) DeleteVPCSubnet(ctx, vpcID, subnetID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCSubnet", reflect.TypeOf((*MockLinodeClient)(nil).DeleteVPCSubnet), ctx, vpcID, subnetID)
 }
 
 // GetFirewall mocks base method.
@@ -1359,6 +1388,21 @@ func (mr *MockLinodeVPCClientMockRecorder) CreateVPC(ctx, opts any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).CreateVPC), ctx, opts)
 }
 
+// CreateVPCSubnet mocks base method.
+func (m *MockLinodeVPCClient) CreateVPCSubnet(ctx context.Context, opts linodego.VPCSubnetCreateOptions, vpcID int) (*linodego.VPCSubnet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVPCSubnet", ctx, opts, vpcID)
+	ret0, _ := ret[0].(*linodego.VPCSubnet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVPCSubnet indicates an expected call of CreateVPCSubnet.
+func (mr *MockLinodeVPCClientMockRecorder) CreateVPCSubnet(ctx, opts, vpcID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVPCSubnet", reflect.TypeOf((*MockLinodeVPCClient)(nil).CreateVPCSubnet), ctx, opts, vpcID)
+}
+
 // DeleteVPC mocks base method.
 func (m *MockLinodeVPCClient) DeleteVPC(ctx context.Context, vpcID int) error {
 	m.ctrl.T.Helper()
@@ -1371,6 +1415,20 @@ func (m *MockLinodeVPCClient) DeleteVPC(ctx context.Context, vpcID int) error {
 func (mr *MockLinodeVPCClientMockRecorder) DeleteVPC(ctx, vpcID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).DeleteVPC), ctx, vpcID)
+}
+
+// DeleteVPCSubnet mocks base method.
+func (m *MockLinodeVPCClient) DeleteVPCSubnet(ctx context.Context, vpcID, subnetID int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteVPCSubnet", ctx, vpcID, subnetID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteVPCSubnet indicates an expected call of DeleteVPCSubnet.
+func (mr *MockLinodeVPCClientMockRecorder) DeleteVPCSubnet(ctx, vpcID, subnetID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCSubnet", reflect.TypeOf((*MockLinodeVPCClient)(nil).DeleteVPCSubnet), ctx, vpcID, subnetID)
 }
 
 // GetVPC mocks base method.
