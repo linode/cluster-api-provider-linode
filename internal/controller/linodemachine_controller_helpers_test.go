@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	b64 "encoding/base64"
 	"fmt"
+	"slices"
 	"testing"
 
 	awssigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
@@ -1178,73 +1179,98 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 	}
 }
 
-func TestReconcileTags(t *testing.T) {
+func TestGetTags(t *testing.T) {
 	t.Parallel()
-	clusterName := "cluster1"
 
 	for _, tc := range []struct {
-		name          string
-		linodeMachine *infrav1alpha2.LinodeMachine
-		mockSetup     func(mockLinodeClient *mock.MockLinodeClient)
-		expectErrMsg  string
-		expMachine    *infrav1alpha2.LinodeMachine
+		name             string
+		clusterName      string
+		currInstanceTags []string
+		machine          *infrav1alpha2.LinodeMachine
+		expMachine       *infrav1alpha2.LinodeMachine
+		expInstanceTags  []string
 	}{
 		{
-			name:          "Success - No Tags annotation",
-			linodeMachine: &infrav1alpha2.LinodeMachine{},
-			mockSetup:     func(mockLinodeClient *mock.MockLinodeClient) {},
-		},
-		{
-			name: "Error - failure to unmarshall tags",
-			linodeMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						machineTagsAnnotation: "tag1,tag2",
-					},
-				},
-				Spec: infrav1alpha2.LinodeMachineSpec{
-					ProviderID: ptr.To("linode://1"),
-				},
+			name:            "Success - No Tags",
+			machine:         &infrav1alpha2.LinodeMachine{},
+			expInstanceTags: []string{},
+			expMachine: &infrav1alpha2.LinodeMachine{
+				Spec:   infrav1alpha2.LinodeMachineSpec{},
+				Status: infrav1alpha2.LinodeMachineStatus{},
 			},
-			mockSetup:    func(mockLinodeClient *mock.MockLinodeClient) {},
-			expectErrMsg: "invalid character 'a' in literal true (expecting 'r')",
 		},
 		{
-			name: "Success - Create capl auto-gen tags annotation",
-			linodeMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						machineTagsAnnotation: "[]",
-					},
-				},
+			name:            "Success - add capl-auto-gen tags",
+			machine:         &infrav1alpha2.LinodeMachine{},
+			clusterName:     "test-cluster",
+			expInstanceTags: []string{"test-cluster"},
+			expMachine: &infrav1alpha2.LinodeMachine{
+				Spec:   infrav1alpha2.LinodeMachineSpec{},
+				Status: infrav1alpha2.LinodeMachineStatus{},
+			},
+		},
+		{
+			name:             "Success - add tags with no previous tags",
+			clusterName:      "test-cluster",
+			currInstanceTags: []string{"instance-manually-added-tag"},
+			machine: &infrav1alpha2.LinodeMachine{
 				Spec: infrav1alpha2.LinodeMachineSpec{
-					ProviderID: ptr.To("linode://1"),
+					Tags: []string{"tag1", "tag2"},
 				},
 			},
 			expMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						machineCAPLTagsAnnotation: "[\"" + clusterName + "\"]",
-						machineTagsAnnotation:     "[]",
-					},
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					Tags: []string{"tag1", "tag2"},
+				},
+				Status: infrav1alpha2.LinodeMachineStatus{
+					Tags: []string{"tag1", "tag2"},
 				},
 			},
-			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {},
+			expInstanceTags: []string{"test-cluster", "tag1", "tag2", "instance-manually-added-tag"},
 		},
 		{
-			name:      "Success - Tag machines",
-			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {},
-			linodeMachine: &infrav1alpha2.LinodeMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						machineCAPLTagsAnnotation: "[\"" + clusterName + "\"]",
-						machineTagsAnnotation:     "[\"tag1\",\"tag2\",\"tag3\"]",
-					},
-				},
+			name:             "Success - add tags with previous tags",
+			clusterName:      "test-cluster",
+			currInstanceTags: []string{"instance-manually-added-tag", "tag1", "tag2"},
+			machine: &infrav1alpha2.LinodeMachine{
 				Spec: infrav1alpha2.LinodeMachineSpec{
-					ProviderID: ptr.To("linode://1"),
+					Tags: []string{"tag1", "tag2", "tag3", "tag4"},
+				},
+				Status: infrav1alpha2.LinodeMachineStatus{
+					Tags: []string{"tag1", "tag2"},
 				},
 			},
+			expMachine: &infrav1alpha2.LinodeMachine{
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					Tags: []string{"tag1", "tag2", "tag3", "tag4"},
+				},
+				Status: infrav1alpha2.LinodeMachineStatus{
+					Tags: []string{"tag1", "tag2", "tag3", "tag4"},
+				},
+			},
+			expInstanceTags: []string{"test-cluster", "tag1", "tag2", "instance-manually-added-tag", "tag3", "tag4"},
+		},
+		{
+			name:             "Success - remove tags",
+			clusterName:      "test-cluster",
+			currInstanceTags: []string{"instance-manually-added-tag", "tag1", "tag2", "tag3", "tag4"},
+			machine: &infrav1alpha2.LinodeMachine{
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					Tags: []string{"tag3", "tag4"},
+				},
+				Status: infrav1alpha2.LinodeMachineStatus{
+					Tags: []string{"tag1", "tag2", "tag3", "tag4"},
+				},
+			},
+			expMachine: &infrav1alpha2.LinodeMachine{
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					Tags: []string{"tag3", "tag4"},
+				},
+				Status: infrav1alpha2.LinodeMachineStatus{
+					Tags: []string{"tag3", "tag4"},
+				},
+			},
+			expInstanceTags: []string{"test-cluster", "tag3", "tag4", "instance-manually-added-tag"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1254,34 +1280,24 @@ func TestReconcileTags(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
-
-			tc.mockSetup(mockLinodeClient)
-
-			// Create machine scope
-			machineScope := &scope.MachineScope{
-				LinodeClient:  mockLinodeClient,
-				LinodeMachine: tc.linodeMachine,
+			// Call the function being tested.
+			// ignoring error check since internal function calls throw errors.
+			// internal functions are tested on their corresponding unit-test.
+			out := getTags(&scope.MachineScope{
+				LinodeMachine: tc.machine,
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: clusterName,
+						Name: tc.clusterName,
 					},
 				},
-			}
-
-			// Call the function being tested
-			_, err := getTags(machineScope)
+			}, tc.currInstanceTags)
 
 			// Check expectations
-			if tc.expectErrMsg != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tc.expectErrMsg)
-			} else {
-				require.NoError(t, err)
-				if tc.expMachine != nil {
-					require.Equal(t, tc.expMachine.Annotations, tc.linodeMachine.Annotations)
-				}
-			}
+			slices.Sort(tc.expInstanceTags)
+			slices.Sort(out)
+
+			require.Equal(t, tc.expInstanceTags, out)
+			require.Equal(t, tc.expMachine.Status.Tags, tc.machine.Spec.Tags)
 		})
 	}
 }

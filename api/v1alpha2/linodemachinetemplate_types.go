@@ -25,6 +25,19 @@ type LinodeMachineTemplateSpec struct {
 	Template LinodeMachineTemplateResource `json:"template"`
 }
 
+// LinodeMachineTemplateStatus defines the observed state of LinodeMachineTemplate
+// It is used to store the status of the LinodeMachineTemplate, such as tags.
+type LinodeMachineTemplateStatus struct {
+
+	// tags that are currently applied to the LinodeMachineTemplate.
+	// +optional
+	Tags []string `json:"tags,omitempty"`
+
+	// Conditions represent the latest available observations of a LinodeMachineTemplate's current state.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
 // LinodeMachineTemplateResource describes the data needed to create a LinodeMachine from a template.
 type LinodeMachineTemplateResource struct {
 	Spec LinodeMachineSpec `json:"spec"`
@@ -33,6 +46,7 @@ type LinodeMachineTemplateResource struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:storageversion
 // +kubebuilder:resource:path=linodemachinetemplates,scope=Namespaced,categories=cluster-api,shortName=lmt
+// +kubebuilder:subresource:status
 // +kubebuilder:metadata:labels="clusterctl.cluster.x-k8s.io/move-hierarchy=true"
 
 // LinodeMachineTemplate is the Schema for the linodemachinetemplates API
@@ -41,6 +55,29 @@ type LinodeMachineTemplate struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec LinodeMachineTemplateSpec `json:"spec,omitempty"`
+
+	Status LinodeMachineTemplateStatus `json:"status,omitempty"`
+}
+
+func (lmt *LinodeMachineTemplate) GetConditions() []metav1.Condition {
+	for i := range lmt.Status.Conditions {
+		if lmt.Status.Conditions[i].Reason == "" {
+			lmt.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
+	return lmt.Status.Conditions
+}
+
+func (lmt *LinodeMachineTemplate) SetConditions(conditions []metav1.Condition) {
+	lmt.Status.Conditions = conditions
+}
+
+func (lmt *LinodeMachineTemplate) GetV1Beta2Conditions() []metav1.Condition {
+	return lmt.GetConditions()
+}
+
+func (lmt *LinodeMachineTemplate) SetV1Beta2Conditions(conditions []metav1.Condition) {
+	lmt.SetConditions(conditions)
 }
 
 // +kubebuilder:object:root=true

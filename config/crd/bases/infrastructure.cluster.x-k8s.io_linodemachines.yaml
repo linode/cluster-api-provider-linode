@@ -363,14 +363,10 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               tags:
-                description: 'Deprecated: spec.tags is deprecated, use metadata.annotations.linode-vm-tags
-                  instead.'
+                description: Tags is a list of tags to apply to the Linode instance.
                 items:
                   type: string
                 type: array
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               type:
                 type: string
                 x-kubernetes-validations:
@@ -573,6 +569,11 @@ spec:
                 default: false
                 description: Ready is true when the provider resource is ready.
                 type: boolean
+              tags:
+                description: tags are the tags applied to the Linode Machine.
+                items:
+                  type: string
+                type: array
             type: object
         type: object
     served: true

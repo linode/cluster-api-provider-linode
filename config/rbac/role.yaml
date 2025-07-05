@@ -47,6 +47,7 @@ rules:
   - linodeobjectstoragekeys
   - linodeplacementgroups
   - linodevpcs
+  - linodemachinetemplates
   verbs:
   - create
   - delete
@@ -77,6 +78,7 @@ rules:
   - linodeobjectstoragekeys/status
   - linodeplacementgroups/status
   - linodevpcs/status
+  - linodemachinetemplates/status
   verbs:
   - get
   - patch
