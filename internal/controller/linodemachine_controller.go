@@ -21,11 +21,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/google/go-cmp/cmp"
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -69,8 +69,6 @@ const (
 	ConditionPreflightConfigured                = "PreflightConfigured"
 	ConditionPreflightBootTriggered             = "PreflightBootTriggered"
 	ConditionPreflightReady                     = "PreflightReady"
-	machineTagsAnnotation                       = "linode-vm-tags"
-	machineCAPLTagsAnnotation                   = "linode-vm-capl-tags"
 
 	// WaitingForBootstrapDataReason used when machine is waiting for bootstrap data to be ready before proceeding.
 	WaitingForBootstrapDataReason = "WaitingForBootstrapData"
@@ -748,12 +746,8 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	}
 
 	// update the tags if needed
-	machineTags, err := getTags(machineScope)
-	if err != nil {
-		logger.Error(err, "Failed to get tags for Linode instance")
-		return ctrl.Result{}, err
-	}
-	if cmp.Diff(machineTags, linodeInstance.Tags) != "" {
+	machineTags := getTags(machineScope, linodeInstance.Tags)
+	if !slices.Equal(machineTags, linodeInstance.Tags) {
 		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: &machineTags})
 		if err != nil {
 			logger.Error(err, "Failed to update tags for Linode instance")

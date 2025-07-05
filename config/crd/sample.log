@@ -1,0 +1,228 @@
+2025/07/04 19:03:59 maxprocs: Leaving GOMAXPROCS=8: CPU quota undefined
+2025-07-04T19:03:59Z	INFO	setup	CAPL version: v0.8.8-33-gfd878a5-dev
+2025-07-04T19:03:59Z	INFO	setup	API URL: https://api.linode.com
+2025-07-04T19:03:59Z	INFO	controller-runtime.builder	Registering a validating webhook	{"GVK": "infrastructure.cluster.x-k8s.io/v1alpha2, Kind=LinodeCluster", "path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Registering webhook	{"path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.builder	Registering a validating webhook	{"GVK": "infrastructure.cluster.x-k8s.io/v1alpha2, Kind=LinodeMachine", "path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodemachine"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Registering webhook	{"path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodemachine"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.builder	Registering a validating webhook	{"GVK": "infrastructure.cluster.x-k8s.io/v1alpha2, Kind=LinodeVPC", "path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodevpc"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Registering webhook	{"path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodevpc"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.builder	Registering a validating webhook	{"GVK": "infrastructure.cluster.x-k8s.io/v1alpha2, Kind=LinodeObjectStorageBucket", "path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragebucket"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Registering webhook	{"path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragebucket"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.builder	Registering a validating webhook	{"GVK": "infrastructure.cluster.x-k8s.io/v1alpha2, Kind=LinodePlacementGroup", "path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeplacementgroup"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Registering webhook	{"path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeplacementgroup"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.builder	Registering a mutating webhook	{"GVK": "infrastructure.cluster.x-k8s.io/v1alpha2, Kind=LinodeObjectStorageKey", "path": "/mutate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Registering webhook	{"path": "/mutate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.builder	Registering a validating webhook	{"GVK": "infrastructure.cluster.x-k8s.io/v1alpha2, Kind=LinodeObjectStorageKey", "path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Registering webhook	{"path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.builder	Registering a validating webhook	{"GVK": "infrastructure.cluster.x-k8s.io/v1alpha2, Kind=LinodeFirewall", "path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodefirewall"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Registering webhook	{"path": "/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodefirewall"}
+2025-07-04T19:03:59Z	INFO	setup	opentelemetry configuration applied	{"OTEL_TRACES_EXPORTER": "none"}
+2025-07-04T19:03:59Z	INFO	setup	starting manager
+2025-07-04T19:03:59Z	INFO	controller-runtime.metrics	Starting metrics server
+2025-07-04T19:03:59Z	INFO	starting server	{"name": "health probe", "addr": "[::]:8081"}
+2025-07-04T19:03:59Z	INFO	controller-runtime.metrics	Serving metrics server	{"bindAddress": ":8443", "secure": false}
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Starting webhook server
+I0704 19:03:59.302477       1 leaderelection.go:257] attempting to acquire leader lease capl-system/3cfd31c3.cluster.x-k8s.io...
+2025-07-04T19:03:59Z	INFO	controller-runtime.certwatcher	Updated current TLS certificate
+2025-07-04T19:03:59Z	INFO	controller-runtime.webhook	Serving webhook server	{"host": "", "port": 9443}
+2025-07-04T19:03:59Z	INFO	controller-runtime.certwatcher	Starting certificate poll+watcher	{"interval": "10s"}
+I0704 19:04:16.675189       1 leaderelection.go:271] successfully acquired lease capl-system/3cfd31c3.cluster.x-k8s.io
+2025-07-04T19:04:16Z	DEBUG	events	capl-controller-manager-f56c77f6b-lx95w_9f0992b0-649d-4a1d-ab33-6a0bd58333f0 became leader	{"type": "Normal", "object": {"kind":"Lease","namespace":"capl-system","name":"3cfd31c3.cluster.x-k8s.io","uid":"5cc00d01-0f57-4817-b52f-5da5820d4492","apiVersion":"coordination.k8s.io/v1","resourceVersion":"4684595"}, "reason": "LeaderElection"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodevpc", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeVPC", "source": "kind source: *v1beta1.Cluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodeplacementgroup", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodePlacementGroup", "source": "kind source: *v1beta1.Cluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodevpc", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeVPC", "source": "kind source: *v1alpha2.LinodeVPC"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodemachine", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeMachine", "source": "kind source: *v1beta1.Cluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodeobjectstoragebucket", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeObjectStorageBucket", "source": "kind source: *v1alpha2.LinodeObjectStorageBucket"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodecluster", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeCluster", "source": "kind source: *v1alpha2.LinodeMachine"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodecluster", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeCluster", "source": "kind source: *v1alpha2.LinodeCluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodecluster", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeCluster", "source": "kind source: *v1beta1.Cluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodeobjectstoragebucket", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeObjectStorageBucket", "source": "kind source: *v1.Secret"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodeplacementgroup", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodePlacementGroup", "source": "kind source: *v1alpha2.LinodePlacementGroup"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodeobjectstoragebucket", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeObjectStorageBucket", "source": "kind source: *v1beta1.Cluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodemachinetemplate", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeMachineTemplate", "source": "kind source: *v1alpha2.LinodeMachineTemplate"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodemachine", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeMachine", "source": "kind source: *v1alpha2.LinodeCluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodemachine", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeMachine", "source": "kind source: *v1alpha2.LinodeMachine"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodefirewall", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeFirewall", "source": "kind source: *v1alpha2.LinodeFirewall"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodeobjectstoragekey", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeObjectStorageKey", "source": "kind source: *v1beta1.Cluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodemachine", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeMachine", "source": "kind source: *v1beta1.Machine"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodeobjectstoragekey", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeObjectStorageKey", "source": "kind source: *v1.Secret"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodefirewall", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeFirewall", "source": "kind source: *v1alpha2.AddressSet"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodeobjectstoragekey", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeObjectStorageKey", "source": "kind source: *v1alpha2.LinodeObjectStorageKey"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodefirewall", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeFirewall", "source": "kind source: *v1beta1.Cluster"}
+2025-07-04T19:04:16Z	INFO	Starting EventSource	{"controller": "linodefirewall", "controllerGroup": "infrastructure.cluster.x-k8s.io", "controllerKind": "LinodeFirewall", "source": "kind source: *v1alpha2.FirewallRule"}
+2025-07-04T19:04:16Z	ERROR	controller-runtime.cache.UnhandledError	Failed to watch	{"reflector": "pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:285", "type": "*v1alpha2.LinodeMachineTemplate", "error": "failed to list *v1alpha2.LinodeMachineTemplate: linodemachinetemplates.infrastructure.cluster.x-k8s.io is forbidden: User \"system:serviceaccount:capl-system:capl-controller-manager\" cannot list resource \"linodemachinetemplates\" in API group \"infrastructure.cluster.x-k8s.io\" at the cluster scope"}
+k8s.io/apimachinery/pkg/util/runtime.logError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:226
+k8s.io/apimachinery/pkg/util/runtime.handleError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:217
+k8s.io/apimachinery/pkg/util/runtime.HandleErrorWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:203
+k8s.io/client-go/tools/cache.DefaultWatchErrorHandler
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:200
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:360
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:255
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:256
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:358
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:63
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:72
+2025-07-04T19:04:18Z	ERROR	controller-runtime.cache.UnhandledError	Failed to watch	{"reflector": "pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:285", "type": "*v1alpha2.LinodeMachineTemplate", "error": "failed to list *v1alpha2.LinodeMachineTemplate: linodemachinetemplates.infrastructure.cluster.x-k8s.io is forbidden: User \"system:serviceaccount:capl-system:capl-controller-manager\" cannot list resource \"linodemachinetemplates\" in API group \"infrastructure.cluster.x-k8s.io\" at the cluster scope"}
+k8s.io/apimachinery/pkg/util/runtime.logError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:226
+k8s.io/apimachinery/pkg/util/runtime.handleError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:217
+k8s.io/apimachinery/pkg/util/runtime.HandleErrorWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:203
+k8s.io/client-go/tools/cache.DefaultWatchErrorHandler
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:200
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:360
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:255
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:256
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:358
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:63
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:72
+2025-07-04T19:04:20Z	ERROR	controller-runtime.cache.UnhandledError	Failed to watch	{"reflector": "pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:285", "type": "*v1alpha2.LinodeMachineTemplate", "error": "failed to list *v1alpha2.LinodeMachineTemplate: linodemachinetemplates.infrastructure.cluster.x-k8s.io is forbidden: User \"system:serviceaccount:capl-system:capl-controller-manager\" cannot list resource \"linodemachinetemplates\" in API group \"infrastructure.cluster.x-k8s.io\" at the cluster scope"}
+k8s.io/apimachinery/pkg/util/runtime.logError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:226
+k8s.io/apimachinery/pkg/util/runtime.handleError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:217
+k8s.io/apimachinery/pkg/util/runtime.HandleErrorWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:203
+k8s.io/client-go/tools/cache.DefaultWatchErrorHandler
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:200
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:360
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:255
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:256
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:358
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:63
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:72
+2025-07-04T19:04:24Z	ERROR	controller-runtime.cache.UnhandledError	Failed to watch	{"reflector": "pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:285", "type": "*v1alpha2.LinodeMachineTemplate", "error": "failed to list *v1alpha2.LinodeMachineTemplate: linodemachinetemplates.infrastructure.cluster.x-k8s.io is forbidden: User \"system:serviceaccount:capl-system:capl-controller-manager\" cannot list resource \"linodemachinetemplates\" in API group \"infrastructure.cluster.x-k8s.io\" at the cluster scope"}
+k8s.io/apimachinery/pkg/util/runtime.logError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:226
+k8s.io/apimachinery/pkg/util/runtime.handleError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:217
+k8s.io/apimachinery/pkg/util/runtime.HandleErrorWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:203
+k8s.io/client-go/tools/cache.DefaultWatchErrorHandler
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:200
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:360
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:255
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:256
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:358
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:63
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:72
+2025-07-04T19:04:35Z	ERROR	controller-runtime.cache.UnhandledError	Failed to watch	{"reflector": "pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:285", "type": "*v1alpha2.LinodeMachineTemplate", "error": "failed to list *v1alpha2.LinodeMachineTemplate: linodemachinetemplates.infrastructure.cluster.x-k8s.io is forbidden: User \"system:serviceaccount:capl-system:capl-controller-manager\" cannot list resource \"linodemachinetemplates\" in API group \"infrastructure.cluster.x-k8s.io\" at the cluster scope"}
+k8s.io/apimachinery/pkg/util/runtime.logError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:226
+k8s.io/apimachinery/pkg/util/runtime.handleError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:217
+k8s.io/apimachinery/pkg/util/runtime.HandleErrorWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:203
+k8s.io/client-go/tools/cache.DefaultWatchErrorHandler
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:200
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:360
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:255
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:256
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:358
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:63
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:72
+2025-07-04T19:04:51Z	ERROR	controller-runtime.cache.UnhandledError	Failed to watch	{"reflector": "pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:285", "type": "*v1alpha2.LinodeMachineTemplate", "error": "failed to list *v1alpha2.LinodeMachineTemplate: linodemachinetemplates.infrastructure.cluster.x-k8s.io is forbidden: User \"system:serviceaccount:capl-system:capl-controller-manager\" cannot list resource \"linodemachinetemplates\" in API group \"infrastructure.cluster.x-k8s.io\" at the cluster scope"}
+k8s.io/apimachinery/pkg/util/runtime.logError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:226
+k8s.io/apimachinery/pkg/util/runtime.handleError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:217
+k8s.io/apimachinery/pkg/util/runtime.HandleErrorWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:203
+k8s.io/client-go/tools/cache.DefaultWatchErrorHandler
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:200
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:360
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:255
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:256
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:358
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:63
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:72
+2025-07-04T19:05:21Z	ERROR	controller-runtime.cache.UnhandledError	Failed to watch	{"reflector": "pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:285", "type": "*v1alpha2.LinodeMachineTemplate", "error": "failed to list *v1alpha2.LinodeMachineTemplate: linodemachinetemplates.infrastructure.cluster.x-k8s.io is forbidden: User \"system:serviceaccount:capl-system:capl-controller-manager\" cannot list resource \"linodemachinetemplates\" in API group \"infrastructure.cluster.x-k8s.io\" at the cluster scope"}
+k8s.io/apimachinery/pkg/util/runtime.logError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:226
+k8s.io/apimachinery/pkg/util/runtime.handleError
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:217
+k8s.io/apimachinery/pkg/util/runtime.HandleErrorWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/runtime/runtime.go:203
+k8s.io/client-go/tools/cache.DefaultWatchErrorHandler
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:200
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext.func1
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:360
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:255
+k8s.io/apimachinery/pkg/util/wait.BackoffUntilWithContext
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:256
+k8s.io/apimachinery/pkg/util/wait.BackoffUntil
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/backoff.go:233
+k8s.io/client-go/tools/cache.(*Reflector).RunWithContext
+	/go/pkg/mod/k8s.io/client-go@v0.33.2/tools/cache/reflector.go:358
+k8s.io/client-go/tools/cache.(*controller).RunWithContext.(*Group).StartWithContext.func3
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:63
+k8s.io/apimachinery/pkg/util/wait.(*Group).Start.func1
+	/go/pkg/mod/k8s.io/apimachinery@v0.33.2/pkg/util/wait/wait.go:72

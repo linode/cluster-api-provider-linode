@@ -21,7 +21,6 @@ import (
 	"compress/gzip"
 	"context"
 	b64 "encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -106,12 +105,7 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzipCompressionEnabled bool, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
-	machineTags, err := getTags(machineScope)
-	if err != nil {
-		logger.Error(err, "Failed to get machine tags")
-		return nil, err
-	}
-	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec, machineTags)
+	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec, getTags(machineScope, []string{}))
 	if createConfig == nil {
 		err = errors.New("failed to convert machine spec to create instance config")
 		logger.Error(err, "Panic! Struct of LinodeMachineSpec is different than InstanceCreateOptions")
@@ -999,50 +993,33 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 	return nil
 }
 
+func addArrayToSet(arr []string, strSet map[string]struct{}) {
+	for _, elem := range arr {
+		strSet[elem] = struct{}{}
+	}
+}
+
 // get tags on the linodemachine
-func getTags(machineScope *scope.MachineScope) ([]string, error) {
-	if len(machineScope.LinodeMachine.Annotations) == 0 {
-		machineScope.LinodeMachine.Annotations = make(map[string]string)
-	}
+func getTags(machineScope *scope.MachineScope, instanceTags []string) []string {
+	machineTagSet := make(map[string]struct{})
+	addArrayToSet(instanceTags, machineTagSet)
+	addArrayToSet(machineScope.LinodeMachine.Spec.Tags, machineTagSet)
+	addArrayToSet(util.GetAutoGenTags(machineScope.LinodeCluster), machineTagSet)
 
-	// add unique tags from the LinodeMachine linode-vm-tags annotation
-	machineTagSet := map[string]struct{}{}
+	desiredMachineTags := make(map[string]struct{})
+	addArrayToSet(machineScope.LinodeMachine.Spec.Tags, desiredMachineTags)
 
-	// TODO: remove post-removal .Spec.Tags removal
-	for _, tag := range machineScope.LinodeMachine.Spec.Tags { //nolint:staticcheck // don't complain until we remove .Spec.Tags
-		machineTagSet[tag] = struct{}{}
-	}
-
-	if _, ok := machineScope.LinodeMachine.Annotations[machineTagsAnnotation]; ok {
-		var machineTags []string
-		if err := json.Unmarshal([]byte(machineScope.LinodeMachine.Annotations[machineTagsAnnotation]), &machineTags); err != nil {
-			return nil, err
-		}
-		for _, tag := range machineTags {
-			machineTagSet[tag] = struct{}{}
+	for _, tag := range machineScope.LinodeMachine.Status.Tags {
+		if _, ok := desiredMachineTags[tag]; !ok {
+			delete(machineTagSet, tag)
 		}
 	}
 
-	// add unique tags from the LinodeMachine linode-capl-vm-tags annotation
-	if _, ok := machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation]; !ok {
-		caplGenTags, err := json.Marshal(util.GetAutoGenTags(*machineScope.LinodeCluster))
-		if err != nil {
-			return nil, fmt.Errorf("error in converting name tag to string, %w", err)
-		}
-		machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation] = string(caplGenTags)
-	}
-	var caplAutogenTags []string
-	if err := json.Unmarshal([]byte(machineScope.LinodeMachine.Annotations[machineCAPLTagsAnnotation]), &caplAutogenTags); err != nil {
-		return nil, err
-	}
-	for _, tag := range caplAutogenTags {
-		machineTagSet[tag] = struct{}{}
-	}
-
-	// use the set to create a slice of unique tags
-	machineTags := make([]string, 0, len(machineTagSet))
+	outTags := []string{}
 	for tag := range machineTagSet {
-		machineTags = append(machineTags, tag)
+		outTags = append(outTags, tag)
 	}
-	return machineTags, nil
+
+	machineScope.LinodeMachine.Status.Tags = machineScope.LinodeMachine.Spec.Tags
+	return outTags
 }
