@@ -1020,6 +1020,6 @@ func getTags(machineScope *scope.MachineScope, instanceTags []string) []string {
 		outTags = append(outTags, tag)
 	}
 
-	machineScope.LinodeMachine.Status.Tags = machineScope.LinodeMachine.Spec.Tags
+	machineScope.LinodeMachine.Status.Tags = slices.Clone(machineScope.LinodeMachine.Spec.Tags)
 	return outTags
 }
