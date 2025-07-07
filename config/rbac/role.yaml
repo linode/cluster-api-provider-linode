@@ -43,11 +43,11 @@ rules:
   - linodeclusters
   - linodefirewalls
   - linodemachines
+  - linodemachinetemplates
   - linodeobjectstoragebuckets
   - linodeobjectstoragekeys
   - linodeplacementgroups
   - linodevpcs
-  - linodemachinetemplates
   verbs:
   - create
   - delete
@@ -74,11 +74,11 @@ rules:
   - linodeclusters/status
   - linodefirewalls/status
   - linodemachines/status
+  - linodemachinetemplates/status
   - linodeobjectstoragebuckets/status
   - linodeobjectstoragekeys/status
   - linodeplacementgroups/status
   - linodevpcs/status
-  - linodemachinetemplates/status
   verbs:
   - get
   - patch
