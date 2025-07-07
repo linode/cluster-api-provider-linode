@@ -44,6 +44,7 @@ type LinodeMachineTemplateReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachinetemplates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=get;list;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodemachinetemplates/status,verbs=get;update;patch
 
 func (lmtr *LinodeMachineTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -128,7 +129,7 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 		if !slices.Equal(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags, lmtScope.LinodeMachineTemplate.Status.Tags) {
 			err := lmtr.reconcileTags(ctx, lmtScope.LinodeMachineTemplate, &machine)
 			if err != nil {
-				lmtr.Logger.Error(err, "Failed to reconcile tags for LinodeMachines", "template", lmtScope.LinodeMachineTemplate.Name)
+				lmtr.Logger.Error(err, "Failed to add tags to LinodeMachine", "template", lmtScope.LinodeMachineTemplate.Name, "machine", machine.Name)
 				outErr = errors.Join(outErr, err)
 
 				failureReason = "FailedToPatchLinodeMachine"
@@ -141,9 +142,13 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 		return ctrl.Result{}, nil
 	}
 
-	lmtScope.LinodeMachineTemplate.Status.Tags = slices.Clone(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags)
-
-	lmtr.Logger.Info("Successfully reconciled LinodeMachineTemplate", "name", lmtScope.LinodeMachineTemplate.Name)
+	// update the LMT status.tags if all the linodeMachines spec.tags is successfully updated.
+	if outErr == nil {
+		lmtScope.LinodeMachineTemplate.Status.Tags = slices.Clone(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags)
+		lmtr.Logger.Info("Successfully reconciled LinodeMachineTemplate", "name", lmtScope.LinodeMachineTemplate.Name)
+	} else {
+		lmtr.Logger.Error(outErr, "Error in reconciling LinodeMachineTemplate, retrying..", "name", lmtScope.LinodeMachineTemplate.Name)
+	}
 	return ctrl.Result{}, outErr
 }
 

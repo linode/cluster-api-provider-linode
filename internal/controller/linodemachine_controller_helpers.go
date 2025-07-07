@@ -993,22 +993,20 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 	return nil
 }
 
-func addArrayToSet(arr []string, strSet map[string]struct{}) {
-	for _, elem := range arr {
-		strSet[elem] = struct{}{}
+func constructSet(arrs ...[]string) map[string]struct{} {
+	strSet := make(map[string]struct{})
+	for _, arr := range arrs {
+		for _, elem := range arr {
+			strSet[elem] = struct{}{}
+		}
 	}
+	return strSet
 }
 
 // get tags on the linodemachine
 func getTags(machineScope *scope.MachineScope, instanceTags []string) []string {
-	machineTagSet := make(map[string]struct{})
-	addArrayToSet(instanceTags, machineTagSet)
-	addArrayToSet(machineScope.LinodeMachine.Spec.Tags, machineTagSet)
-	addArrayToSet(util.GetAutoGenTags(machineScope.LinodeCluster), machineTagSet)
-
-	desiredMachineTags := make(map[string]struct{})
-	addArrayToSet(machineScope.LinodeMachine.Spec.Tags, desiredMachineTags)
-
+	machineTagSet := constructSet(instanceTags, machineScope.LinodeMachine.Spec.Tags, util.GetAutoGenTags(machineScope.LinodeCluster))
+	desiredMachineTags := constructSet(machineScope.LinodeMachine.Spec.Tags)
 	for _, tag := range machineScope.LinodeMachine.Status.Tags {
 		if _, ok := desiredMachineTags[tag]; !ok {
 			delete(machineTagSet, tag)
