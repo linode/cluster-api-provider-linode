@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: lmt-e2e
+  # Label to trigger the test on every PR
+  labels:
+    all:
+    linodemachine:
+spec:
+  bindings:
+    # A short identifier for the E2E test run
+    - name: run
+      value: (join('-', ['e2e', 'cluster-obj-store', env('GIT_REF')]))
+    - name: cluster
+      # Format the cluster name
+      value: (trim((truncate(($run), `29`)), '-'))
+  template: true
+  steps:
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create Cluster resource
+      try:
+        - apply:
+            file: create-cluster.yaml
+      catch:
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Cluster
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeCluster
+        - describe:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            kind: KubeadmControlPlane
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+    - name: Ensure machine is created with provided tags
+      try:
+        - assert:
+            file: assert-lm-creation.yaml
+      catch:
+      - describe:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+          kind: LinodeMachine
+    - name: Add tags to template
+      try:
+        - apply:
+            file: lmt-add-tags.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+    - name: Ensure tags are added to machine
+      try:
+        - assert:
+            file: assert-lm-tags-addition.yaml
+      catch:
+      - describe:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+          kind: LinodeMachine
+    - name: Remove tags from template
+      try:
+        - apply:
+            file: lmt-remove-tags.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+    - name: Ensure tags are removed from machine
+      try:
+        - assert:
+            file: assert-lm-tags-removal.yaml
+      catch:
+      - describe:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+          kind: LinodeMachine
+    # - name: Clean Cluster
+    #   try:
+    #     - delete:
+    #         ref:
+    #           apiVersion: cluster.x-k8s.io/v1beta1
+    #           kind: Cluster
+    #           name: ($cluster)
+
+# - Create a cluster without tags
+# - Update and Delete tags to see if the propagation works.
+# - Create a MD without tags
+# - Add tags to MD
+# - Update tags on MD
+# - Delete tags from md
