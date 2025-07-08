@@ -67,6 +67,14 @@ spec:
                 x-kubernetes-map-type: atomic
               description:
                 type: string
+              ipv6Range:
+                default: /52
+                maxLength: 4
+                minLength: 2
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               region:
                 type: string
                 x-kubernetes-validations:
@@ -85,6 +93,11 @@ spec:
                   description: VPCSubnetCreateOptions defines subnet options
                   properties:
                     ipv4:
+                      type: string
+                    ipv6Range:
+                      default: /56
+                      maxLength: 4
+                      minLength: 2
                       type: string
                     label:
                       maxLength: 63

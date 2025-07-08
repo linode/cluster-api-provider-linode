@@ -23,6 +23,7 @@ import (
 	"net/netip"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"go4.org/netipx"
@@ -146,7 +147,11 @@ func (r *linodeVPCValidator) ValidateDelete(ctx context.Context, obj runtime.Obj
 
 func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeVPCSpec, skipAPIValidation bool) field.ErrorList {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
-	var errs field.ErrorList
+	var (
+		errs          field.ErrorList
+		ipv6Range     = spec.IPv6Range
+		ipv6RangePath = field.NewPath("spec").Child("ipv6Range")
+	)
 
 	if !skipAPIValidation {
 		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
@@ -155,6 +160,12 @@ func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodecl
 	}
 	if err := r.validateLinodeVPCSubnets(spec); err != nil {
 		errs = slices.Concat(errs, err)
+	}
+
+	// Validate VPC IPv6 Range
+	rangeErr := validateIPv6Range(ipv6Range, ipv6RangePath)
+	if rangeErr != nil {
+		errs = append(errs, rangeErr)
 	}
 
 	if len(errs) == 0 {
@@ -173,10 +184,12 @@ func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec infrav1alpha2.LinodeV
 
 	for i, subnet := range spec.Subnets {
 		var (
-			label     = subnet.Label
-			labelPath = field.NewPath("spec").Child("Subnets").Index(i).Child("Label")
-			ip        = subnet.IPv4
-			ipPath    = field.NewPath("spec").Child("Subnets").Index(i).Child("IPv4")
+			label         = subnet.Label
+			labelPath     = field.NewPath("spec").Child("Subnets").Index(i).Child("Label")
+			ip            = subnet.IPv4
+			ipPath        = field.NewPath("spec").Child("Subnets").Index(i).Child("IPv4")
+			ipv6Range     = subnet.IPv6Range
+			ipv6RangePath = field.NewPath("spec").Child("Subnets").Index(i).Child("IPv6Range")
 		)
 
 		// Validate Subnet Label
@@ -201,6 +214,12 @@ func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec infrav1alpha2.LinodeV
 		builder.AddSet(cidr)
 		if cidrs, err = builder.IPSet(); err != nil {
 			return append(field.ErrorList{}, field.InternalError(ipPath, fmt.Errorf("build ip set: %w", err)))
+		}
+
+		// Validate Subnet IPv6 Range
+		rangeErr := validateIPv6Range(ipv6Range, ipv6RangePath)
+		if rangeErr != nil {
+			errs = append(errs, rangeErr)
 		}
 	}
 
@@ -281,4 +300,24 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 		return nil, field.InternalError(path, fmt.Errorf("build ip set: %w", err))
 	}
 	return set, nil
+}
+
+func validateIPv6Range(ipv6Range string, path *field.Path) *field.Error {
+	var errs = []error{
+		errors.New("IPv6 range must start with /. Example: /64"),
+		errors.New("IPv6 range doesn't contain a valid number after /"),
+		errors.New("IPv6 range must be between /0 and /128"),
+	}
+	if !strings.HasPrefix(ipv6Range, "/") {
+		return field.Invalid(path, ipv6Range, errs[0].Error())
+	}
+	numStr := strings.TrimPrefix(ipv6Range, "/")
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		return field.Invalid(path, ipv6Range, errs[1].Error())
+	}
+	if num < 0 || num > 128 {
+		return field.Invalid(path, ipv6Range, errs[2].Error())
+	}
+	return nil
 }

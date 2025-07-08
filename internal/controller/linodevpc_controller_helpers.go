@@ -122,16 +122,29 @@ func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
 
 func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linodego.VPCCreateOptions {
 	subnets := make([]linodego.VPCSubnetCreateOptions, len(vpcSpec.Subnets))
+	vpcIPv6 := []linodego.VPCCreateOptionsIPv6{
+		{
+			Range: &vpcSpec.IPv6Range,
+		},
+	}
+
 	for idx, subnet := range vpcSpec.Subnets {
 		subnets[idx] = linodego.VPCSubnetCreateOptions{
 			Label: subnet.Label,
 			IPv4:  subnet.IPv4,
+			IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
+				{
+					Range: &subnet.IPv6Range,
+				},
+			},
 		}
 	}
+
 	return &linodego.VPCCreateOptions{
 		Description: vpcSpec.Description,
 		Region:      vpcSpec.Region,
 		Subnets:     subnets,
+		IPv6:        vpcIPv6,
 	}
 }
 

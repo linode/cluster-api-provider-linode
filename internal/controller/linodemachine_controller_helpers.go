@@ -494,6 +494,13 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		IPv4: &linodego.VPCIPv4{
 			NAT1To1: ptr.To("any"),
 		},
+		IPv6: &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
+			Ranges: []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
+				{
+					Range: ptr.To("/64"),
+				},
+			},
+		},
 	}, nil
 }
 
