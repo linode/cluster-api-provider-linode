@@ -94,7 +94,7 @@ jobs:
         exclude:
           - flavor: src
         include:
-          - flavor: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
+          - flavor: ${{ github.event.pull_request.number && 'quick' || 'all' }}
     uses: ./.github/workflows/e2e-test.yaml
     secrets: inherit
     with:
