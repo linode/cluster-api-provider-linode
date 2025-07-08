@@ -3,7 +3,6 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   name: lmt-e2e
-  # Label to trigger the test on every PR
   labels:
     all:
     linodemachine:
@@ -78,17 +77,3 @@ spec:
       - describe:
           apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
           kind: LinodeMachine
-    # - name: Clean Cluster
-    #   try:
-    #     - delete:
-    #         ref:
-    #           apiVersion: cluster.x-k8s.io/v1beta1
-    #           kind: Cluster
-    #           name: ($cluster)
-
-# - Create a cluster without tags
-# - Update and Delete tags to see if the propagation works.
-# - Create a MD without tags
-# - Add tags to MD
-# - Update tags on MD
-# - Delete tags from md
