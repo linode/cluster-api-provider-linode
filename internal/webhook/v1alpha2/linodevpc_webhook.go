@@ -182,14 +182,14 @@ func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec infrav1alpha2.LinodeV
 		labels  = []string{}
 	)
 
-	for i, subnet := range spec.Subnets {
+	for idx, subnet := range spec.Subnets {
 		var (
 			label         = subnet.Label
-			labelPath     = field.NewPath("spec").Child("Subnets").Index(i).Child("Label")
+			labelPath     = field.NewPath("spec").Child("Subnets").Index(idx).Child("Label")
 			ip            = subnet.IPv4
-			ipPath        = field.NewPath("spec").Child("Subnets").Index(i).Child("IPv4")
+			ipPath        = field.NewPath("spec").Child("Subnets").Index(idx).Child("IPv4")
 			ipv6Range     = subnet.IPv6Range
-			ipv6RangePath = field.NewPath("spec").Child("Subnets").Index(i).Child("IPv6Range")
+			ipv6RangePath = field.NewPath("spec").Child("Subnets").Index(idx).Child("IPv6Range")
 		)
 
 		// Validate Subnet Label
@@ -304,7 +304,7 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 
 func validateIPv6Range(ipv6Range string, path *field.Path) *field.Error {
 	var errs = []error{
-		errors.New("IPv6 range must start with /. Example: /64"),
+		errors.New("IPv6 range must start with /. Example: /52"),
 		errors.New("IPv6 range doesn't contain a valid number after /"),
 		errors.New("IPv6 range must be between /0 and /128"),
 	}

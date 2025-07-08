@@ -57,6 +57,7 @@ import (
 const (
 	maxBootstrapDataBytesCloudInit = 16384
 	vlanIPFormat                   = "%s/11"
+	ipv6Range                      = "/64" // Default IPv6 range for VPC interfaces
 )
 
 var (
@@ -497,7 +498,7 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		IPv6: &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
 			Ranges: []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
 				{
-					Range: ptr.To("/64"),
+					Range: ptr.To(ipv6Range),
 				},
 			},
 		},
@@ -555,6 +556,13 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 		SubnetID: &subnetID,
 		IPv4: &linodego.VPCIPv4{
 			NAT1To1: ptr.To("any"),
+		},
+		IPv6: &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
+			Ranges: []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
+				{
+					Range: ptr.To(ipv6Range),
+				},
+			},
 		},
 	}, nil
 }
