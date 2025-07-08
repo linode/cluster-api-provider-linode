@@ -87,7 +87,6 @@ jobs:
 
   e2e-test:
     needs: changes
-    environment: ${{ github.event.pull_request.head.repo.fork == true && 'prod-external' || 'prod' }}
     strategy:
       fail-fast: false
       matrix:
@@ -99,5 +98,6 @@ jobs:
     uses: ./.github/workflows/e2e-test.yaml
     secrets: inherit
     with:
+      environment: ${{ github.event.pull_request.head.repo.fork == true && 'prod-external' || 'prod' }}
       e2e-selector: ${{ matrix.flavor }}
       e2e-flags: ${{ matrix.flavor == 'quick' && ''  || '--assert-timeout 20m0s'}}
