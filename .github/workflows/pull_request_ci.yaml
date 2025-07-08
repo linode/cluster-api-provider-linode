@@ -1,10 +1,7 @@
-name: Coverage and E2E
+name: Build and Test PR
 
 on:
-  push:
-    branches:
-      - main
-  pull_request_target:
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -13,7 +10,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: build-test-ci-${{ github.event.pull_request.number || github.ref_name }}
+  group: pull-request-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,8 +21,6 @@ jobs:
       paths: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -39,8 +34,16 @@ jobs:
         with:
           filters: .github/filters.yml
 
+  yamllint:
+    runs-on: ubuntu-latest
+    needs: changes
+    if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate YAML file
+        run: yamllint templates
+
   go-build-test:
-    environment: ${{ github.event.pull_request.head.repo.fork == true && 'prod-external' || 'prod' }}
     runs-on: ubuntu-latest
     needs: changes
     if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
@@ -64,8 +67,6 @@ jobs:
             raw.githubusercontent.com:443
 
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -73,31 +74,46 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
+      - name: Build
+        run: make build
+
+      - name: Check for generated diff
+        run: make check-gen-diff
+
       - name: Test
         run: make test
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.out
-          fail_ci_if_error: false
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: linode/cluster-api-provider-linode
-
-  e2e-test:
+  docker-build:
+    runs-on: ubuntu-latest
     needs: changes
-    environment: ${{ github.event.pull_request.head.repo.fork == true && 'prod-external' || 'prod' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        flavor: ${{ fromJSON(needs.changes.outputs.paths) }}
-        exclude:
-          - flavor: src
-        include:
-          - flavor: ${{ github.ref == 'refs/heads/main' && 'all' || 'quick' }}
-    uses: ./.github/workflows/e2e-test.yaml
-    secrets: inherit
-    with:
-      e2e-selector: ${{ matrix.flavor }}
-      e2e-flags: ${{ matrix.flavor == 'quick' && ''  || '--assert-timeout 20m0s'}}
+    if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+            proxy.golang.org:443
+            sum.golang.org:443
+            go.dev:443
+            dl.google.com:443
+            golang.org:443
+            objects.githubusercontent.com:443
+            registry-1.docker.io:443
+            auth.docker.io:443
+            production.cloudflare.docker.com:443
+            gcr.io:443
+            storage.googleapis.com:443
+
+      - uses: actions/checkout@v4
+
+      - name: Docker cache
+        uses: ScribeMD/docker-cache@0.5.0
+        with:
+          key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
+
+      - name: Build the Docker image
+        run: make docker-build
