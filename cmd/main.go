@@ -88,6 +88,7 @@ type flagVars struct {
 	linodeVPCConcurrency                 int
 	linodePlacementGroupConcurrency      int
 	linodeFirewallConcurrency            int
+	linodeMachineTemplateConcurrency     int
 }
 
 func init() {
@@ -152,7 +153,7 @@ func parseFlags() (flags flagVars, opts zap.Options) {
 	flag.IntVar(&flags.linodeVPCConcurrency, "linodevpc-concurrency", concurrencyDefault, "Number of LinodeVPCs to process simultaneously")
 	flag.IntVar(&flags.linodePlacementGroupConcurrency, "linodeplacementgroup-concurrency", concurrencyDefault, "Number of Linode Placement Groups to process simultaneously")
 	flag.IntVar(&flags.linodeFirewallConcurrency, "linodefirewall-concurrency", concurrencyDefault, "Number of Linode Firewall to process simultaneously")
-
+	flag.IntVar(&flags.linodeMachineTemplateConcurrency, "linodemachinetemplate-concurrency", concurrencyDefault, "Number of LinodeMachineTemplates to process simultaneously")
 	opts = zap.Options{Development: true}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -345,6 +346,15 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 		LinodeClientConfig: linodeClientConfig,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeFirewallConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeFirewall")
+		os.Exit(1)
+	}
+
+	// LinodeMachineTemplate Controller
+	if err := (&controller.LinodeMachineTemplateReconciler{
+		Client: mgr.GetClient(),
+		Logger: ctrl.Log.WithName("LinodeMachineTemplateReconciler"),
+	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeMachineTemplateConcurrency}); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachineTemplate")
 		os.Exit(1)
 	}
 }

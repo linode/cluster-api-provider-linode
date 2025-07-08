@@ -1682,7 +1682,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				})),
 		),
 		Path(
-			Call("machine tag annotation is updated", func(ctx context.Context, mck Mock) {
+			Call("machine tag is updated", func(ctx context.Context, mck Mock) {
 				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 					&linodego.Instance{
 						ID:      11111,
@@ -1702,16 +1702,13 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						Updated: util.Pointer(time.Now()),
 					}, nil)
 			}),
-			Result("machine tag annotation is updated", func(ctx context.Context, mck Mock) {
+			Result("machine tag is updated", func(ctx context.Context, mck Mock) {
 				linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
 				linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceRunning)
-				linodeMachine.Annotations = map[string]string{
-					machineTagsAnnotation: "[\"test-tag\"]",
-				}
+				linodeMachine.Spec.Tags = []string{"test-tag"}
 				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(linodeMachine.Annotations[machineTagsAnnotation]).To(Equal("[\"test-tag\"]"))
-				Expect(linodeMachine.Annotations[machineCAPLTagsAnnotation]).To(Equal("[\"test-cluster-2\"]"))
+				Expect(linodeMachine.Status.Tags).To(Equal([]string{"test-tag"}))
 			}),
 		),
 	)

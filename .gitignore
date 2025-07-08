@@ -10,3 +10,4 @@ release/*
 templates/cluster-template*.yaml
 infrastructure-*-linode/*
 .envrc
+vendor/

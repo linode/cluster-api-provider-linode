@@ -1,0 +1,12 @@
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachine
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ($cluster)
+spec:
+  tags:
+  - tag1
+  - tag2
+  - tag3
+  - tag4
