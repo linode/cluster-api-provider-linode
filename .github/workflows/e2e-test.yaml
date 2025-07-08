@@ -11,6 +11,10 @@ on:
       e2e-flags:
         type: string
         description: "Flags to pass to chainsaw when running e2e tests"
+      environment:
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       e2e-selector:
@@ -70,6 +74,7 @@ jobs:
     name: ${{ format('{0}-e2e-tests', inputs.e2e-selector) }}
     if: ${{contains(fromJSON(needs.changes.outputs.paths), 'src')}}
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     env:
       GITHUB_TOKEN: ${{ secrets.github_token }}
       LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
