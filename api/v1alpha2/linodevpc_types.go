@@ -42,6 +42,12 @@ type LinodeVPCSpec struct {
 	// supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=4
+	// +kubebuilder:default="/52"
+	IPv6Range string `json:"ipv6Range,omitempty"`
 }
 
 // VPCSubnetCreateOptions defines subnet options
@@ -55,6 +61,11 @@ type VPCSubnetCreateOptions struct {
 	// SubnetID is subnet id for the subnet
 	// +optional
 	SubnetID int `json:"subnetID,omitempty"`
+	// +optional
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=4
+	// +kubebuilder:default="/56"
+	IPv6Range string `json:"ipv6Range,omitempty"`
 }
 
 // LinodeVPCStatus defines the observed state of LinodeVPC
