@@ -65,9 +65,7 @@ type LinodeMachineSpec struct {
 	BackupsEnabled bool `json:"backupsEnabled,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	PrivateIP *bool `json:"privateIP,omitempty"`
-	// Deprecated: spec.tags is deprecated, use metadata.annotations.linode-vm-tags instead.
-	// +kubebuilder:deprecatedversion:warning="spec.tags is deprecated, use metadata.annotations.linode-vm-tags instead"
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// Tags is a list of tags to apply to the Linode instance.
 	Tags []string `json:"tags,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	FirewallID int `json:"firewallID,omitempty"`
@@ -225,6 +223,10 @@ type LinodeMachineStatus struct {
 	// Conditions defines current service state of the LinodeMachine.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// tags are the tags applied to the Linode Machine.
+	// +optional
+	Tags []string `json:"tags,omitempty"`
 }
 
 // +kubebuilder:object:root=true

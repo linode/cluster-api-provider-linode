@@ -43,6 +43,7 @@ rules:
   - linodeclusters
   - linodefirewalls
   - linodemachines
+  - linodemachinetemplates
   - linodeobjectstoragebuckets
   - linodeobjectstoragekeys
   - linodeplacementgroups
@@ -73,6 +74,7 @@ rules:
   - linodeclusters/status
   - linodefirewalls/status
   - linodemachines/status
+  - linodemachinetemplates/status
   - linodeobjectstoragebuckets/status
   - linodeobjectstoragekeys/status
   - linodeplacementgroups/status

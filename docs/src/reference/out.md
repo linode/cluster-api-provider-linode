@@ -610,7 +610,7 @@ _Appears in:_
 | `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ |  |  |  |
 | `backupsEnabled` _boolean_ |  |  |  |
 | `privateIP` _boolean_ |  |  |  |
-| `tags` _string array_ | Deprecated: spec.tags is deprecated, use metadata.annotations.linode-vm-tags instead. |  |  |
+| `tags` _string array_ | Tags is a list of tags to apply to the Linode instance. |  |  |
 | `firewallID` _integer_ |  |  |  |
 | `osDisk` _[InstanceDisk](#instancedisk)_ | OSDisk is configuration for the root disk that includes the OS,<br />if not specified this defaults to whatever space is not taken up by the DataDisks |  |  |
 | `dataDisks` _object (keys:string, values:[InstanceDisk](#instancedisk))_ | DataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on a linodes plan |  |  |
@@ -643,6 +643,7 @@ _Appears in:_
 | `failureReason` _string_ | FailureReason will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
 | `failureMessage` _string_ | FailureMessage will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions defines current service state of the LinodeMachine. |  |  |
+| `tags` _string array_ | tags are the tags applied to the Linode Machine. |  |  |
 
 
 #### LinodeMachineTemplate
@@ -664,6 +665,7 @@ _Appears in:_
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
 | `spec` _[LinodeMachineTemplateSpec](#linodemachinetemplatespec)_ |  |  |  |
+| `status` _[LinodeMachineTemplateStatus](#linodemachinetemplatestatus)_ |  |  |  |
 
 
 #### LinodeMachineTemplateList
@@ -716,6 +718,24 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `template` _[LinodeMachineTemplateResource](#linodemachinetemplateresource)_ |  |  |  |
+
+
+#### LinodeMachineTemplateStatus
+
+
+
+LinodeMachineTemplateStatus defines the observed state of LinodeMachineTemplate
+It is used to store the status of the LinodeMachineTemplate, such as tags.
+
+
+
+_Appears in:_
+- [LinodeMachineTemplate](#linodemachinetemplate)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `tags` _string array_ | tags that are currently applied to the LinodeMachineTemplate. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions represent the latest available observations of a LinodeMachineTemplate's current state. |  |  |
 
 
 #### LinodeNBPortConfig
