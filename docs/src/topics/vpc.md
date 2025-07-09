@@ -143,5 +143,3 @@ CIDR returned in the output of above command should match with the pod CIDR pres
 
 ### Running cilium connectivity tests
 One can also run cilium connectivity tests to make sure networking works fine within VPC. Follow the steps defined in [cilium e2e tests](https://docs.cilium.io/en/stable/contributing/testing/e2e/) guide to install cilium binary, set the KUBECONFIG variable and then run `cilium connectivity tests`.
-
-```
