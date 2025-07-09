@@ -32,9 +32,7 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 	createConfig := linodeVPCSpecToVPCCreateConfig(vpcScope.LinodeVPC.Spec)
 	if createConfig == nil {
 		err := errors.New("failed to convert VPC spec to create VPC config")
-
 		logger.Error(err, "Panic! Struct of LinodeVPCSpec is different than VPCCreateOptions")
-
 		return err
 	}
 
@@ -48,53 +46,20 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 	if err != nil {
 		return err
 	}
-	if vpcs, err := vpcScope.LinodeClient.ListVPCs(ctx, linodego.NewListOptions(1, filter)); err != nil {
+
+	vpcs, err := vpcScope.LinodeClient.ListVPCs(ctx, linodego.NewListOptions(1, filter))
+	if err != nil {
 		logger.Error(err, "Failed to list VPCs")
-
 		return err
-	} else if len(vpcs) != 0 {
-		// Labels are unique
-		vpcScope.LinodeVPC.Spec.VPCID = &vpcs[0].ID
+	}
 
-		// build a map of existing subnets to easily check for existence
-		existingSubnets := make(map[string]int)
-		for _, subnet := range vpcs[0].Subnets {
-			existingSubnets[subnet.Label] = subnet.ID
-		}
-
-		// adopt or create subnets
-		for i, subnet := range vpcScope.LinodeVPC.Spec.Subnets {
-			if subnet.SubnetID != 0 {
-				continue
-			}
-			if id, ok := existingSubnets[subnet.Label]; ok {
-				vpcScope.LinodeVPC.Spec.Subnets[i].SubnetID = id
-			} else {
-				createSubnetConfig := linodego.VPCSubnetCreateOptions{
-					Label: subnet.Label,
-					IPv4:  subnet.IPv4,
-				}
-				newSubnet, err := vpcScope.LinodeClient.CreateVPCSubnet(ctx, createSubnetConfig, *vpcScope.LinodeVPC.Spec.VPCID)
-				if err != nil {
-					return err
-				}
-				vpcScope.LinodeVPC.Spec.Subnets[i].SubnetID = newSubnet.ID
-			}
-		}
-
-		return nil
+	if len(vpcs) != 0 {
+		return reconcileExistingVPC(ctx, vpcScope, &vpcs[0])
 	}
 
 	vpc, err := vpcScope.LinodeClient.CreateVPC(ctx, *createConfig)
 	if err != nil {
 		logger.Error(err, "Failed to create VPC")
-
-		return err
-	} else if vpc == nil {
-		err = errors.New("missing VPC")
-
-		logger.Error(err, "Panic! Failed to create VPC")
-
 		return err
 	}
 
@@ -104,12 +69,45 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 	return nil
 }
 
+func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *linodego.VPC) error {
+	// Labels are unique
+	vpcScope.LinodeVPC.Spec.VPCID = &vpc.ID
+
+	// build a map of existing subnets to easily check for existence
+	existingSubnets := make(map[string]int, len(vpc.Subnets))
+	for _, subnet := range vpc.Subnets {
+		existingSubnets[subnet.Label] = subnet.ID
+	}
+
+	// adopt or create subnets
+	for idx, subnet := range vpcScope.LinodeVPC.Spec.Subnets {
+		if subnet.SubnetID != 0 {
+			continue
+		}
+		if id, ok := existingSubnets[subnet.Label]; ok {
+			vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = id
+		} else {
+			createSubnetConfig := linodego.VPCSubnetCreateOptions{
+				Label: subnet.Label,
+				IPv4:  subnet.IPv4,
+			}
+			newSubnet, err := vpcScope.LinodeClient.CreateVPCSubnet(ctx, createSubnetConfig, *vpcScope.LinodeVPC.Spec.VPCID)
+			if err != nil {
+				return err
+			}
+			vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = newSubnet.ID
+		}
+	}
+
+	return nil
+}
+
 // updateVPCSpecSubnets updates Subnets in linodeVPC spec and adds linode specific ID to them
 func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
-	for i, specSubnet := range vpcScope.LinodeVPC.Spec.Subnets {
+	for idx, specSubnet := range vpcScope.LinodeVPC.Spec.Subnets {
 		for _, vpcSubnet := range vpc.Subnets {
 			if specSubnet.Label == vpcSubnet.Label {
-				vpcScope.LinodeVPC.Spec.Subnets[i].SubnetID = vpcSubnet.ID
+				vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = vpcSubnet.ID
 				break
 			}
 		}

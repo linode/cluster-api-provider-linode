@@ -313,7 +313,7 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 				VPCID:  ptr.To(123),
 				Region: "us-east",
 				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
-					{Label: "subnet1", IPv4: "10.0.0.0/8", SubnetID: 1},
+					{Label: "subnet1", IPv4: "10.0.0.0/8", SubnetID: 1, Retain: true},
 					{Label: "subnet2", IPv4: "10.0.1.0/24", SubnetID: 2},
 				},
 			},
@@ -350,9 +350,20 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 		OneOf(
 			Path(
 				Call("retained VPC is not deleted", func(ctx context.Context, mck Mock) {
-					vpcScope.LinodeVPC.Spec.Retain = ptr.To(true)
+					vpcScope.LinodeVPC.Spec.Retain = true
+					mck.LinodeClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+						ID:      1,
+						Label:   "vpc1",
+						Region:  "us-east",
+						Updated: ptr.To(time.Now()),
+						Subnets: []linodego.VPCSubnet{
+							{ID: 1, Label: "subnet1", IPv4: "10.0.0.0/8"},
+							{ID: 2, Label: "subnet2", IPv4: "10.0.1.0/24"},
+						},
+					}, nil)
 
-					// No Linode client calls should be made
+					mck.LinodeClient.EXPECT().DeleteVPCSubnet(ctx, *vpcScope.LinodeVPC.Spec.VPCID, vpcScope.LinodeVPC.Spec.Subnets[1].SubnetID).Return(nil)
+
 				}),
 				Result("retained success", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
@@ -364,12 +375,21 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("retained VPC with subnet deletion disabled", func(ctx context.Context, mck Mock) {
-					reconciler.EnableSubnetDeletion = false
-					vpcScope.LinodeVPC.Spec.Retain = ptr.To(true)
-					vpcScope.LinodeVPC.Spec.Subnets[0].Retain = ptr.To(true)
-					vpcScope.LinodeVPC.Spec.Subnets[1].Retain = ptr.To(false)
+					vpcScope.LinodeVPC.Spec.Retain = true
+					vpcScope.LinodeVPC.Spec.Subnets[0].Retain = true
+					vpcScope.LinodeVPC.Spec.Subnets[1].Retain = true
 
-					// No Linode client calls should be made
+					mck.LinodeClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
+						ID:      1,
+						Label:   "vpc1",
+						Region:  "us-east",
+						Updated: ptr.To(time.Now()),
+						Subnets: []linodego.VPCSubnet{
+							{ID: 1, Label: "subnet1", IPv4: "10.0.0.0/8"},
+							{ID: 2, Label: "subnet2", IPv4: "10.0.1.0/24"},
+						},
+					}, nil)
+
 				}),
 				Result("unretained subnets are not deleted", func(ctx context.Context, mck Mock) {
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
@@ -381,10 +401,9 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("retained VPC with unretained subnet deletion", func(ctx context.Context, mck Mock) {
-					reconciler.EnableSubnetDeletion = true
-					vpcScope.LinodeVPC.Spec.Retain = ptr.To(true)
-					vpcScope.LinodeVPC.Spec.Subnets[0].Retain = ptr.To(true)
-					vpcScope.LinodeVPC.Spec.Subnets[1].Retain = ptr.To(false)
+					vpcScope.LinodeVPC.Spec.Retain = true
+					vpcScope.LinodeVPC.Spec.Subnets[0].Retain = true
+					vpcScope.LinodeVPC.Spec.Subnets[1].Retain = false
 
 					mck.LinodeClient.EXPECT().GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID).Return(&linodego.VPC{
 						ID: *vpcScope.LinodeVPC.Spec.VPCID,
