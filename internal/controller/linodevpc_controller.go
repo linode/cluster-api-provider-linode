@@ -335,7 +335,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) (ctrl.Result, error) {
 	logger.Info("VPC has retain flag, skipping VPC deletion")
 
-	if err := r.deleteRetainedSubnets(ctx, logger, vpcScope); err != nil {
+	if err := r.handleRetainedSubnets(ctx, logger, vpcScope); err != nil {
 		if errors.Is(err, util.ErrReconcileAgain) {
 			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
 		}
@@ -369,7 +369,7 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 	return ctrl.Result{}, nil
 }
 
-func (r *LinodeVPCReconciler) deleteRetainedSubnets(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
+func (r *LinodeVPCReconciler) handleRetainedSubnets(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
 	if vpcScope.LinodeVPC.Spec.VPCID == nil {
 		return nil
 	}
