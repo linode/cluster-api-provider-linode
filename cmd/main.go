@@ -295,7 +295,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	// LinodeVPC Controller
 	if err := (&controller.LinodeVPCReconciler{
 		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("linodevpc-controller"),
+		Recorder:           mgr.GetEventRecorderFor("LinodeVPCReconciler"),
 		LinodeClientConfig: linodeClientConfig,
 		WatchFilterValue:   flags.clusterWatchFilter,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeVPCConcurrency}); err != nil {

@@ -374,7 +374,6 @@ func (r *LinodeVPCReconciler) handleRetainedSubnets(ctx context.Context, logger 
 		return nil
 	}
 
-	logger.Info("subnet deletion enabled, checking subnets")
 	vpc, err := vpcScope.LinodeClient.GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)
 	if err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) == nil {
