@@ -2165,6 +2165,13 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Primary:  true,
 				SubnetID: ptr.To(1),
 				IPv4:     &linodego.VPCIPv4{NAT1To1: ptr.To("any")},
+				IPv6: &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
+					Ranges: []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
+						{
+							Range: ptr.To(ipv6Range),
+						},
+					},
+				},
 			},
 			{
 				Primary: true,
@@ -2311,6 +2318,13 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Primary:  true,
 				SubnetID: ptr.To(27),
 				IPv4:     &linodego.VPCIPv4{NAT1To1: ptr.To("any")},
+				IPv6: &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
+					Ranges: []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
+						{
+							Range: ptr.To(ipv6Range),
+						},
+					},
+				},
 			},
 			{
 				Primary: true,

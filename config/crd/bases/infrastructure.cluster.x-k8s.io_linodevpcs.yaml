@@ -67,6 +67,8 @@ spec:
                 x-kubernetes-map-type: atomic
               description:
                 type: string
+              ipv6:
+                type: string
               ipv6Range:
                 default: /52
                 maxLength: 4
@@ -85,6 +87,8 @@ spec:
                   description: VPCSubnetCreateOptions defines subnet options
                   properties:
                     ipv4:
+                      type: string
+                    ipv6:
                       type: string
                     ipv6Range:
                       default: /56
