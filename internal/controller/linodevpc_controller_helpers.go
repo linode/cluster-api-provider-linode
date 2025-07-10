@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"net/http"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -127,4 +128,23 @@ func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linode
 		Region:      vpcSpec.Region,
 		Subnets:     subnets,
 	}
+}
+
+// getVPC fetches a VPC and handles not-found errors.
+// It returns the VPC if found.
+// It returns nil, nil if the VPC is not found.
+// It returns nil and an error for other API errors.
+func getVPC(ctx context.Context, vpcScope *scope.VPCScope) (*linodego.VPC, error) {
+	if vpcScope.LinodeVPC.Spec.VPCID == nil {
+		return nil, nil
+	}
+
+	vpc, err := vpcScope.LinodeClient.GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)
+	if err != nil {
+		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) == nil {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return vpc, nil
 }

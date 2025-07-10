@@ -64,7 +64,7 @@ type VPCSubnetCreateOptions struct {
 	// +optional
 	SubnetID int `json:"subnetID,omitempty"`
 	// Retain allows you to keep the Subnet after the LinodeVPC object is deleted.
-	// This is only applicable when the parent VPC has RetainVPC set to true.
+	// This is only applicable when the parent VPC has retain set to true.
 	// +optional
 	// +kubebuilder:default=false
 	Retain bool `json:"retain,omitempty"`

@@ -1238,6 +1238,6 @@ _Appears in:_
 | `label` _string_ |  |  | MaxLength: 63 <br />MinLength: 3 <br /> |
 | `ipv4` _string_ |  |  |  |
 | `subnetID` _integer_ | SubnetID is subnet id for the subnet |  |  |
-| `retain` _boolean_ | Retain allows you to keep the Subnet after the LinodeVPC object is deleted.<br />This is only applicable when the parent VPC has RetainVPC set to true. | false |  |
+| `retain` _boolean_ | Retain allows you to keep the Subnet after the LinodeVPC object is deleted.<br />This is only applicable when the parent VPC has retain set to true. | false |  |
 
 
