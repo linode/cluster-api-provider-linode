@@ -138,6 +138,7 @@ func CreateS3Clients(ctx context.Context, crClient clients.K8sClient, cluster in
 			configOpts = append(configOpts, awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(access, secret, "")))
 			clientOpts = append(clientOpts, func(opts *s3.Options) {
 				opts.BaseEndpoint = aws.String(endpoint)
+				opts.UsePathStyle = strings.EqualFold(os.Getenv("LINODE_OBJECT_STORAGE_USE_PATH_STYLE"), "true")
 			})
 		}
 	}
