@@ -256,6 +256,11 @@ spec:
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
+                      label:
+                        description: |-
+                          name of the Linode instance associated with this machine.
+                          the instance name is set to the name of LinodeMachine if the Label is not set / empty.
+                        type: string
                       osDisk:
                         description: |-
                           OSDisk is configuration for the root disk that includes the OS,

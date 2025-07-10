@@ -166,7 +166,7 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				res, err := reconciler.reconcile(ctx, lmtScope)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res).To(Equal(ctrl.Result{}))
-				Expect(mck.Logs()).To(ContainSubstring("Patched LinodeMachine with new tags"))
+				Expect(mck.Logs()).To(ContainSubstring("Update LinodeMachine with new tags"))
 
 				// get the updated machineTemplate
 				updatedMachineTemplate := &infrav1alpha2.LinodeMachineTemplate{}
