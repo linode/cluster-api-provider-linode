@@ -33,6 +33,12 @@ const (
 
 // LinodeMachineSpec defines the desired state of LinodeMachine
 type LinodeMachineSpec struct {
+
+	// name of the Linode instance associated with this machine.
+	// the instance name is set to the name of LinodeMachine if the Label is not set / empty.
+	// +optional
+	Label string `json:"label,omitempty"`
+
 	// ProviderID is the unique identifier as specified by the cloud provider.
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`

@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
+	"reflect"
 	"slices"
 	"strings"
 	"text/template"
@@ -569,6 +570,7 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 		privateIP = *machineSpec.PrivateIP
 	}
 	return &linodego.InstanceCreateOptions{
+		Label:           machineSpec.Label,
 		Region:          machineSpec.Region,
 		Type:            machineSpec.Type,
 		AuthorizedKeys:  machineSpec.AuthorizedKeys,
@@ -1020,4 +1022,29 @@ func getTags(machineScope *scope.MachineScope, instanceTags []string) []string {
 
 	machineScope.LinodeMachine.Status.Tags = slices.Clone(machineScope.LinodeMachine.Spec.Tags)
 	return outTags
+}
+
+// This function is a placeholder for any logic that checks if the instance needs to be updated.
+// It compares the current instance tags and label with the desired state from the MachineScope.
+// If there are differences, it returns true and the update options that should be applied.
+func instanceHasToBeUpdated(machineScope *scope.MachineScope, linodeInstance *linodego.Instance) (bool, linodego.InstanceUpdateOptions) {
+
+	updateOptions := linodego.InstanceUpdateOptions{}
+
+	machineTags := getTags(machineScope, linodeInstance.Tags)
+	if !slices.Equal(machineTags, linodeInstance.Tags) {
+		updateOptions.Tags = &machineTags
+	}
+
+	if machineScope.LinodeMachine.Spec.Label != linodeInstance.Label {
+		if machineScope.LinodeMachine.Spec.Label == "" {
+			updateOptions.Label = machineScope.LinodeMachine.Name
+		} else {
+			updateOptions.Label = machineScope.LinodeMachine.Spec.Label
+		}
+	}
+
+	// TODO: remove after testing
+	fmt.Println(reflect.DeepEqual(updateOptions, linodego.InstanceUpdateOptions{}), updateOptions)
+	return !reflect.DeepEqual(updateOptions, linodego.InstanceUpdateOptions{}), updateOptions
 }

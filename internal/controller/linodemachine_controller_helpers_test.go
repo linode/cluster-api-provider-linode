@@ -1301,3 +1301,51 @@ func TestGetTags(t *testing.T) {
 		})
 	}
 }
+
+func TestInstanceHasToBeUpdated(t *testing.T) {
+	t.Parallel()
+
+	// Setup test cases
+	testCases := []struct {
+		name                  string
+		machine               *infrav1alpha2.LinodeMachine
+		instance              *linodego.Instance
+		expectToUpdate        bool
+		expectedUpdateOptions *linodego.InstanceUpdateOptions
+	}{
+		{
+			name: "No changes - no update needed",
+			machine: &infrav1alpha2.LinodeMachine{
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					Type: "g6-standard-1",
+				},
+			},
+			instance: &linodego.Instance{
+				Type: "g6-standard-1",
+			},
+			expectToUpdate: false,
+		},
+		{
+			name: "Type change - update needed",
+			machine: &infrav1alpha2.LinodeMachine{
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					Type: "g6-standard-2",
+				},
+			},
+			instance: &linodego.Instance{
+				Type: "g6-standard-1",
+			},
+			expectToUpdate: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			toUpdate := instanceHasToBeUpdated(tc.machine, tc.instance)
+			require.Equal(t, tc.expectToUpdate, toUpdate)
+		})
+	}
+}

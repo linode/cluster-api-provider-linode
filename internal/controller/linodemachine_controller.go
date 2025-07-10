@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -745,12 +744,11 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		})
 	}
 
-	// update the tags if needed
-	machineTags := getTags(machineScope, linodeInstance.Tags)
-	if !slices.Equal(machineTags, linodeInstance.Tags) {
-		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: &machineTags})
+	isUpdated, updateOptions := instanceHasToBeUpdated(machineScope, linodeInstance)
+	if isUpdated {
+		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, updateOptions)
 		if err != nil {
-			logger.Error(err, "Failed to update tags for Linode instance")
+			logger.Error(err, "Failed to update Linode instance")
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 	}
