@@ -1080,6 +1080,7 @@ _Appears in:_
 | `description` _string_ |  |  |  |
 | `region` _string_ |  |  |  |
 | `subnets` _[VPCSubnetCreateOptions](#vpcsubnetcreateoptions) array_ |  |  |  |
+| `retain` _boolean_ | Retain allows you to keep the VPC after the LinodeVPC object is deleted.<br />This is useful if you want to use an existing VPC that was not created by this controller.<br />If set to true, the controller will not delete the VPC resource in Linode.<br />Defaults to false. | false |  |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not<br />supplied then the credentials of the controller will be used. |  |  |
 
 
@@ -1238,5 +1239,6 @@ _Appears in:_
 | `label` _string_ |  |  | MaxLength: 63 <br />MinLength: 3 <br /> |
 | `ipv4` _string_ |  |  |  |
 | `subnetID` _integer_ | SubnetID is subnet id for the subnet |  |  |
+| `retain` _boolean_ | Retain allows you to keep the Subnet after the LinodeVPC object is deleted.<br />This is only applicable when the parent VPC has retain set to true. | false |  |
 
 

@@ -23,6 +23,8 @@ import (
 var (
 	// ErrRateLimit indicates hitting linode API rate limits
 	ErrRateLimit = errors.New("rate-limit exceeded")
+	// ErrReconcileAgain indicates that the reconciliation loop should be tried again.
+	ErrReconcileAgain = errors.New("reconcile again")
 )
 
 // List of failure reasons to use in the status fields of our resources

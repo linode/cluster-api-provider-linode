@@ -61,6 +61,42 @@ spec:
 
 Reference to LinodeVPC object is added to LinodeCluster object which then uses the specified VPC to provision resources.
 
+## Lifecycle Management and Adopting Existing VPCs
+
+The provider offers flexible lifecycle management, allowing you to adopt existing VPCs and control whether resources are deleted when their corresponding Kubernetes objects are removed.
+
+### Adopting an Existing VPC
+You can instruct the controller to use a pre-existing VPC by specifying its ID in the `LinodeVPCSpec`. The controller will "adopt" this VPC and manage its subnets without creating a new one.
+
+```yaml
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeVPC
+metadata:
+  name: my-adopted-vpc
+spec:
+  vpcID: 12345
+  region: us-sea
+  # subnets can be defined and will be created within the adopted VPC
+  subnets:
+    - label: my-new-subnet-in-adopted-vpc
+      ipv4: 10.0.3.0/24
+```
+
+```admonish note
+We currently don't have functionality to update predefined/already-created subnets. We only have create/delete operations at the moment.
+```
+
+### Retaining Resources on Deletion
+By default, the controller deletes VPCs and subnets from your Linode account when you delete the `LinodeVPC` Kubernetes object. You can prevent this using the `retain` flag.
+
+- **`spec.retain`**: When set to `true` on the `LinodeVPC`, the VPC itself will not be deleted from Linode. This is the default and recommended behavior when adopting an existing VPC.
+- **`spec.subnets[].retain`**: When the parent VPC is retained, you can use this flag to control individual subnets. If `retain` is `false` (the default), the subnet will be deleted.
+
+```admonish warning title="Safety Check for Attached Linodes"
+The controller includes a critical safety feature: it will **not** delete a subnet if it has any active Linode instances attached to it. The operation will be paused and retried, preventing resource orphaning.
+```
+
 ### Additional Configuration
 By default, the VPC will use the subnet with the `default` label for deploying clusters. To modify this behavior, set the `SUBNET_NAME` environment variable to match the label of the subnet to be used. Make sure the subnet is set up in the LinodeVPC manifest.
 
@@ -111,3 +147,5 @@ CIDR returned in the output of above command should match with the pod CIDR pres
 
 ### Running cilium connectivity tests
 One can also run cilium connectivity tests to make sure networking works fine within VPC. Follow the steps defined in [cilium e2e tests](https://docs.cilium.io/en/stable/contributing/testing/e2e/) guide to install cilium binary, set the KUBECONFIG variable and then run `cilium connectivity tests`.
+
+```

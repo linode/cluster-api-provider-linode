@@ -296,8 +296,8 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	if err := (&controller.LinodeVPCReconciler{
 		Client:             mgr.GetClient(),
 		Recorder:           mgr.GetEventRecorderFor("LinodeVPCReconciler"),
-		WatchFilterValue:   flags.clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
+		WatchFilterValue:   flags.clusterWatchFilter,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeVPCConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)

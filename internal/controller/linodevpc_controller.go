@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -289,63 +290,18 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 	return nil
 }
 
-//nolint:nestif,gocognit // As simple as possible.
 func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) (ctrl.Result, error) {
 	logger.Info("deleting VPC")
 
-	if vpcScope.LinodeVPC.Spec.VPCID != nil {
-		vpc, err := vpcScope.LinodeClient.GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)
-		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-			logger.Error(err, "Failed to fetch VPC")
+	if vpcScope.LinodeVPC.Spec.Retain {
+		return r.handleRetainedVPC(ctx, logger, vpcScope)
+	}
 
-			if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
-				logger.Info("re-queuing VPC deletion")
-
-				return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
-			}
-
-			return ctrl.Result{}, err
+	if err := r.deleteVPCResources(ctx, logger, vpcScope); err != nil {
+		if errors.Is(err, util.ErrReconcileAgain) {
+			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
 		}
-
-		if vpc != nil {
-			for i := range vpc.Subnets {
-				if len(vpc.Subnets[i].Linodes) == 0 {
-					continue
-				}
-
-				logger.Info("VPC subnets still has node(s) attached")
-
-				if vpc.Updated.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerWaitForHasNodesTimeout)).After(time.Now()) {
-					logger.Info("VPC has node(s) attached, re-queuing VPC deletion")
-
-					return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
-				}
-
-				conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
-					Type:    string(clusterv1.ReadyCondition),
-					Status:  metav1.ConditionFalse,
-					Reason:  string(clusterv1.DeletionFailedReason),
-					Message: "skipped due to node(s) attached",
-				})
-
-				return ctrl.Result{}, errors.New("will not delete VPC with node(s) attached")
-			}
-
-			err = vpcScope.LinodeClient.DeleteVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)
-			if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-				logger.Error(err, "Failed to delete VPC")
-
-				if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
-					logger.Info("re-queuing VPC deletion")
-
-					return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
-				}
-
-				return ctrl.Result{}, err
-			}
-		}
-	} else {
-		logger.Info("VPC ID is missing, nothing to do")
+		return ctrl.Result{}, err
 	}
 
 	conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
@@ -354,20 +310,16 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		Reason:  string(clusterv1.DeletedReason),
 		Message: "VPC deleted",
 	})
-
 	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletedReason, "VPC has cleaned up")
 
 	vpcScope.LinodeVPC.Spec.VPCID = nil
 
 	if err := vpcScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
-
 		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("re-queuing VPC deletion")
-
 			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
 		}
-
 		return ctrl.Result{}, err
 	}
 
@@ -378,6 +330,153 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) (ctrl.Result, error) {
+	logger.Info("VPC has retain flag, skipping VPC deletion")
+
+	if err := r.handleRetainedSubnets(ctx, logger, vpcScope); err != nil {
+		if errors.Is(err, util.ErrReconcileAgain) {
+			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
+	conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+		Type:    string(clusterv1.ReadyCondition),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(clusterv1.DeletedReason),
+		Message: "VPC retained as requested, associated cloud resource was not deleted.",
+	})
+
+	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, "VPCResourceRetained", "VPC retained as requested, associated cloud resource was not deleted.")
+
+	if err := vpcScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
+		logger.Error(err, "Failed to update credentials secret")
+		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
+			logger.Info("re-queuing VPC deletion")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
+	controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha2.VPCFinalizer)
+	// TODO: remove this check and removal later
+	if controllerutil.ContainsFinalizer(vpcScope.LinodeVPC, infrav1alpha2.GroupVersion.String()) {
+		controllerutil.RemoveFinalizer(vpcScope.LinodeVPC, infrav1alpha2.GroupVersion.String())
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeVPCReconciler) handleRetainedSubnets(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
+	vpc, err := getVPC(ctx, vpcScope)
+	if err != nil {
+		if errors.Is(err, ErrVPCNotFound) {
+			return nil
+		}
+		logger.Error(err, "Failed to fetch VPC for subnet deletion")
+		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
+			logger.Info("re-queuing VPC deletion due to fetch error for subnet deletion")
+			return util.ErrReconcileAgain
+		}
+		return err
+	}
+
+	// index the subnets by ID for quick lookup
+	apiSubnets := make(map[int]linodego.VPCSubnet)
+	for _, s := range vpc.Subnets {
+		apiSubnets[s.ID] = s
+	}
+
+	for _, subnet := range vpcScope.LinodeVPC.Spec.Subnets {
+		if subnet.Retain {
+			continue
+		}
+
+		if apiSubnet, ok := apiSubnets[subnet.SubnetID]; ok {
+			if len(apiSubnet.Linodes) > 0 {
+				logger.Info("subnet still has node(s) attached", "subnetID", subnet.SubnetID)
+				if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerWaitForHasNodesTimeout)).After(time.Now()) {
+					logger.Info("re-queuing VPC deletion due to attached nodes in subnet")
+					return util.ErrReconcileAgain
+				}
+
+				conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+					Type:    string(clusterv1.ReadyCondition),
+					Status:  metav1.ConditionFalse,
+					Reason:  string(clusterv1.DeletionFailedReason),
+					Message: fmt.Sprintf("will not delete subnet %d with node(s) attached", subnet.SubnetID),
+				})
+				return fmt.Errorf("will not delete subnet %d with node(s) attached", subnet.SubnetID)
+			}
+		}
+
+		logger.Info("deleting subnet", "subnetID", subnet.SubnetID)
+		deleteErr := vpcScope.LinodeClient.DeleteVPCSubnet(ctx, *vpcScope.LinodeVPC.Spec.VPCID, subnet.SubnetID)
+		if deleteErr != nil {
+			if err := util.IgnoreLinodeAPIError(deleteErr, http.StatusNotFound); err != nil {
+				logger.Error(err, "Failed to delete subnet")
+				if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
+					logger.Info("re-queuing VPC deletion due to subnet delete error")
+					return util.ErrReconcileAgain
+				}
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *LinodeVPCReconciler) deleteVPCResources(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
+	vpc, err := getVPC(ctx, vpcScope)
+	if err != nil {
+		if errors.Is(err, ErrVPCNotFound) {
+			logger.Info("VPC not found, nothing to do")
+			return nil
+		}
+		logger.Error(err, "Failed to fetch VPC")
+		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
+			logger.Info("re-queuing VPC deletion due to fetch error")
+			return util.ErrReconcileAgain
+		}
+		return err
+	}
+
+	for i := range vpc.Subnets {
+		if len(vpc.Subnets[i].Linodes) == 0 {
+			continue
+		}
+
+		logger.Info("VPC subnets still has node(s) attached")
+		if vpc.Updated.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerWaitForHasNodesTimeout)).After(time.Now()) {
+			logger.Info("VPC has node(s) attached, re-queuing VPC deletion")
+			return util.ErrReconcileAgain
+		}
+
+		conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(clusterv1.DeletionFailedReason),
+			Message: "skipped due to node(s) attached",
+		})
+		return errors.New("will not delete VPC with node(s) attached")
+	}
+
+	if err := vpcScope.LinodeClient.DeleteVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID); err != nil {
+		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) == nil {
+			return nil
+		}
+		logger.Error(err, "Failed to delete VPC")
+		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
+			logger.Info("re-queuing VPC deletion due to delete error")
+			return util.ErrReconcileAgain
+		}
+		return err
+	}
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
