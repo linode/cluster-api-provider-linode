@@ -38,6 +38,14 @@ type LinodeVPCSpec struct {
 	// +optional
 	Subnets []VPCSubnetCreateOptions `json:"subnets,omitempty"`
 
+	// Retain allows you to keep the VPC after the LinodeVPC object is deleted.
+	// This is useful if you want to use an existing VPC that was not created by this controller.
+	// If set to true, the controller will not delete the VPC resource in Linode.
+	// Defaults to false.
+	// +optional
+	// +kubebuilder:default=false
+	Retain bool `json:"retain,omitempty"`
+
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not
 	// supplied then the credentials of the controller will be used.
 	// +optional
@@ -55,6 +63,11 @@ type VPCSubnetCreateOptions struct {
 	// SubnetID is subnet id for the subnet
 	// +optional
 	SubnetID int `json:"subnetID,omitempty"`
+	// Retain allows you to keep the Subnet after the LinodeVPC object is deleted.
+	// This is only applicable when the parent VPC has retain set to true.
+	// +optional
+	// +kubebuilder:default=false
+	Retain bool `json:"retain,omitempty"`
 }
 
 // LinodeVPCStatus defines the observed state of LinodeVPC
