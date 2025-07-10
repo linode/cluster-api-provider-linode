@@ -36,6 +36,14 @@ type LinodeVPCSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
 	// +optional
+	IPv6 string `json:"ipv6,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=4
+	// +kubebuilder:default="/52"
+	IPv6Range string `json:"ipv6Range,omitempty"`
+	// +optional
 	Subnets []VPCSubnetCreateOptions `json:"subnets,omitempty"`
 
 	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not
@@ -52,6 +60,13 @@ type VPCSubnetCreateOptions struct {
 	Label string `json:"label,omitempty"`
 	// +optional
 	IPv4 string `json:"ipv4,omitempty"`
+	// +optional
+	IPv6 string `json:"ipv6,omitempty"`
+	// +optional
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=4
+	// +kubebuilder:default="/56"
+	IPv6Range string `json:"ipv6Range,omitempty"`
 	// SubnetID is subnet id for the subnet
 	// +optional
 	SubnetID int `json:"subnetID,omitempty"`

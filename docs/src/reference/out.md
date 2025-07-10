@@ -1078,6 +1078,8 @@ _Appears in:_
 | `vpcID` _integer_ |  |  |  |
 | `description` _string_ |  |  |  |
 | `region` _string_ |  |  |  |
+| `ipv6` _string_ |  |  |  |
+| `ipv6Range` _string_ |  | /52 | MaxLength: 4 <br />MinLength: 2 <br /> |
 | `subnets` _[VPCSubnetCreateOptions](#vpcsubnetcreateoptions) array_ |  |  |  |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not<br />supplied then the credentials of the controller will be used. |  |  |
 
@@ -1236,6 +1238,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `label` _string_ |  |  | MaxLength: 63 <br />MinLength: 3 <br /> |
 | `ipv4` _string_ |  |  |  |
+| `ipv6` _string_ |  |  |  |
+| `ipv6Range` _string_ |  | /56 | MaxLength: 4 <br />MinLength: 2 <br /> |
 | `subnetID` _integer_ | SubnetID is subnet id for the subnet |  |  |
 
 
