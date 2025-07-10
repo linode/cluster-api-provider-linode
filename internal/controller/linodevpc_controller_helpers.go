@@ -29,6 +29,11 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util"
 )
 
+var (
+	// ErrVPCNotFound is a sentinel error to indicate that a VPC was not found.
+	ErrVPCNotFound = errors.New("VPC not found")
+)
+
 func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Logger) error {
 	createConfig := linodeVPCSpecToVPCCreateConfig(vpcScope.LinodeVPC.Spec)
 	if createConfig == nil {
@@ -132,17 +137,17 @@ func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linode
 
 // getVPC fetches a VPC and handles not-found errors.
 // It returns the VPC if found.
-// It returns nil, nil if the VPC is not found.
+// It returns nil, ErrVPCNotFound if the VPC is not found.
 // It returns nil and an error for other API errors.
 func getVPC(ctx context.Context, vpcScope *scope.VPCScope) (*linodego.VPC, error) {
 	if vpcScope.LinodeVPC.Spec.VPCID == nil {
-		return nil, nil
+		return nil, ErrVPCNotFound
 	}
 
 	vpc, err := vpcScope.LinodeClient.GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID)
 	if err != nil {
 		if util.IgnoreLinodeAPIError(err, http.StatusNotFound) == nil {
-			return nil, nil
+			return nil, ErrVPCNotFound
 		}
 		return nil, err
 	}

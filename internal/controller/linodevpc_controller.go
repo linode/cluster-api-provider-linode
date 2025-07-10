@@ -372,16 +372,15 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 func (r *LinodeVPCReconciler) handleRetainedSubnets(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
 	vpc, err := getVPC(ctx, vpcScope)
 	if err != nil {
+		if errors.Is(err, ErrVPCNotFound) {
+			return nil
+		}
 		logger.Error(err, "Failed to fetch VPC for subnet deletion")
 		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("re-queuing VPC deletion due to fetch error for subnet deletion")
 			return util.ErrReconcileAgain
 		}
 		return err
-	}
-
-	if vpc == nil {
-		return nil
 	}
 
 	// index the subnets by ID for quick lookup
@@ -433,16 +432,16 @@ func (r *LinodeVPCReconciler) handleRetainedSubnets(ctx context.Context, logger 
 func (r *LinodeVPCReconciler) deleteVPCResources(ctx context.Context, logger logr.Logger, vpcScope *scope.VPCScope) error {
 	vpc, err := getVPC(ctx, vpcScope)
 	if err != nil {
+		if errors.Is(err, ErrVPCNotFound) {
+			logger.Info("VPC not found, nothing to do")
+			return nil
+		}
 		logger.Error(err, "Failed to fetch VPC")
 		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("re-queuing VPC deletion due to fetch error")
 			return util.ErrReconcileAgain
 		}
 		return err
-	}
-	if vpc == nil {
-		logger.Info("VPC not found, nothing to do")
-		return nil
 	}
 
 	for i := range vpc.Subnets {
