@@ -29,7 +29,6 @@ metadata:
     app.kubernetes.io/part-of: cluster-api-provider-linode
     cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
   name: ${CLUSTER_NAME}-etcd-backup-mgmt
-  namespace: default
 spec:
   bucketAccess:
     - bucketName: ${CLUSTER_NAME}-etcd-backup
