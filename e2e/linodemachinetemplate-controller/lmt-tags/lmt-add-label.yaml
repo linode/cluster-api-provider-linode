@@ -1,0 +1,9 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+    name: ($cluster)
+spec:
+    template:
+      spec:
+        label: test-label
+---

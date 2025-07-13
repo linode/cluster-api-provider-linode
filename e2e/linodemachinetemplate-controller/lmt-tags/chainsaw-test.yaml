@@ -5,7 +5,7 @@ metadata:
   name: lmt-e2e
   labels:
     all:
-    linodemachine:
+    linodemachinetemplate:
 spec:
   bindings:
     # A short identifier for the E2E test run
@@ -73,6 +73,38 @@ spec:
       try:
         - assert:
             file: assert-lm-tags-removal.yaml
+      catch:
+      - describe:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+          kind: LinodeMachine
+    - name: Add Label to template
+      try:
+        - apply:
+            file: lmt-add-label.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+    - name: Ensure label is added to machine
+      try:
+        - assert:
+            file: assert-lm-label-addition.yaml
+      catch:
+      - describe:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+          kind: LinodeMachine
+    - name: Remove label from template
+      try:
+        - apply:
+            file: lmt-remove-label.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+    - name: Ensure label is removed from machine
+      try:
+        - assert:
+            file: assert-lm-label-removal.yaml
       catch:
       - describe:
           apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2

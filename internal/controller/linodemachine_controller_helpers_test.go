@@ -1308,34 +1308,46 @@ func TestInstanceHasToBeUpdated(t *testing.T) {
 	// Setup test cases
 	testCases := []struct {
 		name                  string
-		machine               *infrav1alpha2.LinodeMachine
+		machineScope          *scope.MachineScope
 		instance              *linodego.Instance
 		expectToUpdate        bool
 		expectedUpdateOptions *linodego.InstanceUpdateOptions
 	}{
 		{
-			name: "No changes - no update needed",
-			machine: &infrav1alpha2.LinodeMachine{
-				Spec: infrav1alpha2.LinodeMachineSpec{
-					Type: "g6-standard-1",
+			name: "no update needed: No changes",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						Type: "g6-standard-1",
+					},
 				},
 			},
 			instance: &linodego.Instance{
 				Type: "g6-standard-1",
 			},
-			expectToUpdate: false,
+			expectToUpdate:        false,
+			expectedUpdateOptions: &linodego.InstanceUpdateOptions{},
 		},
 		{
-			name: "Type change - update needed",
-			machine: &infrav1alpha2.LinodeMachine{
-				Spec: infrav1alpha2.LinodeMachineSpec{
-					Type: "g6-standard-2",
+			name: "update needed: Changes in label and tags",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						Type:  "g6-standard-2",
+						Label: "new-instance-label",
+						Tags:  []string{"new-instance-tag"},
+					},
 				},
 			},
 			instance: &linodego.Instance{
-				Type: "g6-standard-1",
+				Type:  "g6-standard-1",
+				Label: "test-instance",
 			},
 			expectToUpdate: true,
+			expectedUpdateOptions: &linodego.InstanceUpdateOptions{
+				Label: "new-instance-label",
+				Tags:  &[]string{"new-instance-tag"},
+			},
 		},
 	}
 
@@ -1344,8 +1356,9 @@ func TestInstanceHasToBeUpdated(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			toUpdate := instanceHasToBeUpdated(tc.machine, tc.instance)
+			toUpdate, updateOptions := instanceHasToBeUpdated(tc.machineScope, tc.instance)
 			require.Equal(t, tc.expectToUpdate, toUpdate)
+			require.Equal(t, *tc.expectedUpdateOptions, updateOptions)
 		})
 	}
 }

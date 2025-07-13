@@ -360,7 +360,7 @@ S5CMD          ?= $(CACHE_BIN)/s5cmd
 
 ## Tool Versions
 KUSTOMIZE_VERSION        ?= v5.4.3
-CTLPTL_VERSION           ?= v0.8.29
+CTLPTL_VERSION           ?= v0.8.42
 CLUSTERCTL_VERSION       ?= v1.7.2
 CRD_REF_DOCS_VERSION     ?= v0.1.0
 KUBECTL_VERSION          ?= v1.28.0

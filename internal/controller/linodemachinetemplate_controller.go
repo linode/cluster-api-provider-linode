@@ -151,7 +151,6 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 }
 
 func (lmtr *LinodeMachineTemplateReconciler) reconcileUpdates(ctx context.Context, lmt *infrav1alpha2.LinodeMachineTemplate, machine *infrav1alpha2.LinodeMachine) error {
-
 	helper, err := patch.NewHelper(machine, lmtr.Client)
 	if err != nil {
 		return fmt.Errorf("failed to init patch helper: %w", err)
@@ -160,13 +159,11 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcileUpdates(ctx context.Contex
 	if !slices.Equal(lmt.Spec.Template.Spec.Tags, lmt.Status.Tags) {
 		machine.Spec.Tags = lmt.Spec.Template.Spec.Tags
 		lmtr.Logger.Info("Update LinodeMachine with new tags", "machine", machine.Name, "tags", lmt.Spec.Template.Spec.Tags)
-
 	}
 
 	if machine.Spec.Label != lmt.Spec.Template.Spec.Label {
 		machine.Spec.Label = lmt.Spec.Template.Spec.Label
 		lmtr.Logger.Info("Update LinodeMachine with new label", "machine", machine.Name, "label", lmt.Spec.Template.Spec.Label)
-
 	}
 
 	if err := helper.Patch(ctx, machine); err != nil {

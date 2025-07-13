@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
-	"reflect"
 	"slices"
 	"strings"
 	"text/template"
@@ -1028,7 +1027,6 @@ func getTags(machineScope *scope.MachineScope, instanceTags []string) []string {
 // It compares the current instance tags and label with the desired state from the MachineScope.
 // If there are differences, it returns true and the update options that should be applied.
 func instanceHasToBeUpdated(machineScope *scope.MachineScope, linodeInstance *linodego.Instance) (bool, linodego.InstanceUpdateOptions) {
-
 	updateOptions := linodego.InstanceUpdateOptions{}
 
 	machineTags := getTags(machineScope, linodeInstance.Tags)
@@ -1044,7 +1042,5 @@ func instanceHasToBeUpdated(machineScope *scope.MachineScope, linodeInstance *li
 		}
 	}
 
-	// TODO: remove after testing
-	fmt.Println(reflect.DeepEqual(updateOptions, linodego.InstanceUpdateOptions{}), updateOptions)
-	return !reflect.DeepEqual(updateOptions, linodego.InstanceUpdateOptions{}), updateOptions
+	return updateOptions.Tags != nil || updateOptions.Label != "", updateOptions
 }

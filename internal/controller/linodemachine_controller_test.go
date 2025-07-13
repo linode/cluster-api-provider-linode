@@ -1711,6 +1711,36 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				Expect(linodeMachine.Status.Tags).To(Equal([]string{"test-tag"}))
 			}),
 		),
+		Path(
+			Call("machine label is updated", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+						Label:   "test-label",
+					}, nil)
+			}),
+			Result("machine label is updated", func(ctx context.Context, mck Mock) {
+				linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
+				linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceRunning)
+				linodeMachine.Spec.Label = "test-label"
+				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
+				Expect(err).NotTo(HaveOccurred())
+			}),
+		),
 	)
 })
 
