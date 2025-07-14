@@ -264,10 +264,10 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              label:
+              labelPrefix:
                 description: |-
-                  name of the Linode instance associated with this machine.
-                  the instance name is set to the name of LinodeMachine if the Label is not set / empty.
+                  LabelPrefix is the prefix to use for the Linode instance label.
+                  If not specified, defaults are applied.
                 type: string
               osDisk:
                 description: |-

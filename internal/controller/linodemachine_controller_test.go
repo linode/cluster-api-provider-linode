@@ -1736,7 +1736,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 			Result("machine label is updated", func(ctx context.Context, mck Mock) {
 				linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
 				linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceRunning)
-				linodeMachine.Spec.Label = "test-label"
+				linodeMachine.Spec.LabelPrefix = "test-label"
 				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
 				Expect(err).NotTo(HaveOccurred())
 			}),

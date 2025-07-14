@@ -33,7 +33,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func generateMachine(templateName, label string) infrav1alpha2.LinodeMachine {
+func generateMachine(templateName, labelPrefix string) infrav1alpha2.LinodeMachine {
 	out := infrav1alpha2.LinodeMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      templateName,
@@ -45,14 +45,14 @@ func generateMachine(templateName, label string) infrav1alpha2.LinodeMachine {
 		Spec: infrav1alpha2.LinodeMachineSpec{},
 	}
 
-	if label != "" {
-		out.Spec.Label = label
+	if labelPrefix != "" {
+		out.Spec.LabelPrefix = labelPrefix
 	}
 
 	return out
 }
 
-func generateMachineTemplate(templateName string, tags []string, label string, statusTags []string) infrav1alpha2.LinodeMachineTemplate {
+func generateMachineTemplate(templateName string, tags []string, labelPrefix string, statusTags []string) infrav1alpha2.LinodeMachineTemplate {
 	return infrav1alpha2.LinodeMachineTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      templateName,
@@ -61,8 +61,8 @@ func generateMachineTemplate(templateName string, tags []string, label string, s
 		Spec: infrav1alpha2.LinodeMachineTemplateSpec{
 			Template: infrav1alpha2.LinodeMachineTemplateResource{
 				Spec: infrav1alpha2.LinodeMachineSpec{
-					Tags:  tags,
-					Label: label,
+					Tags:        tags,
+					LabelPrefix: labelPrefix,
 				},
 			},
 		},
@@ -189,7 +189,7 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				res, err := reconciler.reconcile(ctx, &lmtScope)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res).To(Equal(ctrl.Result{}))
-				Expect(mck.Logs()).NotTo(ContainSubstring("Patched LinodeMachine with new tags"))
+				Expect(mck.Logs()).NotTo(ContainSubstring("Update LinodeMachine with new tags"))
 			}),
 		),
 		Path(
@@ -210,7 +210,7 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				res, err := reconciler.reconcile(ctx, &lmtScope)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res).To(Equal(ctrl.Result{}))
-				Expect(mck.Logs()).To(ContainSubstring("Update LinodeMachine with new label"))
+				Expect(mck.Logs()).To(ContainSubstring("Update LinodeMachine with new label prefix"))
 			}),
 		),
 		Path(
@@ -231,7 +231,7 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				res, err := reconciler.reconcile(ctx, &lmtScope)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res).To(Equal(ctrl.Result{}))
-				Expect(mck.Logs()).To(ContainSubstring("Update LinodeMachine with new label"))
+				Expect(mck.Logs()).To(ContainSubstring("Update LinodeMachine with new label prefix"))
 
 				// get the updated machine
 				updatedMachine := &infrav1alpha2.LinodeMachine{}
@@ -239,7 +239,7 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 					Name:      linodeMachines[3].Name,
 					Namespace: linodeMachines[3].Namespace,
 				}, updatedMachine)).To(Succeed())
-				Expect(updatedMachine.Spec.Label).To(Equal(""))
+				Expect(updatedMachine.Spec.LabelPrefix).To(Equal(""))
 			}),
 		),
 	),

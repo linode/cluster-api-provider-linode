@@ -34,10 +34,12 @@ const (
 // LinodeMachineSpec defines the desired state of LinodeMachine
 type LinodeMachineSpec struct {
 
-	// name of the Linode instance associated with this machine.
-	// the instance name is set to the name of LinodeMachine if the Label is not set / empty.
+	// LabelPrefix is the prefix to use for the Linode instance label.
+	// If not specified, defaults are applied.
+	// If specified but a Machine doesn't have a owner reference, the prefix is added to the Machine name.
+	// If specified and a Machine has a owner reference, owner reference name is replaced with the prefix.
 	// +optional
-	Label string `json:"label,omitempty"`
+	LabelPrefix string `json:"labelPrefix,omitempty"`
 
 	// ProviderID is the unique identifier as specified by the cloud provider.
 	// +optional

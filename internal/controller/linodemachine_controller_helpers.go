@@ -105,7 +105,7 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzipCompressionEnabled bool, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
-	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec, getTags(machineScope, []string{}))
+	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope, getTags(machineScope, []string{}))
 	if createConfig == nil {
 		err = errors.New("failed to convert machine spec to create instance config")
 		logger.Error(err, "Panic! Struct of LinodeMachineSpec is different than InstanceCreateOptions")
@@ -552,7 +552,8 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	}, nil
 }
 
-func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec, machineTags []string) *linodego.InstanceCreateOptions {
+func linodeMachineSpecToInstanceCreateConfig(machineScope *scope.MachineScope, machineTags []string) *linodego.InstanceCreateOptions {
+	machineSpec := machineScope.LinodeMachine.Spec
 	interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
 	for idx, iface := range machineSpec.Interfaces {
 		interfaces[idx] = linodego.InstanceConfigInterfaceCreateOptions{
@@ -569,7 +570,7 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 		privateIP = *machineSpec.PrivateIP
 	}
 	return &linodego.InstanceCreateOptions{
-		Label:           machineSpec.Label,
+		Label:           getDesiredLinodeInstanceLabel(machineScope),
 		Region:          machineSpec.Region,
 		Type:            machineSpec.Type,
 		AuthorizedKeys:  machineSpec.AuthorizedKeys,
@@ -1034,13 +1035,41 @@ func instanceHasToBeUpdated(machineScope *scope.MachineScope, linodeInstance *li
 		updateOptions.Tags = &machineTags
 	}
 
-	if machineScope.LinodeMachine.Spec.Label != linodeInstance.Label {
-		if machineScope.LinodeMachine.Spec.Label == "" {
-			updateOptions.Label = machineScope.LinodeMachine.Name
-		} else {
-			updateOptions.Label = machineScope.LinodeMachine.Spec.Label
-		}
+	computedInstanceLabel := getDesiredLinodeInstanceLabel(machineScope)
+	if computedInstanceLabel != linodeInstance.Label {
+		updateOptions.Label = computedInstanceLabel
 	}
 
 	return updateOptions.Tags != nil || updateOptions.Label != "", updateOptions
+}
+
+func getDesiredLinodeInstanceLabel(machineScope *scope.MachineScope) string {
+	// If no label prefix is specified, use the machine name as the label
+	if machineScope.LinodeMachine.Spec.LabelPrefix == "" {
+		return machineScope.LinodeMachine.Name
+	}
+
+	// if machine is created by a deployment / control-plane, it's name will be prefixed with the label of linode.
+	outLabel := machineScope.LinodeMachine.Name
+	machineOwners := machineScope.Machine.GetOwnerReferences()
+
+	// get the longest prefix match from machine owner names.
+	longestPrefix := ""
+	for _, owner := range machineOwners {
+		if strings.HasPrefix(machineScope.LinodeMachine.Name, owner.Name) && len(owner.Name) > len(longestPrefix) {
+			longestPrefix = owner.Name
+		}
+	}
+
+	// If no owner name matches the prefix, use the machine name as the label
+	if machineScope.LinodeMachine.Spec.LabelPrefix != "" {
+		if longestPrefix == "" {
+			// If no owner name matches the prefix, use the label prefix
+			outLabel = machineScope.LinodeMachine.Spec.LabelPrefix + "-" + machineScope.Machine.Name
+		} else {
+			outLabel = strings.Replace(machineScope.Machine.Name, longestPrefix, machineScope.LinodeMachine.Spec.LabelPrefix, 1)
+		}
+	}
+
+	return outLabel
 }

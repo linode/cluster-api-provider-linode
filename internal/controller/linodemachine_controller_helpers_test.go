@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -64,7 +65,11 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		PrivateIP:      util.Pointer(true),
 	}
 
-	createConfig := linodeMachineSpecToInstanceCreateConfig(machineSpec, []string{"tag"})
+	createConfig := linodeMachineSpecToInstanceCreateConfig(&scope.MachineScope{
+		LinodeMachine: &infrav1alpha2.LinodeMachine{
+			Spec: machineSpec,
+		},
+	}, []string{"tag"})
 	assert.NotNil(t, createConfig, "Failed to convert LinodeMachineSpec to InstanceCreateOptions")
 }
 
@@ -1333,9 +1338,9 @@ func TestInstanceHasToBeUpdated(t *testing.T) {
 			machineScope: &scope.MachineScope{
 				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						Type:  "g6-standard-2",
-						Label: "new-instance-label",
-						Tags:  []string{"new-instance-tag"},
+						Type:        "g6-standard-2",
+						LabelPrefix: "new-instance-label",
+						Tags:        []string{"new-instance-tag"},
 					},
 				},
 			},
@@ -1359,6 +1364,79 @@ func TestInstanceHasToBeUpdated(t *testing.T) {
 			toUpdate, updateOptions := instanceHasToBeUpdated(tc.machineScope, tc.instance)
 			require.Equal(t, tc.expectToUpdate, toUpdate)
 			require.Equal(t, *tc.expectedUpdateOptions, updateOptions)
+		})
+	}
+}
+
+func TestGetDesiredLinodeInstanceLabel(t *testing.T) {
+	t.Parallel()
+
+	// Setup test cases
+	testCases := []struct {
+		name          string
+		machineScope  *scope.MachineScope
+		expectedLabel string
+	}{
+		{
+			name: "Success - Default label",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-machine",
+						Namespace: "default",
+					},
+				},
+			},
+			expectedLabel: "test-machine",
+		},
+		{
+			name: "Success - Custom label prefix",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-machine",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						LabelPrefix: "custom-prefix",
+					},
+				},
+			},
+			expectedLabel: "custom-prefix-test-machine",
+		},
+		{
+			name: "Success - Custom label prefix with owner reference",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-machine",
+						Namespace: "default",
+					},
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						LabelPrefix: "custom-prefix",
+					},
+				},
+				Machine: &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								Kind: "MachineDeployment",
+							},
+						},
+					},
+				},
+			},
+			expectedLabel: "custom-prefix-test-machine",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			label := getDesiredLinodeInstanceLabel(tc.machineScope)
+			require.Equal(t, tc.expectedLabel, label)
 		})
 	}
 }

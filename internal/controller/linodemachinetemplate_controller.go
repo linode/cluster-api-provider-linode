@@ -161,9 +161,9 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcileUpdates(ctx context.Contex
 		lmtr.Logger.Info("Update LinodeMachine with new tags", "machine", machine.Name, "tags", lmt.Spec.Template.Spec.Tags)
 	}
 
-	if machine.Spec.Label != lmt.Spec.Template.Spec.Label {
-		machine.Spec.Label = lmt.Spec.Template.Spec.Label
-		lmtr.Logger.Info("Update LinodeMachine with new label", "machine", machine.Name, "label", lmt.Spec.Template.Spec.Label)
+	if machine.Spec.LabelPrefix != lmt.Spec.Template.Spec.LabelPrefix {
+		machine.Spec.LabelPrefix = lmt.Spec.Template.Spec.LabelPrefix
+		lmtr.Logger.Info("Update LinodeMachine with new label prefix", "machine", machine.Name, "labelPrefix", lmt.Spec.Template.Spec.LabelPrefix)
 	}
 
 	if err := helper.Patch(ctx, machine); err != nil {
