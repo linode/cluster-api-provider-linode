@@ -1651,6 +1651,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 						&linodego.Instance{
 							ID:      11111,
+							Label:   "machine-update",
 							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
@@ -1668,6 +1669,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 
 					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 						&linodego.Instance{
+							Label:   "machine-update",
 							ID:      11111,
 							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
 							IPv6:    "fd00::",

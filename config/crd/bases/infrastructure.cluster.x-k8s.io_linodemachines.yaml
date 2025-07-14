@@ -268,6 +268,8 @@ spec:
                 description: |-
                   LabelPrefix is the prefix to use for the Linode instance label.
                   If not specified, defaults are applied.
+                  If specified but a Machine doesn't have a owner reference, the prefix is added to the Machine name.
+                  If specified and a Machine has a owner reference, owner reference name is replaced with the prefix.
                 type: string
               osDisk:
                 description: |-

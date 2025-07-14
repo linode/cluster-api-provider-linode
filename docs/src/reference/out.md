@@ -597,7 +597,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `labelPrefix` _string_ | LabelPrefix is the prefix to use for the Linode instance label.<br />If not specified, defaults are applied. |  |  |
+| `labelPrefix` _string_ | LabelPrefix is the prefix to use for the Linode instance label.<br />If not specified, defaults are applied.<br />If specified but a Machine doesn't have a owner reference, the prefix is added to the Machine name.<br />If specified and a Machine has a owner reference, owner reference name is replaced with the prefix. |  |  |
 | `providerID` _string_ | ProviderID is the unique identifier as specified by the cloud provider. |  |  |
 | `instanceID` _integer_ | InstanceID is the Linode instance ID for this machine. |  |  |
 | `region` _string_ |  |  | Required: \{\} <br /> |

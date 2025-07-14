@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -1326,6 +1325,7 @@ func TestInstanceHasToBeUpdated(t *testing.T) {
 						Type: "g6-standard-1",
 					},
 				},
+				Machine: &v1beta1.Machine{},
 			},
 			instance: &linodego.Instance{
 				Type: "g6-standard-1",
@@ -1337,12 +1337,16 @@ func TestInstanceHasToBeUpdated(t *testing.T) {
 			name: "update needed: Changes in label and tags",
 			machineScope: &scope.MachineScope{
 				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-instance",
+					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
 						Type:        "g6-standard-2",
 						LabelPrefix: "new-instance-label",
 						Tags:        []string{"new-instance-tag"},
 					},
 				},
+				Machine: &v1beta1.Machine{},
 			},
 			instance: &linodego.Instance{
 				Type:  "g6-standard-1",
@@ -1350,7 +1354,7 @@ func TestInstanceHasToBeUpdated(t *testing.T) {
 			},
 			expectToUpdate: true,
 			expectedUpdateOptions: &linodego.InstanceUpdateOptions{
-				Label: "new-instance-label",
+				Label: "new-instance-label-test-instance",
 				Tags:  &[]string{"new-instance-tag"},
 			},
 		},
@@ -1386,6 +1390,7 @@ func TestGetDesiredLinodeInstanceLabel(t *testing.T) {
 						Namespace: "default",
 					},
 				},
+				Machine: &v1beta1.Machine{},
 			},
 			expectedLabel: "test-machine",
 		},
@@ -1401,6 +1406,7 @@ func TestGetDesiredLinodeInstanceLabel(t *testing.T) {
 						LabelPrefix: "custom-prefix",
 					},
 				},
+				Machine: &v1beta1.Machine{},
 			},
 			expectedLabel: "custom-prefix-test-machine",
 		},
@@ -1416,17 +1422,22 @@ func TestGetDesiredLinodeInstanceLabel(t *testing.T) {
 						LabelPrefix: "custom-prefix",
 					},
 				},
-				Machine: &clusterv1.Machine{
+				Machine: &v1beta1.Machine{
 					ObjectMeta: metav1.ObjectMeta{
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								Kind: "MachineDeployment",
+								Name: "te",
+							},
+							{
+								Kind: "MachineSet",
+								Name: "test",
 							},
 						},
 					},
 				},
 			},
-			expectedLabel: "custom-prefix-test-machine",
+			expectedLabel: "custom-prefix-machine",
 		},
 	}
 

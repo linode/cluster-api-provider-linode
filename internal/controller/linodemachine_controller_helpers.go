@@ -1065,9 +1065,9 @@ func getDesiredLinodeInstanceLabel(machineScope *scope.MachineScope) string {
 	if machineScope.LinodeMachine.Spec.LabelPrefix != "" {
 		if longestPrefix == "" {
 			// If no owner name matches the prefix, use the label prefix
-			outLabel = machineScope.LinodeMachine.Spec.LabelPrefix + "-" + machineScope.Machine.Name
+			outLabel = machineScope.LinodeMachine.Spec.LabelPrefix + "-" + machineScope.LinodeMachine.Name
 		} else {
-			outLabel = strings.Replace(machineScope.Machine.Name, longestPrefix, machineScope.LinodeMachine.Spec.LabelPrefix, 1)
+			outLabel = strings.Replace(machineScope.LinodeMachine.Name, longestPrefix, machineScope.LinodeMachine.Spec.LabelPrefix, 1)
 		}
 	}
 
