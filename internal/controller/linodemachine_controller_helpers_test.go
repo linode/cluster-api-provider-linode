@@ -44,6 +44,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		RootPass:        "rootPass",
 		AuthorizedKeys:  []string{"key"},
 		AuthorizedUsers: []string{"user"},
+		LabelPrefix:     "test-label-prefix",
 		BackupID:        1,
 		Image:           "image",
 		Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
@@ -68,6 +69,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 		LinodeMachine: &infrav1alpha2.LinodeMachine{
 			Spec: machineSpec,
 		},
+		Machine: &v1beta1.Machine{},
 	}, []string{"tag"})
 	assert.NotNil(t, createConfig, "Failed to convert LinodeMachineSpec to InstanceCreateOptions")
 }
