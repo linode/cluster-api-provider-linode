@@ -744,11 +744,12 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		})
 	}
 
-	isUpdated, updateOptions := instanceHasToBeUpdated(machineScope, linodeInstance)
-	if isUpdated {
-		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, updateOptions)
+	// update the tags if needed
+	machineTags := getTags(machineScope, linodeInstance.Tags)
+	if !areSlicesEqual(machineTags, linodeInstance.Tags) {
+		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: &machineTags})
 		if err != nil {
-			logger.Error(err, "Failed to update Linode instance")
+			logger.Error(err, "Failed to update tags for Linode instance")
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 	}

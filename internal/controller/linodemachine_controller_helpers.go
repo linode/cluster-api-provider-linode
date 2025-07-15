@@ -1024,23 +1024,21 @@ func getTags(machineScope *scope.MachineScope, instanceTags []string) []string {
 	return outTags
 }
 
-// This function is a placeholder for any logic that checks if the instance needs to be updated.
-// It compares the current instance tags and label with the desired state from the MachineScope.
-// If there are differences, it returns true and the update options that should be applied.
-func instanceHasToBeUpdated(machineScope *scope.MachineScope, linodeInstance *linodego.Instance) (bool, linodego.InstanceUpdateOptions) {
-	updateOptions := linodego.InstanceUpdateOptions{}
-
-	machineTags := getTags(machineScope, linodeInstance.Tags)
-	if !slices.Equal(machineTags, linodeInstance.Tags) {
-		updateOptions.Tags = &machineTags
+func areSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
 	}
-
-	computedInstanceLabel := getDesiredLinodeInstanceLabel(machineScope)
-	if computedInstanceLabel != linodeInstance.Label {
-		updateOptions.Label = computedInstanceLabel
+	aSet := constructSet(a)
+	bSet := constructSet(b)
+	if len(aSet) != len(bSet) {
+		return false
 	}
-
-	return updateOptions.Tags != nil || updateOptions.Label != "", updateOptions
+	for key := range aSet {
+		if _, ok := bSet[key]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func getDesiredLinodeInstanceLabel(machineScope *scope.MachineScope) string {
@@ -1062,13 +1060,11 @@ func getDesiredLinodeInstanceLabel(machineScope *scope.MachineScope) string {
 	}
 
 	// If no owner name matches the prefix, use the machine name as the label
-	if machineScope.LinodeMachine.Spec.LabelPrefix != "" {
-		if longestPrefix == "" {
-			// If no owner name matches the prefix, use the label prefix
-			outLabel = machineScope.LinodeMachine.Spec.LabelPrefix + "-" + machineScope.LinodeMachine.Name
-		} else {
-			outLabel = strings.Replace(machineScope.LinodeMachine.Name, longestPrefix, machineScope.LinodeMachine.Spec.LabelPrefix, 1)
-		}
+	if longestPrefix == "" {
+		// If no owner name matches the prefix, use the label prefix
+		outLabel = machineScope.LinodeMachine.Spec.LabelPrefix + "-" + machineScope.LinodeMachine.Name
+	} else {
+		outLabel = strings.Replace(machineScope.LinodeMachine.Name, longestPrefix, machineScope.LinodeMachine.Spec.LabelPrefix, 1)
 	}
 
 	return outLabel
