@@ -1048,7 +1048,6 @@ func getDesiredLinodeInstanceLabel(machineScope *scope.MachineScope) string {
 	}
 
 	// if machine is created by a deployment / control-plane, it's name will be prefixed with the label of linode.
-	outLabel := machineScope.LinodeMachine.Name
 	machineOwners := machineScope.Machine.GetOwnerReferences()
 
 	// get the longest prefix match from machine owner names.
@@ -1062,10 +1061,8 @@ func getDesiredLinodeInstanceLabel(machineScope *scope.MachineScope) string {
 	// If no owner name matches the prefix, use the machine name as the label
 	if longestPrefix == "" {
 		// If no owner name matches the prefix, use the label prefix
-		outLabel = machineScope.LinodeMachine.Spec.LabelPrefix + "-" + machineScope.LinodeMachine.Name
+		return machineScope.LinodeMachine.Spec.LabelPrefix + "-" + machineScope.LinodeMachine.Name
 	} else {
-		outLabel = strings.Replace(machineScope.LinodeMachine.Name, longestPrefix, machineScope.LinodeMachine.Spec.LabelPrefix, 1)
+		return strings.Replace(machineScope.LinodeMachine.Name, longestPrefix, machineScope.LinodeMachine.Spec.LabelPrefix, 1)
 	}
-
-	return outLabel
 }
