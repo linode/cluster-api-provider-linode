@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -36,6 +37,16 @@ type LinodeVPCSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
 	// +optional
+	// IPv6 is a list of IPv6 ranges allocated to the VPC.
+	// Once ranges are allocated based on the IPv6Range field, they will be
+	// added to this field.
+	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
+	// +optional
+	// IPv6Range is a list of IPv6 ranges to allocate to the VPC.
+	// If not specified, the VPC will not have an IPv6 range allocated.
+	// Once ranges are allocated, they will be added to the IPv6 field.
+	IPv6Range []VPCCreateOptionsIPv6 `json:"ipv6Range,omitempty"`
+	// +optional
 	Subnets []VPCSubnetCreateOptions `json:"subnets,omitempty"`
 
 	// Retain allows you to keep the VPC after the LinodeVPC object is deleted.
@@ -50,12 +61,15 @@ type LinodeVPCSpec struct {
 	// supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	// +kubebuilder:validation:MinLength=2
-	// +kubebuilder:validation:MaxLength=4
-	// +kubebuilder:default="/52"
-	IPv6Range string `json:"ipv6Range,omitempty"`
+}
+
+// VPCCreateOptionsIPv6 defines the options for creating an IPv6 range in a VPC.
+// Its copied from linodego.VPCCreateOptionsIPv6 and should be kept in sync.
+// Values supported by the linode API should be used here.
+// See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
+type VPCCreateOptionsIPv6 struct {
+	Range           *string `json:"range,omitempty"`
+	AllocationClass *string `json:"allocation_class,omitempty"`
 }
 
 // VPCSubnetCreateOptions defines subnet options
@@ -66,6 +80,16 @@ type VPCSubnetCreateOptions struct {
 	Label string `json:"label,omitempty"`
 	// +optional
 	IPv4 string `json:"ipv4,omitempty"`
+	// +optional
+	// IPv6 is a list of IPv6 ranges allocated to the subnet.
+	// Once ranges are allocated based on the IPv6Range field, they will be
+	// added to this field.
+	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
+	// +optional
+	// IPv6Range is a list of IPv6 ranges to allocate to the subnet.
+	// If not specified, the subnet will not have an IPv6 range allocated.
+	// Once ranges are allocated, they will be added to the IPv6 field.
+	IPv6Range []VPCSubnetCreateOptionsIPv6 `json:"ipv6Range,omitempty"`
 	// SubnetID is subnet id for the subnet
 	// +optional
 	SubnetID int `json:"subnetID,omitempty"`
@@ -74,11 +98,14 @@ type VPCSubnetCreateOptions struct {
 	// +optional
 	// +kubebuilder:default=false
 	Retain bool `json:"retain,omitempty"`
-	// +optional
-	// +kubebuilder:validation:MinLength=2
-	// +kubebuilder:validation:MaxLength=4
-	// +kubebuilder:default="/56"
-	IPv6Range string `json:"ipv6Range,omitempty"`
+}
+
+// VPCSubnetCreateOptionsIPv6 defines the options for creating an IPv6 range in a VPC subnet.
+// Its copied from linodego.VPCSubnetCreateOptionsIPv6 and should be kept in sync.
+// Values supported by the linode API should be used here.
+// See https://techdocs.akamai.com/linode-api/reference/post-vpc-subnet for more details.
+type VPCSubnetCreateOptionsIPv6 struct {
+	Range *string `json:"range,omitempty"`
 }
 
 // LinodeVPCStatus defines the observed state of LinodeVPC

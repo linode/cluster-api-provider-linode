@@ -70,6 +70,9 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 	}
 
 	vpcScope.LinodeVPC.Spec.VPCID = &vpc.ID
+	for _, ipv6 := range vpc.IPv6 {
+		vpcScope.LinodeVPC.Spec.IPv6 = append(vpcScope.LinodeVPC.Spec.IPv6, linodego.VPCIPv6Range{Range: ipv6.Range})
+	}
 	updateVPCSpecSubnets(vpcScope, vpc)
 
 	return nil
@@ -78,11 +81,16 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *linodego.VPC) error {
 	// Labels are unique
 	vpcScope.LinodeVPC.Spec.VPCID = &vpc.ID
+	for _, ipv6 := range vpc.IPv6 {
+		vpcScope.LinodeVPC.Spec.IPv6 = append(vpcScope.LinodeVPC.Spec.IPv6, linodego.VPCIPv6Range{Range: ipv6.Range})
+	}
 
 	// build a map of existing subnets to easily check for existence
 	existingSubnets := make(map[string]int, len(vpc.Subnets))
+	existingSubnetsIpv6 := make(map[string][]linodego.VPCIPv6Range, len(vpc.Subnets))
 	for _, subnet := range vpc.Subnets {
 		existingSubnets[subnet.Label] = subnet.ID
+		existingSubnetsIpv6[subnet.Label] = subnet.IPv6
 	}
 
 	// adopt or create subnets
@@ -92,16 +100,28 @@ func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *li
 		}
 		if id, ok := existingSubnets[subnet.Label]; ok {
 			vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = id
+			vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6 = existingSubnetsIpv6[subnet.Label]
 		} else {
+			ipv6 := []linodego.VPCSubnetCreateOptionsIPv6{}
+			for _, ipv6Range := range subnet.IPv6Range {
+				ipv6 = append(ipv6, linodego.VPCSubnetCreateOptionsIPv6{
+					Range: ipv6Range.Range,
+				})
+			}
 			createSubnetConfig := linodego.VPCSubnetCreateOptions{
 				Label: subnet.Label,
 				IPv4:  subnet.IPv4,
+				IPv6:  ipv6,
 			}
+
 			newSubnet, err := vpcScope.LinodeClient.CreateVPCSubnet(ctx, createSubnetConfig, *vpcScope.LinodeVPC.Spec.VPCID)
 			if err != nil {
 				return err
 			}
 			vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = newSubnet.ID
+			for _, ipv6 := range newSubnet.IPv6 {
+				vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6 = append(vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6, linodego.VPCIPv6Range{Range: ipv6.Range})
+			}
 		}
 	}
 
@@ -114,6 +134,9 @@ func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
 		for _, vpcSubnet := range vpc.Subnets {
 			if specSubnet.Label == vpcSubnet.Label {
 				vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = vpcSubnet.ID
+				for _, ipv6 := range vpcSubnet.IPv6 {
+					vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6 = append(vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6, linodego.VPCIPv6Range{Range: ipv6.Range})
+				}
 				break
 			}
 		}
@@ -121,22 +144,25 @@ func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
 }
 
 func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linodego.VPCCreateOptions {
-	subnets := make([]linodego.VPCSubnetCreateOptions, len(vpcSpec.Subnets))
-	vpcIPv6 := []linodego.VPCCreateOptionsIPv6{
-		{
-			Range: &vpcSpec.IPv6Range,
-		},
+	vpcIPv6 := make([]linodego.VPCCreateOptionsIPv6, len(vpcSpec.IPv6Range))
+	for idx, ipv6 := range vpcSpec.IPv6Range {
+		vpcIPv6[idx] = linodego.VPCCreateOptionsIPv6{
+			Range: ipv6.Range,
+		}
 	}
 
+	subnets := make([]linodego.VPCSubnetCreateOptions, len(vpcSpec.Subnets))
 	for idx, subnet := range vpcSpec.Subnets {
+		ipv6 := []linodego.VPCSubnetCreateOptionsIPv6{}
+		for _, ipv6Range := range subnet.IPv6Range {
+			ipv6 = append(ipv6, linodego.VPCSubnetCreateOptionsIPv6{
+				Range: ipv6Range.Range,
+			})
+		}
 		subnets[idx] = linodego.VPCSubnetCreateOptions{
 			Label: subnet.Label,
 			IPv4:  subnet.IPv4,
-			IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
-				{
-					Range: &subnet.IPv6Range,
-				},
-			},
+			IPv6:  ipv6,
 		}
 	}
 

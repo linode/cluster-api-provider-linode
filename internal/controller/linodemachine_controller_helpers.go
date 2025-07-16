@@ -57,6 +57,7 @@ import (
 const (
 	maxBootstrapDataBytesCloudInit = 16384
 	vlanIPFormat                   = "%s/11"
+	ipv6Range                      = "/64" // Default IPv6 range for VPC interfaces
 )
 
 var (
@@ -462,10 +463,13 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 
 	subnetName := machineScope.LinodeCluster.Spec.Network.SubnetName // name of subnet to use
 
+	ipv6RangeConfig := []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{}
 	if subnetName != "" {
 		for _, subnet := range linodeVPC.Spec.Subnets {
 			if subnet.Label == subnetName {
 				subnetID = subnet.SubnetID
+				ipv6RangeConfig = getIPv6RangeConfig(subnet.IPv6)
+				break
 			}
 		}
 
@@ -474,6 +478,7 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		}
 	} else {
 		subnetID = linodeVPC.Spec.Subnets[0].SubnetID // get first subnet if nothing specified
+		ipv6RangeConfig = getIPv6RangeConfig(linodeVPC.Spec.Subnets[0].IPv6)
 	}
 
 	if subnetID == 0 {
@@ -483,25 +488,31 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID
+			if len(ipv6RangeConfig) > 0 {
+				interfaces[i].IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
+					Ranges: ipv6RangeConfig,
+				}
+			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
 		}
 	}
 
-	return &linodego.InstanceConfigInterfaceCreateOptions{
+	vpcIntfCreateOpts := &linodego.InstanceConfigInterfaceCreateOptions{
 		Purpose:  linodego.InterfacePurposeVPC,
 		Primary:  true,
 		SubnetID: &subnetID,
 		IPv4: &linodego.VPCIPv4{
 			NAT1To1: ptr.To("any"),
 		},
-		IPv6: &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
-			Ranges: []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
-				{
-					Range: ptr.To("/64"),
-				},
-			},
-		},
-	}, nil
+	}
+
+	if len(ipv6RangeConfig) > 0 {
+		vpcIntfCreateOpts.IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
+			Ranges: ipv6RangeConfig,
+		}
+	}
+
+	return vpcIntfCreateOpts, nil
 }
 
 // getVPCInterfaceConfigFromDirectID returns the interface configuration for a VPC based on a direct VPC ID
@@ -526,10 +537,12 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	}
 
 	// If subnet name specified, find matching subnet; otherwise use first subnet
+	ipv6RangeConfig := []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{}
 	if subnetName != "" {
 		for _, subnet := range vpc.Subnets {
 			if subnet.Label == subnetName {
 				subnetID = subnet.ID
+				ipv6RangeConfig = getIPv6RangeConfig(subnet.IPv6)
 				break
 			}
 		}
@@ -538,25 +551,51 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 		}
 	} else {
 		subnetID = vpc.Subnets[0].ID
+		ipv6RangeConfig = getIPv6RangeConfig(vpc.Subnets[0].IPv6)
 	}
 
 	// Check if a VPC interface already exists
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID
+			if len(ipv6RangeConfig) > 0 {
+				interfaces[i].IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
+					Ranges: ipv6RangeConfig,
+				}
+			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
 		}
 	}
 
 	// Create a new VPC interface
-	return &linodego.InstanceConfigInterfaceCreateOptions{
+	vpcIntfCreateOpts := &linodego.InstanceConfigInterfaceCreateOptions{
 		Purpose:  linodego.InterfacePurposeVPC,
 		Primary:  true,
 		SubnetID: &subnetID,
 		IPv4: &linodego.VPCIPv4{
 			NAT1To1: ptr.To("any"),
 		},
-	}, nil
+	}
+
+	// If IPv6 ranges are specified, add them to the interface configuration
+	if len(ipv6RangeConfig) > 0 {
+		vpcIntfCreateOpts.IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
+			Ranges: ipv6RangeConfig,
+		}
+	}
+
+	return vpcIntfCreateOpts, nil
+}
+
+// getIPv6RangeConfig returns the IPv6 range configuration for a given slice of VPC IPv6 ranges
+func getIPv6RangeConfig(ipv6 []linodego.VPCIPv6Range) []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range {
+	ipv6RangeConfig := []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{}
+	if len(ipv6) > 0 {
+		ipv6RangeConfig = append(ipv6RangeConfig, linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
+			Range: ptr.To(ipv6Range),
+		})
+	}
+	return ipv6RangeConfig
 }
 
 func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec, machineTags []string) *linodego.InstanceCreateOptions {
