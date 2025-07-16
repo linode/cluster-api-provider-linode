@@ -308,21 +308,20 @@ func validateIPv6Range(ipv6Range *string, path *field.Path) *field.Error {
 		errors.New("IPv6 range doesn't contain a valid number after /"),
 		errors.New("IPv6 range must be between /0 and /128"),
 	}
-	var ipv6RangeStr string
-	if ipv6Range == nil {
-		ipv6RangeStr = "auto"
-	} else {
+	ipv6RangeStr := "auto"
+	if ipv6Range != nil {
 		ipv6RangeStr = *ipv6Range
 	}
-	if ipv6RangeStr == "" {
+
+	// "auto" is valid
+	if ipv6RangeStr == "auto" {
+		return nil
+	}
+
+	if ipv6RangeStr == "" || !strings.HasPrefix(ipv6RangeStr, "/") {
 		return field.Invalid(path, ipv6RangeStr, errs[0].Error())
 	}
-	if ipv6RangeStr == "auto" {
-		return nil // "auto" is a valid value for IPv6Range
-	}
-	if !strings.HasPrefix(ipv6RangeStr, "/") {
-		return field.Invalid(path, ipv6Range, errs[0].Error())
-	}
+
 	numStr := strings.TrimPrefix(ipv6RangeStr, "/")
 	num, err := strconv.Atoi(numStr)
 	if err != nil {

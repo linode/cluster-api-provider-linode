@@ -61,9 +61,6 @@ func TestValidateLinodeVPC(t *testing.T) {
 		ErrorSubnetRangeNotPrivate    = "spec.Subnets[0].IPv4: Invalid value: \"9.9.9.0/24\": range must belong to a private address space as defined in RFC1918"
 		ErrorSubnetRange              = "spec.Subnets[0].IPv4: Invalid value: \"IPv4 CIDR\": must be IPv4 range in CIDR canonical form"
 		ErrorSubnetRangeNotIPv4       = "spec.Subnets[0].IPv4: Invalid value: \"10.9.9.9/8\": must be IPv4 range in CIDR canonical form"
-		ErrorIPv6RangeInvalid         = "spec.IPv6Range[0].Range: Invalid value: \"48\": IPv6 range must be either 'auto' or start with /. Example: /52"
-		ErrorIPv6RangeInvalidChars    = "spec.IPv6Range[0].Range: Invalid value: \"/a48\": IPv6 range doesn't contain a valid number after /"
-		ErrorIPv6RangeOutOfRange      = "spec.IPv6Range[0].Range: Invalid value: \"/130\": IPv6 range must be between /0 and /128"
 		validator                     = &linodeVPCValidator{}
 	)
 
@@ -93,40 +90,6 @@ func TestValidateLinodeVPC(t *testing.T) {
 					require.Empty(t, errs)
 				}),
 			),
-			Path(
-				Call("valid ipv6 ranges in vpc", func(ctx context.Context, mck Mock) {
-					region := region
-					region.Capabilities = slices.Clone(capabilities)
-					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
-				}),
-				Result("success", func(ctx context.Context, mck Mock) {
-					vpc := vpc
-					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
-						{Range: ptr.To("/48")},
-						{Range: ptr.To("/52")},
-						{Range: ptr.To("auto")},
-					}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
-					require.Empty(t, errs)
-				}),
-			),
-			Path(
-				Call("valid ipv6 ranges in subnets", func(ctx context.Context, mck Mock) {
-					region := region
-					region.Capabilities = slices.Clone(capabilities)
-					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
-				}),
-				Result("success", func(ctx context.Context, mck Mock) {
-					vpc := vpc
-					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
-						{Label: "foo", IPv4: "10.0.0.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/52")}}},
-						{Label: "bar", IPv4: "10.0.1.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/64")}}},
-						{Label: "buzz", IPv4: "10.0.2.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("auto")}}},
-					}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
-					require.Empty(t, errs)
-				}),
-			),
 		),
 		OneOf(
 			Path(
@@ -152,39 +115,6 @@ func TestValidateLinodeVPC(t *testing.T) {
 						assert.ErrorContains(t, err, vpcCapabilityError)
 					}
 				})),
-		),
-		OneOf(
-			Path(
-				Call("invalid ipv6 range", func(ctx context.Context, mck Mock) {
-					region := region
-					region.Capabilities = slices.Clone(capabilities)
-					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
-				}),
-				Result("error", func(ctx context.Context, mck Mock) {
-					vpc := vpc
-					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
-						{Range: ptr.To("48")},
-					}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
-					for _, err := range errs {
-						assert.ErrorContains(t, err, ErrorIPv6RangeInvalid)
-					}
-					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
-						{Range: ptr.To("/a48")},
-					}
-					errs = validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
-					for _, err := range errs {
-						assert.ErrorContains(t, err, ErrorIPv6RangeInvalidChars)
-					}
-					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
-						{Range: ptr.To("/130")},
-					}
-					errs = validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
-					for _, err := range errs {
-						assert.ErrorContains(t, err, ErrorIPv6RangeOutOfRange)
-					}
-				}),
-			),
 		),
 		OneOf(
 			Path(
@@ -352,6 +282,120 @@ func TestValidateLinodeVPC(t *testing.T) {
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						require.Error(t, err)
+					}
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateVPCIPv6Ranges(t *testing.T) {
+	t.Parallel()
+
+	var (
+		vpc = infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "example",
+			},
+		}
+		region                     = linodego.Region{ID: "test"}
+		capabilities               = []string{LinodeVPCCapability}
+		ErrorIPv6RangeInvalid      = "spec.IPv6Range[0].Range: Invalid value: \"48\": IPv6 range must be either 'auto' or start with /. Example: /52"
+		ErrorIPv6RangeInvalidChars = "spec.IPv6Range[0].Range: Invalid value: \"/a48\": IPv6 range doesn't contain a valid number after /"
+		ErrorIPv6RangeOutOfRange   = "spec.IPv6Range[0].Range: Invalid value: \"/130\": IPv6 range must be between /0 and /128"
+		validator                  = &linodeVPCValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("valid ipv6 ranges in vpc", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					vpc := vpc
+					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
+						{Range: ptr.To("/48")},
+						{Range: ptr.To("/52")},
+						{Range: ptr.To("auto")},
+					}
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					require.Empty(t, errs)
+				}),
+			),
+			Path(
+				Call("valid ipv6 ranges in subnets", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					vpc := vpc
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
+						{Label: "foo", IPv4: "10.0.0.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/52")}}},
+						{Label: "bar", IPv4: "10.0.1.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/64")}}},
+						{Label: "buzz", IPv4: "10.0.2.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("auto")}}},
+					}
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					require.Empty(t, errs)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("ipv6 range missing /", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					vpc := vpc
+					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
+						{Range: ptr.To("48")},
+					}
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, ErrorIPv6RangeInvalid)
+					}
+				}),
+			),
+			Path(
+				Call("ipv6 range containing chars", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					vpc := vpc
+					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
+						{Range: ptr.To("/a48")},
+					}
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, ErrorIPv6RangeInvalidChars)
+					}
+				}),
+			),
+			Path(
+				Call("ipv6 range out of bounds", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					vpc := vpc
+					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
+						{Range: ptr.To("/130")},
+					}
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, ErrorIPv6RangeOutOfRange)
 					}
 				}),
 			),
