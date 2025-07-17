@@ -23,6 +23,7 @@ import (
 	"net/netip"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"go4.org/netipx"
@@ -157,6 +158,15 @@ func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodecl
 		errs = slices.Concat(errs, err)
 	}
 
+	// Validate VPC IPv6 Ranges
+	for idx, ipv6Range := range spec.IPv6Range {
+		ipv6RangePath := field.NewPath("spec").Child("IPv6Range").Index(idx).Child("Range")
+		rangeErr := validateIPv6Range(ipv6Range.Range, ipv6RangePath)
+		if rangeErr != nil {
+			errs = append(errs, rangeErr)
+		}
+	}
+
 	if len(errs) == 0 {
 		return nil
 	}
@@ -171,12 +181,12 @@ func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec infrav1alpha2.LinodeV
 		labels  = []string{}
 	)
 
-	for i, subnet := range spec.Subnets {
+	for idx, subnet := range spec.Subnets {
 		var (
 			label     = subnet.Label
-			labelPath = field.NewPath("spec").Child("Subnets").Index(i).Child("Label")
+			labelPath = field.NewPath("spec").Child("Subnets").Index(idx).Child("Label")
 			ip        = subnet.IPv4
-			ipPath    = field.NewPath("spec").Child("Subnets").Index(i).Child("IPv4")
+			ipPath    = field.NewPath("spec").Child("Subnets").Index(idx).Child("IPv4")
 		)
 
 		// Validate Subnet Label
@@ -201,6 +211,15 @@ func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec infrav1alpha2.LinodeV
 		builder.AddSet(cidr)
 		if cidrs, err = builder.IPSet(); err != nil {
 			return append(field.ErrorList{}, field.InternalError(ipPath, fmt.Errorf("build ip set: %w", err)))
+		}
+
+		// Validate Subnet IPv6 Ranges
+		for subnetIdx, ipv6Range := range spec.Subnets[idx].IPv6Range {
+			ipv6RangePath := field.NewPath("spec").Child("Subnets").Index(idx).Child("IPv6Range").Index(subnetIdx).Child("Range")
+			rangeErr := validateIPv6Range(ipv6Range.Range, ipv6RangePath)
+			if rangeErr != nil {
+				errs = append(errs, rangeErr)
+			}
 		}
 	}
 
@@ -281,4 +300,36 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 		return nil, field.InternalError(path, fmt.Errorf("build ip set: %w", err))
 	}
 	return set, nil
+}
+
+func validateIPv6Range(ipv6Range *string, path *field.Path) *field.Error {
+	const (
+		errIPv6RangeFormat   = "IPv6 range must be either 'auto' or start with /. Example: /52"
+		errIPv6RangeNoNumber = "IPv6 range doesn't contain a valid number after /"
+		errIPv6RangeBounds   = "IPv6 range must be between /0 and /128"
+	)
+
+	ipv6RangeStr := "auto"
+	if ipv6Range != nil {
+		ipv6RangeStr = *ipv6Range
+	}
+
+	// "auto" is valid
+	if ipv6RangeStr == "auto" {
+		return nil
+	}
+
+	if ipv6RangeStr == "" || !strings.HasPrefix(ipv6RangeStr, "/") {
+		return field.Invalid(path, ipv6RangeStr, errIPv6RangeFormat)
+	}
+
+	numStr := strings.TrimPrefix(ipv6RangeStr, "/")
+	num, err := strconv.Atoi(numStr)
+	if err != nil {
+		return field.Invalid(path, ipv6RangeStr, errIPv6RangeNoNumber)
+	}
+	if num < 0 || num > 128 {
+		return field.Invalid(path, ipv6RangeStr, errIPv6RangeBounds)
+	}
+	return nil
 }

@@ -67,6 +67,42 @@ spec:
                 x-kubernetes-map-type: atomic
               description:
                 type: string
+              ipv6:
+                description: |-
+                  IPv6 is a list of IPv6 ranges allocated to the VPC.
+                  Once ranges are allocated based on the IPv6Range field, they will be
+                  added to this field.
+                items:
+                  description: VPCIPv6Range represents a single IPv6 range assigned
+                    to a VPC.
+                  properties:
+                    range:
+                      type: string
+                  required:
+                  - range
+                  type: object
+                type: array
+              ipv6Range:
+                description: |-
+                  IPv6Range is a list of IPv6 ranges to allocate to the VPC.
+                  If not specified, the VPC will not have an IPv6 range allocated.
+                  Once ranges are allocated, they will be added to the IPv6 field.
+                items:
+                  description: |-
+                    VPCCreateOptionsIPv6 defines the options for creating an IPv6 range in a VPC.
+                    It's copied from linodego.VPCCreateOptionsIPv6 and should be kept in sync.
+                    Values supported by the linode API should be used here.
+                    See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
+                  properties:
+                    allocation_class:
+                      description: IPv6 inventory from which the VPC prefix should
+                        be allocated.
+                      type: string
+                    range:
+                      description: Range is the IPv6 prefix for the VPC.
+                      type: string
+                  type: object
+                type: array
               region:
                 type: string
                 x-kubernetes-validations:
@@ -86,6 +122,37 @@ spec:
                   properties:
                     ipv4:
                       type: string
+                    ipv6:
+                      description: |-
+                        IPv6 is a list of IPv6 ranges allocated to the subnet.
+                        Once ranges are allocated based on the IPv6Range field, they will be
+                        added to this field.
+                      items:
+                        description: VPCIPv6Range represents a single IPv6 range assigned
+                          to a VPC.
+                        properties:
+                          range:
+                            type: string
+                        required:
+                        - range
+                        type: object
+                      type: array
+                    ipv6Range:
+                      description: |-
+                        IPv6Range is a list of IPv6 ranges to allocate to the subnet.
+                        If not specified, the subnet will not have an IPv6 range allocated.
+                        Once ranges are allocated, they will be added to the IPv6 field.
+                      items:
+                        description: |-
+                          VPCSubnetCreateOptionsIPv6 defines the options for creating an IPv6 range in a VPC subnet.
+                          It's copied from linodego.VPCSubnetCreateOptionsIPv6 and should be kept in sync.
+                          Values supported by the linode API should be used here.
+                          See https://techdocs.akamai.com/linode-api/reference/post-vpc-subnet for more details.
+                        properties:
+                          range:
+                            type: string
+                        type: object
+                      type: array
                     label:
                       maxLength: 63
                       minLength: 3

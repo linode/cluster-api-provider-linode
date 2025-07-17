@@ -409,6 +409,9 @@ func validateInterfaceExpectations(
 	if expectInterface {
 		require.NotNil(t, iface)
 		require.Equal(t, linodego.InterfacePurposeVPC, iface.Purpose)
+		if iface.IPv6 != nil {
+			require.Equal(t, defaultNodeIPv6CIDRRange, *iface.IPv6.Ranges[0].Range)
+		}
 		require.True(t, iface.Primary)
 		require.NotNil(t, iface.SubnetID)
 		require.Equal(t, expectSubnetID, *iface.SubnetID)
@@ -497,6 +500,11 @@ func TestGetVPCInterfaceConfigFromDirectID(t *testing.T) {
 						{
 							ID:    456,
 							Label: "subnet-1",
+							IPv6: []linodego.VPCIPv6Range{
+								{
+									Range: "2001:0db8::/56",
+								},
+							},
 						},
 					},
 				}, nil)
@@ -762,6 +770,11 @@ func TestConfigureVPCInterface(t *testing.T) {
 						{
 							ID:    456,
 							Label: "subnet-1",
+							IPv6: []linodego.VPCIPv6Range{
+								{
+									Range: "2001:0db8::/56",
+								},
+							},
 						},
 					},
 				}, nil)
@@ -944,6 +957,11 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 						{
 							SubnetID: 456,
 							Label:    "subnet-1",
+							IPv6: []linodego.VPCIPv6Range{
+								{
+									Range: "2001:0db8::/56",
+								},
+							},
 						},
 					}
 					return nil
@@ -1032,6 +1050,11 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 						{
 							SubnetID: 456,
 							Label:    "subnet-1",
+							IPv6: []linodego.VPCIPv6Range{
+								{
+									Range: "2001:0db8::/56",
+								},
+							},
 						},
 					}
 					return nil

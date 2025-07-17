@@ -115,7 +115,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 						ID:     1,
 						Region: "us-east",
 						Subnets: []linodego.VPCSubnet{
-							{Label: "subnet1", IPv4: "10.0.0.0/8"},
+							{Label: "subnet1", IPv4: "10.0.0.0/8", IPv6: []linodego.VPCIPv6Range{{Range: "2001:db8::/52"}}},
 						},
 					}, nil)
 				}),
@@ -126,6 +126,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
 					Expect(*linodeVPC.Spec.VPCID).To(Equal(1))
 					Expect(linodeVPC.Spec.Subnets[0].IPv4).To(Equal("10.0.0.0/8"))
+					Expect(linodeVPC.Spec.Subnets[0].IPv6).To(ContainElement(linodego.VPCIPv6Range{Range: "2001:db8::/52"}))
 					Expect(linodeVPC.Spec.Subnets[0].Label).To(Equal("subnet1"))
 					Expect(mck.Logs()).NotTo(ContainSubstring("Failed to create VPC"))
 				}),
@@ -148,6 +149,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 								{
 									Label: "subnet1",
 									IPv4:  "10.0.0.0/8",
+									IPv6:  []linodego.VPCIPv6Range{{Range: "2001:db8::/52"}},
 								},
 							},
 						},
@@ -310,11 +312,12 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 				Finalizers:   []string{infrav1alpha2.VPCFinalizer},
 			},
 			Spec: infrav1alpha2.LinodeVPCSpec{
-				VPCID:  ptr.To(123),
-				Region: "us-east",
+				VPCID:     ptr.To(123),
+				Region:    "us-east",
+				IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{{Range: ptr.To("/52")}},
 				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
-					{Label: "subnet1", IPv4: "10.0.0.0/8", SubnetID: 1, Retain: true},
-					{Label: "subnet2", IPv4: "10.0.1.0/24", SubnetID: 2},
+					{Label: "subnet1", IPv4: "10.0.0.0/8", SubnetID: 1, Retain: true, IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/56")}}},
+					{Label: "subnet2", IPv4: "10.0.1.0/24", SubnetID: 2, IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/56")}}},
 				},
 			},
 		}
@@ -356,9 +359,10 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 						Label:   "vpc1",
 						Region:  "us-east",
 						Updated: ptr.To(time.Now()),
+						IPv6:    []linodego.VPCIPv6Range{{Range: "2001:db8::/52"}},
 						Subnets: []linodego.VPCSubnet{
-							{ID: 1, Label: "subnet1", IPv4: "10.0.0.0/8"},
-							{ID: 2, Label: "subnet2", IPv4: "10.0.1.0/24"},
+							{ID: 1, Label: "subnet1", IPv4: "10.0.0.0/8", IPv6: []linodego.VPCIPv6Range{{Range: "2001:db8:8:1::/56"}}},
+							{ID: 2, Label: "subnet2", IPv4: "10.0.1.0/24", IPv6: []linodego.VPCIPv6Range{{Range: "2001:db8:8:2::/56"}}},
 						},
 					}, nil)
 
