@@ -589,7 +589,7 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 }
 
 // machineIPv6RangeConfig returns the IPv6 range configuration if subnet has IPv6 ranges.
-// for now, we support only a single IPv6 range for machine per subnet.
+// For now, we support only a single IPv6 range for machine per subnet.
 // If this changes, we may need to adjust this logic.
 func machineIPv6RangeConfig(numIPv6RangesInSubnet int) []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range {
 	if numIPv6RangesInSubnet == 0 {

@@ -103,7 +103,7 @@ type VPCSubnetCreateOptions struct {
 }
 
 // VPCSubnetCreateOptionsIPv6 defines the options for creating an IPv6 range in a VPC subnet.
-// Its copied from linodego.VPCSubnetCreateOptionsIPv6 and should be kept in sync.
+// It's copied from linodego.VPCSubnetCreateOptionsIPv6 and should be kept in sync.
 // Values supported by the linode API should be used here.
 // See https://techdocs.akamai.com/linode-api/reference/post-vpc-subnet for more details.
 type VPCSubnetCreateOptionsIPv6 struct {
