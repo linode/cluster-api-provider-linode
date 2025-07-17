@@ -303,11 +303,12 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 }
 
 func validateIPv6Range(ipv6Range *string, path *field.Path) *field.Error {
-	var errs = []error{
-		errors.New("IPv6 range must be either 'auto' or start with /. Example: /52"),
-		errors.New("IPv6 range doesn't contain a valid number after /"),
-		errors.New("IPv6 range must be between /0 and /128"),
-	}
+	const (
+		errIPv6RangeFormat   = "IPv6 range must be either 'auto' or start with /. Example: /52"
+		errIPv6RangeNoNumber = "IPv6 range doesn't contain a valid number after /"
+		errIPv6RangeBounds   = "IPv6 range must be between /0 and /128"
+	)
+
 	ipv6RangeStr := "auto"
 	if ipv6Range != nil {
 		ipv6RangeStr = *ipv6Range
@@ -319,16 +320,16 @@ func validateIPv6Range(ipv6Range *string, path *field.Path) *field.Error {
 	}
 
 	if ipv6RangeStr == "" || !strings.HasPrefix(ipv6RangeStr, "/") {
-		return field.Invalid(path, ipv6RangeStr, errs[0].Error())
+		return field.Invalid(path, ipv6RangeStr, errIPv6RangeFormat)
 	}
 
 	numStr := strings.TrimPrefix(ipv6RangeStr, "/")
 	num, err := strconv.Atoi(numStr)
 	if err != nil {
-		return field.Invalid(path, ipv6RangeStr, errs[1].Error())
+		return field.Invalid(path, ipv6RangeStr, errIPv6RangeNoNumber)
 	}
 	if num < 0 || num > 128 {
-		return field.Invalid(path, ipv6RangeStr, errs[2].Error())
+		return field.Invalid(path, ipv6RangeStr, errIPv6RangeBounds)
 	}
 	return nil
 }

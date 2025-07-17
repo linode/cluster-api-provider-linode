@@ -1194,7 +1194,7 @@ _Appears in:_
 
 
 VPCCreateOptionsIPv6 defines the options for creating an IPv6 range in a VPC.
-Its copied from linodego.VPCCreateOptionsIPv6 and should be kept in sync.
+It's copied from linodego.VPCCreateOptionsIPv6 and should be kept in sync.
 Values supported by the linode API should be used here.
 See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
 
@@ -1205,8 +1205,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ |  |  |  |
-| `allocation_class` _string_ |  |  |  |
+| `range` _string_ | Range is the IPv6 prefix for the VPC. |  |  |
+| `allocation_class` _string_ | IPv6 inventory from which the VPC prefix should be allocated. |  |  |
 
 
 #### VPCIPv4
