@@ -114,7 +114,9 @@ type LinodeMachineSpec struct {
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
-	// NetworkHelper is a boolean that indicates if the network helper should be used.
+	// NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.
+	// You can use this to enable/disable the network helper for a specific instance.
+	// For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking
 	// Defaults to true.
 	NetworkHelper *bool `json:"networkHelper,omitempty"`
 }
