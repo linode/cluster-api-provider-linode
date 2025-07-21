@@ -131,4 +131,3 @@ patches:
         path: /spec/template/spec/vpcRef
       - op: remove
         path: /spec/template/spec/firewallRef
-
