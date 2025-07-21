@@ -618,18 +618,35 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
-	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
-		instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
-		if err != nil {
-			logger.Error(err, "Failed to get default instance configuration")
-			return retryIfTransient(err, logger)
-		}
 
-		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Kernel: machineScope.LinodeMachine.Spec.Configuration.Kernel}); err != nil {
-			logger.Error(err, "Failed to update default instance configuration")
-			return retryIfTransient(err, logger)
+	configData := linodego.InstanceConfigUpdateOptions{
+		Helpers: &linodego.InstanceConfigHelpers{
+			Network: true,
+		},
+	}
+
+	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
+		configData.Kernel = machineScope.LinodeMachine.Spec.Configuration.Kernel
+	}
+
+	// For cases where the network helper is not enabled on account level, we can enable it per instance level
+	// Default is true, so we only need to update if it's explicitly set to false
+	if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
+		configData.Helpers = &linodego.InstanceConfigHelpers{
+			Network: *machineScope.LinodeMachine.Spec.NetworkHelper,
 		}
 	}
+
+	instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
+	if err != nil {
+		logger.Error(err, "Failed to get default instance configuration")
+		return retryIfTransient(err, logger)
+	}
+	if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, configData); err != nil {
+		logger.Error(err, "Failed to update default instance configuration")
+		return retryIfTransient(err, logger)
+	}
+
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
 		Type:   ConditionPreflightConfigured,
 		Status: metav1.ConditionTrue,

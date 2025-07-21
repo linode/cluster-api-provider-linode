@@ -111,6 +111,12 @@ type LinodeMachineSpec struct {
 	// VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL.
 	// +optional
 	VPCID *int `json:"vpcID,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	// NetworkHelper is a boolean that indicates if the network helper should be used.
+	// Defaults to true.
+	NetworkHelper *bool `json:"networkHelper,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance
