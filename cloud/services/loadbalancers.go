@@ -392,7 +392,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 	}
 
 	subnetID := 0
-	if clusterScope.LinodeCluster.Spec.VPCRef != nil {
+	if clusterScope.LinodeCluster.Spec.VPCRef != nil || clusterScope.LinodeCluster.Spec.VPCID != nil {
 		subnetID, err := getSubnetID(ctx, clusterScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to fetch Linode Subnet ID")
