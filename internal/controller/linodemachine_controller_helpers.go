@@ -491,7 +491,7 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 			if len(ipv6RangeConfig) > 0 {
 				interfaces[i].IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
 					Ranges:   ipv6RangeConfig,
-					IsPublic: netInterface.IPv6.IsPublic,
+					IsPublic: ptr.To(true),
 				}
 			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
@@ -561,10 +561,11 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID
+
 			if len(ipv6RangeConfig) > 0 {
 				interfaces[i].IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
 					Ranges:   ipv6RangeConfig,
-					IsPublic: netInterface.IPv6.IsPublic,
+					IsPublic: ptr.To(true),
 				}
 			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
