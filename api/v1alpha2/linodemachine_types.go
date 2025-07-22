@@ -111,6 +111,14 @@ type LinodeMachineSpec struct {
 	// VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL.
 	// +optional
 	VPCID *int `json:"vpcID,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	// NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.
+	// You can use this to enable/disable the network helper for a specific instance.
+	// For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking
+	// Defaults to true.
+	NetworkHelper *bool `json:"networkHelper,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance

@@ -229,6 +229,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			createInst := mockLinodeClient.EXPECT().
 				OnAfterResponse(gomock.Any()).
 				Return()
+			listInstConfs := mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(createInst).
+				Return([]linodego.InstanceConfig{{
+					ID: 1,
+				}}, nil)
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).
+				After(listInstConfs).
+				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
 				After(createInst).
@@ -374,6 +385,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			createInst := mockLinodeClient.EXPECT().
 				OnAfterResponse(gomock.Any()).
 				Return()
+			listInstConfs := mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(createInst).
+				Return([]linodego.InstanceConfig{{
+					ID: 1,
+				}}, nil)
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).
+				After(listInstConfs).
+				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
 				After(createInst).
@@ -441,6 +463,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
@@ -527,6 +560,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(listInst).
@@ -727,7 +771,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-			createInst := mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				CreateInstance(ctx, gomock.Any()).
 				After(getImage).
 				Return(&linodego.Instance{
@@ -739,17 +783,19 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient.EXPECT().
 				OnAfterResponse(gomock.Any()).
 				Return()
-			listInstConfs := mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
-				After(createInst).
 				Return([]linodego.InstanceConfig{{
+					ID: 1,
 					Devices: &linodego.InstanceConfigDeviceMap{
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 					},
-				}}, nil).MaxTimes(2)
+				}}, nil).MaxTimes(3)
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).Return(nil, nil)
 			getInstDisk := mockLinodeClient.EXPECT().
 				GetInstanceDisk(ctx, 123, 100).
-				After(listInstConfs).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
 			resizeInstDisk := mockLinodeClient.EXPECT().
 				ResizeInstanceDisk(ctx, 123, 100, 4262).
@@ -767,12 +813,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
 				After(createEtcdDisk).
 				Return([]linodego.InstanceConfig{{
+					ID: 1,
 					Devices: &linodego.InstanceConfigDeviceMap{
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 					},
-				}}, nil).MaxTimes(2)
+				}}, nil).MaxTimes(3)
 			createInstanceProfile := mockLinodeClient.EXPECT().
-				UpdateInstanceConfig(ctx, 123, 0, linodego.InstanceConfigUpdateOptions{
+				UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
 					Devices: &linodego.InstanceConfigDeviceMap{
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
@@ -890,10 +937,16 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
 				After(createInst).
 				Return([]linodego.InstanceConfig{{
+					ID: 1,
 					Devices: &linodego.InstanceConfigDeviceMap{
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 					},
 				}}, nil)
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).
+				After(listInstConfs).
+				Return(nil, nil)
 			getInstDisk := mockLinodeClient.EXPECT().
 				GetInstanceDisk(ctx, 123, 100).
 				After(listInstConfs).
@@ -933,6 +986,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
 			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightAdditionalDisksCreated)).To(BeFalse())
 
+			mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				Return([]linodego.InstanceConfig{{
+					ID: 1,
+					Devices: &linodego.InstanceConfigDeviceMap{
+						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
+					},
+				}}, nil).AnyTimes()
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).Return(nil, nil).AnyTimes()
 			getInst := mockLinodeClient.EXPECT().
 				GetInstance(ctx, 123).
 				After(createFailedEtcdDisk).
@@ -954,12 +1018,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
 				After(createEtcdDisk).
 				Return([]linodego.InstanceConfig{{
+					ID: 1,
 					Devices: &linodego.InstanceConfigDeviceMap{
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 					},
-				}}, nil)
+				}}, nil).AnyTimes()
 			createInstanceProfile := mockLinodeClient.EXPECT().
-				UpdateInstanceConfig(ctx, 123, 0, linodego.InstanceConfigUpdateOptions{
+				UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
 					Devices: &linodego.InstanceConfigDeviceMap{
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
@@ -1135,6 +1200,17 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
@@ -2435,6 +2511,17 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
@@ -2600,6 +2687,10 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 					Devices: &linodego.InstanceConfigDeviceMap{},
 				},
 			}, nil).
+			AnyTimes()
+		mockLinodeClient.EXPECT().
+			UpdateInstanceConfig(gomock.Any(), 12345, 1, gomock.Any()).
+			Return(nil, nil).
 			AnyTimes()
 		mockLinodeClient.EXPECT().
 			GetInstanceIPAddresses(gomock.Any(), gomock.Any()).

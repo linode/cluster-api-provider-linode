@@ -264,6 +264,16 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              networkHelper:
+                description: |-
+                  NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.
+                  You can use this to enable/disable the network helper for a specific instance.
+                  For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking
+                  Defaults to true.
+                type: boolean
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
               osDisk:
                 description: |-
                   OSDisk is configuration for the root disk that includes the OS,

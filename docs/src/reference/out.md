@@ -621,6 +621,7 @@ _Appears in:_
 | `firewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall. |  |  |
 | `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | VPCRef is a reference to a LinodeVPC resource. If specified, this takes precedence over<br />the cluster-level VPC configuration for multi-region support. |  |  |
 | `vpcID` _integer_ | VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
+| `networkHelper` _boolean_ | NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.<br />You can use this to enable/disable the network helper for a specific instance.<br />For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking<br />Defaults to true. |  |  |
 
 
 #### LinodeMachineStatus
