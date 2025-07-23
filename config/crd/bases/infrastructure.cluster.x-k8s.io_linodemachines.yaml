@@ -163,15 +163,6 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              enableSLAAC:
-                description: |-
-                  EnableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.
-                  This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.
-                  Defaults to false.
-                type: boolean
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               firewallID:
                 type: integer
                 x-kubernetes-validations:
@@ -273,11 +264,40 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
-              isPublicIPv6:
+              ipv6Options:
                 description: |-
-                  IsPublicIPv6 is an option to enable public IPv6 for the instance.
-                  If set to true, the instance will have a publicly routable IPv6 range.
-                type: boolean
+                  IPv6Options defines the IPv6 options for the instance.
+                  If not specified, IPv6 ranges won't be allocated to instance.
+                properties:
+                  enableRanges:
+                    description: |-
+                      EnableRanges is an option to enable IPv6 ranges for the instance.
+                      If set to true, the instance will have a range of IPv6 addresses.
+                      This is useful for instances that require multiple IPv6 addresses.
+                      Defaults to false.
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
+                  enableSLAAC:
+                    description: |-
+                      EnableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.
+                      This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.
+                      Defaults to false.
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
+                  isPublicIPv6:
+                    description: |-
+                      IsPublicIPv6 is an option to enable public IPv6 for the instance.
+                      If set to true, the instance will have a publicly routable IPv6 range.
+                      Defaults to false.
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
+                type: object
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
