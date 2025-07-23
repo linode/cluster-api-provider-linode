@@ -463,12 +463,12 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 
 	subnetName := machineScope.LinodeCluster.Spec.Network.SubnetName // name of subnet to use
 
-	var ipv6RangeConfig []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range
+	var ipv6Config *linodego.InstanceConfigInterfaceCreateOptionsIPv6
 	if subnetName != "" {
 		for _, subnet := range linodeVPC.Spec.Subnets {
 			if subnet.Label == subnetName {
 				subnetID = subnet.SubnetID
-				ipv6RangeConfig = machineIPv6RangeConfig(len(subnet.IPv6))
+				ipv6Config = getMachineIPv6Config(machineScope, len(subnet.IPv6))
 				break
 			}
 		}
@@ -478,7 +478,7 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		}
 	} else {
 		subnetID = linodeVPC.Spec.Subnets[0].SubnetID // get first subnet if nothing specified
-		ipv6RangeConfig = machineIPv6RangeConfig(len(linodeVPC.Spec.Subnets[0].IPv6))
+		ipv6Config = getMachineIPv6Config(machineScope, len(linodeVPC.Spec.Subnets[0].IPv6))
 	}
 
 	if subnetID == 0 {
@@ -488,10 +488,9 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID
-			if len(ipv6RangeConfig) > 0 {
-				interfaces[i].IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
-					Ranges: ipv6RangeConfig,
-				}
+			// If IPv6 range config is not empty, add it to the interface configuration
+			if ipv6Config != nil {
+				interfaces[i].IPv6 = ipv6Config
 			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
 		}
@@ -506,11 +505,9 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		},
 	}
 
-	// If IPv6 range config is not empty, add it to the interface configuration
-	if len(ipv6RangeConfig) > 0 {
-		vpcIntfCreateOpts.IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
-			Ranges: ipv6RangeConfig,
-		}
+	// If IPv6 config is not empty, add it to the interface configuration
+	if ipv6Config != nil {
+		vpcIntfCreateOpts.IPv6 = ipv6Config
 	}
 
 	return vpcIntfCreateOpts, nil
@@ -538,12 +535,12 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	}
 
 	// If subnet name specified, find matching subnet; otherwise use first subnet
-	var ipv6RangeConfig []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range
+	var ipv6Config *linodego.InstanceConfigInterfaceCreateOptionsIPv6
 	if subnetName != "" {
 		for _, subnet := range vpc.Subnets {
 			if subnet.Label == subnetName {
 				subnetID = subnet.ID
-				ipv6RangeConfig = machineIPv6RangeConfig(len(subnet.IPv6))
+				ipv6Config = getMachineIPv6Config(machineScope, len(subnet.IPv6))
 				break
 			}
 		}
@@ -552,17 +549,15 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 		}
 	} else {
 		subnetID = vpc.Subnets[0].ID
-		ipv6RangeConfig = machineIPv6RangeConfig(len(vpc.Subnets[0].IPv6))
+		ipv6Config = getMachineIPv6Config(machineScope, len(vpc.Subnets[0].IPv6))
 	}
 
 	// Check if a VPC interface already exists
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID
-			if len(ipv6RangeConfig) > 0 {
-				interfaces[i].IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
-					Ranges: ipv6RangeConfig,
-				}
+			if ipv6Config != nil {
+				interfaces[i].IPv6 = ipv6Config
 			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
 		}
@@ -579,27 +574,45 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	}
 
 	// If IPv6 range config is not empty, add it to the interface configuration
-	if len(ipv6RangeConfig) > 0 {
-		vpcIntfCreateOpts.IPv6 = &linodego.InstanceConfigInterfaceCreateOptionsIPv6{
-			Ranges: ipv6RangeConfig,
-		}
+	if ipv6Config != nil {
+		vpcIntfCreateOpts.IPv6 = ipv6Config
 	}
 
 	return vpcIntfCreateOpts, nil
 }
 
-// machineIPv6RangeConfig returns the IPv6 range configuration if subnet has IPv6 ranges.
+// getMachineIPv6Config returns the IPv6 configuration if subnet has IPv6 ranges.
 // For now, we support only a single IPv6 range for machine per subnet.
-// If this changes, we may need to adjust this logic.
-func machineIPv6RangeConfig(numIPv6RangesInSubnet int) []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range {
+// If SLAAC is enabled, we create an IPv6 configuration with the SLAAC range.
+// If SLAAC is not enabled, we create an IPv6 configuration with the default range.
+// If no IPv6 ranges are available in the subnet, it returns nil.
+// If `IsPublicIPv6` is set, it will be used to determine if the IPv6 range should be publicly routable or not.
+func getMachineIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubnet int) *linodego.InstanceConfigInterfaceCreateOptionsIPv6 {
 	if numIPv6RangesInSubnet == 0 {
-		return nil // No IPv6 ranges available in subnet, return empty slice
+		return nil // No IPv6 ranges available in subnet, return nil
 	}
-	return []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
-		{
-			Range: ptr.To(defaultNodeIPv6CIDRRange),
-		},
+
+	intfOpts := &linodego.InstanceConfigInterfaceCreateOptionsIPv6{}
+	if machineScope.LinodeMachine.Spec.IsPublicIPv6 != nil {
+		// Set the public IPv6 flag based on the IsPublicIPv6 specification.
+		intfOpts.IsPublic = machineScope.LinodeMachine.Spec.IsPublicIPv6
 	}
+
+	if machineScope.LinodeMachine.Spec.EnableSLAAC != nil && *machineScope.LinodeMachine.Spec.EnableSLAAC {
+		intfOpts.SLAAC = []linodego.InstanceConfigInterfaceCreateOptionsIPv6SLAAC{
+			{
+				Range: defaultNodeIPv6CIDRRange,
+			},
+		}
+	} else {
+		intfOpts.Ranges = []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
+			{
+				Range: ptr.To(defaultNodeIPv6CIDRRange),
+			},
+		}
+	}
+
+	return intfOpts
 }
 
 func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec, machineTags []string) *linodego.InstanceCreateOptions {

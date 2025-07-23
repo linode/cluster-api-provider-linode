@@ -113,6 +113,18 @@ type LinodeMachineSpec struct {
 	VPCID *int `json:"vpcID,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// EnableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.
+	// This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.
+	// Defaults to false.
+	// +optional
+	EnableSLAAC *bool `json:"enableSLAAC,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// IsPublicIPv6 is an option to enable public IPv6 for the instance.
+	// If set to true, the instance will have a publicly routable IPv6 range.
+	IsPublicIPv6 *bool `json:"isPublicIPv6,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	// NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.
 	// You can use this to enable/disable the network helper for a specific instance.
