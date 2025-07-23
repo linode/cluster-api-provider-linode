@@ -878,6 +878,16 @@ func (in *LinodeMachineSpec) DeepCopyInto(out *LinodeMachineSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	if in.EnableSLAAC != nil {
+		in, out := &in.EnableSLAAC, &out.EnableSLAAC
+		*out = new(bool)
+		**out = **in
+	}
+	if in.IsPublicIPv6 != nil {
+		in, out := &in.IsPublicIPv6, &out.IsPublicIPv6
+		*out = new(bool)
+		**out = **in
+	}
 	if in.NetworkHelper != nil {
 		in, out := &in.NetworkHelper, &out.NetworkHelper
 		*out = new(bool)

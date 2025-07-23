@@ -409,7 +409,9 @@ func validateInterfaceExpectations(
 	if expectInterface {
 		require.NotNil(t, iface)
 		require.Equal(t, linodego.InterfacePurposeVPC, iface.Purpose)
-		if iface.IPv6 != nil {
+		if iface.IPv6 != nil && iface.IPv6.SLAAC != nil {
+			require.Equal(t, defaultNodeIPv6CIDRRange, iface.IPv6.SLAAC[0].Range)
+		} else if iface.IPv6 != nil && iface.IPv6.Ranges != nil {
 			require.Equal(t, defaultNodeIPv6CIDRRange, *iface.IPv6.Ranges[0].Range)
 		}
 		require.True(t, iface.Primary)
@@ -477,6 +479,35 @@ func TestGetVPCInterfaceConfigFromDirectID(t *testing.T) {
 						{
 							ID:    789,
 							Label: "subnet-2",
+						},
+					},
+				}, nil)
+			},
+			expectErr:       false,
+			expectInterface: true,
+			expectSubnetID:  789, // Matching subnet ID
+		},
+		{
+			name:       "Success - Valid VPC with subnets and ipv6 ranges, specific subnet name",
+			vpcID:      123,
+			interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
+			subnetName: "subnet-2",
+			mockSetup: func(mockLinodeClient *mock.MockLinodeClient) {
+				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+					ID: 123,
+					Subnets: []linodego.VPCSubnet{
+						{
+							ID:    456,
+							Label: "subnet-1",
+						},
+						{
+							ID:    789,
+							Label: "subnet-2",
+							IPv6: []linodego.VPCIPv6Range{
+								{
+									Range: "2001:0db8::/56",
+								},
+							},
 						},
 					},
 				}, nil)
@@ -1176,7 +1207,10 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 					},
-					Spec: infrav1alpha2.LinodeMachineSpec{},
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						EnableSLAAC:  ptr.To(true),
+						IsPublicIPv6: ptr.To(true),
+					},
 				},
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
