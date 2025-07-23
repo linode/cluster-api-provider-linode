@@ -582,29 +582,30 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 }
 
 // getMachineIPv6Config returns the IPv6 configuration if subnet has IPv6 ranges.
-// For now, we support only a single IPv6 range for machine per subnet.
-// If SLAAC is enabled, we create an IPv6 configuration with the SLAAC range.
-// If SLAAC is not enabled, we create an IPv6 configuration with the default range.
-// If no IPv6 ranges are available in the subnet, it returns nil.
+// It checks the LinodeMachine's IPv6Options for SLAAC and Ranges settings.
+// If `EnableSLAAC` is set, it will enable SLAAC with the default IPv6 CIDR range.
+// If `EnableRanges` is set, it will enable IPv6 ranges with the default IPv6 CIDR range.
 // If `IsPublicIPv6` is set, it will be used to determine if the IPv6 range should be publicly routable or not.
 func getMachineIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubnet int) *linodego.InstanceConfigInterfaceCreateOptionsIPv6 {
-	if numIPv6RangesInSubnet == 0 {
-		return nil // No IPv6 ranges available in subnet, return nil
+	// If there are no IPv6 ranges in the subnet or if IPv6 options are not specified, return nil.
+	if numIPv6RangesInSubnet == 0 || machineScope.LinodeMachine.Spec.IPv6Options == nil {
+		return nil
 	}
 
 	intfOpts := &linodego.InstanceConfigInterfaceCreateOptionsIPv6{}
-	if machineScope.LinodeMachine.Spec.IsPublicIPv6 != nil {
+	if machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6 != nil {
 		// Set the public IPv6 flag based on the IsPublicIPv6 specification.
-		intfOpts.IsPublic = machineScope.LinodeMachine.Spec.IsPublicIPv6
+		intfOpts.IsPublic = machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6
 	}
 
-	if machineScope.LinodeMachine.Spec.EnableSLAAC != nil && *machineScope.LinodeMachine.Spec.EnableSLAAC {
+	if machineScope.LinodeMachine.Spec.IPv6Options.EnableSLAAC != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableSLAAC {
 		intfOpts.SLAAC = []linodego.InstanceConfigInterfaceCreateOptionsIPv6SLAAC{
 			{
 				Range: defaultNodeIPv6CIDRRange,
 			},
 		}
-	} else {
+	}
+	if machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges {
 		intfOpts.Ranges = []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
 			{
 				Range: ptr.To(defaultNodeIPv6CIDRRange),

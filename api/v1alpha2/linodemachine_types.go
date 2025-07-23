@@ -113,16 +113,10 @@ type LinodeMachineSpec struct {
 	VPCID *int `json:"vpcID,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// EnableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.
-	// This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.
-	// Defaults to false.
+	// IPv6Options defines the IPv6 options for the instance.
+	// If not specified, IPv6 ranges won't be allocated to instance.
 	// +optional
-	EnableSLAAC *bool `json:"enableSLAAC,omitempty"`
-
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// IsPublicIPv6 is an option to enable public IPv6 for the instance.
-	// If set to true, the instance will have a publicly routable IPv6 range.
-	IsPublicIPv6 *bool `json:"isPublicIPv6,omitempty"`
+	IPv6Options *IPv6CreateOptions `json:"ipv6Options,omitempty"`
 
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
@@ -131,6 +125,31 @@ type LinodeMachineSpec struct {
 	// For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking
 	// Defaults to true.
 	NetworkHelper *bool `json:"networkHelper,omitempty"`
+}
+
+// IPv6CreateOptions defines the IPv6 options for the instance.
+type IPv6CreateOptions struct {
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// EnableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.
+	// This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.
+	// Defaults to false.
+	// +optional
+	EnableSLAAC *bool `json:"enableSLAAC,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// EnableRanges is an option to enable IPv6 ranges for the instance.
+	// If set to true, the instance will have a range of IPv6 addresses.
+	// This is useful for instances that require multiple IPv6 addresses.
+	// Defaults to false.
+	// +optional
+	EnableRanges *bool `json:"enableRanges,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// IsPublicIPv6 is an option to enable public IPv6 for the instance.
+	// If set to true, the instance will have a publicly routable IPv6 range.
+	// Defaults to false.
+	// +optional
+	IsPublicIPv6 *bool `json:"isPublicIPv6,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance

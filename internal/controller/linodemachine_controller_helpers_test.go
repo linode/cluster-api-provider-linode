@@ -1208,8 +1208,10 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						EnableSLAAC:  ptr.To(true),
-						IsPublicIPv6: ptr.To(true),
+						IPv6Options: &infrav1alpha2.IPv6CreateOptions{
+							EnableSLAAC:  ptr.To(true),
+							IsPublicIPv6: ptr.To(true),
+						},
 					},
 				},
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
