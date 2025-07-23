@@ -44,9 +44,8 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 
 	createConfig.Label = vpcScope.LinodeVPC.Name
 	listFilter := util.Filter{
-		ID:    vpcScope.LinodeVPC.Spec.VPCID,
-		Label: createConfig.Label,
-		Tags:  nil,
+		ID:   vpcScope.LinodeVPC.Spec.VPCID,
+		Tags: nil,
 	}
 	filter, err := listFilter.String()
 	if err != nil {
@@ -78,23 +77,35 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *linodego.VPC) error {
 	setVPCFields(&vpcScope.LinodeVPC.Spec, vpc)
 
-	// build a map of existing subnets to easily check for existence
-	existingSubnets := make(map[string]int, len(vpc.Subnets))
-	existingSubnetsIPv6 := make(map[string][]linodego.VPCIPv6Range, len(vpc.Subnets))
+	// Build a map of VPC subnets by both label and ID. We check for
+	// the subnet ID but fallback to the label because the ID is not guaranteed
+	// to be set until we've processed the subnet at least once.
+	type SubnetConfig struct {
+		ID    int
+		Label string
+		IPv6  []linodego.VPCIPv6Range
+	}
+	subnetsByLabel := make(map[string]SubnetConfig, len(vpc.Subnets))
+	subnetsById := make(map[int]SubnetConfig, len(vpc.Subnets))
 	for _, subnet := range vpc.Subnets {
-		existingSubnets[subnet.Label] = subnet.ID
-		existingSubnetsIPv6[subnet.Label] = subnet.IPv6
+		config := SubnetConfig{subnet.ID, subnet.Label, subnet.IPv6}
+		subnetsByLabel[subnet.Label], subnetsById[subnet.ID] = config, config
 	}
 
 	// adopt or create subnets
 	for idx, subnet := range vpcScope.LinodeVPC.Spec.Subnets {
 		if subnet.SubnetID != 0 {
-			continue
-		}
-		if id, ok := existingSubnets[subnet.Label]; ok {
-			vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = id
-			vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6 = existingSubnetsIPv6[subnet.Label]
+			if config, ok := subnetsById[subnet.SubnetID]; ok {
+				vpcScope.LinodeVPC.Spec.Subnets[idx].Label = config.Label
+				vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6 = config.IPv6
+			}
+		} else if config, ok := subnetsByLabel[subnet.Label]; ok {
+			// Handle subnets that exist in the Linode API but have not had their
+			// ID set on the LinodeVPC yet.
+			vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = config.ID
+			vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6 = config.IPv6
 		} else {
+			// Handle subnets that we need to create in the Linode API.
 			ipv6 := []linodego.VPCSubnetCreateOptionsIPv6{}
 			for _, ipv6Range := range subnet.IPv6Range {
 				ipv6 = append(ipv6, linodego.VPCSubnetCreateOptionsIPv6{

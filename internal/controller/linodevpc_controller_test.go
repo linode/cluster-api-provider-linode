@@ -510,3 +510,78 @@ var _ = Describe("adopt existing VPC", Label("vpc", "lifecycle"), func() {
 		),
 	)
 })
+
+var _ = Describe("name changing VPC", Label("vpc", "lifecycle"), func() {
+	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
+
+	var reconciler LinodeVPCReconciler
+	var vpcScope scope.VPCScope
+	var linodeVPC infrav1alpha2.LinodeVPC
+
+	suite.BeforeEach(func(ctx context.Context, mck Mock) {
+		vpcScope.Client = k8sClient
+		linodeVPC = infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "changing-vpc-",
+				Namespace:    "default",
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "us-east",
+				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+					{Label: "changing-subnet", SubnetID: 1, IPv4: "10.0.0.0/8"},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
+
+		vpcScope.LinodeClient = mck.LinodeClient
+
+		reconciler = LinodeVPCReconciler{
+			Recorder: mck.Recorder(),
+		}
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
+		vpcScope.LinodeVPC = &linodeVPC
+
+		patchHelper, err := patch.NewHelper(&linodeVPC, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+		vpcScope.PatchHelper = patchHelper
+	})
+
+	AfterEach(func(ctx SpecContext) {
+		err := k8sClient.Delete(ctx, &linodeVPC)
+		if err != nil {
+			Expect(apierrors.IsNotFound(err)).To(BeTrue())
+		}
+	})
+
+	suite.Run(
+		Path(
+			Call("get existing VPC and adapt to name changes", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{
+					{
+						ID:     1,
+						Label:  "changed-vpc-",
+						Region: "us-east",
+						Subnets: []linodego.VPCSubnet{
+							{
+								ID:    1,
+								Label: "changed-subnet-",
+								IPv4:  "10.0.0.0/8",
+							},
+						},
+					},
+				}, nil)
+			}),
+			Result("reconcile VPC with changed name and create success", func(ctx context.Context, mck Mock) {
+				_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
+				Expect(len(linodeVPC.Spec.Subnets)).To(Equal(1))
+				Expect(linodeVPC.Spec.Subnets[0].SubnetID).To(Equal(1))
+				Expect(linodeVPC.Spec.Subnets[0].Label).To(Equal("changed-subnet-"))
+			}),
+		),
+	)
+})
