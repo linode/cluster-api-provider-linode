@@ -489,7 +489,7 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID
 			// If IPv6 range config is not empty, add it to the interface configuration
-			if ipv6Config != nil {
+			if !isIPv6ConfigEmpty(ipv6Config) {
 				interfaces[i].IPv6 = ipv6Config
 			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
@@ -506,7 +506,7 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 	}
 
 	// If IPv6 config is not empty, add it to the interface configuration
-	if ipv6Config != nil {
+	if !isIPv6ConfigEmpty(ipv6Config) {
 		vpcIntfCreateOpts.IPv6 = ipv6Config
 	}
 
@@ -556,7 +556,7 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	for i, netInterface := range interfaces {
 		if netInterface.Purpose == linodego.InterfacePurposeVPC {
 			interfaces[i].SubnetID = &subnetID
-			if ipv6Config != nil {
+			if !isIPv6ConfigEmpty(ipv6Config) {
 				interfaces[i].IPv6 = ipv6Config
 			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
@@ -574,25 +574,34 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	}
 
 	// If IPv6 range config is not empty, add it to the interface configuration
-	if ipv6Config != nil {
+	if !isIPv6ConfigEmpty(ipv6Config) {
 		vpcIntfCreateOpts.IPv6 = ipv6Config
 	}
 
 	return vpcIntfCreateOpts, nil
 }
 
-// getMachineIPv6Config returns the IPv6 configuration if subnet has IPv6 ranges.
+// isIPv6ConfigEmpty checks if the IPv6 configuration is empty.
+func isIPv6ConfigEmpty(opts *linodego.InstanceConfigInterfaceCreateOptionsIPv6) bool {
+	return opts == nil ||
+		len(opts.SLAAC) == 0 &&
+			len(opts.Ranges) == 0 &&
+			(opts.IsPublic == nil)
+}
+
+// getMachineIPv6Config returns the IPv6 configuration for a LinodeMachine.
 // It checks the LinodeMachine's IPv6Options for SLAAC and Ranges settings.
 // If `EnableSLAAC` is set, it will enable SLAAC with the default IPv6 CIDR range.
 // If `EnableRanges` is set, it will enable IPv6 ranges with the default IPv6 CIDR range.
 // If `IsPublicIPv6` is set, it will be used to determine if the IPv6 range should be publicly routable or not.
 func getMachineIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubnet int) *linodego.InstanceConfigInterfaceCreateOptionsIPv6 {
+	intfOpts := &linodego.InstanceConfigInterfaceCreateOptionsIPv6{}
+
 	// If there are no IPv6 ranges in the subnet or if IPv6 options are not specified, return nil.
 	if numIPv6RangesInSubnet == 0 || machineScope.LinodeMachine.Spec.IPv6Options == nil {
-		return nil
+		return intfOpts
 	}
 
-	intfOpts := &linodego.InstanceConfigInterfaceCreateOptionsIPv6{}
 	if machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6 != nil {
 		// Set the public IPv6 flag based on the IsPublicIPv6 specification.
 		intfOpts.IsPublic = machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6
