@@ -1,12 +1,20 @@
 #!/bin/bash
 set -euo pipefail
+
 DEFAULT_CONTAINERD_VERSION=1.7.24
 DEFAULT_CNI_PLUGIN_VERSIONS=1.6.2
 CONTAINERD_VERSION="${CONTAINERD_VERSION:=$DEFAULT_CONTAINERD_VERSION}"
 CNI_PLUGIN_VERSIONS="${CNI_PLUGIN_VERSIONS:=$DEFAULT_CNI_PLUGIN_VERSIONS}"
+PATCH_VERSION=${1#[v]}
+VERSION=${PATCH_VERSION%.*}
 
 # setup containerd config
-mkdir -p -m 755 /etc/containerd
+if ! mkdir -p /etc/containerd ; then
+    echo "Error: Failed to create directory /etc/containerd" >&2
+    exit 1
+fi
+chmod 0755 /etc/containerd
+
 cat > /etc/containerd/config.toml << EOF
 version = 2
 imports = ["/etc/containerd/conf.d/*.toml"]
@@ -25,7 +33,12 @@ EOF
 
 chmod 644 /etc/containerd/config.toml
 
-mkdir -p -m 755 /etc/modules-load.d
+if ! mkdir -p /etc/modules-load.d ; then
+    echo "Error: Failed to create directory /etc/modules-load.d" >&2
+    exit 1
+fi
+chmod 0755 /etc/modules-load.d
+
 cat > /etc/modules-load.d/k8s.conf << EOF
 overlay
 br_netfilter
@@ -33,7 +46,12 @@ EOF
 
 chmod 644 /etc/modules-load.d/k8s.conf
 
-mkdir -p -m 755 /etc/sysctl.d
+if ! mkdir -p /etc/sysctl.d ; then
+    echo "Error: Failed to create directory /etc/sysctl.d" >&2
+    exit 1
+fi
+chmod 0755 /etc/sysctl.d
+
 cat > /etc/sysctl.d/k8s.conf << EOF
 net.bridge.bridge-nf-call-iptables  = 1
 net.bridge.bridge-nf-call-ip6tables = 1
@@ -46,6 +64,20 @@ chmod 644 /etc/sysctl.d/k8s.conf
 modprobe overlay
 modprobe br_netfilter
 sysctl --system
+
+if ! mkdir -p /etc/systemd/system.conf.d ; then
+    echo "Error: Failed to create directory /etc/systemd/system.conf.d" >&2
+    exit 1
+fi
+chmod 0755 /etc/systemd/system.conf.d
+
+cat > /etc/systemd/system.conf.d/override.conf << EOF
+[Manager]
+# Set sane defaults for the NOFILE limits to support high-performance workloads:
+# - Soft limit (65535): Suitable for most containerized applications.
+# - Hard limit (1048576): Allows scaling for high-demand scenarios.
+DefaultLimitNOFILE=65535:1048576
+EOF
 
 # containerd service
 cat > /usr/lib/systemd/system/containerd.service << EOF
@@ -68,6 +100,7 @@ RestartSec=5
 # in the kernel. We recommend using cgroups to do container-local accounting.
 LimitNPROC=infinity
 LimitCORE=infinity
+LimitNOFILE=infinity
 
 # Comment TasksMax if your systemd version does not supports it.
 # Only systemd 226 and above support this version.
@@ -96,7 +129,12 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-mkdir -p /usr/lib/systemd/system/kubelet.service.d
+if ! mkdir -p /usr/lib/systemd/system/kubelet.service.d ; then
+    echo "Error: Failed to create directory /usr/lib/systemd/system/kubelet.service.d" >&2
+    exit 1
+fi
+chmod 0755 /usr/lib/systemd/system/kubelet.service.d
+
 cat > /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf << EOF
 # Note: This dropin only works with kubeadm and kubelet v1.11+
 [Service]
@@ -116,36 +154,40 @@ swapoff -a
 # check for required tools and only install missing tools
 REQUIRED_TOOLS=(runc socat conntrack ethtool iptables)
 INSTALL_TOOLS=()
-for tool in ${REQUIRED_TOOLS[*]}; do
+for tool in "${REQUIRED_TOOLS[@]}"; do
     echo "checking for ${tool}"
-    if [ ! -x "$(command -v ${tool})" ]; then
+    if [ ! -x "$(command -v "${tool}")" ]; then
         echo "${tool} is missing"
-        INSTALL_TOOLS+=(${tool})
+        INSTALL_TOOLS+=("${tool}")
     fi
 done
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y ${INSTALL_TOOLS[*]}
+if [ "${#INSTALL_TOOLS[@]}" -gt 0 ]; then
+    apt-get install -y "${INSTALL_TOOLS[@]}"
+fi
 
 # install containerd
 curl -L "https://github.com/containerd/containerd/releases/download/v${CONTAINERD_VERSION}/containerd-${CONTAINERD_VERSION}-linux-amd64.tar.gz" | tar -C /usr/local -xz
 
 # install cni plugins
-mkdir -p /opt/cni/bin
+if ! mkdir -p /opt/cni/bin ; then
+    echo "Error: Failed to create directory /opt/cni/bin" >&2
+    exit 1
+fi
+
 curl -L "https://github.com/containernetworking/plugins/releases/download/v${CNI_PLUGIN_VERSIONS}/cni-plugins-linux-amd64-v${CNI_PLUGIN_VERSIONS}.tgz" | tar -C /opt/cni/bin -xz
 chown -R root:root /opt/cni
-
-PATCH_VERSION=${1#[v]}
-VERSION=${PATCH_VERSION%.*}
 
 # install crictl
 curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${VERSION}.0/crictl-v${VERSION}.0-linux-amd64.tar.gz" | tar -C /usr/local/bin -xz
 
 # install kubeadm,kubelet,kubectl
 cd /usr/local/bin
-curl -L --remote-name-all https://dl.k8s.io/release/$1/bin/linux/amd64/{kubeadm,kubelet}
+curl -L --remote-name-all "https://dl.k8s.io/release/$1/bin/linux/amd64/{kubeadm,kubelet}"
 curl -LO "https://dl.k8s.io/release/v${VERSION}.0/bin/linux/amd64/kubectl"
 chmod +x {kubeadm,kubelet,kubectl}
+
 # reload systemd to pick up containerd & kubelet settings
 systemctl daemon-reload
 systemctl enable --now containerd kubelet
