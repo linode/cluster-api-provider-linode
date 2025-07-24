@@ -33,6 +33,10 @@ type LinodeMachineTemplateStatus struct {
 	// +optional
 	Tags []string `json:"tags,omitempty"`
 
+	// Firewall ID that is currently applied to the LinodeMachineTemplate.
+	// +optional
+	FirewallID int `json:"firewallID,omitempty"`
+
 	// Conditions represent the latest available observations of a LinodeMachineTemplate's current state.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`

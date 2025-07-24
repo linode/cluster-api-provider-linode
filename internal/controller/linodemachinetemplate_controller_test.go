@@ -78,6 +78,35 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				Tags: []string{"test-tag1"},
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-template-with-firewall-id",
+				Namespace: "default",
+			},
+			Spec: infrav1alpha2.LinodeMachineTemplateSpec{
+				Template: infrav1alpha2.LinodeMachineTemplateResource{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						FirewallID: 12345,
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-template-no-firewall-change",
+				Namespace: "default",
+			},
+			Spec: infrav1alpha2.LinodeMachineTemplateSpec{
+				Template: infrav1alpha2.LinodeMachineTemplateResource{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						FirewallID: 67890,
+					},
+				},
+			},
+			Status: infrav1alpha2.LinodeMachineTemplateStatus{
+				FirewallID: 67890,
+			},
+		},
 	}
 
 	linodeMachines := []infrav1alpha2.LinodeMachine{
@@ -96,6 +125,24 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				Namespace: "default",
 				Annotations: map[string]string{
 					clusterv1.TemplateClonedFromNameAnnotation: "machine-template-no-tags-change",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-3",
+				Namespace: "default",
+				Annotations: map[string]string{
+					clusterv1.TemplateClonedFromNameAnnotation: "machine-template-with-firewall-id",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-4",
+				Namespace: "default",
+				Annotations: map[string]string{
+					clusterv1.TemplateClonedFromNameAnnotation: "machine-template-no-firewall-change",
 				},
 			},
 		},
@@ -196,6 +243,56 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res).To(Equal(ctrl.Result{}))
 				Expect(mck.Logs()).NotTo(ContainSubstring("Patched LinodeMachine with new tags"))
+			}),
+		),
+		Path(
+			Call("machine template update firewall ID", func(ctx context.Context, mck Mock) {}),
+			Result("success", func(ctx context.Context, mck Mock) {
+				lmtScope, _ := scope.NewMachineTemplateScope(
+					ctx,
+					scope.MachineTemplateScopeParams{
+						Client:                k8sClient,
+						LinodeMachineTemplate: &machineTemplates[3],
+					},
+				)
+				reconciler = LinodeMachineTemplateReconciler{
+					Logger: mck.Logger(),
+					Client: k8sClient,
+				}
+
+				res, err := reconciler.reconcile(ctx, lmtScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res).To(Equal(ctrl.Result{}))
+				Expect(mck.Logs()).To(ContainSubstring("Patched LinodeMachine with new firewall ID"))
+
+				// get the updated machineTemplate
+				updatedMachineTemplate := &infrav1alpha2.LinodeMachineTemplate{}
+				Expect(k8sClient.Get(ctx, client.ObjectKey{
+					Name:      machineTemplates[3].Name,
+					Namespace: machineTemplates[3].Namespace,
+				}, updatedMachineTemplate)).To(Succeed())
+				Expect(updatedMachineTemplate.Status.FirewallID).To(Equal(updatedMachineTemplate.Spec.Template.Spec.FirewallID))
+			}),
+		),
+		Path(
+			Call("machine template no firewall ID update", func(ctx context.Context, mck Mock) {}),
+			Result("success", func(ctx context.Context, mck Mock) {
+				patchHelper, err := patch.NewHelper(&machineTemplates[4], k8sClient)
+				Expect(err).NotTo(HaveOccurred())
+
+				lmtScope = scope.MachineTemplateScope{
+					PatchHelper:           patchHelper,
+					LinodeMachineTemplate: &machineTemplates[4],
+				}
+				reconciler = LinodeMachineTemplateReconciler{
+					Logger: mck.Logger(),
+					Client: k8sClient,
+				}
+
+				res, err := reconciler.reconcile(ctx, &lmtScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res).To(Equal(ctrl.Result{}))
+				Expect(mck.Logs()).NotTo(ContainSubstring("Patched LinodeMachine with new firewall ID"))
 			}),
 		),
 	),

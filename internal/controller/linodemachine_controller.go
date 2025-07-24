@@ -717,6 +717,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 	return ctrl.Result{}, nil
 }
 
+//nolint:cyclop // making it simpler complicates things more
 func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	logger.Info("updating machine")
 	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
@@ -772,6 +773,11 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		}
 	}
 
+	res, err := r.reconcileFirewallID(ctx, logger, machineScope, instanceID)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	// Clean up bootstrap data after instance creation.
 	if linodeInstance.Status == linodego.InstanceRunning && machineScope.Machine.Status.Phase == "Running" {
 		if err := deleteBootstrapData(ctx, machineScope); err != nil {
@@ -779,6 +785,41 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		}
 	}
 
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
+	// get the instance's firewalls
+	firewalls, err := machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
+	if err != nil {
+		logger.Error(err, "Failed to list firewalls for Linode instance")
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+	}
+
+	attachedFirewalls := make([]int, 0, len(firewalls))
+	for _, fw := range firewalls {
+		attachedFirewalls = append(attachedFirewalls, fw.ID)
+	}
+
+	var desiredFirewalls []int
+	if machineScope.LinodeMachine.Spec.FirewallID != 0 {
+		desiredFirewalls = []int{machineScope.LinodeMachine.Spec.FirewallID}
+	} else {
+		desiredFirewalls = []int{}
+	}
+
+	// update the firewallID if needed.
+	if !slices.Equal(attachedFirewalls, desiredFirewalls) {
+		_, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
+			linodego.InstanceFirewallUpdateOptions{
+				FirewallIDs: desiredFirewalls,
+			},
+		)
+		if err != nil {
+			logger.Error(err, "Failed to update firewalls for Linode instance")
+			return ctrl.Result{}, err
+		}
+	}
 	return ctrl.Result{}, nil
 }
 

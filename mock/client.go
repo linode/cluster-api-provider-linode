@@ -696,6 +696,21 @@ func (mr *MockLinodeClientMockRecorder) ListInstanceConfigs(ctx, linodeID, opts 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceConfigs", reflect.TypeOf((*MockLinodeClient)(nil).ListInstanceConfigs), ctx, linodeID, opts)
 }
 
+// ListInstanceFirewalls mocks base method.
+func (m *MockLinodeClient) ListInstanceFirewalls(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.Firewall, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInstanceFirewalls", ctx, linodeID, opts)
+	ret0, _ := ret[0].([]linodego.Firewall)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInstanceFirewalls indicates an expected call of ListInstanceFirewalls.
+func (mr *MockLinodeClientMockRecorder) ListInstanceFirewalls(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceFirewalls", reflect.TypeOf((*MockLinodeClient)(nil).ListInstanceFirewalls), ctx, linodeID, opts)
+}
+
 // ListInstances mocks base method.
 func (m *MockLinodeClient) ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error) {
 	m.ctrl.T.Helper()
@@ -884,6 +899,21 @@ func (m *MockLinodeClient) UpdateInstanceConfig(ctx context.Context, linodeID, c
 func (mr *MockLinodeClientMockRecorder) UpdateInstanceConfig(ctx, linodeID, configID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstanceConfig", reflect.TypeOf((*MockLinodeClient)(nil).UpdateInstanceConfig), ctx, linodeID, configID, opts)
+}
+
+// UpdateInstanceFirewalls mocks base method.
+func (m *MockLinodeClient) UpdateInstanceFirewalls(ctx context.Context, linodeID int, opts linodego.InstanceFirewallUpdateOptions) ([]linodego.Firewall, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateInstanceFirewalls", ctx, linodeID, opts)
+	ret0, _ := ret[0].([]linodego.Firewall)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateInstanceFirewalls indicates an expected call of UpdateInstanceFirewalls.
+func (mr *MockLinodeClientMockRecorder) UpdateInstanceFirewalls(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstanceFirewalls", reflect.TypeOf((*MockLinodeClient)(nil).UpdateInstanceFirewalls), ctx, linodeID, opts)
 }
 
 // UpdateObjectStorageBucketAccess mocks base method.
@@ -1291,6 +1321,21 @@ func (mr *MockLinodeInstanceClientMockRecorder) ListInstanceConfigs(ctx, linodeI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceConfigs", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstanceConfigs), ctx, linodeID, opts)
 }
 
+// ListInstanceFirewalls mocks base method.
+func (m *MockLinodeInstanceClient) ListInstanceFirewalls(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.Firewall, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInstanceFirewalls", ctx, linodeID, opts)
+	ret0, _ := ret[0].([]linodego.Firewall)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInstanceFirewalls indicates an expected call of ListInstanceFirewalls.
+func (mr *MockLinodeInstanceClientMockRecorder) ListInstanceFirewalls(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceFirewalls", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstanceFirewalls), ctx, linodeID, opts)
+}
+
 // ListInstances mocks base method.
 func (m *MockLinodeInstanceClient) ListInstances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.Instance, error) {
 	m.ctrl.T.Helper()
@@ -1348,6 +1393,21 @@ func (m *MockLinodeInstanceClient) UpdateInstanceConfig(ctx context.Context, lin
 func (mr *MockLinodeInstanceClientMockRecorder) UpdateInstanceConfig(ctx, linodeID, configID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstanceConfig", reflect.TypeOf((*MockLinodeInstanceClient)(nil).UpdateInstanceConfig), ctx, linodeID, configID, opts)
+}
+
+// UpdateInstanceFirewalls mocks base method.
+func (m *MockLinodeInstanceClient) UpdateInstanceFirewalls(ctx context.Context, linodeID int, opts linodego.InstanceFirewallUpdateOptions) ([]linodego.Firewall, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateInstanceFirewalls", ctx, linodeID, opts)
+	ret0, _ := ret[0].([]linodego.Firewall)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateInstanceFirewalls indicates an expected call of UpdateInstanceFirewalls.
+func (mr *MockLinodeInstanceClientMockRecorder) UpdateInstanceFirewalls(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateInstanceFirewalls", reflect.TypeOf((*MockLinodeInstanceClient)(nil).UpdateInstanceFirewalls), ctx, linodeID, opts)
 }
 
 // MockLinodeVPCClient is a mock of LinodeVPCClient interface.
