@@ -47,6 +47,10 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 		ID:   vpcScope.LinodeVPC.Spec.VPCID,
 		Tags: nil,
 	}
+	// If VPCID is not set, we should use the label to filter
+	if vpcScope.LinodeVPC.Spec.VPCID == nil {
+		listFilter.Label = vpcScope.LinodeVPC.Name
+	}
 	filter, err := listFilter.String()
 	if err != nil {
 		return err
