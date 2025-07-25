@@ -629,7 +629,7 @@ _Appears in:_
 | `backupsEnabled` _boolean_ |  |  |  |
 | `privateIP` _boolean_ |  |  |  |
 | `tags` _string array_ | Tags is a list of tags to apply to the Linode instance. |  |  |
-| `firewallID` _integer_ |  |  |  |
+| `firewallID` _integer_ | FirewallID is the id of the cloud firewall to apply to the Linode Instance |  |  |
 | `osDisk` _[InstanceDisk](#instancedisk)_ | OSDisk is configuration for the root disk that includes the OS,<br />if not specified this defaults to whatever space is not taken up by the DataDisks |  |  |
 | `dataDisks` _object (keys:string, values:[InstanceDisk](#instancedisk))_ | DataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on a linodes plan |  |  |
 | `diskEncryption` _string_ | DiskEncryption determines if the disks of the instance should be encrypted. The default is disabled. |  | Enum: [enabled disabled] <br /> |
@@ -755,6 +755,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `tags` _string array_ | tags that are currently applied to the LinodeMachineTemplate. |  |  |
+| `firewallID` _integer_ | Firewall ID that is currently applied to the LinodeMachineTemplate. |  |  |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions represent the latest available observations of a LinodeMachineTemplate's current state. |  |  |
 
 

@@ -771,6 +771,30 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 		}
 	}
+	// get the instance's firewalls
+	firewalls, err := machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID)
+	if err != nil {
+		logger.Error(err, "Failed to list firewalls for Linode instance")
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+	}
+
+	attachedFirewalls := make([]int, 0, len(firewalls))
+	for _, fw := range firewalls {
+		attachedFirewalls = append(attachedFirewalls, fw.ID)
+	}
+
+	// update the firewallID if needed.
+	if !slices.Contains(attachedFirewalls, machineScope.LinodeMachine.Spec.FirewallID) {
+	 	err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
+			linodego.InstanceFirewallUpdateOptions{
+				FirewallIDs: []int{machineScope.LinodeMachine.Spec.FirewallID},
+			},
+		)
+		if err != nil {
+			logger.Error(err, "Failed to update firewalls for Linode instance")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+	}
 
 	// Clean up bootstrap data after instance creation.
 	if linodeInstance.Status == linodego.InstanceRunning && machineScope.Machine.Status.Phase == "Running" {

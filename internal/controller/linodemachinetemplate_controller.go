@@ -126,13 +126,36 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 		}
 
 		machinesFoundForTemplate = true
-		if !slices.Equal(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags, lmtScope.LinodeMachineTemplate.Status.Tags) {
-			err := lmtr.reconcileTags(ctx, lmtScope.LinodeMachineTemplate, &machine)
-			if err != nil {
-				lmtr.Logger.Error(err, "Failed to add tags to LinodeMachine", "template", lmtScope.LinodeMachineTemplate.Name, "machine", machine.Name)
-				outErr = errors.Join(outErr, err)
 
-				failureReason = "FailedToPatchLinodeMachine"
+		// Define reconciliation tasks
+		reconciliationTasks := []struct {
+			shouldReconcile bool
+			fieldType       string
+			failureReason   string
+			logMessage      string
+		}{
+			{
+				shouldReconcile: !slices.Equal(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags, lmtScope.LinodeMachineTemplate.Status.Tags),
+				fieldType:       "tags",
+				failureReason:   "FailedToPatchLinodeMachineWithTags",
+				logMessage:      "Failed to update tags on LinodeMachine",
+			},
+			{
+				shouldReconcile: lmtScope.LinodeMachineTemplate.Spec.Template.Spec.FirewallID != lmtScope.LinodeMachineTemplate.Status.FirewallID,
+				fieldType:       "firewallID",
+				failureReason:   "FailedToPatchLinodeMachineWithFirewallID",
+				logMessage:      "Failed to update firewall ID on LinodeMachine",
+			},
+		}
+
+		// Execute reconciliation tasks
+		for _, task := range reconciliationTasks {
+			if task.shouldReconcile {
+				if err := lmtr.reconcileField(ctx, lmtScope.LinodeMachineTemplate, &machine, task.fieldType); err != nil {
+					lmtr.Logger.Error(err, task.logMessage, "template", lmtScope.LinodeMachineTemplate.Name, "machine", machine.Name)
+					outErr = errors.Join(outErr, err)
+					failureReason = task.failureReason
+				}
 			}
 		}
 	}
@@ -142,9 +165,10 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 		return ctrl.Result{}, nil
 	}
 
-	// update the LMT status.tags if all the linodeMachines spec.tags is successfully updated.
+	// update the LMT status if all the linodeMachines are successfully updated.
 	if outErr == nil {
 		lmtScope.LinodeMachineTemplate.Status.Tags = slices.Clone(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags)
+		lmtScope.LinodeMachineTemplate.Status.FirewallID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.FirewallID
 		lmtr.Logger.Info("Successfully reconciled LinodeMachineTemplate", "name", lmtScope.LinodeMachineTemplate.Name)
 	} else {
 		lmtr.Logger.Error(outErr, "Error in reconciling LinodeMachineTemplate, retrying..", "name", lmtScope.LinodeMachineTemplate.Name)
@@ -152,18 +176,30 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 	return ctrl.Result{}, outErr
 }
 
-func (lmtr *LinodeMachineTemplateReconciler) reconcileTags(ctx context.Context, lmt *infrav1alpha2.LinodeMachineTemplate, machine *infrav1alpha2.LinodeMachine) error {
+// reconcileField updates a specific field on a LinodeMachine based on the field type
+func (lmtr *LinodeMachineTemplateReconciler) reconcileField(ctx context.Context, lmt *infrav1alpha2.LinodeMachineTemplate, machine *infrav1alpha2.LinodeMachine, fieldType string) error {
 	helper, err := patch.NewHelper(machine, lmtr.Client)
 	if err != nil {
 		return fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
-	machine.Spec.Tags = lmt.Spec.Template.Spec.Tags
-
-	if err := helper.Patch(ctx, machine); err != nil {
-		return fmt.Errorf("failed to patch LinodeMachine %s with new tags: %w", machine.Name, err)
+	switch fieldType {
+	case "tags":
+		machine.Spec.Tags = lmt.Spec.Template.Spec.Tags
+		if err := helper.Patch(ctx, machine); err != nil {
+			return fmt.Errorf("failed to patch LinodeMachine %s with new %s: %w", machine.Name, fieldType, err)
+		}
+		lmtr.Logger.Info("Patched LinodeMachine with new tags", "machine", machine.Name, "tags", lmt.Spec.Template.Spec.Tags)
+	case "firewallID":
+		machine.Spec.FirewallID = lmt.Spec.Template.Spec.FirewallID
+		if err := helper.Patch(ctx, machine); err != nil {
+			return fmt.Errorf("failed to patch LinodeMachine %s with new %s: %w", machine.Name, fieldType, err)
+		}
+		lmtr.Logger.Info("Patched LinodeMachine with new firewall ID", "machine", machine.Name, "firewallID", lmt.Spec.Template.Spec.FirewallID)
+	default:
+		return fmt.Errorf("unsupported field type: %s", fieldType)
 	}
-	lmtr.Logger.Info("Patched LinodeMachine with new tags", "machine", machine.Name, "tags", lmt.Spec.Template.Spec.Tags)
+
 	return nil
 }
 
