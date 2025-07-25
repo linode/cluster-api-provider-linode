@@ -112,3 +112,12 @@ patches:
           presignedURLDuration: "24h"
           credentialsRef:
             name: ${CLUSTER_NAME}-object-store-obj-key
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+    patch: |-
+      - op: add
+        path: /spec/template/spec/interfaces
+        value:
+        - purpose: public

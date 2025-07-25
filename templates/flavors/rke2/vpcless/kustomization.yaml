@@ -121,5 +121,13 @@ patches:
       version: v1alpha2
       kind: LinodeMachineTemplate
     patch: |-
+      - op: add
+        path: /spec/template/spec/interfaces
+        value:
+        - purpose: public
+      - op: remove
+        path: /spec/template/spec/privateIP
+      - op: remove
+        path: /spec/template/spec/vpcRef
       - op: remove
         path: /spec/template/spec/firewallRef
