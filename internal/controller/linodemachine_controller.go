@@ -785,7 +785,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 
 	// update the firewallID if needed.
 	if !slices.Contains(attachedFirewalls, machineScope.LinodeMachine.Spec.FirewallID) {
-		_, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
+	 	err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
 			linodego.InstanceFirewallUpdateOptions{
 				FirewallIDs: []int{machineScope.LinodeMachine.Spec.FirewallID},
 			},

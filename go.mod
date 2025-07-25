@@ -4,7 +4,7 @@ go 1.24.0
 
 toolchain go1.24.1
 
-replace github.com/linode/linodego => github.com/tchinmai7/linodego v1.34.1-0.20250724223529-4a2202ff2334
+replace github.com/linode/linodego => github.com/tchinmai7/linodego v1.34.1-0.20250725201158-fe65bfe08a58
 
 require (
 	github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.4.0

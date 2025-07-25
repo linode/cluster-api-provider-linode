@@ -252,8 +252,8 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/tchinmai7/linodego v1.34.1-0.20250724223529-4a2202ff2334 h1:XqjnCesr3zfCC1iDSw3NGd9QgxtvDUEOKWAC6MLUvYM=
-github.com/tchinmai7/linodego v1.34.1-0.20250724223529-4a2202ff2334/go.mod h1:VHlFAbhj18634Cd7B7L5D723kFKFQMOxzIutSMcWsB4=
+github.com/tchinmai7/linodego v1.34.1-0.20250725201158-fe65bfe08a58 h1:FOMH5r1pOBrDxm7H2r9xynqWNSfuDDDKDKmJZGDdBYo=
+github.com/tchinmai7/linodego v1.34.1-0.20250725201158-fe65bfe08a58/go.mod h1:VHlFAbhj18634Cd7B7L5D723kFKFQMOxzIutSMcWsB4=
 github.com/tj/assert v0.0.0-20171129193455-018094318fb0/go.mod h1:mZ9/Rh9oLWpLLDRpvE+3b7gP/C2YyLFYxNmcLnPTMe0=
 github.com/tj/assert v0.0.3 h1:Df/BlaZ20mq6kuai7f5z2TvPFiwC3xaWJSDQNiIS3Rk=
 github.com/tj/assert v0.0.3/go.mod h1:Ne6X72Q+TB1AteidzQncjw9PabbMp4PBMZ1k+vd1Pvk=

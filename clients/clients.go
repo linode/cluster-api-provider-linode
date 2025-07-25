@@ -56,7 +56,7 @@ type LinodeInstanceClient interface {
 	GetImage(ctx context.Context, imageID string) (*linodego.Image, error)
 	GetType(ctx context.Context, typeID string) (*linodego.LinodeType, error)
 	ListInstanceFirewalls(ctx context.Context, linodeID int) ([]linodego.Firewall, error)
-	UpdateInstanceFirewalls(ctx context.Context, linodeID int, opts linodego.InstanceFirewallUpdateOptions) (*linodego.UpdateInstanceFirewallsResponse, error)
+	UpdateInstanceFirewalls(ctx context.Context, linodeID int, opts linodego.InstanceFirewallUpdateOptions) error
 }
 
 // LinodeVPCClient defines the methods that interact with Linode's VPC service.
