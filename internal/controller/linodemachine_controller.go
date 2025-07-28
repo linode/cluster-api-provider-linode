@@ -717,7 +717,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 	return ctrl.Result{}, nil
 }
 
-//nolint:cyclop // making it simpler complicates things more
 func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
 	logger.Info("updating machine")
 	instanceID, err := util.GetInstanceID(machineScope.LinodeMachine.Spec.ProviderID)
