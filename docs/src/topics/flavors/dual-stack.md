@@ -1,4 +1,7 @@
 # Dual-Stack
+
+This flavor enables allocating both IPv4 and IPv6 ranges to nodes within k8s cluster. This flavor disables nodeipam controller within kube-controller-manager and uses CCM specific nodeipam controller to allocate CIDRs to Nodes. IPv6 ranges are allocated to VPC, Subnets and Nodes attached to those subnets.  Pods get both ipv4 and ipv6 addresses.
+
 ## Specification
 | Supported Control Plane | CNI    | Default OS   | Installs ClusterClass | IPv4 | IPv6 |
 |-------------------------|--------|--------------|-----------------------|------|------|

@@ -22,7 +22,6 @@
       - [Etcd Backup](./topics/flavors/etcd-backup-restore.md)
       - [Etcd-disk](./topics/flavors/etcd-disk.md)
       - [Flatcar](./topics/flavors/flatcar.md)
-      - [NodeIPAM CCM (kubeadm)](./topics/flavors/nodeipam-ccm.md)
       - [k3s](./topics/flavors/k3s.md)
       - [konnectivity (kubeadm)](./topics/flavors/konnectivity.md)
       - [rke2](./topics/flavors/rke2.md)
