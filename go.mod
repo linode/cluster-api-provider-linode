@@ -17,7 +17,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/linode/linodego v1.53.1-0.20250709175023-9b152d30578c
 	github.com/onsi/ginkgo/v2 v2.23.4
-	github.com/onsi/gomega v1.37.0
+	github.com/onsi/gomega v1.38.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/exporters/autoexport v0.62.0
 	go.opentelemetry.io/otel v1.37.0
