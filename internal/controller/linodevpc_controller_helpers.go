@@ -171,6 +171,9 @@ func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linode
 		vpcIPv6[idx] = linodego.VPCCreateOptionsIPv6{
 			Range: ipv6.Range,
 		}
+		if ipv6.AllocationClass != nil {
+			vpcIPv6[idx].AllocationClass = ipv6.AllocationClass
+		}
 	}
 
 	subnets := make([]linodego.VPCSubnetCreateOptions, len(vpcSpec.Subnets))
