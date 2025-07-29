@@ -795,23 +795,23 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 
-	attachedFirewalls := make([]int, 0, len(firewalls))
+	attachedFWIDs := make([]int, 0, len(firewalls))
 	for _, fw := range firewalls {
-		attachedFirewalls = append(attachedFirewalls, fw.ID)
+		attachedFWIDs = append(attachedFWIDs, fw.ID)
 	}
 
-	var desiredFirewalls []int
+	var desiredFWIDs []int
 	if machineScope.LinodeMachine.Spec.FirewallID != 0 {
-		desiredFirewalls = []int{machineScope.LinodeMachine.Spec.FirewallID}
+		desiredFWIDs = []int{machineScope.LinodeMachine.Spec.FirewallID}
 	} else {
-		desiredFirewalls = []int{}
+		desiredFWIDs = []int{}
 	}
 
 	// update the firewallID if needed.
-	if !slices.Equal(attachedFirewalls, desiredFirewalls) {
+	if !slices.Equal(attachedFWIDs, desiredFWIDs) {
 		_, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
 			linodego.InstanceFirewallUpdateOptions{
-				FirewallIDs: desiredFirewalls,
+				FirewallIDs: desiredFWIDs,
 			},
 		)
 		if err != nil {
