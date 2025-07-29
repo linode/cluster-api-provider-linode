@@ -174,7 +174,11 @@ func EnsureLinodeDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	if err != nil {
 		return err
 	}
-	domainRecords, err := cscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, linodego.NewListOptions(0, string(filter)))
+
+	listOptions := linodego.NewListOptions(0, string(filter))
+	listOptions.PageSize = 500 // set a high page size to avoid multiple requests
+
+	domainRecords, err := cscope.LinodeDomainsClient.ListDomainRecords(ctx, domainID, listOptions)
 	if err != nil {
 		return err
 	}
