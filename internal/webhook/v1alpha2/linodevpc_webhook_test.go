@@ -304,7 +304,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 		}
 		region                     = linodego.Region{ID: "test"}
 		capabilities               = []string{LinodeVPCCapability}
-		ErrorIPv6RangeInvalid      = "spec.IPv6Range[0].Range: Invalid value: \"48\": IPv6 range must be either 'auto' or start with /. Example: /52"
+		ErrorIPv6RangeInvalid      = "spec.IPv6Range[0].Range: Invalid value: \"48\": IPv6 range must be either 'auto', valid IPv6 prefix or start with /. Example: auto, /52, 2001:db8::/52"
 		ErrorIPv6RangeInvalidChars = "spec.IPv6Range[0].Range: Invalid value: \"/a48\": IPv6 range doesn't contain a valid number after /"
 		ErrorIPv6RangeOutOfRange   = "spec.IPv6Range[0].Range: Invalid value: \"/130\": IPv6 range must be between /0 and /128"
 		validator                  = &linodeVPCValidator{}
@@ -324,6 +324,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 						{Range: ptr.To("/48")},
 						{Range: ptr.To("/52")},
 						{Range: ptr.To("auto")},
+						{Range: ptr.To("2001:db8::/52")},
 					}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
@@ -341,6 +342,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 						{Label: "foo", IPv4: "10.0.0.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/52")}}},
 						{Label: "bar", IPv4: "10.0.1.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/64")}}},
 						{Label: "buzz", IPv4: "10.0.2.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("auto")}}},
+						{Label: "bazz", IPv4: "10.0.3.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("2001:db8::/56")}}},
 					}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
