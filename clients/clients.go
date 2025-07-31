@@ -23,6 +23,7 @@ type LinodeClient interface {
 	LinodePlacementGroupClient
 	LinodeFirewallClient
 	LinodeTokenClient
+	LinodeInterfacesClient
 
 	OnAfterResponse(m func(response *resty.Response) error)
 }
@@ -123,6 +124,11 @@ type LinodeFirewallClient interface {
 	UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRuleSet) (*linodego.FirewallRuleSet, error)
 	DeleteFirewall(ctx context.Context, firewallID int) error
 	DeleteFirewallDevice(ctx context.Context, firewallID, deviceID int) error
+}
+
+// LinodeInterfacesClient defines the methods that interact with Linode's Interfaces service.
+type LinodeInterfacesClient interface {
+	ListInterfaces(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.LinodeInterface, error)
 }
 
 type K8sClient interface {

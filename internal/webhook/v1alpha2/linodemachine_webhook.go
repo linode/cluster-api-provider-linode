@@ -128,10 +128,17 @@ func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime
 func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeMachineSpec, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
-	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
-			errs = append(errs, err)
+	if !skipAPIValidation { //nolint:nestif // too simple for switch
+		if spec.LinodeInterfaces != nil {
+			if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityLinodeInterfaces); err != nil {
+				errs = append(errs, err)
+			}
+		} else {
+			if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
+				errs = append(errs, err)
+			}
 		}
+
 		plan, err := validateLinodeType(ctx, linodeclient, spec.Type, field.NewPath("spec").Child("type"))
 		if err != nil {
 			errs = append(errs, err)

@@ -169,15 +169,29 @@ func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope
 
 // addVPCInterfaceFromDirectID handles adding a VPC interface from a direct ID
 func addVPCInterfaceFromDirectID(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger, vpcID int) error {
-	iface, err := getVPCInterfaceConfigFromDirectID(ctx, machineScope, createConfig.Interfaces, logger, vpcID)
-	if err != nil {
-		logger.Error(err, "Failed to get VPC interface config from direct ID")
-		return err
-	}
+	switch {
+	case createConfig.LinodeInterfaces != nil:
+		iface, err := getVPCLinodeInterfaceConfigFromDirectID(ctx, machineScope, createConfig.LinodeInterfaces, logger, vpcID)
+		if err != nil {
+			logger.Error(err, "Failed to get VPC linode interface config from direct ID")
+			return err
+		}
 
-	if iface != nil {
-		// add VPC interface as first interface
-		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		if iface != nil {
+			// add VPC interface as first interface
+			createConfig.LinodeInterfaces = slices.Insert(createConfig.LinodeInterfaces, 0, *iface)
+		}
+	default:
+		iface, err := getVPCInterfaceConfigFromDirectID(ctx, machineScope, createConfig.Interfaces, logger, vpcID)
+		if err != nil {
+			logger.Error(err, "Failed to get VPC interface config from direct ID")
+			return err
+		}
+
+		if iface != nil {
+			// add VPC interface as first interface
+			createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		}
 	}
 
 	return nil
@@ -185,15 +199,29 @@ func addVPCInterfaceFromDirectID(ctx context.Context, machineScope *scope.Machin
 
 // addVPCInterfaceFromReference handles adding a VPC interface from a reference
 func addVPCInterfaceFromReference(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger, vpcRef *corev1.ObjectReference) error {
-	iface, err := getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger, vpcRef)
-	if err != nil {
-		logger.Error(err, "Failed to get VPC interface config")
-		return err
-	}
+	switch {
+	case createConfig.LinodeInterfaces != nil:
+		iface, err := getVPCLinodeInterfaceConfig(ctx, machineScope, createConfig.LinodeInterfaces, logger, vpcRef)
+		if err != nil {
+			logger.Error(err, "Failed to get VPC interface config")
+			return err
+		}
 
-	if iface != nil {
-		// add VPC interface as first interface
-		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		if iface != nil {
+			// add VPC interface as first interface
+			createConfig.LinodeInterfaces = slices.Insert(createConfig.LinodeInterfaces, 0, *iface)
+		}
+	default:
+		iface, err := getVPCInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger, vpcRef)
+		if err != nil {
+			logger.Error(err, "Failed to get VPC interface config")
+			return err
+		}
+
+		if iface != nil {
+			// add VPC interface as first interface
+			createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		}
 	}
 
 	return nil
@@ -238,10 +266,49 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 	}
 
 	if machineScope.LinodeCluster.Spec.Network.UseVlan {
+		vlanIps, err := handleVlanIps(ctx, machineScope, instanceID)
+		if err != nil {
+			return nil, fmt.Errorf("handle vlan ips: %w", err)
+		}
+		ips = append(ips, vlanIps...)
+	}
+
+	// if a node has private ip, store it as well
+	// NOTE: We specifically store VPC ips first so that they are used first during
+	//       bootstrap when we set `registrationMethod: internal-only-ips`
+	if len(addresses.IPv4.Private) != 0 {
+		ips = append(ips, clusterv1.MachineAddress{
+			Address: addresses.IPv4.Private[0].Address,
+			Type:    clusterv1.MachineInternalIP,
+		})
+	}
+
+	return ips, nil
+}
+
+func handleVlanIps(ctx context.Context, machineScope *scope.MachineScope, instanceID int) ([]clusterv1.MachineAddress, error) {
+	ips := []clusterv1.MachineAddress{}
+	switch {
+	case machineScope.LinodeMachine.Spec.LinodeInterfaces != nil:
+		ifaces, err := machineScope.LinodeClient.ListInterfaces(ctx, instanceID, &linodego.ListOptions{})
+		if err != nil || len(ifaces) == 0 {
+			return ips, fmt.Errorf("list interfaces: %w", err)
+		}
+		// Iterate over interfaces in config and find VLAN specific ips
+		for _, iface := range ifaces {
+			if iface.VLAN != nil {
+				// vlan addresses have a /11 appended to them - we should strip it out.
+				ips = append(ips, clusterv1.MachineAddress{
+					Address: netip.MustParsePrefix(*iface.VLAN.IPAMAddress).Addr().String(),
+					Type:    clusterv1.MachineInternalIP,
+				})
+			}
+		}
+	default:
 		// get the default instance config
 		configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, instanceID, &linodego.ListOptions{})
 		if err != nil || len(configs) == 0 {
-			return nil, fmt.Errorf("list instance configs: %w", err)
+			return ips, fmt.Errorf("list instance configs: %w", err)
 		}
 
 		// Iterate over interfaces in config and find VLAN specific ips
@@ -254,16 +321,6 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 				})
 			}
 		}
-	}
-
-	// if a node has private ip, store it as well
-	// NOTE: We specifically store VPC ips first so that they are used first during
-	//       bootstrap when we set `registrationMethod: internal-only-ips`
-	if len(addresses.IPv4.Private) != 0 {
-		ips = append(ips, clusterv1.MachineAddress{
-			Address: addresses.IPv4.Private[0].Address,
-			Type:    clusterv1.MachineInternalIP,
-		})
 	}
 
 	return ips, nil
@@ -425,8 +482,33 @@ func getVlanInterfaceConfig(ctx context.Context, machineScope *scope.MachineScop
 	}, nil
 }
 
-// getVPCInterfaceConfig returns the interface configuration for a VPC based on the provided VPC reference
-func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger, vpcRef *corev1.ObjectReference) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+func getVlanLinodeInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.LinodeInterfaceCreateOptions, logger logr.Logger) (*linodego.LinodeInterfaceCreateOptions, error) {
+	logger = logger.WithValues("vlanName", machineScope.Cluster.Name)
+
+	// Try to obtain a IP for the machine using its name
+	ip, err := util.GetNextVlanIP(ctx, machineScope.Cluster.Name, machineScope.Cluster.Namespace, machineScope.Client)
+	if err != nil {
+		return nil, fmt.Errorf("getting vlanIP: %w", err)
+	}
+
+	logger.Info("obtained IP for machine", "name", machineScope.LinodeMachine.Name, "ip", ip)
+
+	for i, netInterface := range interfaces {
+		if netInterface.VLAN != nil {
+			interfaces[i].VLAN.IPAMAddress = ptr.To(fmt.Sprintf(vlanIPFormat, ip))
+			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VLAN interface already exists
+		}
+	}
+
+	return &linodego.LinodeInterfaceCreateOptions{
+		VLAN: &linodego.VLANInterface{
+			VLANLabel:   machineScope.Cluster.Name,
+			IPAMAddress: ptr.To(fmt.Sprintf(vlanIPFormat, ip)),
+		},
+	}, nil
+}
+
+func getVPCFromRef(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger, vpcRef *corev1.ObjectReference) (*infrav1alpha2.LinodeVPC, error) {
 	// Get namespace from VPC ref or default to machine namespace
 	namespace := vpcRef.Namespace
 	if namespace == "" {
@@ -459,11 +541,21 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		return nil, errors.New("failed to find subnet")
 	}
 
-	var subnetID int
+	return &linodeVPC, nil
+}
 
+// getVPCInterfaceConfig returns the interface configuration for a VPC based on the provided VPC reference
+func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger, vpcRef *corev1.ObjectReference) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+	linodeVPC, err := getVPCFromRef(ctx, machineScope, logger, vpcRef)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		ipv6Config *linodego.InstanceConfigInterfaceCreateOptionsIPv6
+		subnetID   int
+	)
 	subnetName := machineScope.LinodeCluster.Spec.Network.SubnetName // name of subnet to use
-
-	var ipv6Config *linodego.InstanceConfigInterfaceCreateOptionsIPv6
 	if subnetName != "" {
 		for _, subnet := range linodeVPC.Spec.Subnets {
 			if subnet.Label == subnetName {
@@ -513,8 +605,72 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 	return vpcIntfCreateOpts, nil
 }
 
-// getVPCInterfaceConfigFromDirectID returns the interface configuration for a VPC based on a direct VPC ID
-func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger, vpcID int) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope, linodeInterfaces []linodego.LinodeInterfaceCreateOptions, logger logr.Logger, vpcRef *corev1.ObjectReference) (*linodego.LinodeInterfaceCreateOptions, error) {
+	linodeVPC, err := getVPCFromRef(ctx, machineScope, logger, vpcRef)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		ipv6Config *linodego.VPCInterfaceIPv6CreateOptions
+		subnetID   int
+	)
+	subnetName := machineScope.LinodeCluster.Spec.Network.SubnetName // name of subnet to use
+	if subnetName != "" {
+		for _, subnet := range linodeVPC.Spec.Subnets {
+			if subnet.Label == subnetName {
+				subnetID = subnet.SubnetID
+				ipv6Config = getVPCInterfaceIPv6Config(machineScope, len(subnet.IPv6))
+				break
+			}
+		}
+
+		if subnetID == 0 {
+			logger.Info("Failed to fetch subnet ID for specified subnet name")
+		}
+	} else {
+		subnetID = linodeVPC.Spec.Subnets[0].SubnetID // get first subnet if nothing specified
+		ipv6Config = getVPCInterfaceIPv6Config(machineScope, len(linodeVPC.Spec.Subnets[0].IPv6))
+	}
+
+	if subnetID == 0 {
+		return nil, errors.New("failed to find subnet as subnet id set is 0")
+	}
+
+	// Check if a VPC interface already exists
+	for i, netInterface := range linodeInterfaces {
+		if netInterface.VPC != nil {
+			linodeInterfaces[i].VPC.SubnetID = subnetID
+			// If IPv6 range config is not empty, add it to the interface configuration
+			if !isVPCInterfaceIPv6ConfigEmpty(ipv6Config) {
+				linodeInterfaces[i].VPC.IPv6 = ipv6Config
+			}
+			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
+		}
+	}
+
+	// Create a new VPC interface
+	vpcIntfCreateOpts := &linodego.LinodeInterfaceCreateOptions{
+		VPC: &linodego.VPCInterfaceCreateOptions{
+			SubnetID: subnetID,
+			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
+				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+					Primary:        ptr.To(true),
+					NAT1To1Address: ptr.To("any"),
+				}},
+			},
+		},
+	}
+
+	// If IPv6 config is not empty, add it to the interface configuration
+	if !isVPCInterfaceIPv6ConfigEmpty(ipv6Config) {
+		vpcIntfCreateOpts.VPC.IPv6 = ipv6Config
+	}
+
+	return vpcIntfCreateOpts, nil
+}
+
+func getVPCFromID(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger, vpcID int) (*linodego.VPC, error) {
 	vpc, err := machineScope.LinodeClient.GetVPC(ctx, vpcID)
 	if err != nil {
 		logger.Error(err, "Failed to fetch VPC from Linode API", "vpcID", vpcID)
@@ -526,8 +682,21 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 		return nil, errors.New("no subnets found in VPC")
 	}
 
-	var subnetID int
-	var subnetName string
+	return vpc, nil
+}
+
+// getVPCLinodeInterfaceConfigFromDirectID returns the linode interface configuration for a VPC based on a direct VPC ID
+func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.MachineScope, linodeInterfaces []linodego.LinodeInterfaceCreateOptions, logger logr.Logger, vpcID int) (*linodego.LinodeInterfaceCreateOptions, error) {
+	vpc, err := getVPCFromID(ctx, machineScope, logger, vpcID)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		subnetID   int
+		subnetName string
+		ipv6Config *linodego.VPCInterfaceIPv6CreateOptions
+	)
 
 	// Safety check for when LinodeCluster is nil (e.g., when using direct VPCID without cluster)
 	if machineScope.LinodeCluster != nil && machineScope.LinodeCluster.Spec.Network.SubnetName != "" {
@@ -535,7 +704,73 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 	}
 
 	// If subnet name specified, find matching subnet; otherwise use first subnet
-	var ipv6Config *linodego.InstanceConfigInterfaceCreateOptionsIPv6
+	if subnetName != "" {
+		for _, subnet := range vpc.Subnets {
+			if subnet.Label == subnetName {
+				subnetID = subnet.ID
+				ipv6Config = getVPCInterfaceIPv6Config(machineScope, len(subnet.IPv6))
+				break
+			}
+		}
+		if subnetID == 0 {
+			return nil, fmt.Errorf("subnet with label %s not found in VPC", subnetName)
+		}
+	} else {
+		subnetID = vpc.Subnets[0].ID
+		ipv6Config = getVPCInterfaceIPv6Config(machineScope, len(vpc.Subnets[0].IPv6))
+	}
+
+	// Check if a VPC interface already exists
+	for i, netInterface := range linodeInterfaces {
+		if netInterface.VPC != nil {
+			linodeInterfaces[i].VPC.SubnetID = subnetID
+			if !isVPCInterfaceIPv6ConfigEmpty(ipv6Config) {
+				linodeInterfaces[i].VPC.IPv6 = ipv6Config
+			}
+			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
+		}
+	}
+
+	// Create a new VPC interface
+	vpcIntfCreateOpts := &linodego.LinodeInterfaceCreateOptions{
+		VPC: &linodego.VPCInterfaceCreateOptions{
+			SubnetID: subnetID,
+			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
+				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+					Primary:        ptr.To(true),
+					NAT1To1Address: ptr.To("any"),
+				}},
+			},
+		},
+	}
+
+	// If IPv6 range config is not empty, add it to the interface configuration
+	if !isVPCInterfaceIPv6ConfigEmpty(ipv6Config) {
+		vpcIntfCreateOpts.VPC.IPv6 = ipv6Config
+	}
+
+	return vpcIntfCreateOpts, nil
+}
+
+// getVPCInterfaceConfigFromDirectID returns the interface configuration for a VPC based on a direct VPC ID
+func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.MachineScope, interfaces []linodego.InstanceConfigInterfaceCreateOptions, logger logr.Logger, vpcID int) (*linodego.InstanceConfigInterfaceCreateOptions, error) {
+	vpc, err := getVPCFromID(ctx, machineScope, logger, vpcID)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		subnetID   int
+		subnetName string
+		ipv6Config *linodego.InstanceConfigInterfaceCreateOptionsIPv6
+	)
+
+	// Safety check for when LinodeCluster is nil (e.g., when using direct VPCID without cluster)
+	if machineScope.LinodeCluster != nil && machineScope.LinodeCluster.Spec.Network.SubnetName != "" {
+		subnetName = machineScope.LinodeCluster.Spec.Network.SubnetName
+	}
+
+	// If subnet name specified, find matching subnet; otherwise use first subnet
 	if subnetName != "" {
 		for _, subnet := range vpc.Subnets {
 			if subnet.Label == subnetName {
@@ -589,6 +824,13 @@ func isIPv6ConfigEmpty(opts *linodego.InstanceConfigInterfaceCreateOptionsIPv6) 
 			(opts.IsPublic == nil)
 }
 
+func isVPCInterfaceIPv6ConfigEmpty(opts *linodego.VPCInterfaceIPv6CreateOptions) bool {
+	return opts == nil ||
+		len(opts.SLAAC) == 0 &&
+			len(opts.Ranges) == 0 &&
+			!opts.IsPublic
+}
+
 // getMachineIPv6Config returns the IPv6 configuration for a LinodeMachine.
 // It checks the LinodeMachine's IPv6Options for SLAAC and Ranges settings.
 // If `EnableSLAAC` is set, it will enable SLAAC with the default IPv6 CIDR range.
@@ -625,6 +867,160 @@ func getMachineIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubne
 	return intfOpts
 }
 
+// getVPCInterfaceIPv6Config returns the IPv6 configuration for a LinodeMachine.
+// It checks the LinodeMachine's IPv6Options for SLAAC and Ranges settings.
+// If `EnableSLAAC` is set, it will enable SLAAC with the default IPv6 CIDR range.
+// If `EnableRanges` is set, it will enable IPv6 ranges with the default IPv6 CIDR range.
+// If `IsPublicIPv6` is set, it will be used to determine if the IPv6 range should be publicly routable or not.
+func getVPCInterfaceIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubnet int) *linodego.VPCInterfaceIPv6CreateOptions {
+	intfOpts := &linodego.VPCInterfaceIPv6CreateOptions{}
+
+	// If there are no IPv6 ranges in the subnet or if IPv6 options are not specified, return nil.
+	if numIPv6RangesInSubnet == 0 || machineScope.LinodeMachine.Spec.IPv6Options == nil {
+		return intfOpts
+	}
+
+	if machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6 != nil {
+		// Set the public IPv6 flag based on the IsPublicIPv6 specification.
+		intfOpts.IsPublic = *machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6
+	}
+
+	if machineScope.LinodeMachine.Spec.IPv6Options.EnableSLAAC != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableSLAAC {
+		intfOpts.SLAAC = []linodego.VPCInterfaceIPv6SLAACCreateOptions{
+			{
+				Range: defaultNodeIPv6CIDRRange,
+			},
+		}
+	}
+	if machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges {
+		intfOpts.Ranges = []linodego.VPCInterfaceIPv6RangeCreateOptions{
+			{
+				Range: defaultNodeIPv6CIDRRange,
+			},
+		}
+	}
+
+	return intfOpts
+}
+
+// Unfortunately, this is necessary since DeepCopy can't be generated for linodego.LinodeInterfaceCreateOptions
+// so here we manually create the options for Linode interfaces.
+// /
+//
+//nolint:gocognit,cyclop,gocritic,nestif,nolintlint // Also, unfortunately, this cannot be made any reasonably simpler with how complicated the linodego struct is
+func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfaceCreateOptions) []linodego.LinodeInterfaceCreateOptions {
+	linodeInterfaces := make([]linodego.LinodeInterfaceCreateOptions, len(createOpts))
+	for idx, iface := range createOpts {
+		ifaceCreateOpts := linodego.LinodeInterfaceCreateOptions{}
+		// Handle VLAN
+		if iface.VLAN != nil {
+			ifaceCreateOpts.VLAN = &linodego.VLANInterface{
+				VLANLabel:   iface.VLAN.VLANLabel,
+				IPAMAddress: iface.VLAN.IPAMAddress,
+			}
+		}
+		// Handle VPC
+		if iface.VPC != nil {
+			var (
+				ipv4Addrs    []linodego.VPCInterfaceIPv4AddressCreateOptions
+				ipv4Ranges   []linodego.VPCInterfaceIPv4RangeCreateOptions
+				ipv6Ranges   []linodego.VPCInterfaceIPv6RangeCreateOptions
+				ipv6SLAAC    []linodego.VPCInterfaceIPv6SLAACCreateOptions
+				ipv6IsPublic bool
+			)
+			if iface.VPC.IPv4 != nil {
+				for _, addr := range iface.VPC.IPv4.Addresses {
+					ipv4Addrs = append(ipv4Addrs, linodego.VPCInterfaceIPv4AddressCreateOptions{
+						Address:        addr.Address,
+						Primary:        addr.Primary,
+						NAT1To1Address: addr.NAT1To1Address,
+					})
+				}
+				for _, rng := range iface.VPC.IPv4.Ranges {
+					ipv4Ranges = append(ipv4Ranges, linodego.VPCInterfaceIPv4RangeCreateOptions{
+						Range: rng.Range,
+					})
+				}
+			} else {
+				// If no IPv4 addresses are specified, we set a default NAT1To1 address to "any"
+				ipv4Addrs = []linodego.VPCInterfaceIPv4AddressCreateOptions{
+					{
+						Primary:        ptr.To(true),
+						NAT1To1Address: ptr.To("any"),
+					},
+				}
+			}
+			if iface.VPC.IPv6 != nil {
+				for _, slaac := range iface.VPC.IPv6.SLAAC {
+					ipv6SLAAC = append(ipv6SLAAC, linodego.VPCInterfaceIPv6SLAACCreateOptions{
+						Range: slaac.Range,
+					})
+				}
+				for _, rng := range iface.VPC.IPv6.Ranges {
+					ipv6Ranges = append(ipv6Ranges, linodego.VPCInterfaceIPv6RangeCreateOptions{
+						Range: rng.Range,
+					})
+				}
+				ipv6IsPublic = iface.VPC.IPv6.IsPublic
+			}
+			ifaceCreateOpts.VPC = &linodego.VPCInterfaceCreateOptions{
+				SubnetID: iface.VPC.SubnetID,
+				IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
+					Addresses: ipv4Addrs,
+					Ranges:    ipv4Ranges,
+				},
+				IPv6: &linodego.VPCInterfaceIPv6CreateOptions{
+					SLAAC:    ipv6SLAAC,
+					Ranges:   ipv6Ranges,
+					IsPublic: ipv6IsPublic,
+				},
+			}
+		}
+		// Handle Public Interface
+		if iface.Public != nil {
+			var (
+				ipv4Addrs  []linodego.PublicInterfaceIPv4AddressCreateOptions
+				ipv6Ranges []linodego.PublicInterfaceIPv6RangeCreateOptions
+			)
+			if iface.Public.IPv4 != nil {
+				for _, addr := range iface.Public.IPv4.Addresses {
+					ipv4Addrs = append(ipv4Addrs, linodego.PublicInterfaceIPv4AddressCreateOptions{
+						Address: addr.Address,
+						Primary: addr.Primary,
+					})
+				}
+			}
+			if iface.Public.IPv6 != nil {
+				for _, rng := range iface.Public.IPv6.Ranges {
+					ipv6Ranges = append(ipv6Ranges, linodego.PublicInterfaceIPv6RangeCreateOptions{
+						Range: rng.Range,
+					})
+				}
+			}
+			ifaceCreateOpts.Public = &linodego.PublicInterfaceCreateOptions{
+				IPv4: &linodego.PublicInterfaceIPv4CreateOptions{
+					Addresses: ipv4Addrs,
+				},
+				IPv6: &linodego.PublicInterfaceIPv6CreateOptions{
+					Ranges: ipv6Ranges,
+				},
+			}
+		}
+		// Handle Default Route
+		if iface.DefaultRoute != nil {
+			ifaceCreateOpts.DefaultRoute = &linodego.InterfaceDefaultRoute{
+				IPv4: iface.DefaultRoute.IPv4,
+				IPv6: iface.DefaultRoute.IPv6,
+			}
+		}
+		ifaceCreateOpts.FirewallID = iface.FirewallID
+		// createOpts is now fully populated with the interface options
+		linodeInterfaces[idx] = ifaceCreateOpts
+	}
+
+	return linodeInterfaces
+}
+
 func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec, machineTags []string) *linodego.InstanceCreateOptions {
 	interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
 	for idx, iface := range machineSpec.Interfaces {
@@ -641,7 +1037,7 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 	if machineSpec.PrivateIP != nil {
 		privateIP = *machineSpec.PrivateIP
 	}
-	return &linodego.InstanceCreateOptions{
+	instCreateOpts := &linodego.InstanceCreateOptions{
 		Region:          machineSpec.Region,
 		Type:            machineSpec.Type,
 		AuthorizedKeys:  machineSpec.AuthorizedKeys,
@@ -654,6 +1050,11 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 		FirewallID:      machineSpec.FirewallID,
 		DiskEncryption:  linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
 	}
+	if len(machineSpec.LinodeInterfaces) > 0 {
+		instCreateOpts.LinodeInterfaces = constructLinodeInterfaceCreateOpts(machineSpec.LinodeInterfaces)
+	}
+
+	return instCreateOpts
 }
 
 func compressUserData(bootstrapData []byte) ([]byte, error) {
@@ -1016,15 +1417,29 @@ func getVPCRefFromScope(machineScope *scope.MachineScope) *corev1.ObjectReferenc
 
 // configureVlanInterface adds a VLAN interface to the configuration
 func configureVlanInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
-	iface, err := getVlanInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
-	if err != nil {
-		logger.Error(err, "Failed to get VLAN interface config")
-		return err
-	}
+	switch {
+	case createConfig.LinodeInterfaces != nil:
+		iface, err := getVlanLinodeInterfaceConfig(ctx, machineScope, createConfig.LinodeInterfaces, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get VLAN interface config")
+			return err
+		}
 
-	if iface != nil {
-		// add VLAN interface as first interface
-		createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		if iface != nil {
+			// add VLAN interface as first interface
+			createConfig.LinodeInterfaces = slices.Insert(createConfig.LinodeInterfaces, 0, *iface)
+		}
+	default:
+		iface, err := getVlanInterfaceConfig(ctx, machineScope, createConfig.Interfaces, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get VLAN interface config")
+			return err
+		}
+
+		if iface != nil {
+			// add VLAN interface as first interface
+			createConfig.Interfaces = slices.Insert(createConfig.Interfaces, 0, *iface)
+		}
 	}
 
 	return nil
