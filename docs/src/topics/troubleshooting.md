@@ -73,3 +73,20 @@ You can also see which images have cloud-init support via the [linode-cli](https
 
 Please refer to the [Troubleshoot Metadata and Cloud-Init section of the Linode Metadata Service Guide](https://www.linode.com/docs/products/compute/compute-instances/guides/metadata/?tabs=linode-api%2Cmacos#troubleshoot-metadata-and-cloud-init).
 
+## Increasing Linode API timeout values
+If the Linode API is slow to provision resources and you need to increase the timeout for API calls, you can set the LINODE_CLIENT_TIMEOUT environment variable to a higher value (in seconds). CAPL will automatically use this value when interacting with the Linode API.
+
+```bash
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capl-controller-manager
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          env:
+            - name: LINODE_CLIENT_TIMEOUT
+              value: "60"  # Timeout in seconds
+```

@@ -196,6 +196,13 @@ for resource in manager_yaml:
         resource["spec"]["template"]["spec"].pop("securityContext")
         for container in resource["spec"]["template"]["spec"]["containers"]:
             container.pop("securityContext")
+            timeout_value = os.getenv("LINODE_CLIENT_TIMEOUT")
+            if timeout_value:
+                env = container.setdefault("env", [])
+                env.append({
+                    "name": "LINODE_CLIENT_TIMEOUT",
+                    "value": timeout_value
+                })
 
 k8s_yaml(encode_yaml_stream(manager_yaml))
 
