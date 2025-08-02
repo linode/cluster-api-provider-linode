@@ -178,8 +178,23 @@ func validateEnvironment() (linodeConfig, dnsConfig scope.ClientConfig) {
 		linodeDNSToken = linodeToken
 	}
 
-	return scope.ClientConfig{Token: linodeToken},
-		scope.ClientConfig{Token: linodeDNSToken, BaseUrl: linodeDNSURL, RootCertificatePath: linodeDNSCA}
+	linodeClientTimeout := 0
+	if raw, ok := os.LookupEnv("LINODE_CLIENT_TIMEOUT"); ok {
+		if timeout, err := strconv.Atoi(raw); timeout > 0 && err == nil {
+			linodeClientTimeout = timeout
+			setupLog.Info("LINODE_CLIENT_TIMEOUT set", "timeout", linodeClientTimeout)
+		} else {
+			setupLog.Error(fmt.Errorf("invalid LINODE_CLIENT_TIMEOUT value: %s", raw), "using default timeout")
+		}
+	}
+
+	linodeConfig = scope.ClientConfig{Token: linodeToken}
+	dnsConfig = scope.ClientConfig{Token: linodeDNSToken, BaseUrl: linodeDNSURL, RootCertificatePath: linodeDNSCA}
+	if linodeClientTimeout > 0 {
+		linodeConfig.Timeout = time.Duration(linodeClientTimeout) * time.Second
+		dnsConfig.Timeout = time.Duration(linodeClientTimeout) * time.Second
+	}
+	return linodeConfig, dnsConfig
 }
 
 // setupManager initializes and returns a new manager instance with the provided configurations.
