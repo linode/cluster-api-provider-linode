@@ -22,6 +22,24 @@ patches:
           ipv6Range:
           - range: auto
   - target:
+      group: cluster.x-k8s.io
+      version: v1beta1
+      kind: Cluster
+    patch: |-
+      apiVersion: cluster.x-k8s.io/v1beta1
+      kind: Cluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        clusterNetwork:
+          pods:
+            cidrBlocks:
+              - 10.192.0.0/10
+          services:
+            cidrBlocks:
+              - 10.96.0.0/12
+              - fd03::/108
+  - target:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
       kind: LinodeMachineTemplate
