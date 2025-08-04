@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"slices"
 
+	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,13 +36,6 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
-)
-
-var (
-	// The capability string indicating a region supports PlacementGroups: [PlacementGroups Availability]
-	//
-	// [PlacementGroups Availability]:https://www.linode.com/docs/products/compute/compute-instances/guides/placement-groups/#availability
-	LinodePlacementGroupCapability = "Placement Group"
 )
 
 // log is for logging in this package.
@@ -127,7 +121,7 @@ func (v *LinodePlacementGroupCustomValidator) validateLinodePlacementGroupSpec(c
 	var errs field.ErrorList
 
 	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodePlacementGroupCapability); err != nil {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityPlacementGroup); err != nil {
 			errs = append(errs, err)
 		}
 	}

@@ -23,11 +23,11 @@ import (
 
 func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error {
 	logger := logr.FromContextOrDiscard(ctx)
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "external" {
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeExternal {
 		logger.Info("LoadBalancing is handled externally")
 		return nil
 	}
-	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "dns" {
+	if clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeDNS {
 		if err := services.EnsureDNSEntries(ctx, clusterScope, "create"); err != nil {
 			logger.Error(err, "Failed to ensure DNS entries")
 			return err
@@ -37,7 +37,7 @@ func addMachineToLB(ctx context.Context, clusterScope *scope.ClusterScope) error
 	// Reconcile clusters with Spec.Network = {} and ControlPlaneEndpoint.Host externally managed
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil || clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID == nil {
 		logger.Info("NodeBalancerID or ApiserverNodeBalancerConfigID not set for Type NodeBalancer, this cluster is managed externally")
-		clusterScope.LinodeCluster.Spec.Network.LoadBalancerType = "external"
+		clusterScope.LinodeCluster.Spec.Network.LoadBalancerType = lbTypeExternal
 		return nil
 	}
 	nodeBalancerNodes, err := clusterScope.LinodeClient.ListNodeBalancerNodes(

@@ -51,7 +51,8 @@ import (
 
 const (
 	lbTypeDNS                               string = "dns"
-	pauseAnnotationValue                    string = "true"
+	lbTypeExternal                          string = "external"
+	lbTypeNB                                string = "NodeBalancer"
 	ConditionPreflightLinodeVPCReady        string = "PreflightLinodeVPCReady"
 	ConditionPreflightLinodeNBFirewallReady string = "PreflightLinodeNBFirewallReady"
 )
@@ -453,7 +454,7 @@ func (r *LinodeClusterReconciler) reconcileCreate(ctx context.Context, logger lo
 func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) error {
 	logger.Info("deleting cluster")
 	switch {
-	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "external":
+	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeExternal:
 		logger.Info("LoadBalacing managed externally, nothing to do.")
 		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
@@ -461,7 +462,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			Reason:  string(clusterv1.DeletedReason),
 			Message: "Deletion in progress",
 		})
-		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "LoadBalacing managed externally", "LoadBalacing managed externally, nothing to do.")
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "LoadBalancing managed externally", "LoadBalancing managed externally, nothing to do.")
 
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeDNS:
 		if err := removeMachineFromDNS(ctx, logger, clusterScope); err != nil {
@@ -475,11 +476,11 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		})
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancing for Type DNS deleted")
 
-	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil:
+	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeNB && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil:
 		logger.Info("NodeBalancer ID is missing for Type NodeBalancer, nothing to do")
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "NodeBalancerIDMissing", "NodeBalancer already removed, nothing to do")
 
-	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == "NodeBalancer" && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil:
+	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeNB && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID != nil:
 		if err := removeMachineFromNB(ctx, logger, clusterScope); err != nil {
 			return fmt.Errorf("remove machine from loadbalancer: %w", err)
 		}

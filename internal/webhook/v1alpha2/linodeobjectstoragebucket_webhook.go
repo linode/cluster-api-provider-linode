@@ -34,13 +34,6 @@ import (
 	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
-var (
-	// The capability string indicating a region supports Object Storage: [Object Storage Availability]
-	//
-	// [Object Storage Availability]: https://www.linode.com/docs/products/storage/object-storage/#availability
-	LinodeObjectStorageCapability = "Object Storage"
-)
-
 // log is for logging in this package.
 var linodeobjectstoragebucketlog = logf.Log.WithName("linodeobjectstoragebucket-resource")
 

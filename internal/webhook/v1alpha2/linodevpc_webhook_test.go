@@ -52,7 +52,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 			},
 		}
 		region                        = linodego.Region{ID: "test"}
-		capabilities                  = []string{LinodeVPCCapability}
+		capabilities                  = []string{linodego.CapabilityVPCs}
 		capabilities_zero             = []string{}
 		regionNotFoundError           = "spec.region: Not found: \"example\""
 		vpcCapabilityError            = "spec.region: Invalid value: \"example\": no capability: VPCs"
@@ -303,7 +303,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 			},
 		}
 		region                     = linodego.Region{ID: "test"}
-		capabilities               = []string{LinodeVPCCapability}
+		capabilities               = []string{linodego.CapabilityVPCs}
 		ErrorIPv6RangeInvalid      = "spec.IPv6Range[0].Range: Invalid value: \"48\": IPv6 range must be either 'auto', valid IPv6 prefix or start with /. Example: auto, /52, 2001:db8::/52"
 		ErrorIPv6RangeInvalidChars = "spec.IPv6Range[0].Range: Invalid value: \"/a48\": IPv6 range doesn't contain a valid number after /"
 		ErrorIPv6RangeOutOfRange   = "spec.IPv6Range[0].Range: Invalid value: \"/130\": IPv6 range must be between /0 and /128"
