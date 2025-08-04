@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/netip"
 	"regexp"
 	"slices"
@@ -304,7 +305,7 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 
 func validateIPv6Range(ipv6Range *string, path *field.Path) *field.Error {
 	const (
-		errIPv6RangeFormat   = "IPv6 range must be either 'auto' or start with /. Example: /52"
+		errIPv6RangeFormat   = "IPv6 range must be either 'auto', valid IPv6 prefix or start with /. Example: auto, /52, 2001:db8::/52"
 		errIPv6RangeNoNumber = "IPv6 range doesn't contain a valid number after /"
 		errIPv6RangeBounds   = "IPv6 range must be between /0 and /128"
 	)
@@ -319,17 +320,29 @@ func validateIPv6Range(ipv6Range *string, path *field.Path) *field.Error {
 		return nil
 	}
 
-	if ipv6RangeStr == "" || !strings.HasPrefix(ipv6RangeStr, "/") {
-		return field.Invalid(path, ipv6RangeStr, errIPv6RangeFormat)
+	// check for valid IPv6 prefix (e.g., 2001:db8::/52)
+	if _, ipNet, err := net.ParseCIDR(ipv6RangeStr); err == nil {
+		if ipNet.IP.To16() != nil && ipNet.IP.To4() == nil {
+			ones, _ := ipNet.Mask.Size()
+			if ones < 0 || ones > 128 {
+				return field.Invalid(path, ipv6RangeStr, errIPv6RangeBounds)
+			}
+			return nil
+		}
 	}
 
-	numStr := strings.TrimPrefix(ipv6RangeStr, "/")
-	num, err := strconv.Atoi(numStr)
-	if err != nil {
-		return field.Invalid(path, ipv6RangeStr, errIPv6RangeNoNumber)
+	// Slash-prefixed format (e.g., /52)
+	if numStr, ok := strings.CutPrefix(ipv6RangeStr, "/"); ok {
+		num, err := strconv.Atoi(numStr)
+		if err != nil {
+			return field.Invalid(path, ipv6RangeStr, errIPv6RangeNoNumber)
+		}
+		if num < 0 || num > 128 {
+			return field.Invalid(path, ipv6RangeStr, errIPv6RangeBounds)
+		}
+		return nil
 	}
-	if num < 0 || num > 128 {
-		return field.Invalid(path, ipv6RangeStr, errIPv6RangeBounds)
-	}
-	return nil
+
+	// Invalid
+	return field.Invalid(path, ipv6RangeStr, errIPv6RangeFormat)
 }
