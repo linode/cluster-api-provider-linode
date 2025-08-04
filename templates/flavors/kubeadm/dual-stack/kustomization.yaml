@@ -1,20 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../vpcless
+  - ../default
 
 patches:
-  - target:
-      group: infrastructure.cluster.x-k8s.io
-      version: v1alpha2
-      kind: LinodeCluster
-    patch: |-
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-      kind: LinodeCluster
-      metadata:
-        name: ${CLUSTER_NAME}
-      spec:
-        nodeBalancerFirewallRef: null
   - target:
       group: cluster.x-k8s.io
       version: v1beta1
@@ -29,11 +18,27 @@ patches:
           pods:
             cidrBlocks:
               - 10.192.0.0/10
-              - fd02::/80
           services:
             cidrBlocks:
               - 10.96.0.0/12
               - fd03::/108
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeVPC
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeVPC
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        ipv6Range:
+        - range: auto
+        subnets:
+        - ipv4: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
+          label: default
+          ipv6Range:
+          - range: auto
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
@@ -48,7 +53,37 @@ patches:
           clusterConfiguration:
             controllerManager:
               extraArgs:
-                node-cidr-mask-size-ipv6: "96"
+                allocate-node-cidrs: "false"
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeMachineTemplate
+      metadata:
+        name: ${CLUSTER_NAME}-control-plane
+      spec:
+        template:
+          spec:
+            ipv6Options:
+              enableSLAAC: true
+              isPublicIPv6: true
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeMachineTemplate
+      metadata:
+        name: ${CLUSTER_NAME}-md-0
+      spec:
+        template:
+          spec:
+            ipv6Options:
+              enableSLAAC: true
+              isPublicIPv6: true
   - target:
       kind: HelmChartProxy
       name: .*-cilium
@@ -58,19 +93,92 @@ patches:
         value: |
           bgpControlPlane:
             enabled: true
+          routingMode: native
+          kubeProxyReplacement: true
+          ipv4NativeRoutingCIDR: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
+          ipv6NativeRoutingCIDR: ::/0
+          tunnelProtocol: ""
+          enableIPv4Masquerade: true
+          enableIPv6Masquerade: false
           policyAuditMode: ${FW_AUDIT_ONLY:=true}
           hostFirewall:
             enabled: true
           extraConfig:
             allow-localhost: policy
-          ipv6:
-            enabled: true
+          k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
+          k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
+          extraArgs:
+          - --nodeport-addresses=0.0.0.0/0
           ipam:
             mode: kubernetes
+          ipv4:
+            enabled: true
+          ipv6:
+            enabled: true
           k8s:
             requireIPv4PodCIDR: true
+            requireIPv6PodCIDR: true
           hubble:
             relay:
               enabled: true
             ui:
               enabled: true
+  - target:
+      kind: HelmChartProxy
+      name: .*-linode-cloud-controller-manager
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          routeController:
+            vpcNames: {{ .InfraCluster.spec.vpcRef.name }}
+            clusterCIDR: ${VPC_NETWORK_CIDR:=10.192.0.0/10}
+            configureCloudRoutes: true
+          secretRef:
+            name: "linode-token-region"
+          image:
+            tag: v0.9.0
+            pullPolicy: IfNotPresent
+          enableNodeIPAM: true
+          tolerations:
+          # The CCM can run on Nodes tainted as masters
+            - key: "node-role.kubernetes.io/control-plane"
+              effect: "NoSchedule"
+            # The CCM is a "critical addon"
+            - key: "CriticalAddonsOnly"
+              operator: "Exists"
+            # This taint is set on all Nodes when an external CCM is used
+            - key: node.cloudprovider.kubernetes.io/uninitialized
+              value: "true"
+              effect: NoSchedule
+            - key: node.kubernetes.io/not-ready
+              operator: Exists
+              effect: NoSchedule
+            - key: node.kubernetes.io/unreachable
+              operator: Exists
+              effect: NoSchedule
+            - key: node.cilium.io/agent-not-ready
+              operator: Exists
+              effect: NoSchedule
+          env:
+            - name: LINODE_EXTERNAL_SUBNET
+              value: ${LINODE_EXTERNAL_SUBNET:=""}
+            - name: LINODE_URL
+              value: ${LINODE_URL:="https://api.linode.com"}
+            - name: SSL_CERT_DIR
+              value: "/tls"
+            - name: LINODE_API_VERSION
+              value: v4beta
+            - name: KUBERNETES_SERVICE_HOST
+              value: "{{ .InfraCluster.spec.controlPlaneEndpoint.host }}"
+            - name: KUBERNETES_SERVICE_PORT
+              value: "{{ .InfraCluster.spec.controlPlaneEndpoint.port }}"
+          volumeMounts:
+            - name: cacert
+              mountPath: /tls
+              readOnly: true
+          volumes:
+            - name: cacert
+              secret:
+                secretName: linode-ca
+                defaultMode: 420
