@@ -2743,8 +2743,9 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 					SubnetID: 1,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: ptr.To("any"),
+							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
+							Address:        "auto",
 						}},
 					},
 					IPv6: nil,
@@ -2816,8 +2817,9 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 					SubnetID: 1,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: ptr.To("any"),
+							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
+							Address:        "auto",
 						}},
 					},
 					IPv6: &linodego.VPCInterfaceIPv6CreateOptions{
@@ -2903,8 +2905,9 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 					SubnetID: 27,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: ptr.To("any"),
+							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
+							Address:        "auto",
 						}},
 					},
 					IPv6: &linodego.VPCInterfaceIPv6CreateOptions{SLAAC: nil, Ranges: nil, IsPublic: false},
@@ -3219,7 +3222,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 				ID: 1,
 			}}, nil)
 		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
-			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			Helpers: &linodego.InstanceConfigHelpers{Network: false},
 		}).
 			After(listInstConfs).
 			Return(nil, nil)

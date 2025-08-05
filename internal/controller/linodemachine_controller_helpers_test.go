@@ -436,7 +436,7 @@ func validateInterfaceExpectations(
 		require.Equal(t, expectSubnetID, linodeIface.VPC.SubnetID)
 		require.NotNil(t, linodeIface.VPC.IPv4)
 		require.NotNil(t, linodeIface.VPC.IPv4.Addresses[0].NAT1To1Address)
-		require.Equal(t, "any", *linodeIface.VPC.IPv4.Addresses[0].NAT1To1Address)
+		require.Equal(t, "auto", *linodeIface.VPC.IPv4.Addresses[0].NAT1To1Address)
 	} else {
 		require.Nil(t, linodeIface)
 	}

@@ -14,6 +14,12 @@ spec:
         kind: LinodeFirewall
         name: ${CLUSTER_NAME}
       # diskEncryption: disabled
+      #
+      # linodeInterfaces can't be used for the control plane
+      # if using the default NodeBalancer for the associated
+      # LinodeCluster's .Spec.Network.LoadBalancerType
+      # because we need a private IP to add the machine to the
+      # NodeBalancer
       interfaces:
         - purpose: public
       authorizedKeys:
@@ -37,6 +43,12 @@ spec:
       # diskEncryption: disabled
       interfaces:
         - purpose: public
+      # uncomment if using new network interfaces and comment out interfaces above (requires beta opt-in)
+      # linodeInterfaces:
+      #   - public:
+      #       ipv4:
+      #         addresses:
+      #           - address: "auto"
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - ${LINODE_SSH_PUBKEY}

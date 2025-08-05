@@ -125,6 +125,7 @@ func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime
 	return nil, nil
 }
 
+//nolint:cyclop // as simple as it gets
 func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeMachineSpec, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
@@ -153,6 +154,30 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 			Field:  "spec.vpcID/spec.vpcRef",
 			Type:   field.ErrorTypeInvalid,
 			Detail: "Cannot specify both VPCID and VPCRef",
+		})
+	}
+
+	if spec.LinodeInterfaces != nil && spec.Interfaces != nil {
+		errs = append(errs, &field.Error{
+			Field:  "spec.linodeInterfaces/spec.interfaces",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Cannot specify both LinodeInterfaces and Interfaces",
+		})
+	}
+
+	if spec.LinodeInterfaces != nil && spec.PrivateIP != nil && *spec.PrivateIP {
+		errs = append(errs, &field.Error{
+			Field:  "spec.linodeInterfaces/spec.privateIP",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Linode Interfaces do not support private IPs",
+		})
+	}
+
+	if spec.LinodeInterfaces != nil && spec.NetworkHelper != nil && *spec.NetworkHelper {
+		errs = append(errs, &field.Error{
+			Field:  "spec.linodeInterfaces/spec.networkHelper",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Linode Interfaces do not support network helper (enabled by default), it must be explicitly set to false",
 		})
 	}
 
