@@ -624,6 +624,10 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 			Network: true,
 		},
 	}
+	// LinodeInterfaces does not support network helpers, so we disable it
+	if machineScope.LinodeMachine.Spec.LinodeInterfaces != nil {
+		configData.Helpers.Network = false
+	}
 
 	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
 		configData.Kernel = machineScope.LinodeMachine.Spec.Configuration.Kernel

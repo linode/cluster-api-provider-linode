@@ -84,7 +84,14 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 	if machineScope.LinodeMachine.Spec.PrivateIP != nil {
 		createConfig.PrivateIP = *machineScope.LinodeMachine.Spec.PrivateIP
 	} else {
-		createConfig.PrivateIP = true
+		if machineScope.LinodeMachine.Spec.LinodeInterfaces == nil {
+			// Supported only for legacy network interfaces.
+			createConfig.PrivateIP = true
+		} else {
+			// Network Helper is not supported for the new network interfaces.
+			createConfig.NetworkHelper = ptr.To(false)
+			createConfig.InterfaceGeneration = linodego.GenerationLinode
+		}
 	}
 
 	if createConfig.Tags == nil {
@@ -638,12 +645,21 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 	}
 
 	// Check if a VPC interface already exists
-	for i, netInterface := range linodeInterfaces {
+	for iface, netInterface := range linodeInterfaces {
 		if netInterface.VPC != nil {
-			linodeInterfaces[i].VPC.SubnetID = subnetID
+			linodeInterfaces[iface].VPC.SubnetID = subnetID
 			// If IPv6 range config is not empty, add it to the interface configuration
 			if !isVPCInterfaceIPv6ConfigEmpty(ipv6Config) {
-				linodeInterfaces[i].VPC.IPv6 = ipv6Config
+				linodeInterfaces[iface].VPC.IPv6 = ipv6Config
+			}
+			if netInterface.VPC.IPv4 == nil {
+				linodeInterfaces[iface].VPC.IPv4 = &linodego.VPCInterfaceIPv4CreateOptions{
+					Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+						Primary:        ptr.To(true),
+						NAT1To1Address: ptr.To("auto"),
+						Address:        "auto",
+					}},
+				}
 			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
 		}
@@ -656,7 +672,8 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
-					NAT1To1Address: ptr.To("any"),
+					NAT1To1Address: ptr.To("auto"),
+					Address:        "auto",
 				}},
 			},
 		},
@@ -666,6 +683,8 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 	if !isVPCInterfaceIPv6ConfigEmpty(ipv6Config) {
 		vpcIntfCreateOpts.VPC.IPv6 = ipv6Config
 	}
+
+	logger.Info("Creating LinodeInterfaceCreateOptions", "VPC", *vpcIntfCreateOpts)
 
 	return vpcIntfCreateOpts, nil
 }
@@ -738,7 +757,7 @@ func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *
 			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
-					NAT1To1Address: ptr.To("any"),
+					NAT1To1Address: ptr.To("auto"),
 				}},
 			},
 		},
@@ -905,7 +924,6 @@ func getVPCInterfaceIPv6Config(machineScope *scope.MachineScope, numIPv6RangesIn
 
 // Unfortunately, this is necessary since DeepCopy can't be generated for linodego.LinodeInterfaceCreateOptions
 // so here we manually create the options for Linode interfaces.
-// /
 //
 //nolint:gocognit,cyclop,gocritic,nestif,nolintlint // Also, unfortunately, this cannot be made any reasonably simpler with how complicated the linodego struct is
 func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfaceCreateOptions) []linodego.LinodeInterfaceCreateOptions {
@@ -946,7 +964,8 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 				ipv4Addrs = []linodego.VPCInterfaceIPv4AddressCreateOptions{
 					{
 						Primary:        ptr.To(true),
-						NAT1To1Address: ptr.To("any"),
+						NAT1To1Address: ptr.To("auto"),
+						Address:        "auto", // Default to auto-assigned address
 					},
 				}
 			}
@@ -1021,22 +1040,8 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 	return linodeInterfaces
 }
 
+// for converting LinodeMachineSpec to linodego.InstanceCreateOptions. Any defaulting should be done in fillCreateConfig instead
 func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec, machineTags []string) *linodego.InstanceCreateOptions {
-	interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
-	for idx, iface := range machineSpec.Interfaces {
-		interfaces[idx] = linodego.InstanceConfigInterfaceCreateOptions{
-			IPAMAddress: iface.IPAMAddress,
-			Label:       iface.Label,
-			Purpose:     iface.Purpose,
-			Primary:     iface.Primary,
-			SubnetID:    iface.SubnetID,
-			IPRanges:    iface.IPRanges,
-		}
-	}
-	privateIP := false
-	if machineSpec.PrivateIP != nil {
-		privateIP = *machineSpec.PrivateIP
-	}
 	instCreateOpts := &linodego.InstanceCreateOptions{
 		Region:          machineSpec.Region,
 		Type:            machineSpec.Type,
@@ -1044,14 +1049,30 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 		AuthorizedUsers: machineSpec.AuthorizedUsers,
 		RootPass:        machineSpec.RootPass,
 		Image:           machineSpec.Image,
-		Interfaces:      interfaces,
-		PrivateIP:       privateIP,
 		Tags:            machineTags,
 		FirewallID:      machineSpec.FirewallID,
 		DiskEncryption:  linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
 	}
+
+	if machineSpec.PrivateIP != nil {
+		instCreateOpts.PrivateIP = *machineSpec.PrivateIP
+	}
+
 	if len(machineSpec.LinodeInterfaces) > 0 {
 		instCreateOpts.LinodeInterfaces = constructLinodeInterfaceCreateOpts(machineSpec.LinodeInterfaces)
+	} else {
+		interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
+		for idx, iface := range machineSpec.Interfaces {
+			interfaces[idx] = linodego.InstanceConfigInterfaceCreateOptions{
+				IPAMAddress: iface.IPAMAddress,
+				Label:       iface.Label,
+				Purpose:     iface.Purpose,
+				Primary:     iface.Primary,
+				SubnetID:    iface.SubnetID,
+				IPRanges:    iface.IPRanges,
+			}
+		}
+		instCreateOpts.Interfaces = interfaces
 	}
 
 	return instCreateOpts
@@ -1478,6 +1499,14 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 	}
 
 	createConfig.FirewallID = fwID
+
+	// If using LinodeInterfaces that needs to know about the firewall ID
+	if machineScope.LinodeMachine.Spec.LinodeInterfaces != nil {
+		for i := range createConfig.LinodeInterfaces {
+			createConfig.LinodeInterfaces[i].FirewallID = ptr.To(fwID)
+		}
+	}
+
 	return nil
 }
 
