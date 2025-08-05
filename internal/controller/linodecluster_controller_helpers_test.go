@@ -338,7 +338,7 @@ func TestAddMachineToLB(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType: "external",
+							LoadBalancerType: lbTypeExternal,
 						},
 					},
 				},
@@ -352,7 +352,7 @@ func TestAddMachineToLB(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType: "nodebalancer",
+							LoadBalancerType: lbTypeNB,
 							// NodeBalancerID and ApiserverNodeBalancerConfigID are nil
 						},
 					},
@@ -367,7 +367,7 @@ func TestAddMachineToLB(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:              "nodebalancer",
+							LoadBalancerType:              lbTypeNB,
 							NodeBalancerID:                util.Pointer(12345),
 							ApiserverNodeBalancerConfigID: util.Pointer(67890),
 						},
@@ -395,7 +395,7 @@ func TestAddMachineToLB(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							LoadBalancerType:              "nodebalancer",
+							LoadBalancerType:              lbTypeNB,
 							NodeBalancerID:                util.Pointer(12345),
 							ApiserverNodeBalancerConfigID: util.Pointer(67890),
 						},
@@ -449,9 +449,9 @@ func TestAddMachineToLB(t *testing.T) {
 				}
 			} else {
 				require.NoError(t, err)
-				// For the NodeBalancer without IDs case, verify that LoadBalancerType was changed to "external"
-				if testcase.name == "NodeBalancer without IDs should set type to external" {
-					assert.Equal(t, "external", testcase.clusterScope.LinodeCluster.Spec.Network.LoadBalancerType)
+				// For the NodeBalancer without IDs case, verify that LoadBalancerType was changed to lbTypeExternal
+				if testcase.name == "NodeBalancer without IDs should set type to lbTypeExternal" {
+					assert.Equal(t, lbTypeExternal, testcase.clusterScope.LinodeCluster.Spec.Network.LoadBalancerType)
 				}
 			}
 		})
