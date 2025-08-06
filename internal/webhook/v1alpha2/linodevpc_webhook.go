@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/linode/linodego"
 	"go4.org/netipx"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,11 +43,6 @@ import (
 )
 
 var (
-	// The capability string indicating a region supports VPCs: [VPC Availability]
-	//
-	// [VPC Availability]: https://www.linode.com/docs/products/networking/vpc/#availability
-	LinodeVPCCapability = "VPCs"
-
 	// The IPv4 ranges that are excluded from VPC Subnets: [Valid IPv4 Ranges for a Subnet]
 	//
 	// [Valid IPv4 Ranges for a Subnet]: https://www.linode.com/docs/products/networking/vpc/guides/subnets/#valid-ipv4-ranges
@@ -151,7 +147,7 @@ func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodecl
 	var errs field.ErrorList
 
 	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), LinodeVPCCapability); err != nil {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityVPCs); err != nil {
 			errs = append(errs, err)
 		}
 	}

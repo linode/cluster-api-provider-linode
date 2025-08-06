@@ -48,7 +48,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 			},
 		}
 		region            = linodego.Region{ID: "mock-region"}
-		capabilities      = []string{LinodeObjectStorageCapability}
+		capabilities      = []string{linodego.CapabilityObjectStorage}
 		capabilities_zero = []string{}
 	)
 

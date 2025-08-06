@@ -99,7 +99,7 @@ func validateObjectStorageRegion(ctx context.Context, linodegoclient clients.Lin
 	} else {
 		region = cexp1.FindStringSubmatch(id)[1]
 	}
-	return validateRegion(ctx, linodegoclient, region, path, LinodeObjectStorageCapability)
+	return validateRegion(ctx, linodegoclient, region, path, linodego.CapabilityObjectStorage)
 }
 
 func getCredentialDataFromRef(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {

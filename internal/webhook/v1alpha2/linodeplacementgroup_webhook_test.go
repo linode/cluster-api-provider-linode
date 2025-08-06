@@ -51,7 +51,7 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 			},
 		}
 		region                      = linodego.Region{ID: "test"}
-		capabilities                = []string{LinodePlacementGroupCapability}
+		capabilities                = []string{linodego.CapabilityPlacementGroup}
 		capabilities_zero           = []string{}
 		invalidRegionError          = "spec.region: Not found: \"example\""
 		invalidRegionNoPGCapability = "spec.region: Invalid value: \"example\": no capability: Placement Group"
