@@ -679,6 +679,7 @@ _Appears in:_
 | `vpcID` _integer_ | VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
 | `ipv6Options` _[IPv6CreateOptions](#ipv6createoptions)_ | IPv6Options defines the IPv6 options for the instance.<br />If not specified, IPv6 ranges won't be allocated to instance. |  |  |
 | `networkHelper` _boolean_ | NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.<br />You can use this to enable/disable the network helper for a specific instance.<br />For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking<br />Defaults to true. |  |  |
+| `interfaceGeneration` _[InterfaceGeneration](#interfacegeneration)_ | InterfaceGeneration is the generation of the interface to use for the cluster's<br />nodes in interface / linodeInterface are not specified for a LinodeMachine.<br />If not set, defaults to "legacy_config". | legacy_config | Enum: [legacy_config linode] <br /> |
 
 
 #### LinodeMachineStatus
