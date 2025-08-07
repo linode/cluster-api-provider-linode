@@ -227,6 +227,16 @@ spec:
               instanceID:
                 description: InstanceID is the Linode instance ID for this machine.
                 type: integer
+              interfaceGeneration:
+                default: legacy_config
+                description: |-
+                  InterfaceGeneration is the generation of the interface to use for the cluster's
+                  nodes in interface / linodeInterface are not specified for a LinodeMachine.
+                  If not set, defaults to "legacy_config".
+                enum:
+                - legacy_config
+                - linode
+                type: string
               interfaces:
                 items:
                   description: InstanceConfigInterfaceCreateOptions defines network

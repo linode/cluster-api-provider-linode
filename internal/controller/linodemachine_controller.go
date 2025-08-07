@@ -274,7 +274,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
-		if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightLinodeFirewallReady)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+		if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, machineScope)
 			if err != nil || !res.IsZero() {
 				conditions.Set(machineScope.LinodeMachine, metav1.Condition{
@@ -553,6 +553,10 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
+	// default to legacy interface generation if not set for now
+	if machineScope.LinodeMachine.Spec.InterfaceGeneration == "" {
+		machineScope.LinodeMachine.Spec.InterfaceGeneration = linodego.GenerationLegacyConfig
+	}
 	// get the bootstrap data for the Linode instance and set it for create config
 	createOpts, err := newCreateConfig(ctx, machineScope, r.GzipCompressionEnabled, logger)
 	if err != nil {
@@ -619,7 +623,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 
-	configData := &linodego.InstanceConfigUpdateOptions{}
+	configData := linodego.InstanceConfigUpdateOptions{}
 	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
 		configData.Kernel = machineScope.LinodeMachine.Spec.Configuration.Kernel
 	}
@@ -632,14 +636,14 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 	}
 
 	// only update the instance configuration if there are changes
-	if configData != nil {
+	if configData.Kernel != "" || configData.Helpers != nil {
 		instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
 		if err != nil {
 			logger.Error(err, "Failed to get default instance configuration")
 			return retryIfTransient(err, logger)
 		}
-		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, *configData); err != nil {
-			logger.Error(err, "Failed to update default instance configuration", "configuration", *configData)
+		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, configData); err != nil {
+			logger.Error(err, "Failed to update default instance configuration", "configuration", configData)
 			return retryIfTransient(err, logger)
 		}
 	}

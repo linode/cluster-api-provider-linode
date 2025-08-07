@@ -128,6 +128,13 @@ type LinodeMachineSpec struct {
 	// For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking
 	// Defaults to true.
 	NetworkHelper *bool `json:"networkHelper,omitempty"`
+
+	// InterfaceGeneration is the generation of the interface to use for the cluster's
+	// nodes in interface / linodeInterface are not specified for a LinodeMachine.
+	// If not set, defaults to "legacy_config".
+	// +kubebuilder:validation:Enum=legacy_config;linode
+	// +kubebuilder:default=legacy_config
+	InterfaceGeneration linodego.InterfaceGeneration `json:"interfaceGeneration,omitempty"`
 }
 
 // IPv6CreateOptions defines the IPv6 options for the instance.
