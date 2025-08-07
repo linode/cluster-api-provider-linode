@@ -89,7 +89,7 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 			createConfig.PrivateIP = true
 		} else {
 			// Network Helper is not supported for the new network interfaces.
-			createConfig.NetworkHelper = ptr.To(false)
+			createConfig.NetworkHelper = nil
 			createConfig.InterfaceGeneration = linodego.GenerationLinode
 		}
 	}

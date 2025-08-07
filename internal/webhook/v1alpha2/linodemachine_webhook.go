@@ -157,28 +157,10 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 		})
 	}
 
-	if spec.LinodeInterfaces != nil && spec.Interfaces != nil {
-		errs = append(errs, &field.Error{
-			Field:  "spec.linodeInterfaces/spec.interfaces",
-			Type:   field.ErrorTypeInvalid,
-			Detail: "Cannot specify both LinodeInterfaces and Interfaces",
-		})
-	}
-
-	if spec.LinodeInterfaces != nil && spec.PrivateIP != nil && *spec.PrivateIP {
-		errs = append(errs, &field.Error{
-			Field:  "spec.linodeInterfaces/spec.privateIP",
-			Type:   field.ErrorTypeInvalid,
-			Detail: "Linode Interfaces do not support private IPs",
-		})
-	}
-
-	if spec.LinodeInterfaces != nil && spec.NetworkHelper != nil && *spec.NetworkHelper {
-		errs = append(errs, &field.Error{
-			Field:  "spec.linodeInterfaces/spec.networkHelper",
-			Type:   field.ErrorTypeInvalid,
-			Detail: "Linode Interfaces do not support network helper (enabled by default), it must be explicitly set to false",
-		})
+	if spec.LinodeInterfaces != nil {
+		if ifaceErrs := r.validateLinodeInterfaces(spec); ifaceErrs != nil {
+			errs = append(errs, ifaceErrs...)
+		}
 	}
 
 	if spec.FirewallID != 0 && spec.FirewallRef != nil {
@@ -186,6 +168,39 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 			Field:  "spec.firewallID/spec.firewallRef",
 			Type:   field.ErrorTypeInvalid,
 			Detail: "Cannot specify both FirewallID and FirewallRef",
+		})
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errs
+}
+
+func (r *linodeMachineValidator) validateLinodeInterfaces(spec infrav1alpha2.LinodeMachineSpec) field.ErrorList {
+	var errs field.ErrorList
+
+	if spec.Interfaces != nil {
+		errs = append(errs, &field.Error{
+			Field:  "spec.linodeInterfaces/spec.interfaces",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Cannot specify both LinodeInterfaces and Interfaces",
+		})
+	}
+
+	if spec.PrivateIP != nil && *spec.PrivateIP {
+		errs = append(errs, &field.Error{
+			Field:  "spec.linodeInterfaces/spec.privateIP",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Linode Interfaces do not support private IPs",
+		})
+	}
+
+	if spec.NetworkHelper != nil {
+		errs = append(errs, &field.Error{
+			Field:  "spec.linodeInterfaces/spec.networkHelper",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Linode Interfaces do not support configuring network helper",
 		})
 	}
 
