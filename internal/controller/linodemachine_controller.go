@@ -619,20 +619,10 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 
-	configData := linodego.InstanceConfigUpdateOptions{
-		Helpers: &linodego.InstanceConfigHelpers{
-			Network: true,
-		},
-	}
-	// LinodeInterfaces does not support network helpers, so we disable it
-	if machineScope.LinodeMachine.Spec.LinodeInterfaces != nil {
-		configData.Helpers.Network = false
-	}
-
+	configData := &linodego.InstanceConfigUpdateOptions{}
 	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
 		configData.Kernel = machineScope.LinodeMachine.Spec.Configuration.Kernel
 	}
-
 	// For cases where the network helper is not enabled on account level, we can enable it per instance level
 	// Default is true, so we only need to update if it's explicitly set to false
 	if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
@@ -641,14 +631,17 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		}
 	}
 
-	instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
-	if err != nil {
-		logger.Error(err, "Failed to get default instance configuration")
-		return retryIfTransient(err, logger)
-	}
-	if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, configData); err != nil {
-		logger.Error(err, "Failed to update default instance configuration")
-		return retryIfTransient(err, logger)
+	// only update the instance configuration if there are changes
+	if configData != nil {
+		instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
+		if err != nil {
+			logger.Error(err, "Failed to get default instance configuration")
+			return retryIfTransient(err, logger)
+		}
+		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, *configData); err != nil {
+			logger.Error(err, "Failed to update default instance configuration", "configuration", *configData)
+			return retryIfTransient(err, logger)
+		}
 	}
 
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
