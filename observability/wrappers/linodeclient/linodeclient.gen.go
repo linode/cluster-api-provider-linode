@@ -1144,6 +1144,32 @@ func (_d LinodeClientWithTracing) ListInstanceConfigs(ctx context.Context, linod
 	return _d.LinodeClient.ListInstanceConfigs(ctx, linodeID, opts)
 }
 
+// ListInstanceFirewalls implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) ListInstanceFirewalls(ctx context.Context, linodeID int, opts *linodego.ListOptions) (fa1 []linodego.Firewall, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListInstanceFirewalls")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":      ctx,
+				"linodeID": linodeID,
+				"opts":     opts}, map[string]interface{}{
+				"fa1": fa1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListInstanceFirewalls(ctx, linodeID, opts)
+}
+
 // ListInstances implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListInstances(ctx context.Context, opts *linodego.ListOptions) (ia1 []linodego.Instance, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListInstances")
@@ -1428,6 +1454,32 @@ func (_d LinodeClientWithTracing) UpdateInstanceConfig(ctx context.Context, lino
 		_span.End()
 	}()
 	return _d.LinodeClient.UpdateInstanceConfig(ctx, linodeID, configID, opts)
+}
+
+// UpdateInstanceFirewalls implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateInstanceFirewalls(ctx context.Context, linodeID int, opts linodego.InstanceFirewallUpdateOptions) (fa1 []linodego.Firewall, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateInstanceFirewalls")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":      ctx,
+				"linodeID": linodeID,
+				"opts":     opts}, map[string]interface{}{
+				"fa1": fa1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateInstanceFirewalls(ctx, linodeID, opts)
 }
 
 // UpdateObjectStorageBucketAccess implements _sourceClients.LinodeClient

@@ -1733,6 +1733,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							Status:  linodego.InstanceProvisioning,
 							Updated: util.Pointer(time.Now()),
 						}, nil)
+					mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+						[]linodego.Firewall{}, nil)
 				}),
 				Result("machine status updated", func(ctx context.Context, mck Mock) {
 					linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
@@ -1777,6 +1779,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						Status:  linodego.InstanceRunning,
 						Updated: util.Pointer(time.Now()),
 					}, nil)
+				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+					[]linodego.Firewall{}, nil)
 			}),
 			Result("machine tag is updated", func(ctx context.Context, mck Mock) {
 				linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
@@ -1786,6 +1790,178 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(linodeMachine.Status.Tags).To(Equal([]string{"test-tag"}))
 			}),
+		),
+		Path(
+			Call("machine firewall is updated", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2", "test-tag"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+					[]linodego.Firewall{
+						{ID: 5}, // Instance currently has firewall ID 5
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
+					FirewallIDs: []int{10}, // Update to firewall ID 10
+				}).Return(nil, nil)
+			}),
+			Result("machine firewall is updated", func(ctx context.Context, mck Mock) {
+				linodeMachine.Spec.FirewallID = 10 // Set new firewall ID
+				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
+				Expect(err).NotTo(HaveOccurred())
+			}),
+		),
+		Path(
+			Call("machine firewall update applied when multiple firewall already attached", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2", "test-tag"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+					[]linodego.Firewall{
+						{ID: 10}, // Instance already has the desired firewall ID 10
+						{ID: 15}, // Additional firewall
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
+					FirewallIDs: []int{10}, // Update to firewall ID 10
+				}).Return(nil, nil)
+			}),
+			Result("machine firewall update skipped when firewall already attached", func(ctx context.Context, mck Mock) {
+				linodeMachine.Spec.FirewallID = 10 // Firewall ID already attached
+				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
+				Expect(err).NotTo(HaveOccurred())
+			}),
+		),
+		Path(
+			Call("machine firewall update called even when FirewallID is zero", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2", "test-tag"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+					[]linodego.Firewall{
+						{ID: 5}, // Instance has existing firewall
+					}, nil)
+				// UpdateInstanceFirewalls WILL be called since 0 is not in the attachedFirewalls list
+				mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
+					FirewallIDs: []int{},
+				}).Return(nil, nil)
+			}),
+			Result("machine firewall gets cleared when firewallID is set to 0", func(ctx context.Context, mck Mock) {
+				linodeMachine.Spec.FirewallID = 0
+				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
+				Expect(err).NotTo(HaveOccurred())
+			}),
+		),
+		OneOf(
+			Path(
+				Call("machine firewall list fails", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+						&linodego.Instance{
+							ID:      11111,
+							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv6:    "fd00::",
+							Tags:    []string{"test-cluster-2"},
+							Status:  linodego.InstanceRunning,
+							Updated: util.Pointer(time.Now()),
+						}, nil)
+					mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+						&linodego.Instance{
+							ID:      11111,
+							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv6:    "fd00::",
+							Tags:    []string{"test-cluster-2", "test-tag"},
+							Status:  linodego.InstanceRunning,
+							Updated: util.Pointer(time.Now()),
+						}, nil)
+					mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+						nil, &linodego.Error{Code: http.StatusInternalServerError})
+				}),
+				Result("machine firewall list error requeues", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.FirewallID = 10
+					res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to list firewalls for Linode instance"))
+				}),
+			),
+			Path(
+				Call("machine firewall update fails", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+						&linodego.Instance{
+							ID:      11111,
+							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv6:    "fd00::",
+							Tags:    []string{"test-cluster-2"},
+							Status:  linodego.InstanceRunning,
+							Updated: util.Pointer(time.Now()),
+						}, nil)
+					mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+						&linodego.Instance{
+							ID:      11111,
+							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv6:    "fd00::",
+							Tags:    []string{"test-cluster-2", "test-tag"},
+							Status:  linodego.InstanceRunning,
+							Updated: util.Pointer(time.Now()),
+						}, nil)
+					mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+						[]linodego.Firewall{
+							{ID: 5}, // Instance currently has firewall ID 5
+						}, nil)
+					mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
+						FirewallIDs: []int{10},
+					}).Return(nil, &linodego.Error{Code: http.StatusBadRequest})
+				}),
+				Result("machine firewall update error requeues", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.FirewallID = 10
+					_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+					Expect(err).To(HaveOccurred())
+					Expect(mck.Logs()).To(ContainSubstring("Failed to update firewalls for Linode instance"))
+				}),
+			),
 		),
 	)
 })
