@@ -79,7 +79,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		Spec: infrav1alpha2.LinodeVPCSpec{
 			Region: "us-ord",
 			Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
-				{Label: "subnet1", IPv4: "10.0.0.0/8"},
+				{Label: "subnet1", IPv4: "10.0.0.0/8", SubnetID: 123},
 			},
 		},
 	}
@@ -787,7 +787,8 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 									Label: "subnet-1",
 								},
 							},
-						}, nil)
+						}, nil).
+						AnyTimes()
 
 					// Mock the CreateNodeBalancer call to avoid unexpected call error
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).

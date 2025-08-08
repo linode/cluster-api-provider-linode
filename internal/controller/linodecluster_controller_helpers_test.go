@@ -93,6 +93,7 @@ func TestGetIPPortCombo(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
 						},
 						VPCRef: &corev1.ObjectReference{
@@ -127,6 +128,7 @@ func TestGetIPPortCombo(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
 						},
 						VPCRef: &corev1.ObjectReference{
@@ -192,6 +194,7 @@ func TestGetIPPortCombo(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
@@ -227,6 +230,7 @@ func TestGetIPPortCombo(t *testing.T) {
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
 						},
 						VPCRef: &corev1.ObjectReference{

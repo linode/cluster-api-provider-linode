@@ -190,6 +190,16 @@ type NetworkSpec struct {
 	// example: 10.10.10.0/30
 	// +optional
 	NodeBalancerBackendIPv4Range string `json:"nodeBalancerBackendIPv4Range,omitempty"`
+
+	// EnableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.
+	// If set to false (default), the NodeBalancer will not be created in a VPC and
+	// backends will use Linode private IPs. If true, the NodeBalancer will be
+	// created in the configured VPC (when VPCRef or VPCID is set) and backends
+	// will use VPC IPs.
+	// +kubebuilder:default=false
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +optional
+	EnableVPCBackends bool `json:"enableVPCBackends,omitempty"`
 }
 
 type LinodeNBPortConfig struct {

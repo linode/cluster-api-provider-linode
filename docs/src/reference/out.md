@@ -1170,6 +1170,7 @@ _Appears in:_
 | `subnetName` _string_ | subnetName is the name/label of the VPC subnet to be used by the cluster |  |  |
 | `useVlan` _boolean_ | UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally. |  |  |
 | `nodeBalancerBackendIPv4Range` _string_ | NodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.<br />example: 10.10.10.0/30 |  |  |
+| `enableVPCBackends` _boolean_ | EnableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.<br />If set to false (default), the NodeBalancer will not be created in a VPC and<br />backends will use Linode private IPs. If true, the NodeBalancer will be<br />created in the configured VPC (when VPCRef or VPCID is set) and backends<br />will use VPC IPs. | false |  |
 
 
 #### ObjectStorageACL

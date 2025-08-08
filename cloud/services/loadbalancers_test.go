@@ -276,6 +276,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 							Namespace: "default",
 						},
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
 						},
 					},
@@ -339,6 +340,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 						Region: "us-east",
 						VPCID:  ptr.To(456),
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
 						},
 					},
@@ -393,6 +395,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 						Region: "us-east",
 						VPCID:  ptr.To(789),
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
 						},
 					},
@@ -420,6 +423,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 							Namespace: "default",
 						},
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
 						},
 					},
@@ -1713,6 +1717,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 							Namespace: "default",
 						},
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:             true,
 							NodeBalancerID:                ptr.To(1234),
 							ApiserverNodeBalancerConfigID: ptr.To(5678),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
@@ -1786,6 +1791,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 							Namespace: "default",
 						},
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:             true,
 							NodeBalancerID:                ptr.To(1234),
 							ApiserverNodeBalancerConfigID: ptr.To(5678),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
@@ -1844,6 +1850,7 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 							Namespace: "default",
 						},
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:             true,
 							NodeBalancerID:                ptr.To(1234),
 							ApiserverNodeBalancerConfigID: ptr.To(5678),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
@@ -2564,6 +2571,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:             true,
 							ApiserverNodeBalancerConfigID: ptr.To(222),
 							NodeBalancerID:                ptr.To(111),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
@@ -2635,6 +2643,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:             true,
 							ApiserverNodeBalancerConfigID: ptr.To(222),
 							NodeBalancerID:                ptr.To(111),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
@@ -2710,6 +2719,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:             true,
 							ApiserverNodeBalancerConfigID: ptr.To(222),
 							NodeBalancerID:                ptr.To(111),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
@@ -2819,6 +2829,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
+							EnableVPCBackends:             true,
 							ApiserverNodeBalancerConfigID: ptr.To(222),
 							NodeBalancerID:                ptr.To(111),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
