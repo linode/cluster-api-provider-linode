@@ -16,4 +16,5 @@ spec:
     kind: LinodeFirewall
     name: ${CLUSTER_NAME}-nb
   network:
+    enableVPCBackends: true
     subnetName: ${SUBNET_NAME:=default}
