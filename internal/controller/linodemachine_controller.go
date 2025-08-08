@@ -553,10 +553,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
-	// default to legacy interface generation if not set for now
-	if machineScope.LinodeMachine.Spec.InterfaceGeneration == "" {
-		machineScope.LinodeMachine.Spec.InterfaceGeneration = linodego.GenerationLegacyConfig
-	}
 	// get the bootstrap data for the Linode instance and set it for create config
 	createOpts, err := newCreateConfig(ctx, machineScope, r.GzipCompressionEnabled, logger)
 	if err != nil {
