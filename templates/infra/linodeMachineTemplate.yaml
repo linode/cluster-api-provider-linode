@@ -9,13 +9,16 @@ spec:
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_CONTROL_PLANE_MACHINE_TYPE}
       region: ${LINODE_REGION}
+      privateIP: false
+      vpcRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeVPC
+        name: ${CLUSTER_NAME}
       firewallRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall
         name: ${CLUSTER_NAME}
       # diskEncryption: disabled
-      interfaces:
-        - purpose: public
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - ${LINODE_SSH_PUBKEY}
@@ -30,13 +33,16 @@ spec:
       image: ${LINODE_OS:="linode/ubuntu22.04"}
       type: ${LINODE_MACHINE_TYPE}
       region: ${LINODE_REGION}
+      privateIP: false
+      vpcRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeVPC
+        name: ${CLUSTER_NAME}
       firewallRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
         kind: LinodeFirewall
         name: ${CLUSTER_NAME}
       # diskEncryption: disabled
-      interfaces:
-        - purpose: public
       authorizedKeys:
       # uncomment to include your ssh key in linode provisioning
       # - ${LINODE_SSH_PUBKEY}

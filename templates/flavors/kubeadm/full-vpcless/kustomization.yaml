@@ -77,6 +77,8 @@ patches:
         path: /spec/vpcRef
       - op: remove
         path: /spec/nodeBalancerFirewallRef
+      - op: remove
+        path: /spec/network/enableVPCBackends
   - target:
       group: controlplane.cluster.x-k8s.io
       version: v1beta1
@@ -224,6 +226,14 @@ patches:
     patch: |-
       - op: remove
         path: /spec/template/spec/firewallRef
+      - op: remove
+        path: /spec/template/spec/vpcRef
+      - op: remove
+        path: /spec/template/spec/privateIP
+      - op: add
+        path: /spec/template/spec/interfaces
+        value:
+        - purpose: public
   - target:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
