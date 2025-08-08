@@ -81,16 +81,20 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 }
 
 func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
+	// This will only be empty if no interfaces or linodeInterfaces were specified in the LinodeMachine spec.
+	// In that case we default to legacy interfaces.
+	if createConfig.InterfaceGeneration == "" {
+		createConfig.InterfaceGeneration = linodego.GenerationLegacyConfig
+	}
 	if machineScope.LinodeMachine.Spec.PrivateIP != nil {
 		createConfig.PrivateIP = *machineScope.LinodeMachine.Spec.PrivateIP
 	} else {
-		if machineScope.LinodeMachine.Spec.LinodeInterfaces == nil && machineScope.LinodeMachine.Spec.InterfaceGeneration == linodego.GenerationLegacyConfig {
+		if createConfig.InterfaceGeneration == linodego.GenerationLegacyConfig {
 			// Supported only for legacy network interfaces.
 			createConfig.PrivateIP = true
 		} else {
 			// Network Helper is not supported for the new network interfaces.
 			createConfig.NetworkHelper = nil
-			createConfig.InterfaceGeneration = linodego.GenerationLinode
 		}
 	}
 
@@ -1040,18 +1044,19 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 	return linodeInterfaces
 }
 
-// for converting LinodeMachineSpec to linodego.InstanceCreateOptions. Any defaulting should be done in fillCreateConfig instead
+// For converting LinodeMachineSpec to linodego.InstanceCreateOptions. Any defaulting should be done in fillCreateConfig instead
 func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMachineSpec, machineTags []string) *linodego.InstanceCreateOptions {
 	instCreateOpts := &linodego.InstanceCreateOptions{
-		Region:          machineSpec.Region,
-		Type:            machineSpec.Type,
-		AuthorizedKeys:  machineSpec.AuthorizedKeys,
-		AuthorizedUsers: machineSpec.AuthorizedUsers,
-		RootPass:        machineSpec.RootPass,
-		Image:           machineSpec.Image,
-		Tags:            machineTags,
-		FirewallID:      machineSpec.FirewallID,
-		DiskEncryption:  linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
+		Region:              machineSpec.Region,
+		Type:                machineSpec.Type,
+		AuthorizedKeys:      machineSpec.AuthorizedKeys,
+		AuthorizedUsers:     machineSpec.AuthorizedUsers,
+		RootPass:            machineSpec.RootPass,
+		Image:               machineSpec.Image,
+		Tags:                machineTags,
+		FirewallID:          machineSpec.FirewallID,
+		InterfaceGeneration: machineSpec.InterfaceGeneration,
+		DiskEncryption:      linodego.InstanceDiskEncryption(machineSpec.DiskEncryption),
 	}
 
 	if machineSpec.PrivateIP != nil {
@@ -1060,6 +1065,8 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 
 	if len(machineSpec.LinodeInterfaces) > 0 {
 		instCreateOpts.LinodeInterfaces = constructLinodeInterfaceCreateOpts(machineSpec.LinodeInterfaces)
+		// If LinodeInterfaces are specified, the InterfaceGeneration must be GenerationLinode
+		instCreateOpts.InterfaceGeneration = linodego.GenerationLinode
 	} else if len(machineSpec.Interfaces) > 0 {
 		interfaces := make([]linodego.InstanceConfigInterfaceCreateOptions, len(machineSpec.Interfaces))
 		for idx, iface := range machineSpec.Interfaces {
@@ -1073,6 +1080,8 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 			}
 		}
 		instCreateOpts.Interfaces = interfaces
+		// If Interfaces are specified, the InterfaceGeneration must be GenerationLegacyConfig
+		instCreateOpts.InterfaceGeneration = linodego.GenerationLegacyConfig
 	}
 
 	return instCreateOpts
