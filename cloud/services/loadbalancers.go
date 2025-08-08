@@ -22,6 +22,21 @@ const (
 	DefaultKonnectivityLBPort = 8132
 )
 
+// DetermineAPIServerLBPort returns the configured API server load balancer port,
+// or the provider default when not explicitly set.
+func DetermineAPIServerLBPort(clusterScope *scope.ClusterScope) int {
+	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
+		return clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
+	}
+	return DefaultApiserverLBPort
+}
+
+// ShouldUseVPC decides whether VPC IPs/backends should be preferred and a VPC-scoped
+// NodeBalancer should be created. It requires both the feature flag and a VPC reference/ID.
+func ShouldUseVPC(clusterScope *scope.ClusterScope) bool {
+	return clusterScope.LinodeCluster.Spec.Network.EnableVPCBackends && (clusterScope.LinodeCluster.Spec.VPCRef != nil || clusterScope.LinodeCluster.Spec.VPCID != nil)
+}
+
 // FindSubnet selects a subnet from the provided subnets based on the subnet name
 // It handles both direct VPC subnets and VPCRef subnets
 // If subnet name is provided, it looks for a matching subnet; otherwise, it uses the first subnet
@@ -125,19 +140,18 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 		Tags:   []string{string(clusterScope.LinodeCluster.UID)},
 	}
 
-	// if NodeBalancerBackendIPv4Range is set, create the NodeBalancer in the specified VPC
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && (clusterScope.LinodeCluster.Spec.VPCRef != nil || clusterScope.LinodeCluster.Spec.VPCID != nil) {
-		logger.Info("Creating NodeBalancer in VPC", "NodeBalancerBackendIPv4Range", clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range)
+	// if enableVPCBackends is true and vpcRef or vpcID is set, create the NodeBalancer in the specified VPC
+	if ShouldUseVPC(clusterScope) {
+		logger.Info("Creating NodeBalancer in VPC")
 		subnetID, err := getSubnetID(ctx, clusterScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to fetch Linode Subnet ID")
 			return nil, err
 		}
-		createConfig.VPCs = []linodego.NodeBalancerVPCOptions{
-			{
-				IPv4Range: clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range,
-				SubnetID:  subnetID,
-			},
+
+		createConfig.VPCs = []linodego.NodeBalancerVPCOptions{{SubnetID: subnetID}}
+		if clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" {
+			createConfig.VPCs[0].IPv4Range = clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range
 		}
 	}
 
@@ -264,10 +278,7 @@ func EnsureNodeBalancerConfigs(
 	nbConfigs := []*linodego.NodeBalancerConfig{}
 	var apiserverLinodeNBConfig *linodego.NodeBalancerConfig
 	var err error
-	apiLBPort := DefaultApiserverLBPort
-	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
-		apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
-	}
+	apiLBPort := DetermineAPIServerLBPort(clusterScope)
 
 	if clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID != nil {
 		apiserverLinodeNBConfig, err = clusterScope.LinodeClient.GetNodeBalancerConfig(
@@ -325,10 +336,7 @@ func EnsureNodeBalancerConfigs(
 }
 
 func processAndCreateNodeBalancerNodes(ctx context.Context, ipAddress string, clusterScope *scope.ClusterScope, nodeBalancerNodes []linodego.NodeBalancerNode, subnetID int) error {
-	apiserverLBPort := DefaultApiserverLBPort
-	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
-		apiserverLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
-	}
+	apiserverLBPort := DetermineAPIServerLBPort(clusterScope)
 
 	// Set the port number and NB config ID for standard ports
 	portsToBeAdded := make([]map[string]int, 0)
@@ -382,12 +390,8 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 		return errors.New("nil NodeBalancer Config ID")
 	}
 
-	// if NodeBalancerBackendIPv4Range is set, we want to prioritize finding the VPC IP address
-	// otherwise, we will use the private IP address
 	subnetID := 0
-	useVPCIps := clusterScope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && clusterScope.LinodeCluster.Spec.VPCRef != nil
-	if useVPCIps {
-		// Get subnetID
+	if ShouldUseVPC(clusterScope) {
 		subnetID, err := getSubnetID(ctx, clusterScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to fetch Linode Subnet ID")

@@ -87,49 +87,60 @@ func removeMachineFromNB(ctx context.Context, logger logr.Logger, clusterScope *
 }
 
 func getIPPortCombo(cscope *scope.ClusterScope) (ipPortComboList []string) {
-	apiserverLBPort := services.DefaultApiserverLBPort
-	if cscope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
-		apiserverLBPort = cscope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
-	}
-
-	// Check if we're using VPC
-	useVPCIps := cscope.LinodeCluster.Spec.Network.NodeBalancerBackendIPv4Range != "" && cscope.LinodeCluster.Spec.VPCRef != nil
+	apiServerLBPort := services.DetermineAPIServerLBPort(cscope)
+	useVPCIPs := services.ShouldUseVPC(cscope)
 
 	for _, eachMachine := range cscope.LinodeMachines.Items {
-		// First try to find VPC IPs if we're using VPC
-		if useVPCIps {
-			vpcIPFound := false
-			for _, IPs := range eachMachine.Status.Addresses {
-				// Look for internal IPs that are NOT 192.168.* (likely VPC IPs)
-				if IPs.Type == clusterv1.MachineInternalIP && !util.IsLinodePrivateIP(IPs.Address) {
-					vpcIPFound = true
-					ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, apiserverLBPort))
-					for _, portConfig := range cscope.LinodeCluster.Spec.Network.AdditionalPorts {
-						ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, portConfig.Port))
-					}
-					break // Use first VPC IP found for this machine
-				}
-			}
+		var selectedIP string
 
-			// If we found a VPC IP for this machine, continue to the next machine
-			if vpcIPFound {
-				continue
+		if useVPCIPs {
+			if ip, ok := findFirstVPCInternalIP(eachMachine.Status.Addresses); ok {
+				selectedIP = ip
 			}
 		}
 
-		// Fall back to original behavior for this machine if no VPC IP found or not using VPC
-		for _, IPs := range eachMachine.Status.Addresses {
-			if IPs.Type != clusterv1.MachineInternalIP || !util.IsLinodePrivateIP(IPs.Address) {
-				continue
+		if selectedIP == "" {
+			if ip, ok := findFirstPrivateInternalIP(eachMachine.Status.Addresses); ok {
+				selectedIP = ip
 			}
-			ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, apiserverLBPort))
-			for _, portConfig := range cscope.LinodeCluster.Spec.Network.AdditionalPorts {
-				ipPortComboList = append(ipPortComboList, fmt.Sprintf("%s:%d", IPs.Address, portConfig.Port))
-			}
-			break // Use first 192.168.* IP found for this machine
+		}
+
+		if selectedIP != "" {
+			ipPortComboList = append(ipPortComboList, buildPortCombosForIP(selectedIP, apiServerLBPort, cscope.LinodeCluster.Spec.Network.AdditionalPorts)...)
 		}
 	}
+
 	return ipPortComboList
+}
+
+// findFirstVPCInternalIP returns the first internal IP that is not in Linode's private 192.168.* range.
+func findFirstVPCInternalIP(addresses []clusterv1.MachineAddress) (string, bool) {
+	for _, addr := range addresses {
+		if addr.Type == clusterv1.MachineInternalIP && !util.IsLinodePrivateIP(addr.Address) {
+			return addr.Address, true
+		}
+	}
+	return "", false
+}
+
+// findFirstPrivateInternalIP returns the first internal IP in Linode's private 192.168.* range.
+func findFirstPrivateInternalIP(addresses []clusterv1.MachineAddress) (string, bool) {
+	for _, addr := range addresses {
+		if addr.Type == clusterv1.MachineInternalIP && util.IsLinodePrivateIP(addr.Address) {
+			return addr.Address, true
+		}
+	}
+	return "", false
+}
+
+// buildPortCombosForIP composes ip:port pairs for the API server port and any additional ports.
+func buildPortCombosForIP(ip string, apiServerLBPort int, additionalPorts []infrav1alpha2.LinodeNBPortConfig) []string {
+	results := make([]string, 0, 1+len(additionalPorts))
+	results = append(results, fmt.Sprintf("%s:%d", ip, apiServerLBPort))
+	for _, portConfig := range additionalPorts {
+		results = append(results, fmt.Sprintf("%s:%d", ip, portConfig.Port))
+	}
+	return results
 }
 
 func linodeMachineToLinodeCluster(tracedClient client.Client, logger logr.Logger) handler.MapFunc {
@@ -188,10 +199,7 @@ func handleDNS(clusterScope *scope.ClusterScope) {
 		subDomain = clusterScope.LinodeCluster.Spec.Network.DNSSubDomainOverride
 	}
 	dnsHost := subDomain + "." + clusterSpec.Network.DNSRootDomain
-	apiLBPort := services.DefaultApiserverLBPort
-	if clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort != 0 {
-		apiLBPort = clusterScope.LinodeCluster.Spec.Network.ApiserverLoadBalancerPort
-	}
+	apiLBPort := services.DetermineAPIServerLBPort(clusterScope)
 	clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: dnsHost,
 		Port: int32(apiLBPort), // #nosec G115: Integer overflow conversion is safe for port numbers

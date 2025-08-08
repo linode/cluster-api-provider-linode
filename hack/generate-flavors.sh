@@ -16,7 +16,7 @@ SUPPORTED_CLUSTERCLASSES=(
 for clusterclass in ${SUPPORTED_CLUSTERCLASSES[@]}; do
     # clusterctl expects clusterclass not have the "cluster-template" prefix
     # except for the actual cluster template using the clusterclass
-    echo "****** Generating clusterclass-${clusterclass} flavor ******"
+    echo "****** Generating ${clusterclass} flavor ******"
     kustomize build "${FLAVORS_DIR}/${clusterclass}" > "${REPO_ROOT}/templates/${clusterclass}.yaml"
     cp "${FLAVORS_DIR}/${clusterclass}/cluster-template.yaml" "${REPO_ROOT}/templates/cluster-template-${clusterclass}.yaml"
 done
