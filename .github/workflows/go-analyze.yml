@@ -20,7 +20,7 @@ jobs:
       # Expose matched filters as job 'src' output variable
       src: ${{ steps.filter.outputs.src }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -57,7 +57,7 @@ jobs:
             storage.googleapis.com:443
             golangci-lint.run:443
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5

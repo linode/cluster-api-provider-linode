@@ -56,7 +56,7 @@ jobs:
       # Expose matched filters as job 'src' output variable
       paths: ${{ steps.filter.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -112,7 +112,7 @@ jobs:
             helm.cilium.io:443
             linode.github.io:443
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v5

@@ -23,7 +23,7 @@ jobs:
       # Expose matched filters as job 'src' output variable
       paths: ${{ steps.filter.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Harden Runner
@@ -62,7 +62,7 @@ jobs:
             api.codecov.io:443
             ingest.codecov.io:443
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
