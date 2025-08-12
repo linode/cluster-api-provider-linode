@@ -785,11 +785,32 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 }
 
 func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
-	// get the instance's firewalls
-	firewalls, err := machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
-	if err != nil {
-		logger.Error(err, "Failed to list firewalls for Linode instance")
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+	var (
+		firewalls []linodego.Firewall
+		err       error
+	)
+	// Get the instance's firewalls normally if this is not using the new linode interfaces,
+	// otherwise we have to get firewalls per linode interface
+	if machineScope.LinodeMachine.Spec.InterfaceGeneration == linodego.GenerationLegacyConfig {
+		firewalls, err = machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
+		if err != nil {
+			logger.Error(err, "Failed to list firewalls for Linode instance")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+	} else {
+		interfaces, err := machineScope.LinodeClient.ListInterfaces(ctx, instanceID, nil)
+		if err != nil {
+			logger.Error(err, "Failed to list interfaces for Linode instance")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+		for _, iface := range interfaces {
+			ifaceFWs, err := machineScope.LinodeClient.ListInterfaceFirewalls(ctx, instanceID, iface.ID, nil)
+			if err != nil {
+				logger.Error(err, "Failed to list firewalls for Linode instance interface", "interfaceID", iface.ID)
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			}
+			firewalls = append(firewalls, ifaceFWs...)
+		}
 	}
 
 	attachedFWIDs := make([]int, 0, len(firewalls))

@@ -129,6 +129,7 @@ type LinodeFirewallClient interface {
 // LinodeInterfacesClient defines the methods that interact with Linode's Interfaces service.
 type LinodeInterfacesClient interface {
 	ListInterfaces(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.LinodeInterface, error)
+	ListInterfaceFirewalls(ctx context.Context, linodeID int, interfaceID int, opts *linodego.ListOptions) ([]linodego.Firewall, error)
 }
 
 type K8sClient interface {
