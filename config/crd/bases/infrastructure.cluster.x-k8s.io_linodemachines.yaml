@@ -164,10 +164,9 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               firewallID:
+                description: FirewallID is the id of the cloud firewall to apply to
+                  the Linode Instance
                 type: integer
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               firewallRef:
                 description: FirewallRef is a reference to a firewall object. This
                   makes the linode use the specified firewall.

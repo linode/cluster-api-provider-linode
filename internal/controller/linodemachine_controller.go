@@ -772,6 +772,11 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		}
 	}
 
+	res, err := r.reconcileFirewallID(ctx, logger, machineScope, instanceID)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	// Clean up bootstrap data after instance creation.
 	if linodeInstance.Status == linodego.InstanceRunning && machineScope.Machine.Status.Phase == "Running" {
 		if err := deleteBootstrapData(ctx, machineScope); err != nil {
@@ -779,6 +784,41 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		}
 	}
 
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
+	// get the instance's firewalls
+	firewalls, err := machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
+	if err != nil {
+		logger.Error(err, "Failed to list firewalls for Linode instance")
+		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+	}
+
+	attachedFWIDs := make([]int, 0, len(firewalls))
+	for _, fw := range firewalls {
+		attachedFWIDs = append(attachedFWIDs, fw.ID)
+	}
+
+	var desiredFWIDs []int
+	if machineScope.LinodeMachine.Spec.FirewallID != 0 {
+		desiredFWIDs = []int{machineScope.LinodeMachine.Spec.FirewallID}
+	} else {
+		desiredFWIDs = []int{}
+	}
+
+	// update the firewallID if needed.
+	if !slices.Equal(attachedFWIDs, desiredFWIDs) {
+		_, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
+			linodego.InstanceFirewallUpdateOptions{
+				FirewallIDs: desiredFWIDs,
+			},
+		)
+		if err != nil {
+			logger.Error(err, "Failed to update firewalls for Linode instance")
+			return ctrl.Result{}, err
+		}
+	}
 	return ctrl.Result{}, nil
 }
 

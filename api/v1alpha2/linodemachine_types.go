@@ -67,7 +67,7 @@ type LinodeMachineSpec struct {
 	PrivateIP *bool `json:"privateIP,omitempty"`
 	// Tags is a list of tags to apply to the Linode instance.
 	Tags []string `json:"tags,omitempty"`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// FirewallID is the id of the cloud firewall to apply to the Linode Instance
 	FirewallID int `json:"firewallID,omitempty"`
 	// OSDisk is configuration for the root disk that includes the OS,
 	// if not specified this defaults to whatever space is not taken up by the DataDisks

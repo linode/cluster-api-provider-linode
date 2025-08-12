@@ -31,6 +31,10 @@ spec:
         - describe:
             apiVersion: cluster.x-k8s.io/v1beta1
             kind: Cluster
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 250
     - name: Create LinodeMachine resource
       try:
         - apply:
@@ -41,6 +45,10 @@ spec:
         - describe:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeMachineTemplate
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 250
         - describe:
             apiVersion: controlplane.cluster.x-k8s.io/v1beta1
             kind: KubeadmControlPlane
