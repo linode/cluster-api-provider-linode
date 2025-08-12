@@ -151,6 +151,18 @@ spec:
                               Ignored if the LoadBalancerType is set to anything other than dns
                               If not set, CAPL will create a unique identifier for you
                             type: string
+                          enableVPCBackends:
+                            default: false
+                            description: |-
+                              EnableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.
+                              If set to false (default), the NodeBalancer will not be created in a VPC and
+                              backends will use Linode private IPs. If true, the NodeBalancer will be
+                              created in the configured VPC (when VPCRef or VPCID is set) and backends
+                              will use VPC IPs.
+                            type: boolean
+                            x-kubernetes-validations:
+                            - message: Value is immutable
+                              rule: self == oldSelf
                           loadBalancerType:
                             default: NodeBalancer
                             description: LoadBalancerType is the type of load balancer
