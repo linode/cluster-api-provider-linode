@@ -662,8 +662,8 @@ _Appears in:_
 | `authorizedUsers` _string array_ |  |  |  |
 | `backupID` _integer_ |  |  |  |
 | `image` _string_ |  |  |  |
-| `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ |  |  |  |
-| `linodeInterfaces` _[LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions) array_ |  |  |  |
+| `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ | Interfaces is a list of legacy network interfaces to use for the instance. |  |  |
+| `linodeInterfaces` _[LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions) array_ | LinodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use. |  |  |
 | `backupsEnabled` _boolean_ |  |  |  |
 | `privateIP` _boolean_ |  |  |  |
 | `tags` _string array_ | Tags is a list of tags to apply to the Linode instance. |  |  |

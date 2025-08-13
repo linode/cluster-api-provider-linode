@@ -83,19 +83,26 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
 	// This will only be empty if no interfaces or linodeInterfaces were specified in the LinodeMachine spec.
 	// In that case we default to legacy interfaces.
-	if createConfig.InterfaceGeneration == "" {
+	switch createConfig.InterfaceGeneration {
+	case linodego.GenerationLinode:
+		// networkHelper is only applicable for Linode interfaces.
+		// legacy interfaces have nework helper configured in reconcilePreflightConfigure at the instance level.
+		if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
+			createConfig.NetworkHelper = machineScope.LinodeMachine.Spec.NetworkHelper
+		} else {
+			createConfig.NetworkHelper = ptr.To(true)
+		}
+	case linodego.GenerationLegacyConfig:
+		createConfig.InterfaceGeneration = linodego.GenerationLegacyConfig
+	default:
 		createConfig.InterfaceGeneration = linodego.GenerationLegacyConfig
 	}
+
 	if machineScope.LinodeMachine.Spec.PrivateIP != nil {
 		createConfig.PrivateIP = *machineScope.LinodeMachine.Spec.PrivateIP
-	} else {
-		if createConfig.InterfaceGeneration == linodego.GenerationLegacyConfig {
-			// Supported only for legacy network interfaces.
-			createConfig.PrivateIP = true
-		} else {
-			// Network Helper is not supported for the new network interfaces.
-			createConfig.NetworkHelper = nil
-		}
+	} else if createConfig.InterfaceGeneration != linodego.GenerationLinode {
+		// Supported only for legacy network interfaces.
+		createConfig.PrivateIP = true
 	}
 
 	if createConfig.Tags == nil {
@@ -631,7 +638,7 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 		for _, subnet := range linodeVPC.Spec.Subnets {
 			if subnet.Label == subnetName {
 				subnetID = subnet.SubnetID
-				ipv6Config = getVPCInterfaceIPv6Config(machineScope, len(subnet.IPv6))
+				ipv6Config = getVPCLinodeInterfaceIPv6Config(machineScope, len(subnet.IPv6))
 				break
 			}
 		}
@@ -641,7 +648,7 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 		}
 	} else {
 		subnetID = linodeVPC.Spec.Subnets[0].SubnetID // get first subnet if nothing specified
-		ipv6Config = getVPCInterfaceIPv6Config(machineScope, len(linodeVPC.Spec.Subnets[0].IPv6))
+		ipv6Config = getVPCLinodeInterfaceIPv6Config(machineScope, len(linodeVPC.Spec.Subnets[0].IPv6))
 	}
 
 	if subnetID == 0 {
@@ -655,15 +662,6 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 			// If IPv6 range config is not empty, add it to the interface configuration
 			if !isVPCInterfaceIPv6ConfigEmpty(ipv6Config) {
 				linodeInterfaces[iface].VPC.IPv6 = ipv6Config
-			}
-			if netInterface.VPC.IPv4 == nil {
-				linodeInterfaces[iface].VPC.IPv4 = &linodego.VPCInterfaceIPv4CreateOptions{
-					Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-						Primary:        ptr.To(true),
-						NAT1To1Address: ptr.To("auto"),
-						Address:        "auto",
-					}},
-				}
 			}
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VPC interface already exists
 		}
@@ -731,7 +729,7 @@ func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *
 		for _, subnet := range vpc.Subnets {
 			if subnet.Label == subnetName {
 				subnetID = subnet.ID
-				ipv6Config = getVPCInterfaceIPv6Config(machineScope, len(subnet.IPv6))
+				ipv6Config = getVPCLinodeInterfaceIPv6Config(machineScope, len(subnet.IPv6))
 				break
 			}
 		}
@@ -740,7 +738,7 @@ func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *
 		}
 	} else {
 		subnetID = vpc.Subnets[0].ID
-		ipv6Config = getVPCInterfaceIPv6Config(machineScope, len(vpc.Subnets[0].IPv6))
+		ipv6Config = getVPCLinodeInterfaceIPv6Config(machineScope, len(vpc.Subnets[0].IPv6))
 	}
 
 	// Check if a VPC interface already exists
@@ -762,6 +760,7 @@ func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *
 				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
 					NAT1To1Address: ptr.To("auto"),
+					Address:        "auto",
 				}},
 			},
 		},
@@ -890,12 +889,12 @@ func getMachineIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubne
 	return intfOpts
 }
 
-// getVPCInterfaceIPv6Config returns the IPv6 configuration for a LinodeMachine.
+// getVPCLinodeInterfaceIPv6Config returns the IPv6 configuration for a LinodeMachine.
 // It checks the LinodeMachine's IPv6Options for SLAAC and Ranges settings.
 // If `EnableSLAAC` is set, it will enable SLAAC with the default IPv6 CIDR range.
 // If `EnableRanges` is set, it will enable IPv6 ranges with the default IPv6 CIDR range.
 // If `IsPublicIPv6` is set, it will be used to determine if the IPv6 range should be publicly routable or not.
-func getVPCInterfaceIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubnet int) *linodego.VPCInterfaceIPv6CreateOptions {
+func getVPCLinodeInterfaceIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubnet int) *linodego.VPCInterfaceIPv6CreateOptions {
 	intfOpts := &linodego.VPCInterfaceIPv6CreateOptions{}
 
 	// If there are no IPv6 ranges in the subnet or if IPv6 options are not specified, return nil.
@@ -928,8 +927,6 @@ func getVPCInterfaceIPv6Config(machineScope *scope.MachineScope, numIPv6RangesIn
 
 // Unfortunately, this is necessary since DeepCopy can't be generated for linodego.LinodeInterfaceCreateOptions
 // so here we manually create the options for Linode interfaces.
-//
-//nolint:gocognit,cyclop,gocritic,nestif,nolintlint // Also, unfortunately, this cannot be made any reasonably simpler with how complicated the linodego struct is
 func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfaceCreateOptions) []linodego.LinodeInterfaceCreateOptions {
 	linodeInterfaces := make([]linodego.LinodeInterfaceCreateOptions, len(createOpts))
 	for idx, iface := range createOpts {
@@ -943,91 +940,11 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 		}
 		// Handle VPC
 		if iface.VPC != nil {
-			var (
-				ipv4Addrs    []linodego.VPCInterfaceIPv4AddressCreateOptions
-				ipv4Ranges   []linodego.VPCInterfaceIPv4RangeCreateOptions
-				ipv6Ranges   []linodego.VPCInterfaceIPv6RangeCreateOptions
-				ipv6SLAAC    []linodego.VPCInterfaceIPv6SLAACCreateOptions
-				ipv6IsPublic bool
-			)
-			if iface.VPC.IPv4 != nil {
-				for _, addr := range iface.VPC.IPv4.Addresses {
-					ipv4Addrs = append(ipv4Addrs, linodego.VPCInterfaceIPv4AddressCreateOptions{
-						Address:        addr.Address,
-						Primary:        addr.Primary,
-						NAT1To1Address: addr.NAT1To1Address,
-					})
-				}
-				for _, rng := range iface.VPC.IPv4.Ranges {
-					ipv4Ranges = append(ipv4Ranges, linodego.VPCInterfaceIPv4RangeCreateOptions{
-						Range: rng.Range,
-					})
-				}
-			} else {
-				// If no IPv4 addresses are specified, we set a default NAT1To1 address to "any"
-				ipv4Addrs = []linodego.VPCInterfaceIPv4AddressCreateOptions{
-					{
-						Primary:        ptr.To(true),
-						NAT1To1Address: ptr.To("auto"),
-						Address:        "auto", // Default to auto-assigned address
-					},
-				}
-			}
-			if iface.VPC.IPv6 != nil {
-				for _, slaac := range iface.VPC.IPv6.SLAAC {
-					ipv6SLAAC = append(ipv6SLAAC, linodego.VPCInterfaceIPv6SLAACCreateOptions{
-						Range: slaac.Range,
-					})
-				}
-				for _, rng := range iface.VPC.IPv6.Ranges {
-					ipv6Ranges = append(ipv6Ranges, linodego.VPCInterfaceIPv6RangeCreateOptions{
-						Range: rng.Range,
-					})
-				}
-				ipv6IsPublic = iface.VPC.IPv6.IsPublic
-			}
-			ifaceCreateOpts.VPC = &linodego.VPCInterfaceCreateOptions{
-				SubnetID: iface.VPC.SubnetID,
-				IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-					Addresses: ipv4Addrs,
-					Ranges:    ipv4Ranges,
-				},
-				IPv6: &linodego.VPCInterfaceIPv6CreateOptions{
-					SLAAC:    ipv6SLAAC,
-					Ranges:   ipv6Ranges,
-					IsPublic: ipv6IsPublic,
-				},
-			}
+			ifaceCreateOpts.VPC = constructLinodeInterfaceVPC(iface)
 		}
 		// Handle Public Interface
 		if iface.Public != nil {
-			var (
-				ipv4Addrs  []linodego.PublicInterfaceIPv4AddressCreateOptions
-				ipv6Ranges []linodego.PublicInterfaceIPv6RangeCreateOptions
-			)
-			if iface.Public.IPv4 != nil {
-				for _, addr := range iface.Public.IPv4.Addresses {
-					ipv4Addrs = append(ipv4Addrs, linodego.PublicInterfaceIPv4AddressCreateOptions{
-						Address: addr.Address,
-						Primary: addr.Primary,
-					})
-				}
-			}
-			if iface.Public.IPv6 != nil {
-				for _, rng := range iface.Public.IPv6.Ranges {
-					ipv6Ranges = append(ipv6Ranges, linodego.PublicInterfaceIPv6RangeCreateOptions{
-						Range: rng.Range,
-					})
-				}
-			}
-			ifaceCreateOpts.Public = &linodego.PublicInterfaceCreateOptions{
-				IPv4: &linodego.PublicInterfaceIPv4CreateOptions{
-					Addresses: ipv4Addrs,
-				},
-				IPv6: &linodego.PublicInterfaceIPv6CreateOptions{
-					Ranges: ipv6Ranges,
-				},
-			}
+			ifaceCreateOpts.Public = constructLinodeInterfacePublic(iface)
 		}
 		// Handle Default Route
 		if iface.DefaultRoute != nil {
@@ -1042,6 +959,96 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 	}
 
 	return linodeInterfaces
+}
+
+// constructLinodeInterfaceVPC constructs a Linode VPC interface configuration from the provided LinodeInterfaceCreateOptions.
+func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOptions) *linodego.VPCInterfaceCreateOptions {
+	var (
+		ipv4Addrs    []linodego.VPCInterfaceIPv4AddressCreateOptions
+		ipv4Ranges   []linodego.VPCInterfaceIPv4RangeCreateOptions
+		ipv6Ranges   []linodego.VPCInterfaceIPv6RangeCreateOptions
+		ipv6SLAAC    []linodego.VPCInterfaceIPv6SLAACCreateOptions
+		ipv6IsPublic bool
+	)
+	if iface.VPC.IPv4 != nil {
+		for _, addr := range iface.VPC.IPv4.Addresses {
+			ipv4Addrs = append(ipv4Addrs, linodego.VPCInterfaceIPv4AddressCreateOptions{
+				Address:        addr.Address,
+				Primary:        addr.Primary,
+				NAT1To1Address: addr.NAT1To1Address,
+			})
+		}
+		for _, rng := range iface.VPC.IPv4.Ranges {
+			ipv4Ranges = append(ipv4Ranges, linodego.VPCInterfaceIPv4RangeCreateOptions{
+				Range: rng.Range,
+			})
+		}
+	} else {
+		// If no IPv4 addresses are specified, we set a default NAT1To1 address to "any"
+		ipv4Addrs = []linodego.VPCInterfaceIPv4AddressCreateOptions{
+			{
+				Primary:        ptr.To(true),
+				NAT1To1Address: ptr.To("auto"),
+				Address:        "auto", // Default to auto-assigned address
+			},
+		}
+	}
+	if iface.VPC.IPv6 != nil {
+		for _, slaac := range iface.VPC.IPv6.SLAAC {
+			ipv6SLAAC = append(ipv6SLAAC, linodego.VPCInterfaceIPv6SLAACCreateOptions{
+				Range: slaac.Range,
+			})
+		}
+		for _, rng := range iface.VPC.IPv6.Ranges {
+			ipv6Ranges = append(ipv6Ranges, linodego.VPCInterfaceIPv6RangeCreateOptions{
+				Range: rng.Range,
+			})
+		}
+		ipv6IsPublic = iface.VPC.IPv6.IsPublic
+	}
+	return &linodego.VPCInterfaceCreateOptions{
+		SubnetID: iface.VPC.SubnetID,
+		IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
+			Addresses: ipv4Addrs,
+			Ranges:    ipv4Ranges,
+		},
+		IPv6: &linodego.VPCInterfaceIPv6CreateOptions{
+			SLAAC:    ipv6SLAAC,
+			Ranges:   ipv6Ranges,
+			IsPublic: ipv6IsPublic,
+		},
+	}
+}
+
+// constructLinodeInterfacePublic constructs a Linode Public interface configuration from the provided LinodeInterfaceCreateOptions.
+func constructLinodeInterfacePublic(iface infrav1alpha2.LinodeInterfaceCreateOptions) *linodego.PublicInterfaceCreateOptions {
+	var (
+		ipv4Addrs  []linodego.PublicInterfaceIPv4AddressCreateOptions
+		ipv6Ranges []linodego.PublicInterfaceIPv6RangeCreateOptions
+	)
+	if iface.Public.IPv4 != nil {
+		for _, addr := range iface.Public.IPv4.Addresses {
+			ipv4Addrs = append(ipv4Addrs, linodego.PublicInterfaceIPv4AddressCreateOptions{
+				Address: addr.Address,
+				Primary: addr.Primary,
+			})
+		}
+	}
+	if iface.Public.IPv6 != nil {
+		for _, rng := range iface.Public.IPv6.Ranges {
+			ipv6Ranges = append(ipv6Ranges, linodego.PublicInterfaceIPv6RangeCreateOptions{
+				Range: rng.Range,
+			})
+		}
+	}
+	return &linodego.PublicInterfaceCreateOptions{
+		IPv4: &linodego.PublicInterfaceIPv4CreateOptions{
+			Addresses: ipv4Addrs,
+		},
+		IPv6: &linodego.PublicInterfaceIPv6CreateOptions{
+			Ranges: ipv6Ranges,
+		},
+	}
 }
 
 // For converting LinodeMachineSpec to linodego.InstanceCreateOptions. Any defaulting should be done in fillCreateConfig instead

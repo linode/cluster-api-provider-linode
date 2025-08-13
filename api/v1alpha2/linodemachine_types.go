@@ -59,8 +59,10 @@ type LinodeMachineSpec struct {
 	BackupID int `json:"backupID,omitempty"`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Image string `json:"image,omitempty"`
+	// Interfaces is a list of legacy network interfaces to use for the instance.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Interfaces []InstanceConfigInterfaceCreateOptions `json:"interfaces,omitempty"`
+	// LinodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:object:generate=true
 	LinodeInterfaces []LinodeInterfaceCreateOptions `json:"linodeInterfaces,omitempty"`

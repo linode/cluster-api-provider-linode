@@ -184,23 +184,6 @@ func TestValidateLinodeMachine(t *testing.T) {
 				}),
 			),
 			Path(
-				Call("invalid linode interfaces with network helpers", func(ctx context.Context, mck Mock) {
-					region := region
-					region.Capabilities = slices.Clone(capabilities)
-					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
-					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
-				}),
-				Result("error", func(ctx context.Context, mck Mock) {
-					machine := machine
-					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
-					machine.Spec.NetworkHelper = ptr.To(true)
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
-					for _, err := range errs {
-						assert.ErrorContains(t, err, "Linode Interfaces do not support configuring network helper")
-					}
-				}),
-			),
-			Path(
 				Call("invalid linode interfaces with legacy interfaces", func(ctx context.Context, mck Mock) {
 					region := region
 					region.Capabilities = slices.Clone(capabilities)

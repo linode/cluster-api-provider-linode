@@ -195,14 +195,6 @@ func (r *linodeMachineValidator) validateLinodeInterfaces(spec infrav1alpha2.Lin
 		})
 	}
 
-	if spec.NetworkHelper != nil {
-		errs = append(errs, &field.Error{
-			Field:  "spec.linodeInterfaces/spec.networkHelper",
-			Type:   field.ErrorTypeInvalid,
-			Detail: "Linode Interfaces do not support configuring network helper",
-		})
-	}
-
 	if len(errs) == 0 {
 		return nil
 	}

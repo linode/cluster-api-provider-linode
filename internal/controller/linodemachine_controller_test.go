@@ -229,6 +229,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			createInst := mockLinodeClient.EXPECT().
 				OnAfterResponse(gomock.Any()).
 				Return()
+			listInstConfs := mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(createInst).
+				Return([]linodego.InstanceConfig{{
+					ID: 1,
+				}}, nil)
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).
+				After(listInstConfs).
+				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
 				After(createInst).
@@ -374,6 +385,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			createInst := mockLinodeClient.EXPECT().
 				OnAfterResponse(gomock.Any()).
 				Return()
+			listInstConfs := mockLinodeClient.EXPECT().
+				ListInstanceConfigs(ctx, 123, gomock.Any()).
+				After(createInst).
+				Return([]linodego.InstanceConfig{{
+					ID: 1,
+				}}, nil)
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).
+				After(listInstConfs).
+				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
 				BootInstance(ctx, 123, 0).
 				After(createInst).
@@ -441,6 +463,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
@@ -527,6 +560,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(listInst).
@@ -747,6 +791,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 					},
 				}}, nil).MaxTimes(3)
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).Return(nil, nil)
 			getInstDisk := mockLinodeClient.EXPECT().
 				GetInstanceDisk(ctx, 123, 100).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
@@ -895,6 +942,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 					},
 				}}, nil)
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).
+				After(listInstConfs).
+				Return(nil, nil)
 			getInstDisk := mockLinodeClient.EXPECT().
 				GetInstanceDisk(ctx, 123, 100).
 				After(listInstConfs).
@@ -942,6 +994,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 					},
 				}}, nil).AnyTimes()
+			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+				Helpers: &linodego.InstanceConfigHelpers{Network: true},
+			}).Return(nil, nil).AnyTimes()
 			getInst := mockLinodeClient.EXPECT().
 				GetInstance(ctx, 123).
 				After(createFailedEtcdDisk).
@@ -1145,6 +1200,17 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
@@ -2945,6 +3011,17 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).
@@ -3116,6 +3193,17 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 		mockLinodeClient.EXPECT().
 			OnAfterResponse(gomock.Any()).
 			Return()
+		listInstConfs := mockLinodeClient.EXPECT().
+			ListInstanceConfigs(ctx, 123, gomock.Any()).
+			After(createInst).
+			Return([]linodego.InstanceConfig{{
+				ID: 1,
+			}}, nil)
+		mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
+			Helpers: &linodego.InstanceConfigHelpers{Network: true},
+		}).
+			After(listInstConfs).
+			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
 			BootInstance(ctx, 123, 0).
 			After(createInst).

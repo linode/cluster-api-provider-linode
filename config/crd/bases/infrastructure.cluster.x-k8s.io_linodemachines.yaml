@@ -238,6 +238,8 @@ spec:
                 - linode
                 type: string
               interfaces:
+                description: Interfaces is a list of legacy network interfaces to
+                  use for the instance.
                 items:
                   description: InstanceConfigInterfaceCreateOptions defines network
                     interface config
@@ -311,6 +313,9 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               linodeInterfaces:
+                description: LinodeInterfaces is a list of Linode network interfaces
+                  to use for the instance. Requires Linode Interfaces beta opt-in
+                  to use.
                 items:
                   description: LinodeInterfaceCreateOptions defines the linode network
                     interface config

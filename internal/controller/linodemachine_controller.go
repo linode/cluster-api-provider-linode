@@ -623,11 +623,18 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
 		configData.Kernel = machineScope.LinodeMachine.Spec.Configuration.Kernel
 	}
+	// helpers.network does not work on instances using the new linode interfaces.
 	// For cases where the network helper is not enabled on account level, we can enable it per instance level
 	// Default is true, so we only need to update if it's explicitly set to false
-	if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
-		configData.Helpers = &linodego.InstanceConfigHelpers{
-			Network: *machineScope.LinodeMachine.Spec.NetworkHelper,
+	if machineScope.LinodeMachine.Spec.InterfaceGeneration != linodego.GenerationLinode {
+		if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
+			configData.Helpers = &linodego.InstanceConfigHelpers{
+				Network: *machineScope.LinodeMachine.Spec.NetworkHelper,
+			}
+		} else {
+			configData.Helpers = &linodego.InstanceConfigHelpers{
+				Network: true,
+			}
 		}
 	}
 
