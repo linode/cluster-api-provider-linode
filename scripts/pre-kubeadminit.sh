@@ -74,9 +74,9 @@ chmod 0755 /etc/systemd/system.conf.d
 cat > /etc/systemd/system.conf.d/override.conf << EOF
 [Manager]
 # Set sane defaults for the NOFILE limits to support high-performance workloads:
-# - Soft limit (65535): Suitable for most containerized applications.
+# - Soft limit (1048576): Allows scaling for high-demand scenarios.
 # - Hard limit (1048576): Allows scaling for high-demand scenarios.
-DefaultLimitNOFILE=65535:1048576
+DefaultLimitNOFILE=1048576:1048576
 EOF
 
 # containerd service
