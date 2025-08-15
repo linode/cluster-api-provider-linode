@@ -128,10 +128,17 @@ func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime
 func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeMachineSpec, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
-	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
-			errs = append(errs, err)
+	if !skipAPIValidation { //nolint:nestif // too simple for switch
+		if spec.LinodeInterfaces != nil {
+			if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityLinodeInterfaces); err != nil {
+				errs = append(errs, err)
+			}
+		} else {
+			if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
+				errs = append(errs, err)
+			}
 		}
+
 		plan, err := validateLinodeType(ctx, linodeclient, spec.Type, field.NewPath("spec").Child("type"))
 		if err != nil {
 			errs = append(errs, err)
@@ -149,11 +156,42 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 		})
 	}
 
+	if spec.LinodeInterfaces != nil {
+		if ifaceErrs := r.validateLinodeInterfaces(spec); ifaceErrs != nil {
+			errs = append(errs, ifaceErrs...)
+		}
+	}
+
 	if spec.FirewallID != 0 && spec.FirewallRef != nil {
 		errs = append(errs, &field.Error{
 			Field:  "spec.firewallID/spec.firewallRef",
 			Type:   field.ErrorTypeInvalid,
 			Detail: "Cannot specify both FirewallID and FirewallRef",
+		})
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+	return errs
+}
+
+func (r *linodeMachineValidator) validateLinodeInterfaces(spec infrav1alpha2.LinodeMachineSpec) field.ErrorList {
+	var errs field.ErrorList
+
+	if spec.Interfaces != nil {
+		errs = append(errs, &field.Error{
+			Field:  "spec.linodeInterfaces/spec.interfaces",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Cannot specify both LinodeInterfaces and Interfaces",
+		})
+	}
+
+	if spec.PrivateIP != nil && *spec.PrivateIP {
+		errs = append(errs, &field.Error{
+			Field:  "spec.linodeInterfaces/spec.privateIP",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Linode Interfaces do not support private IPs",
 		})
 	}
 

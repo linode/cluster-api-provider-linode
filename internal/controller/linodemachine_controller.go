@@ -274,7 +274,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 	}
 
 	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
-		if !reconciler.ConditionTrue(machineScope.LinodeMachine, string(ConditionPreflightLinodeFirewallReady)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+		if !reconciler.ConditionTrue(machineScope.LinodeMachine, ConditionPreflightLinodeFirewallReady) && machineScope.LinodeMachine.Spec.ProviderID == nil {
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, machineScope)
 			if err != nil || !res.IsZero() {
 				conditions.Set(machineScope.LinodeMachine, metav1.Condition{
@@ -619,32 +619,36 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
 	}
 
-	configData := linodego.InstanceConfigUpdateOptions{
-		Helpers: &linodego.InstanceConfigHelpers{
-			Network: true,
-		},
-	}
-
+	configData := linodego.InstanceConfigUpdateOptions{}
 	if machineScope.LinodeMachine.Spec.Configuration != nil && machineScope.LinodeMachine.Spec.Configuration.Kernel != "" {
 		configData.Kernel = machineScope.LinodeMachine.Spec.Configuration.Kernel
 	}
-
+	// helpers.network does not work on instances using the new linode interfaces.
 	// For cases where the network helper is not enabled on account level, we can enable it per instance level
 	// Default is true, so we only need to update if it's explicitly set to false
-	if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
-		configData.Helpers = &linodego.InstanceConfigHelpers{
-			Network: *machineScope.LinodeMachine.Spec.NetworkHelper,
+	if machineScope.LinodeMachine.Spec.InterfaceGeneration != linodego.GenerationLinode {
+		if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
+			configData.Helpers = &linodego.InstanceConfigHelpers{
+				Network: *machineScope.LinodeMachine.Spec.NetworkHelper,
+			}
+		} else {
+			configData.Helpers = &linodego.InstanceConfigHelpers{
+				Network: true,
+			}
 		}
 	}
 
-	instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
-	if err != nil {
-		logger.Error(err, "Failed to get default instance configuration")
-		return retryIfTransient(err, logger)
-	}
-	if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, configData); err != nil {
-		logger.Error(err, "Failed to update default instance configuration")
-		return retryIfTransient(err, logger)
+	// only update the instance configuration if there are changes
+	if configData.Kernel != "" || configData.Helpers != nil {
+		instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
+		if err != nil {
+			logger.Error(err, "Failed to get default instance configuration")
+			return retryIfTransient(err, logger)
+		}
+		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, configData); err != nil {
+			logger.Error(err, "Failed to update default instance configuration", "configuration", configData)
+			return retryIfTransient(err, logger)
+		}
 	}
 
 	conditions.Set(machineScope.LinodeMachine, metav1.Condition{
@@ -788,11 +792,32 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 }
 
 func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
-	// get the instance's firewalls
-	firewalls, err := machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
-	if err != nil {
-		logger.Error(err, "Failed to list firewalls for Linode instance")
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+	var (
+		firewalls []linodego.Firewall
+		err       error
+	)
+	// Get the instance's firewalls normally if this is not using the new linode interfaces,
+	// otherwise we have to get firewalls per linode interface
+	if machineScope.LinodeMachine.Spec.InterfaceGeneration == linodego.GenerationLinode {
+		interfaces, err := machineScope.LinodeClient.ListInterfaces(ctx, instanceID, nil)
+		if err != nil {
+			logger.Error(err, "Failed to list interfaces for Linode instance")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
+		for _, iface := range interfaces {
+			ifaceFWs, err := machineScope.LinodeClient.ListInterfaceFirewalls(ctx, instanceID, iface.ID, nil)
+			if err != nil {
+				logger.Error(err, "Failed to list firewalls for Linode instance interface", "interfaceID", iface.ID)
+				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			}
+			firewalls = append(firewalls, ifaceFWs...)
+		}
+	} else {
+		firewalls, err = machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
+		if err != nil {
+			logger.Error(err, "Failed to list firewalls for Linode instance")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		}
 	}
 
 	attachedFWIDs := make([]int, 0, len(firewalls))

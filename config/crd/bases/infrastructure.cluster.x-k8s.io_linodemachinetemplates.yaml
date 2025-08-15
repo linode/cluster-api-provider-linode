@@ -218,7 +218,19 @@ spec:
                         description: InstanceID is the Linode instance ID for this
                           machine.
                         type: integer
+                      interfaceGeneration:
+                        default: legacy_config
+                        description: |-
+                          InterfaceGeneration is the generation of the interface to use for the cluster's
+                          nodes in interface / linodeInterface are not specified for a LinodeMachine.
+                          If not set, defaults to "legacy_config".
+                        enum:
+                        - legacy_config
+                        - linode
+                        type: string
                       interfaces:
+                        description: Interfaces is a list of legacy network interfaces
+                          to use for the instance.
                         items:
                           description: InstanceConfigInterfaceCreateOptions defines
                             network interface config
@@ -289,6 +301,155 @@ spec:
                             - message: Value is immutable
                               rule: self == oldSelf
                         type: object
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      linodeInterfaces:
+                        description: LinodeInterfaces is a list of Linode network
+                          interfaces to use for the instance. Requires Linode Interfaces
+                          beta opt-in to use.
+                        items:
+                          description: LinodeInterfaceCreateOptions defines the linode
+                            network interface config
+                          properties:
+                            default_route:
+                              description: InterfaceDefaultRoute defines the default
+                                IPv4 and IPv6 routes for an interface
+                              properties:
+                                ipv4:
+                                  type: boolean
+                                ipv6:
+                                  type: boolean
+                              type: object
+                            firewall_id:
+                              type: integer
+                            public:
+                              description: PublicInterfaceCreateOptions defines the
+                                IPv4 and IPv6 public interface create options
+                              properties:
+                                ipv4:
+                                  description: PublicInterfaceIPv4CreateOptions defines
+                                    the PublicInterfaceIPv4AddressCreateOptions for
+                                    addresses
+                                  properties:
+                                    addresses:
+                                      items:
+                                        description: PublicInterfaceIPv4AddressCreateOptions
+                                          defines the public IPv4 address and whether
+                                          it is primary
+                                        properties:
+                                          address:
+                                            type: string
+                                          primary:
+                                            type: boolean
+                                        required:
+                                        - address
+                                        type: object
+                                      type: array
+                                  type: object
+                                ipv6:
+                                  description: PublicInterfaceIPv6CreateOptions defines
+                                    the PublicInterfaceIPv6RangeCreateOptions
+                                  properties:
+                                    ranges:
+                                      items:
+                                        description: PublicInterfaceIPv6RangeCreateOptions
+                                          defines the IPv6 range for a public interface
+                                        properties:
+                                          range:
+                                            type: string
+                                        required:
+                                        - range
+                                        type: object
+                                      type: array
+                                  type: object
+                              type: object
+                            vlan:
+                              description: VLANInterface defines the VLAN interface
+                                configuration for an instance
+                              properties:
+                                ipam_address:
+                                  type: string
+                                vlan_label:
+                                  type: string
+                              required:
+                              - vlan_label
+                              type: object
+                            vpc:
+                              description: VPCInterfaceCreateOptions defines the VPC
+                                interface configuration for an instance
+                              properties:
+                                ipv4:
+                                  description: VPCInterfaceIPv4CreateOptions defines
+                                    the IPv4 address and range configuration for a
+                                    VPC interface
+                                  properties:
+                                    addresses:
+                                      items:
+                                        description: VPCInterfaceIPv4AddressCreateOptions
+                                          defines the IPv4 configuration for a VPC
+                                          interface
+                                        properties:
+                                          address:
+                                            type: string
+                                          nat_1_1_address:
+                                            type: string
+                                          primary:
+                                            type: boolean
+                                        required:
+                                        - address
+                                        type: object
+                                      type: array
+                                    ranges:
+                                      items:
+                                        description: VPCInterfaceIPv4RangeCreateOptions
+                                          defines the IPv4 range for a VPC interface
+                                        properties:
+                                          range:
+                                            type: string
+                                        required:
+                                        - range
+                                        type: object
+                                      type: array
+                                  type: object
+                                ipv6:
+                                  description: VPCInterfaceIPv6CreateOptions defines
+                                    the IPv6 configuration for a VPC interface
+                                  properties:
+                                    is_public:
+                                      type: boolean
+                                    ranges:
+                                      items:
+                                        description: VPCInterfaceIPv6RangeCreateOptions
+                                          defines the IPv6 range for a VPC interface
+                                        properties:
+                                          range:
+                                            type: string
+                                        required:
+                                        - range
+                                        type: object
+                                      type: array
+                                    slaac:
+                                      items:
+                                        description: VPCInterfaceIPv6SLAACCreateOptions
+                                          defines the Range for IPv6 SLAAC
+                                        properties:
+                                          range:
+                                            type: string
+                                        required:
+                                        - range
+                                        type: object
+                                      type: array
+                                  required:
+                                  - is_public
+                                  type: object
+                                subnet_id:
+                                  type: integer
+                              required:
+                              - subnet_id
+                              type: object
+                          type: object
+                        type: array
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf

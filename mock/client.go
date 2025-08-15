@@ -726,6 +726,36 @@ func (mr *MockLinodeClientMockRecorder) ListInstances(ctx, opts any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeClient)(nil).ListInstances), ctx, opts)
 }
 
+// ListInterfaceFirewalls mocks base method.
+func (m *MockLinodeClient) ListInterfaceFirewalls(ctx context.Context, linodeID, interfaceID int, opts *linodego.ListOptions) ([]linodego.Firewall, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInterfaceFirewalls", ctx, linodeID, interfaceID, opts)
+	ret0, _ := ret[0].([]linodego.Firewall)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInterfaceFirewalls indicates an expected call of ListInterfaceFirewalls.
+func (mr *MockLinodeClientMockRecorder) ListInterfaceFirewalls(ctx, linodeID, interfaceID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInterfaceFirewalls", reflect.TypeOf((*MockLinodeClient)(nil).ListInterfaceFirewalls), ctx, linodeID, interfaceID, opts)
+}
+
+// ListInterfaces mocks base method.
+func (m *MockLinodeClient) ListInterfaces(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.LinodeInterface, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInterfaces", ctx, linodeID, opts)
+	ret0, _ := ret[0].([]linodego.LinodeInterface)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInterfaces indicates an expected call of ListInterfaces.
+func (mr *MockLinodeClientMockRecorder) ListInterfaces(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInterfaces", reflect.TypeOf((*MockLinodeClient)(nil).ListInterfaces), ctx, linodeID, opts)
+}
+
 // ListNodeBalancerNodes mocks base method.
 func (m *MockLinodeClient) ListNodeBalancerNodes(ctx context.Context, nodebalancerID, configID int, opts *linodego.ListOptions) ([]linodego.NodeBalancerNode, error) {
 	m.ctrl.T.Helper()
@@ -2165,6 +2195,59 @@ func (m *MockLinodeFirewallClient) UpdateFirewallRules(ctx context.Context, fire
 func (mr *MockLinodeFirewallClientMockRecorder) UpdateFirewallRules(ctx, firewallID, rules any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFirewallRules", reflect.TypeOf((*MockLinodeFirewallClient)(nil).UpdateFirewallRules), ctx, firewallID, rules)
+}
+
+// MockLinodeInterfacesClient is a mock of LinodeInterfacesClient interface.
+type MockLinodeInterfacesClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockLinodeInterfacesClientMockRecorder
+}
+
+// MockLinodeInterfacesClientMockRecorder is the mock recorder for MockLinodeInterfacesClient.
+type MockLinodeInterfacesClientMockRecorder struct {
+	mock *MockLinodeInterfacesClient
+}
+
+// NewMockLinodeInterfacesClient creates a new mock instance.
+func NewMockLinodeInterfacesClient(ctrl *gomock.Controller) *MockLinodeInterfacesClient {
+	mock := &MockLinodeInterfacesClient{ctrl: ctrl}
+	mock.recorder = &MockLinodeInterfacesClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLinodeInterfacesClient) EXPECT() *MockLinodeInterfacesClientMockRecorder {
+	return m.recorder
+}
+
+// ListInterfaceFirewalls mocks base method.
+func (m *MockLinodeInterfacesClient) ListInterfaceFirewalls(ctx context.Context, linodeID, interfaceID int, opts *linodego.ListOptions) ([]linodego.Firewall, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInterfaceFirewalls", ctx, linodeID, interfaceID, opts)
+	ret0, _ := ret[0].([]linodego.Firewall)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInterfaceFirewalls indicates an expected call of ListInterfaceFirewalls.
+func (mr *MockLinodeInterfacesClientMockRecorder) ListInterfaceFirewalls(ctx, linodeID, interfaceID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInterfaceFirewalls", reflect.TypeOf((*MockLinodeInterfacesClient)(nil).ListInterfaceFirewalls), ctx, linodeID, interfaceID, opts)
+}
+
+// ListInterfaces mocks base method.
+func (m *MockLinodeInterfacesClient) ListInterfaces(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.LinodeInterface, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInterfaces", ctx, linodeID, opts)
+	ret0, _ := ret[0].([]linodego.LinodeInterface)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInterfaces indicates an expected call of ListInterfaces.
+func (mr *MockLinodeInterfacesClientMockRecorder) ListInterfaces(ctx, linodeID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInterfaces", reflect.TypeOf((*MockLinodeInterfacesClient)(nil).ListInterfaces), ctx, linodeID, opts)
 }
 
 // MockK8sClient is a mock of K8sClient interface.

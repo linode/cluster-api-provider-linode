@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -54,6 +55,8 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
+		region                                      = linodego.Region{ID: "test"}
+		capabilities                                = []string{linodego.CapabilityLinodeInterfaces}
 		disk                                        = infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 		disk_zero                                   = infrav1alpha2.InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
 		plan                                        = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
@@ -160,6 +163,55 @@ func TestValidateLinodeMachine(t *testing.T) {
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskOSDiskInvalid)
+					}
+				}),
+			),
+			Path(
+				Call("invalid linode interfaces with private IP", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					machine := machine
+					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
+					machine.Spec.PrivateIP = ptr.To(true)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, "Linode Interfaces do not support private IPs")
+					}
+				}),
+			),
+			Path(
+				Call("invalid linode interfaces with legacy interfaces", func(ctx context.Context, mck Mock) {
+					region := region
+					region.Capabilities = slices.Clone(capabilities)
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					machine := machine
+					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
+					machine.Spec.Interfaces = []infrav1alpha2.InstanceConfigInterfaceCreateOptions{{}}
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, "Cannot specify both LinodeInterfaces and Interfaces")
+					}
+				}),
+			),
+			Path(
+				Call("linode interfaces with invalid region", func(ctx context.Context, mck Mock) {
+					region := region
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					machine := machine
+					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, "no capability: Linode Interfaces")
 					}
 				}),
 			),

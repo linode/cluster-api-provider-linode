@@ -316,6 +316,23 @@ _Appears in:_
 
 
 
+#### InterfaceDefaultRoute
+
+
+
+InterfaceDefaultRoute defines the default IPv4 and IPv6 routes for an interface
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ipv4` _boolean_ |  |  |  |
+| `ipv6` _boolean_ |  |  |  |
+
+
 #### LinodeCluster
 
 
@@ -559,6 +576,26 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions defines current service state of the LinodeFirewall. |  |  |
 
 
+#### LinodeInterfaceCreateOptions
+
+
+
+LinodeInterfaceCreateOptions defines the linode network interface config
+
+
+
+_Appears in:_
+- [LinodeMachineSpec](#linodemachinespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `firewall_id` _integer_ |  |  |  |
+| `default_route` _[InterfaceDefaultRoute](#interfacedefaultroute)_ |  |  |  |
+| `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ |  |  |  |
+| `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ |  |  |  |
+| `vlan` _[VLANInterface](#vlaninterface)_ |  |  |  |
+
+
 #### LinodeMachine
 
 
@@ -625,7 +662,8 @@ _Appears in:_
 | `authorizedUsers` _string array_ |  |  |  |
 | `backupID` _integer_ |  |  |  |
 | `image` _string_ |  |  |  |
-| `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ |  |  |  |
+| `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ | Interfaces is a list of legacy network interfaces to use for the instance. |  |  |
+| `linodeInterfaces` _[LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions) array_ | LinodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use. |  |  |
 | `backupsEnabled` _boolean_ |  |  |  |
 | `privateIP` _boolean_ |  |  |  |
 | `tags` _string array_ | Tags is a list of tags to apply to the Linode instance. |  |  |
@@ -641,6 +679,7 @@ _Appears in:_
 | `vpcID` _integer_ | VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
 | `ipv6Options` _[IPv6CreateOptions](#ipv6createoptions)_ | IPv6Options defines the IPv6 options for the instance.<br />If not specified, IPv6 ranges won't be allocated to instance. |  |  |
 | `networkHelper` _boolean_ | NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.<br />You can use this to enable/disable the network helper for a specific instance.<br />For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking<br />Defaults to true. |  |  |
+| `interfaceGeneration` _[InterfaceGeneration](#interfacegeneration)_ | InterfaceGeneration is the generation of the interface to use for the cluster's<br />nodes in interface / linodeInterface are not specified for a LinodeMachine.<br />If not set, defaults to "legacy_config". | legacy_config | Enum: [legacy_config linode] <br /> |
 
 
 #### LinodeMachineStatus
@@ -1211,6 +1250,105 @@ _Appears in:_
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store. |  |  |
 
 
+#### PublicInterfaceCreateOptions
+
+
+
+PublicInterfaceCreateOptions defines the IPv4 and IPv6 public interface create options
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ipv4` _[PublicInterfaceIPv4CreateOptions](#publicinterfaceipv4createoptions)_ |  |  |  |
+| `ipv6` _[PublicInterfaceIPv6CreateOptions](#publicinterfaceipv6createoptions)_ |  |  |  |
+
+
+#### PublicInterfaceIPv4AddressCreateOptions
+
+
+
+PublicInterfaceIPv4AddressCreateOptions defines the public IPv4 address and whether it is primary
+
+
+
+_Appears in:_
+- [PublicInterfaceIPv4CreateOptions](#publicinterfaceipv4createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `address` _string_ |  |  |  |
+| `primary` _boolean_ |  |  |  |
+
+
+#### PublicInterfaceIPv4CreateOptions
+
+
+
+PublicInterfaceIPv4CreateOptions defines the PublicInterfaceIPv4AddressCreateOptions for addresses
+
+
+
+_Appears in:_
+- [PublicInterfaceCreateOptions](#publicinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `addresses` _[PublicInterfaceIPv4AddressCreateOptions](#publicinterfaceipv4addresscreateoptions) array_ |  |  |  |
+
+
+#### PublicInterfaceIPv6CreateOptions
+
+
+
+PublicInterfaceIPv6CreateOptions defines the PublicInterfaceIPv6RangeCreateOptions
+
+
+
+_Appears in:_
+- [PublicInterfaceCreateOptions](#publicinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ranges` _[PublicInterfaceIPv6RangeCreateOptions](#publicinterfaceipv6rangecreateoptions) array_ |  |  |  |
+
+
+#### PublicInterfaceIPv6RangeCreateOptions
+
+
+
+PublicInterfaceIPv6RangeCreateOptions defines the IPv6 range for a public interface
+
+
+
+_Appears in:_
+- [PublicInterfaceIPv6CreateOptions](#publicinterfaceipv6createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ |  |  |  |
+
+
+#### VLANInterface
+
+
+
+VLANInterface defines the VLAN interface configuration for an instance
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `vlan_label` _string_ |  |  |  |
+| `ipam_address` _string_ |  |  |  |
+
+
 #### VPCCreateOptionsIPv6
 
 
@@ -1246,6 +1384,125 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `vpc` _string_ |  |  |  |
 | `nat1to1` _string_ |  |  |  |
+
+
+#### VPCInterfaceCreateOptions
+
+
+
+VPCInterfaceCreateOptions defines the VPC interface configuration for an instance
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `subnet_id` _integer_ |  |  |  |
+| `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ |  |  |  |
+| `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ |  |  |  |
+
+
+#### VPCInterfaceIPv4AddressCreateOptions
+
+
+
+VPCInterfaceIPv4AddressCreateOptions defines the IPv4 configuration for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `address` _string_ |  |  |  |
+| `primary` _boolean_ |  |  |  |
+| `nat_1_1_address` _string_ |  |  |  |
+
+
+#### VPCInterfaceIPv4CreateOptions
+
+
+
+VPCInterfaceIPv4CreateOptions defines the IPv4 address and range configuration for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `addresses` _[VPCInterfaceIPv4AddressCreateOptions](#vpcinterfaceipv4addresscreateoptions) array_ |  |  |  |
+| `ranges` _[VPCInterfaceIPv4RangeCreateOptions](#vpcinterfaceipv4rangecreateoptions) array_ |  |  |  |
+
+
+#### VPCInterfaceIPv4RangeCreateOptions
+
+
+
+VPCInterfaceIPv4RangeCreateOptions defines the IPv4 range for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ |  |  |  |
+
+
+#### VPCInterfaceIPv6CreateOptions
+
+
+
+VPCInterfaceIPv6CreateOptions defines the IPv6 configuration for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `slaac` _[VPCInterfaceIPv6SLAACCreateOptions](#vpcinterfaceipv6slaaccreateoptions) array_ |  |  |  |
+| `ranges` _[VPCInterfaceIPv6RangeCreateOptions](#vpcinterfaceipv6rangecreateoptions) array_ |  |  |  |
+| `is_public` _boolean_ |  |  |  |
+
+
+#### VPCInterfaceIPv6RangeCreateOptions
+
+
+
+VPCInterfaceIPv6RangeCreateOptions defines the IPv6 range for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ |  |  |  |
+
+
+#### VPCInterfaceIPv6SLAACCreateOptions
+
+
+
+VPCInterfaceIPv6SLAACCreateOptions defines the Range for IPv6 SLAAC
+
+
+
+_Appears in:_
+- [VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ |  |  |  |
 
 
 #### VPCStatusError
