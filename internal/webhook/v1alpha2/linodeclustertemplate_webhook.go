@@ -33,5 +33,3 @@ func SetupLinodeClusterTemplateWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).For(&infrav1alpha2.LinodeClusterTemplate{}).
 		Complete()
 }
-
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

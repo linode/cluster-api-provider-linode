@@ -65,16 +65,11 @@ func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable update and deletion validation.
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodemachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=create,versions=v1alpha2,name=validation.linodemachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	var linodeclient clients.LinodeClient = defaultLinodeClient
 	var errs field.ErrorList
-	skipAPIValidation := false
 
 	machine, ok := obj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
@@ -83,13 +78,10 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime
 	spec := machine.Spec
 	linodemachinelog.Info("validate create", "name", machine.Name)
 
-	// Handle credentials if provided
-	if spec.CredentialsRef != nil {
-		skipAPIValidation, linodeclient = setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
-			machine.Name, machine.GetNamespace(), linodemachinelog)
-	}
+	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+		machine.Name, machine.GetNamespace(), linodemachinelog)
 
-	if err := r.validateLinodeMachineSpec(ctx, linodeclient, spec, skipAPIValidation); err != nil {
+	if err := r.validateLinodeMachineSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 

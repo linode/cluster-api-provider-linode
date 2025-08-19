@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"slices"
 	"time"
@@ -39,14 +40,6 @@ import (
 const (
 	// defaultClientTimeout is the default timeout for a client Linode API call
 	defaultClientTimeout = time.Second * 10
-)
-
-var (
-	// defaultLinodeClient is an unauthenticated Linode client
-	defaultLinodeClient = linodeclient.NewLinodeClientWithTracing(
-		ptr.To(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
-		linodeclient.DefaultDecorator(),
-	)
 )
 
 func validateRegion(ctx context.Context, linodegoclient clients.LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {
@@ -132,14 +125,24 @@ func getCredentials(ctx context.Context, crClient clients.K8sClient, credentials
 	return &credSecret, nil
 }
 
-// setupClientWithCredentials configures a Linode client with credentials from a secret reference
+// setupClientWithCredentials configures a Linode client with credentials the LINODE_TOKEN env variable or
+// a secret reference if it is provided
 // Returns (skipAPIValidation, client) - skipAPIValidation will be true if credentials cannot be found
 // and API validation should be skipped
 func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient, credRef *corev1.SecretReference,
 	resourceName, namespace string, logger logr.Logger) (bool, clients.LinodeClient) {
-	linodeClient := defaultLinodeClient
+	linodeClient := linodeclient.NewLinodeClientWithTracing(
+		ptr.To(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
+		linodeclient.DefaultDecorator(),
+	)
+	credName := ""
+	apiToken := []byte(os.Getenv("LINODE_TOKEN"))
+	var err error
+	if credRef != nil {
+		credName = credRef.Name
+		apiToken, err = getCredentialDataFromRef(ctx, crClient, *credRef, namespace)
+	}
 
-	apiToken, err := getCredentialDataFromRef(ctx, crClient, *credRef, namespace)
 	if err == nil {
 		logger.Info("creating a verified linode client for create request", "name", resourceName)
 		linodeClient.SetToken(string(apiToken))
@@ -149,7 +152,7 @@ func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient,
 	// Handle error cases
 	if apierrors.IsNotFound(err) {
 		logger.Info("credentials secret not found, skipping API validation",
-			"name", resourceName, "secret", credRef.Name)
+			"name", resourceName, "secret", credName)
 		return true, linodeClient
 	}
 
