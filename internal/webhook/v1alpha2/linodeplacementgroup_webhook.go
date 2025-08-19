@@ -68,18 +68,12 @@ func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context
 	}
 	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon creation", "name", pg.GetName())
 
-	var linodeclient clients.LinodeClient = defaultLinodeClient
-	skipAPIValidation := false
-
-	// Handle credentials if provided
-	if pg.Spec.CredentialsRef != nil {
-		skipAPIValidation, linodeclient = setupClientWithCredentials(ctx, v.Client, pg.Spec.CredentialsRef,
-			pg.Name, pg.GetNamespace(), linodeplacementgrouplog)
-	}
+	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, v.Client, pg.Spec.CredentialsRef,
+		pg.Name, pg.GetNamespace(), linodeplacementgrouplog)
 
 	var errs field.ErrorList
 
-	if err := v.validateLinodePlacementGroupSpec(ctx, linodeclient, pg.Spec, pg.Name, skipAPIValidation); err != nil {
+	if err := v.validateLinodePlacementGroupSpec(ctx, linodeClient, pg.Spec, pg.Name, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 

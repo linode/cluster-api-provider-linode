@@ -85,7 +85,6 @@ func SetupLinodeVPCWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable update and deletion validation.
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodevpc,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs,verbs=create,versions=v1alpha2,name=validation.linodevpc.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
@@ -97,17 +96,11 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 	spec := vpc.Spec
 	linodevpclog.Info("validate create", "name", vpc.Name)
 
-	var linodeclient clients.LinodeClient = defaultLinodeClient
-	skipAPIValidation := false
+	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+		vpc.Name, vpc.GetNamespace(), linodevpclog)
 
-	// Handle credentials if provided
-	if spec.CredentialsRef != nil {
-		skipAPIValidation, linodeclient = setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
-			vpc.Name, vpc.GetNamespace(), linodevpclog)
-	}
-
-	// TODO: instrument with tracing, might need refactor to preserve readibility
-	errs := r.validateLinodeVPCSpec(ctx, linodeclient, spec, skipAPIValidation)
+	// TODO: instrument with tracing, might need refactor to preserve readability
+	errs := r.validateLinodeVPCSpec(ctx, linodeClient, spec, skipAPIValidation)
 
 	if len(errs) == 0 {
 		return nil, nil

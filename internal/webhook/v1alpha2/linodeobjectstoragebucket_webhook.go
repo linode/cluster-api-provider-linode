@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -48,7 +49,9 @@ func SetupLinodeObjectStorageBucketWebhookWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragebucket,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragebuckets,verbs=create;update,versions=v1alpha2,name=validation.linodeobjectstoragebucket.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // LinodeObjectStorageBucketCustomValidator struct is responsible for validating the LinodeObjectStorageBucket resource
-type LinodeObjectStorageBucketCustomValidator struct{}
+type LinodeObjectStorageBucketCustomValidator struct {
+	Client client.Client
+}
 
 var _ webhook.CustomValidator = &LinodeObjectStorageBucketCustomValidator{}
 
@@ -59,8 +62,9 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateCreate(ctx context.Co
 		return nil, fmt.Errorf("expected a LinodeObjectStorageBucket object but got %T", obj)
 	}
 	linodeobjectstoragebucketlog.Info("validate create", "name", bucket.Name)
-
-	return nil, v.validateLinodeObjectStorageBucket(ctx, bucket, &defaultLinodeClient)
+	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, v.Client, bucket.Spec.CredentialsRef,
+		bucket.Name, bucket.GetNamespace(), linodemachinelog)
+	return nil, v.validateLinodeObjectStorageBucket(ctx, bucket, linodeClient, skipAPIValidation)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageBucket.
@@ -71,7 +75,7 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateUpdate(ctx context.Co
 	}
 	linodeobjectstoragebucketlog.Info("validate update", "name", bucket.Name)
 
-	return nil, v.validateLinodeObjectStorageBucket(ctx, bucket, &defaultLinodeClient)
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageBucket.
@@ -86,10 +90,10 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateDelete(ctx context.Co
 	return nil, nil
 }
 
-func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucket(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, client clients.LinodeClient) error {
+func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucket(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, linodeClient clients.LinodeClient, skipAPIValidation bool) error {
 	var errs field.ErrorList
 
-	if err := v.validateLinodeObjectStorageBucketSpec(ctx, bucket, client); err != nil {
+	if err := v.validateLinodeObjectStorageBucketSpec(ctx, bucket, linodeClient, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -101,10 +105,12 @@ func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBu
 		bucket.Name, errs)
 }
 
-func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucketSpec(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, client clients.LinodeClient) field.ErrorList {
+func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucketSpec(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, linodeClient clients.LinodeClient, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
-
-	if err := validateObjectStorageRegion(ctx, client, bucket.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
+	if skipAPIValidation {
+		return errs
+	}
+	if err := validateObjectStorageRegion(ctx, linodeClient, bucket.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
 		errs = append(errs, err)
 	}
 
