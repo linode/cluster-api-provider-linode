@@ -42,18 +42,17 @@ spec:
           metadata:
             type: object
           spec:
-            description: LinodeClusterTemplateSpec defines the desired state of LinodeClusterTemplate
+            description: spec is the desired state of the LinodeClusterTemplate.
             properties:
               template:
-                description: LinodeClusterTemplateResource describes the data needed
-                  to create a LinodeCluster from a template.
+                description: template defines the specification for a LinodeCluster.
                 properties:
                   spec:
-                    description: LinodeClusterSpec defines the desired state of LinodeCluster
+                    description: spec is the specification of the LinodeCluster.
                     properties:
                       controlPlaneEndpoint:
                         description: |-
-                          ControlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane.
+                          controlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane
                           If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used.
                         properties:
                           host:
@@ -72,8 +71,8 @@ spec:
                         type: object
                       credentialsRef:
                         description: |-
-                          CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
-                          supplied then the credentials of the controller will be used.
+                          credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
+                           supplied, then the credentials of the controller will be used.
                         properties:
                           name:
                             description: name is unique within a namespace to reference
@@ -86,8 +85,8 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       network:
-                        description: NetworkSpec encapsulates all things related to
-                          Linode network.
+                        description: network encapsulates all things related to Linode
+                          network.
                         properties:
                           additionalPorts:
                             description: additionalPorts contains list of ports to
@@ -121,7 +120,7 @@ spec:
                             type: integer
                           dnsProvider:
                             description: |-
-                              DNSProvider is provider who manages the domain
+                              dnsProvider is the provider who manages the domain.
                               Ignored if the LoadBalancerType is set to anything other than dns
                               If not set, defaults linode dns
                             enum:
@@ -130,23 +129,23 @@ spec:
                             type: string
                           dnsRootDomain:
                             description: |-
-                              DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint
+                              dnsRootDomain is the root domain used to create a DNS entry for the control-plane endpoint.
                               Ignored if the LoadBalancerType is set to anything other than dns
                             type: string
                           dnsSubDomainOverride:
                             description: |-
-                              DNSSubDomainOverride is used to override CAPL's construction of the controlplane endpoint
+                              dnsSubDomainOverride is used to override CAPL's construction of the controlplane endpoint
                               If set, this will override the DNS subdomain from <clustername>-<uniqueid>.<rootdomain> to <overridevalue>.<rootdomain>
                             type: string
                           dnsTTLsec:
                             description: |-
-                              DNSTTLSec is the TTL for the domain record
+                              dnsTTLsec is the TTL for the domain record
                               Ignored if the LoadBalancerType is set to anything other than dns
                               If not set, defaults to 30
                             type: integer
                           dnsUniqueIdentifier:
                             description: |-
-                              DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
+                              dnsUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
                               DNS record
                               Ignored if the LoadBalancerType is set to anything other than dns
                               If not set, CAPL will create a unique identifier for you
@@ -154,7 +153,7 @@ spec:
                           enableVPCBackends:
                             default: false
                             description: |-
-                              EnableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.
+                              enableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.
                               If set to false (default), the NodeBalancer will not be created in a VPC and
                               backends will use Linode private IPs. If true, the NodeBalancer will be
                               created in the configured VPC (when VPCRef or VPCID is set) and backends
@@ -165,8 +164,8 @@ spec:
                               rule: self == oldSelf
                           loadBalancerType:
                             default: NodeBalancer
-                            description: LoadBalancerType is the type of load balancer
-                              to use, defaults to NodeBalancer if not otherwise set
+                            description: loadBalancerType is the type of load balancer
+                              to use, defaults to NodeBalancer if not otherwise set.
                             enum:
                             - NodeBalancer
                             - dns
@@ -174,22 +173,22 @@ spec:
                             type: string
                           nodeBalancerBackendIPv4Range:
                             description: |-
-                              NodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
+                              nodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
                               example: 10.10.10.0/30
                             type: string
                           nodeBalancerFirewallID:
-                            description: NodeBalancerFirewallID is the id of NodeBalancer
+                            description: nodeBalancerFirewallID is the id of NodeBalancer
                               Firewall.
                             type: integer
                           nodeBalancerID:
-                            description: NodeBalancerID is the id of NodeBalancer.
+                            description: nodeBalancerID is the id of NodeBalancer.
                             type: integer
                           subnetName:
                             description: subnetName is the name/label of the VPC subnet
                               to be used by the cluster
                             type: string
                           useVlan:
-                            description: UseVlan provisions a cluster that uses VLANs
+                            description: useVlan provisions a cluster that uses VLANs
                               instead of VPCs. IPAM is managed internally.
                             type: boolean
                             x-kubernetes-validations:
@@ -197,7 +196,7 @@ spec:
                               rule: self == oldSelf
                         type: object
                       nodeBalancerFirewallRef:
-                        description: NodeBalancerFirewallRef is a reference to a NodeBalancer
+                        description: nodeBalancerFirewallRef is a reference to a NodeBalancer
                           Firewall object. This makes the linode use the specified
                           NodeBalancer Firewall.
                         properties:
@@ -246,11 +245,11 @@ spec:
                           rule: self == oldSelf
                       objectStore:
                         description: |-
-                          ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
+                          objectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
                           bootstrapping (e.g. Cloud-init).
                         properties:
                           credentialsRef:
-                            description: CredentialsRef is a reference to a Secret
+                            description: credentialsRef is a reference to a Secret
                               that contains the credentials to use for accessing the
                               Cluster Object Store.
                             properties:
@@ -266,25 +265,24 @@ spec:
                             x-kubernetes-map-type: atomic
                           presignedURLDuration:
                             description: |-
-                              PresignedURLDuration defines the duration for which presigned URLs are valid.
+                              presignedURLDuration defines the duration for which presigned URLs are valid.
 
                               This is used to generate presigned URLs for S3 Bucket objects, which are used by
                               control-plane and worker nodes to fetch bootstrap data.
                             type: string
                         type: object
                       region:
-                        description: The Linode Region the LinodeCluster lives in.
+                        description: region the LinodeCluster lives in.
                         type: string
                       vpcID:
-                        description: VPCID is the ID of an existing VPC in Linode.
-                          This allows using a VPC that is not managed by CAPL.
+                        description: vpcID is the ID of an existing VPC in Linode.
                         type: integer
                         x-kubernetes-validations:
                         - message: Value is immutable
                           rule: self == oldSelf
                       vpcRef:
-                        description: ObjectReference contains enough information to
-                          let you inspect or modify the referred object.
+                        description: vpcRef is a reference to a VPC object. This makes
+                          the Linodes use the specified VPC.
                         properties:
                           apiVersion:
                             description: API version of the referent.

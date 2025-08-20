@@ -22,11 +22,13 @@ import (
 
 // LinodeClusterTemplateSpec defines the desired state of LinodeClusterTemplate
 type LinodeClusterTemplateSpec struct {
+	// template defines the specification for a LinodeCluster.
 	Template LinodeClusterTemplateResource `json:"template"`
 }
 
 // LinodeClusterTemplateResource describes the data needed to create a LinodeCluster from a template.
 type LinodeClusterTemplateResource struct {
+	// spec is the specification of the LinodeCluster.
 	Spec LinodeClusterSpec `json:"spec"`
 }
 
@@ -36,9 +38,10 @@ type LinodeClusterTemplateResource struct {
 
 // LinodeClusterTemplate is the Schema for the linodeclustertemplates API
 type LinodeClusterTemplate struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
+	// spec is the desired state of the LinodeClusterTemplate.
 	Spec LinodeClusterTemplateSpec `json:"spec,omitempty"`
 }
 
@@ -47,8 +50,10 @@ type LinodeClusterTemplate struct {
 // LinodeClusterTemplateList contains a list of LinodeClusterTemplate
 type LinodeClusterTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []LinodeClusterTemplate `json:"items"`
+	// items is a list of LinodeClusterTemplate.
+	Items []LinodeClusterTemplate `json:"items"`
 }
 
 func init() {

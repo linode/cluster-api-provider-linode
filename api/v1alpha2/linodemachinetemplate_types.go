@@ -22,6 +22,7 @@ import (
 
 // LinodeMachineTemplateSpec defines the desired state of LinodeMachineTemplate
 type LinodeMachineTemplateSpec struct {
+	// template defines the specification for a LinodeMachine.
 	Template LinodeMachineTemplateResource `json:"template"`
 }
 
@@ -33,17 +34,18 @@ type LinodeMachineTemplateStatus struct {
 	// +optional
 	Tags []string `json:"tags,omitempty"`
 
-	// Firewall ID that is currently applied to the LinodeMachineTemplate.
+	// firewallID that is currently applied to the LinodeMachineTemplate.
 	// +optional
 	FirewallID int `json:"firewallID,omitempty"`
 
-	// Conditions represent the latest available observations of a LinodeMachineTemplate's current state.
+	// conditions represent the latest available observations of a LinodeMachineTemplate's current state.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // LinodeMachineTemplateResource describes the data needed to create a LinodeMachine from a template.
 type LinodeMachineTemplateResource struct {
+	// spec is the specification of the desired behavior of the machine.
 	Spec LinodeMachineSpec `json:"spec"`
 }
 
@@ -55,11 +57,14 @@ type LinodeMachineTemplateResource struct {
 
 // LinodeMachineTemplate is the Schema for the linodemachinetemplates API
 type LinodeMachineTemplate struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// spec is the desired state of the LinodeMachineTemplate.
 	Spec LinodeMachineTemplateSpec `json:"spec,omitempty"`
 
+	// status is the observed state of the LinodeMachineTemplate.
 	Status LinodeMachineTemplateStatus `json:"status,omitempty"`
 }
 
@@ -89,8 +94,12 @@ func (lmt *LinodeMachineTemplate) SetV1Beta2Conditions(conditions []metav1.Condi
 // LinodeMachineTemplateList contains a list of LinodeMachineTemplate
 type LinodeMachineTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []LinodeMachineTemplate `json:"items"`
+
+	// items is a list of LinodeMachineTemplate.
+	Items []LinodeMachineTemplate `json:"items"`
 }
 
 func init() {

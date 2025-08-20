@@ -29,42 +29,46 @@ const (
 
 // LinodeFirewallSpec defines the desired state of LinodeFirewall
 type LinodeFirewallSpec struct {
+	// firewallID is the ID of the Firewall.
 	// +optional
 	FirewallID *int `json:"firewallID,omitempty"`
 
+	// enabled determines if the Firewall is enabled. Defaults to false if not defined.
 	// +optional
 	// +kubebuilder:default=false
 	Enabled bool `json:"enabled,omitempty"`
 
+	// inboundRules is a list of FirewallRules that will be applied to the Firewall.
 	// +optional
 	InboundRules []FirewallRuleSpec `json:"inboundRules,omitempty"`
 
-	// InboundRuleRefs is a list of references to FirewallRules as an alternative to
+	// inboundRuleRefs is a list of references to FirewallRules as an alternative to
 	// using InboundRules but can be used in conjunction with it
 	// +optional
 	InboundRuleRefs []*corev1.ObjectReference `json:"inboundRuleRefs,omitempty"`
 
-	// InboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
+	// inboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
 	// +kubebuilder:validation:Enum=ACCEPT;DROP
 	// +kubebuilder:default=ACCEPT
 	// +optional
 	InboundPolicy string `json:"inboundPolicy,omitempty"`
 
+	// outboundRules is a list of FirewallRules that will be applied to the Firewall.
 	// +optional
 	OutboundRules []FirewallRuleSpec `json:"outboundRules,omitempty"`
 
-	// OutboundRuleRefs is a list of references to FirewallRules as an alternative to
+	// outboundRuleRefs is a list of references to FirewallRules as an alternative to
 	// using OutboundRules but can be used in conjunction with it
 	// +optional
 	OutboundRuleRefs []*corev1.ObjectReference `json:"outboundRuleRefs,omitempty"`
 
-	// OutboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
+	// outboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
 	// +kubebuilder:validation:Enum=ACCEPT;DROP
 	// +kubebuilder:default=ACCEPT
 	// +optional
 	OutboundPolicy string `json:"outboundPolicy,omitempty"`
 
-	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this Firewall. If not
+	// credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this Firewall. If not
 	// supplied then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
@@ -72,12 +76,12 @@ type LinodeFirewallSpec struct {
 
 // LinodeFirewallStatus defines the observed state of LinodeFirewall
 type LinodeFirewallStatus struct {
-	// Ready is true when the provider resource is ready.
+	// ready is true when the provider resource is ready.
 	// +optional
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
-	// FailureReason will be set in the event that there is a terminal problem
+	// failureReason will be set in the event that there is a terminal problem
 	// reconciling the Firewall and will contain a succinct value suitable
 	// for machine interpretation.
 	//
@@ -96,7 +100,7 @@ type LinodeFirewallStatus struct {
 	// +optional
 	FailureReason *FirewallStatusError `json:"failureReason,omitempty"`
 
-	// FailureMessage will be set in the event that there is a terminal problem
+	// failureMessage will be set in the event that there is a terminal problem
 	// reconciling the Firewall and will contain a more verbose string suitable
 	// for logging and human consumption.
 	//
@@ -115,7 +119,7 @@ type LinodeFirewallStatus struct {
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
-	// Conditions defines current service state of the LinodeFirewall.
+	// conditions define the current service state of the LinodeFirewall.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -129,10 +133,12 @@ type LinodeFirewallStatus struct {
 
 // LinodeFirewall is the Schema for the linodefirewalls API
 type LinodeFirewall struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   LinodeFirewallSpec   `json:"spec,omitempty"`
+	// spec is the desired state of the LinodeFirewall.
+	Spec LinodeFirewallSpec `json:"spec,omitempty"`
+	// status is the observed state of the LinodeFirewall.
 	Status LinodeFirewallStatus `json:"status,omitempty"`
 }
 
@@ -158,13 +164,15 @@ func (lfw *LinodeFirewall) SetV1Beta2Conditions(conditions []metav1.Condition) {
 	lfw.SetConditions(conditions)
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // LinodeFirewallList contains a list of LinodeFirewall
 type LinodeFirewallList struct {
 	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []LinodeFirewall `json:"items"`
+	// items is a list of LinodeFirewall.
+	Items []LinodeFirewall `json:"items"`
 }
 
 func init() {

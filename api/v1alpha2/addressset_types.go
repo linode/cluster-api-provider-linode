@@ -22,7 +22,9 @@ import (
 
 // AddressSetSpec defines the desired state of AddressSet
 type AddressSetSpec struct {
+	// ipv4 defines a list of IPv4 address strings
 	IPv4 *[]string `json:"ipv4,omitempty"`
+	// ipv6 defines a list of IPv6 address strings
 	IPv6 *[]string `json:"ipv6,omitempty"`
 }
 
@@ -37,20 +39,24 @@ type AddressSetStatus struct {
 
 // AddressSet is the Schema for the addresssets API
 type AddressSet struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   AddressSetSpec   `json:"spec,omitempty"`
+	// spec is the desired state of the AddressSet
+	Spec AddressSetSpec `json:"spec,omitempty"`
+	// status is the observed state of the AddressSet
 	Status AddressSetStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // AddressSetList contains a list of AddressSet
 type AddressSetList struct {
 	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []AddressSet `json:"items"`
+	// items is a list of AddressSet
+	Items []AddressSet `json:"items"`
 }
 
 func init() {

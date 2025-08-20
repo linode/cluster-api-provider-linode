@@ -52,8 +52,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[AddressSetSpec](#addresssetspec)_ |  |  |  |
-| `status` _[AddressSetStatus](#addresssetstatus)_ |  |  |  |
+| `spec` _[AddressSetSpec](#addresssetspec)_ | spec is the desired state of the AddressSet |  |  |
+| `status` _[AddressSetStatus](#addresssetstatus)_ | status is the observed state of the AddressSet |  |  |
 
 
 #### AddressSetList
@@ -73,7 +73,7 @@ AddressSetList contains a list of AddressSet
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[AddressSet](#addressset) array_ |  |  |  |
+| `items` _[AddressSet](#addressset) array_ | items is a list of AddressSet |  |  |
 
 
 #### AddressSetSpec
@@ -89,8 +89,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ipv4` _string_ |  |  |  |
-| `ipv6` _string_ |  |  |  |
+| `ipv4` _string_ | ipv4 defines a list of IPv4 address strings |  |  |
+| `ipv6` _string_ | ipv6 defines a list of IPv6 address strings |  |  |
 
 
 #### AddressSetStatus
@@ -119,9 +119,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `bucketName` _string_ |  |  |  |
-| `permissions` _string_ |  |  |  |
-| `region` _string_ |  |  |  |
+| `bucketName` _string_ | bucketName is the name of the bucket to grant access to. |  |  |
+| `permissions` _string_ | permissions is the permissions to grant to the bucket. |  |  |
+| `region` _string_ | region is the region of the bucket. |  |  |
 
 
 #### FirewallRule
@@ -142,8 +142,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[FirewallRuleSpec](#firewallrulespec)_ |  |  |  |
-| `status` _[FirewallRuleStatus](#firewallrulestatus)_ |  |  |  |
+| `spec` _[FirewallRuleSpec](#firewallrulespec)_ | spec is the desired state of the FirewallRule. |  |  |
+| `status` _[FirewallRuleStatus](#firewallrulestatus)_ | status is the observed state of the FirewallRule. |  |  |
 
 
 #### FirewallRuleList
@@ -163,14 +163,14 @@ FirewallRuleList contains a list of FirewallRule
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[FirewallRule](#firewallrule) array_ |  |  |  |
+| `items` _[FirewallRule](#firewallrule) array_ | items is a list of FirewallRule. |  |  |
 
 
 #### FirewallRuleSpec
 
 
 
-FirewallRuleSpec defines the desired state of FirewallRule
+FirewallRuleSpec defines the desired state of FirewallRule.
 
 
 
@@ -180,20 +180,20 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `action` _string_ | INSERT ADDITIONAL SPEC FIELDS - desired state of cluster<br />Important: Run "make" to regenerate code after modifying this file |  |  |
-| `label` _string_ |  |  |  |
-| `description` _string_ |  |  |  |
-| `ports` _string_ |  |  |  |
-| `protocol` _[NetworkProtocol](#networkprotocol)_ |  |  | Enum: [TCP UDP ICMP IPENCAP] <br /> |
-| `addresses` _[NetworkAddresses](#networkaddresses)_ |  |  |  |
-| `addressSetRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core) array_ | AddressSetRefs is a list of references to AddressSets as an alternative to<br />using Addresses but can be used in conjunction with it |  |  |
+| `action` _string_ | action is the action to take when the rule matches. |  |  |
+| `label` _string_ | label is the label of the rule. |  |  |
+| `description` _string_ | description is the description of the rule. |  |  |
+| `ports` _string_ | ports is the ports to apply the rule to. |  |  |
+| `protocol` _[NetworkProtocol](#networkprotocol)_ | protocol is the protocol to apply the rule to. |  | Enum: [TCP UDP ICMP IPENCAP] <br /> |
+| `addresses` _[NetworkAddresses](#networkaddresses)_ | addresses is a list of addresses to apply the rule to. |  |  |
+| `addressSetRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core) array_ | addressSetRefs is a list of references to AddressSets as an alternative to<br />using Addresses but can be used in conjunction with it. |  |  |
 
 
 #### FirewallRuleStatus
 
 
 
-FirewallRuleStatus defines the observed state of FirewallRule
+FirewallRuleStatus defines the observed state of FirewallRule.
 
 
 
@@ -233,10 +233,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | The name of the generated Secret. If not set, the name is formatted as "\{name-of-obj-key\}-obj-key". |  |  |
-| `namespace` _string_ | The namespace for the generated Secret. If not set, defaults to the namespace of the LinodeObjectStorageKey. |  |  |
-| `type` _[SecretType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secrettype-v1-core)_ | The type of the generated Secret. | Opaque | Enum: [Opaque addons.cluster.x-k8s.io/resource-set] <br /> |
-| `format` _object (keys:string, values:string)_ | How to format the data stored in the generated Secret.<br />It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey .BucketName .BucketEndpoint .S3Endpoint<br />If no format is supplied then a generic one is used containing the values specified. |  |  |
+| `name` _string_ | name of the generated Secret. If not set, the name is formatted as "\{name-of-obj-key\}-obj-key". |  |  |
+| `namespace` _string_ | namespace for the generated Secret. If not set, defaults to the namespace of the LinodeObjectStorageKey. |  |  |
+| `type` _[SecretType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secrettype-v1-core)_ | type of the generated Secret. | Opaque | Enum: [Opaque addons.cluster.x-k8s.io/resource-set] <br /> |
+| `format` _object (keys:string, values:string)_ | format of the data stored in the generated Secret.<br />It supports Go template syntax and interpolating the following values: .AccessKey .SecretKey .BucketName .BucketEndpoint .S3Endpoint<br />If no format is supplied, then a generic one is used containing the values specified. |  |  |
 
 
 #### IPv6CreateOptions
@@ -252,9 +252,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enableSLAAC` _boolean_ | EnableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.<br />This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.<br />Defaults to false. |  |  |
-| `enableRanges` _boolean_ | EnableRanges is an option to enable IPv6 ranges for the instance.<br />If set to true, the instance will have a range of IPv6 addresses.<br />This is useful for instances that require multiple IPv6 addresses.<br />Defaults to false. |  |  |
-| `isPublicIPv6` _boolean_ | IsPublicIPv6 is an option to enable public IPv6 for the instance.<br />If set to true, the instance will have a publicly routable IPv6 range.<br />Defaults to false. |  |  |
+| `enableSLAAC` _boolean_ | enableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.<br />This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.<br />Defaults to false. |  |  |
+| `enableRanges` _boolean_ | enableRanges is an option to enable IPv6 ranges for the instance.<br />If set to true, the instance will have a range of IPv6 addresses.<br />This is useful for instances that require multiple IPv6 addresses.<br />Defaults to false. |  |  |
+| `isPublicIPv6` _boolean_ | isPublicIPv6 is an option to enable public IPv6 for the instance.<br />If set to true, the instance will have a publicly routable IPv6 range.<br />Defaults to false. |  |  |
 
 
 #### InstanceConfigInterfaceCreateOptions
@@ -270,13 +270,13 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ipamAddress` _string_ |  |  |  |
-| `label` _string_ |  |  | MaxLength: 63 <br />MinLength: 3 <br /> |
-| `purpose` _[ConfigInterfacePurpose](#configinterfacepurpose)_ |  |  |  |
-| `primary` _boolean_ |  |  |  |
-| `subnetId` _integer_ |  |  |  |
-| `ipv4` _[VPCIPv4](#vpcipv4)_ |  |  |  |
-| `ipRanges` _string array_ |  |  |  |
+| `ipamAddress` _string_ | ipamAddress is the IP address to assign to the interface. |  |  |
+| `label` _string_ | label is the label of the interface. |  | MaxLength: 63 <br />MinLength: 3 <br /> |
+| `purpose` _[ConfigInterfacePurpose](#configinterfacepurpose)_ | purpose is the purpose of the interface. |  |  |
+| `primary` _boolean_ | primary is a boolean indicating whether the interface is primary. |  |  |
+| `subnetId` _integer_ | subnetId is the ID of the subnet to use for the interface. |  |  |
+| `ipv4` _[VPCIPv4](#vpcipv4)_ | ipv4 is the IPv4 configuration for the interface. |  |  |
+| `ipRanges` _string array_ | ipRanges is a list of IPv4 ranges to assign to the interface. |  |  |
 
 
 #### InstanceConfiguration
@@ -292,7 +292,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `kernel` _string_ | Kernel is a Kernel ID to boot a Linode with. (e.g linode/latest-64bit) |  |  |
+| `kernel` _string_ | kernel is a Kernel ID to boot a Linode with. (e.g linode/latest-64bit). |  |  |
 
 
 #### InstanceDisk
@@ -308,10 +308,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `diskID` _integer_ | DiskID is the linode assigned ID of the disk |  |  |
-| `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ | Size of the disk in resource.Quantity notation |  | Required: \{\} <br /> |
-| `label` _string_ | Label for the instance disk, if nothing is provided it will match the device name |  |  |
-| `filesystem` _string_ | Filesystem of disk to provision, the default disk filesystem is "ext4" |  | Enum: [raw swap ext3 ext4 initrd] <br /> |
+| `diskID` _integer_ | diskID is the linode assigned ID of the disk. |  |  |
+| `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ | size of the disk in resource.Quantity notation. |  |  |
+| `label` _string_ | label for the instance disk, if nothing is provided, it will match the device name. |  |  |
+| `filesystem` _string_ | filesystem of disk to provision, the default disk filesystem is "ext4". |  | Enum: [raw swap ext3 ext4 initrd] <br /> |
 
 
 
@@ -329,8 +329,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ipv4` _boolean_ |  |  |  |
-| `ipv6` _boolean_ |  |  |  |
+| `ipv4` _boolean_ | ipv4 is the IPv4 default route for the interface. |  |  |
+| `ipv6` _boolean_ | ipv6 is the IPv6 default route for the interface. |  |  |
 
 
 #### LinodeCluster
@@ -351,8 +351,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeClusterSpec](#linodeclusterspec)_ |  |  |  |
-| `status` _[LinodeClusterStatus](#linodeclusterstatus)_ |  |  |  |
+| `spec` _[LinodeClusterSpec](#linodeclusterspec)_ | spec is the desired state of the LinodeCluster. |  |  |
+| `status` _[LinodeClusterStatus](#linodeclusterstatus)_ | status is the observed state of the LinodeCluster. |  |  |
 
 
 #### LinodeClusterList
@@ -372,7 +372,7 @@ LinodeClusterList contains a list of LinodeCluster
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodeCluster](#linodecluster) array_ |  |  |  |
+| `items` _[LinodeCluster](#linodecluster) array_ | items is a list of LinodeCluster. |  |  |
 
 
 #### LinodeClusterSpec
@@ -389,14 +389,14 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `region` _string_ | The Linode Region the LinodeCluster lives in. |  |  |
-| `controlPlaneEndpoint` _[APIEndpoint](#apiendpoint)_ | ControlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane.<br />If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used. |  |  |
-| `network` _[NetworkSpec](#networkspec)_ | NetworkSpec encapsulates all things related to Linode network. |  |  |
-| `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ |  |  |  |
-| `vpcID` _integer_ | VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
-| `nodeBalancerFirewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | NodeBalancerFirewallRef is a reference to a NodeBalancer Firewall object. This makes the linode use the specified NodeBalancer Firewall. |  |  |
-| `objectStore` _[ObjectStore](#objectstore)_ | ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for<br />bootstrapping (e.g. Cloud-init). |  |  |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not<br />supplied then the credentials of the controller will be used. |  |  |
+| `region` _string_ | region the LinodeCluster lives in. |  |  |
+| `controlPlaneEndpoint` _[APIEndpoint](#apiendpoint)_ | controlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane<br />If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used. |  |  |
+| `network` _[NetworkSpec](#networkspec)_ | network encapsulates all things related to Linode network. |  |  |
+| `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a VPC object. This makes the Linodes use the specified VPC. |  |  |
+| `vpcID` _integer_ | vpcID is the ID of an existing VPC in Linode. |  |  |
+| `nodeBalancerFirewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | nodeBalancerFirewallRef is a reference to a NodeBalancer Firewall object. This makes the linode use the specified NodeBalancer Firewall. |  |  |
+| `objectStore` _[ObjectStore](#objectstore)_ | objectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for<br />bootstrapping (e.g. Cloud-init). |  |  |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not<br /> supplied, then the credentials of the controller will be used. |  |  |
 
 
 #### LinodeClusterStatus
@@ -412,10 +412,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ready` _boolean_ | Ready denotes that the cluster (infrastructure) is ready. |  |  |
-| `failureReason` _string_ | FailureReason will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a succinct value suitable<br />for machine interpretation. |  |  |
-| `failureMessage` _string_ | FailureMessage will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a more verbose string suitable<br />for logging and human consumption. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions defines current service state of the LinodeCluster. |  |  |
+| `ready` _boolean_ | ready denotes that the cluster (infrastructure) is ready. |  |  |
+| `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a succinct value suitable<br />for machine interpretation. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a more verbose string suitable<br />for logging and human consumption. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions defines current service state of the LinodeCluster. |  |  |
 
 
 #### LinodeClusterTemplate
@@ -436,7 +436,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeClusterTemplateSpec](#linodeclustertemplatespec)_ |  |  |  |
+| `spec` _[LinodeClusterTemplateSpec](#linodeclustertemplatespec)_ | spec is the desired state of the LinodeClusterTemplate. |  |  |
 
 
 #### LinodeClusterTemplateList
@@ -456,7 +456,7 @@ LinodeClusterTemplateList contains a list of LinodeClusterTemplate
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodeClusterTemplate](#linodeclustertemplate) array_ |  |  |  |
+| `items` _[LinodeClusterTemplate](#linodeclustertemplate) array_ | items is a list of LinodeClusterTemplate. |  |  |
 
 
 #### LinodeClusterTemplateResource
@@ -472,7 +472,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `spec` _[LinodeClusterSpec](#linodeclusterspec)_ |  |  |  |
+| `spec` _[LinodeClusterSpec](#linodeclusterspec)_ | spec is the specification of the LinodeCluster. |  |  |
 
 
 #### LinodeClusterTemplateSpec
@@ -488,7 +488,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `template` _[LinodeClusterTemplateResource](#linodeclustertemplateresource)_ |  |  |  |
+| `template` _[LinodeClusterTemplateResource](#linodeclustertemplateresource)_ | template defines the specification for a LinodeCluster. |  |  |
 
 
 #### LinodeFirewall
@@ -509,8 +509,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeFirewallSpec](#linodefirewallspec)_ |  |  |  |
-| `status` _[LinodeFirewallStatus](#linodefirewallstatus)_ |  |  |  |
+| `spec` _[LinodeFirewallSpec](#linodefirewallspec)_ | spec is the desired state of the LinodeFirewall. |  |  |
+| `status` _[LinodeFirewallStatus](#linodefirewallstatus)_ | status is the observed state of the LinodeFirewall. |  |  |
 
 
 #### LinodeFirewallList
@@ -530,7 +530,7 @@ LinodeFirewallList contains a list of LinodeFirewall
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodeFirewall](#linodefirewall) array_ |  |  |  |
+| `items` _[LinodeFirewall](#linodefirewall) array_ | items is a list of LinodeFirewall. |  |  |
 
 
 #### LinodeFirewallSpec
@@ -546,15 +546,15 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `firewallID` _integer_ |  |  |  |
-| `enabled` _boolean_ |  | false |  |
-| `inboundRules` _[FirewallRuleSpec](#firewallrulespec) array_ |  |  |  |
-| `inboundRuleRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core) array_ | InboundRuleRefs is a list of references to FirewallRules as an alternative to<br />using InboundRules but can be used in conjunction with it |  |  |
-| `inboundPolicy` _string_ | InboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined. | ACCEPT | Enum: [ACCEPT DROP] <br /> |
-| `outboundRules` _[FirewallRuleSpec](#firewallrulespec) array_ |  |  |  |
-| `outboundRuleRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core) array_ | OutboundRuleRefs is a list of references to FirewallRules as an alternative to<br />using OutboundRules but can be used in conjunction with it |  |  |
-| `outboundPolicy` _string_ | OutboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined. | ACCEPT | Enum: [ACCEPT DROP] <br /> |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this Firewall. If not<br />supplied then the credentials of the controller will be used. |  |  |
+| `firewallID` _integer_ | firewallID is the ID of the Firewall. |  |  |
+| `enabled` _boolean_ | enabled determines if the Firewall is enabled. Defaults to false if not defined. | false |  |
+| `inboundRules` _[FirewallRuleSpec](#firewallrulespec) array_ | inboundRules is a list of FirewallRules that will be applied to the Firewall. |  |  |
+| `inboundRuleRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core) array_ | inboundRuleRefs is a list of references to FirewallRules as an alternative to<br />using InboundRules but can be used in conjunction with it |  |  |
+| `inboundPolicy` _string_ | inboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined. | ACCEPT | Enum: [ACCEPT DROP] <br /> |
+| `outboundRules` _[FirewallRuleSpec](#firewallrulespec) array_ | outboundRules is a list of FirewallRules that will be applied to the Firewall. |  |  |
+| `outboundRuleRefs` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core) array_ | outboundRuleRefs is a list of references to FirewallRules as an alternative to<br />using OutboundRules but can be used in conjunction with it |  |  |
+| `outboundPolicy` _string_ | outboundPolicy determines if traffic by default should be ACCEPTed or DROPped. Defaults to ACCEPT if not defined. | ACCEPT | Enum: [ACCEPT DROP] <br /> |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this Firewall. If not<br />supplied then the credentials of the controller will be used. |  |  |
 
 
 #### LinodeFirewallStatus
@@ -570,10 +570,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ready` _boolean_ | Ready is true when the provider resource is ready. | false |  |
-| `failureReason` _[FirewallStatusError](#firewallstatuserror)_ | FailureReason will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
-| `failureMessage` _string_ | FailureMessage will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions defines current service state of the LinodeFirewall. |  |  |
+| `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
+| `failureReason` _[FirewallStatusError](#firewallstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeFirewall. |  |  |
 
 
 #### LinodeInterfaceCreateOptions
@@ -589,11 +589,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `firewall_id` _integer_ |  |  |  |
-| `default_route` _[InterfaceDefaultRoute](#interfacedefaultroute)_ |  |  |  |
-| `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ |  |  |  |
-| `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ |  |  |  |
-| `vlan` _[VLANInterface](#vlaninterface)_ |  |  |  |
+| `firewall_id` _integer_ | firewall_id is the ID of the firewall to use for the interface. |  |  |
+| `default_route` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | default_route is the default route for the interface. |  |  |
+| `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  |  |
+| `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  |  |
+| `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  |  |
 
 
 #### LinodeMachine
@@ -614,8 +614,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeMachineSpec](#linodemachinespec)_ |  |  |  |
-| `status` _[LinodeMachineStatus](#linodemachinestatus)_ |  |  |  |
+| `spec` _[LinodeMachineSpec](#linodemachinespec)_ | spec defines the specification of desired behavior for the LinodeMachine. |  |  |
+| `status` _[LinodeMachineStatus](#linodemachinestatus)_ | status defines the observed state of LinodeMachine. |  |  |
 
 
 #### LinodeMachineList
@@ -635,7 +635,7 @@ LinodeMachineList contains a list of LinodeMachine
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodeMachine](#linodemachine) array_ |  |  |  |
+| `items` _[LinodeMachine](#linodemachine) array_ | items is a list of LinodeMachine. |  |  |
 
 
 #### LinodeMachineSpec
@@ -652,34 +652,34 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `providerID` _string_ | ProviderID is the unique identifier as specified by the cloud provider. |  |  |
-| `instanceID` _integer_ | InstanceID is the Linode instance ID for this machine. |  |  |
-| `region` _string_ |  |  | Required: \{\} <br /> |
-| `type` _string_ |  |  | Required: \{\} <br /> |
-| `group` _string_ |  |  |  |
-| `rootPass` _string_ |  |  |  |
-| `authorizedKeys` _string array_ |  |  |  |
-| `authorizedUsers` _string array_ |  |  |  |
-| `backupID` _integer_ |  |  |  |
-| `image` _string_ |  |  |  |
-| `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ | Interfaces is a list of legacy network interfaces to use for the instance. |  |  |
-| `linodeInterfaces` _[LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions) array_ | LinodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use. |  |  |
-| `backupsEnabled` _boolean_ |  |  |  |
-| `privateIP` _boolean_ |  |  |  |
-| `tags` _string array_ | Tags is a list of tags to apply to the Linode instance. |  |  |
-| `firewallID` _integer_ | FirewallID is the id of the cloud firewall to apply to the Linode Instance |  |  |
-| `osDisk` _[InstanceDisk](#instancedisk)_ | OSDisk is configuration for the root disk that includes the OS,<br />if not specified this defaults to whatever space is not taken up by the DataDisks |  |  |
-| `dataDisks` _object (keys:string, values:[InstanceDisk](#instancedisk))_ | DataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on a linodes plan |  |  |
-| `diskEncryption` _string_ | DiskEncryption determines if the disks of the instance should be encrypted. The default is disabled. |  | Enum: [enabled disabled] <br /> |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials<br />to use for provisioning this machine. If not supplied then these<br />credentials will be used in-order:<br />  1. LinodeMachine<br />  2. Owner LinodeCluster<br />  3. Controller |  |  |
-| `configuration` _[InstanceConfiguration](#instanceconfiguration)_ | Configuration is the Akamai instance configuration OS,<br />if not specified this defaults to the default configuration associated to the instance. |  |  |
-| `placementGroupRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | PlacementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group. |  |  |
-| `firewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall. |  |  |
-| `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | VPCRef is a reference to a LinodeVPC resource. If specified, this takes precedence over<br />the cluster-level VPC configuration for multi-region support. |  |  |
-| `vpcID` _integer_ | VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
-| `ipv6Options` _[IPv6CreateOptions](#ipv6createoptions)_ | IPv6Options defines the IPv6 options for the instance.<br />If not specified, IPv6 ranges won't be allocated to instance. |  |  |
-| `networkHelper` _boolean_ | NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.<br />You can use this to enable/disable the network helper for a specific instance.<br />For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking<br />Defaults to true. |  |  |
-| `interfaceGeneration` _[InterfaceGeneration](#interfacegeneration)_ | InterfaceGeneration is the generation of the interface to use for the cluster's<br />nodes in interface / linodeInterface are not specified for a LinodeMachine.<br />If not set, defaults to "legacy_config". | legacy_config | Enum: [legacy_config linode] <br /> |
+| `providerID` _string_ | providerID is the unique identifier as specified by the cloud provider. |  |  |
+| `instanceID` _integer_ | instanceID is the Linode instance ID for this machine. |  |  |
+| `region` _string_ | region is the Linode region to create the instance in. |  |  |
+| `type` _string_ | type is the Linode instance type to create. |  |  |
+| `group` _string_ | group is the Linode group to create the instance in. |  |  |
+| `rootPass` _string_ | rootPass is the root password for the instance. |  |  |
+| `authorizedKeys` _string array_ | authorizedKeys is a list of SSH public keys to add to the instance. |  |  |
+| `authorizedUsers` _string array_ | authorizedUsers is a list of usernames to add to the instance. |  |  |
+| `backupID` _integer_ | backupID is the ID of the backup to restore the instance from. |  |  |
+| `image` _string_ | image is the Linode image to use for the instance. |  |  |
+| `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ | interfaces is a list of legacy network interfaces to use for the instance. |  |  |
+| `linodeInterfaces` _[LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions) array_ | linodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use. |  |  |
+| `backupsEnabled` _boolean_ | backupsEnabled is a boolean indicating whether backups should be enabled for the instance. |  |  |
+| `privateIP` _boolean_ | privateIP is a boolean indicating whether the instance should have a private IP address. |  |  |
+| `tags` _string array_ | tags is a list of tags to apply to the Linode instance. |  |  |
+| `firewallID` _integer_ | firewallID is the id of the cloud firewall to apply to the Linode Instance |  |  |
+| `osDisk` _[InstanceDisk](#instancedisk)_ | osDisk is a configuration for the root disk that includes the OS,<br />if not specified, this defaults to whatever space is not taken up by the DataDisks |  |  |
+| `dataDisks` _object (keys:string, values:[InstanceDisk](#instancedisk))_ | dataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on a linodes plan |  |  |
+| `diskEncryption` _string_ | diskEncryption determines if the disks of the instance should be encrypted. The default is disabled. |  | Enum: [enabled disabled] <br /> |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials<br />to use for provisioning this machine. If not supplied then these<br />credentials will be used in-order:<br />  1. LinodeMachine<br />  2. Owner LinodeCluster<br />  3. Controller |  |  |
+| `configuration` _[InstanceConfiguration](#instanceconfiguration)_ | configuration is the Akamai instance configuration OS,<br />if not specified, this defaults to the default configuration associated to the instance. |  |  |
+| `placementGroupRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | placementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group. |  |  |
+| `firewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | firewallRef is a reference to a firewall object. This makes the linode use the specified firewall. |  |  |
+| `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a LinodeVPC resource. If specified, this takes precedence over<br />the cluster-level VPC configuration for multi-region support. |  |  |
+| `vpcID` _integer_ | vpcID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
+| `ipv6Options` _[IPv6CreateOptions](#ipv6createoptions)_ | ipv6Options defines the IPv6 options for the instance.<br />If not specified, IPv6 ranges won't be allocated to instance. |  |  |
+| `networkHelper` _boolean_ | networkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.<br />You can use this to enable/disable the network helper for a specific instance.<br />For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking<br />Defaults to true. |  |  |
+| `interfaceGeneration` _[InterfaceGeneration](#interfacegeneration)_ | interfaceGeneration is the generation of the interface to use for the cluster's<br />nodes in interface / linodeInterface are not specified for a LinodeMachine.<br />If not set, defaults to "legacy_config". | legacy_config | Enum: [legacy_config linode] <br /> |
 
 
 #### LinodeMachineStatus
@@ -695,13 +695,13 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ready` _boolean_ | Ready is true when the provider resource is ready. | false |  |
-| `addresses` _MachineAddress array_ | Addresses contains the Linode instance associated addresses. |  |  |
-| `cloudinitMetadataSupport` _boolean_ | CloudinitMetadataSupport determines whether to use cloud-init or not.<br />Deprecated: Stackscript no longer in use, so this field is not used. | true |  |
-| `instanceState` _[InstanceStatus](#instancestatus)_ | InstanceState is the state of the Linode instance for this machine. |  |  |
-| `failureReason` _string_ | FailureReason will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
-| `failureMessage` _string_ | FailureMessage will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions defines current service state of the LinodeMachine. |  |  |
+| `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
+| `addresses` _MachineAddress array_ | addresses contains the Linode instance associated addresses. |  |  |
+| `cloudinitMetadataSupport` _boolean_ | cloudinitMetadataSupport determines whether to use cloud-init or not.<br />Deprecated: Stackscript no longer in use, so this field is not used. | true |  |
+| `instanceState` _[InstanceStatus](#instancestatus)_ | instanceState is the state of the Linode instance for this machine. |  |  |
+| `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions defines current service state of the LinodeMachine. |  |  |
 | `tags` _string array_ | tags are the tags applied to the Linode Machine. |  |  |
 
 
@@ -723,8 +723,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeMachineTemplateSpec](#linodemachinetemplatespec)_ |  |  |  |
-| `status` _[LinodeMachineTemplateStatus](#linodemachinetemplatestatus)_ |  |  |  |
+| `spec` _[LinodeMachineTemplateSpec](#linodemachinetemplatespec)_ | spec is the desired state of the LinodeMachineTemplate. |  |  |
+| `status` _[LinodeMachineTemplateStatus](#linodemachinetemplatestatus)_ | status is the observed state of the LinodeMachineTemplate. |  |  |
 
 
 #### LinodeMachineTemplateList
@@ -744,7 +744,7 @@ LinodeMachineTemplateList contains a list of LinodeMachineTemplate
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodeMachineTemplate](#linodemachinetemplate) array_ |  |  |  |
+| `items` _[LinodeMachineTemplate](#linodemachinetemplate) array_ | items is a list of LinodeMachineTemplate. |  |  |
 
 
 #### LinodeMachineTemplateResource
@@ -760,7 +760,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `spec` _[LinodeMachineSpec](#linodemachinespec)_ |  |  |  |
+| `spec` _[LinodeMachineSpec](#linodemachinespec)_ | spec is the specification of the desired behavior of the machine. |  |  |
 
 
 #### LinodeMachineTemplateSpec
@@ -776,7 +776,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `template` _[LinodeMachineTemplateResource](#linodemachinetemplateresource)_ |  |  |  |
+| `template` _[LinodeMachineTemplateResource](#linodemachinetemplateresource)_ | template defines the specification for a LinodeMachine. |  |  |
 
 
 #### LinodeMachineTemplateStatus
@@ -794,8 +794,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `tags` _string array_ | tags that are currently applied to the LinodeMachineTemplate. |  |  |
-| `firewallID` _integer_ | Firewall ID that is currently applied to the LinodeMachineTemplate. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions represent the latest available observations of a LinodeMachineTemplate's current state. |  |  |
+| `firewallID` _integer_ | firewallID that is currently applied to the LinodeMachineTemplate. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions represent the latest available observations of a LinodeMachineTemplate's current state. |  |  |
 
 
 #### LinodeNBPortConfig
@@ -833,8 +833,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeObjectStorageBucketSpec](#linodeobjectstoragebucketspec)_ |  |  |  |
-| `status` _[LinodeObjectStorageBucketStatus](#linodeobjectstoragebucketstatus)_ |  |  |  |
+| `spec` _[LinodeObjectStorageBucketSpec](#linodeobjectstoragebucketspec)_ | spec is the desired state of the LinodeObjectStorageBucket. |  |  |
+| `status` _[LinodeObjectStorageBucketStatus](#linodeobjectstoragebucketstatus)_ | status is the observed state of the LinodeObjectStorageBucket. |  |  |
 
 
 #### LinodeObjectStorageBucketList
@@ -854,7 +854,7 @@ LinodeObjectStorageBucketList contains a list of LinodeObjectStorageBucket
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodeObjectStorageBucket](#linodeobjectstoragebucket) array_ |  |  |  |
+| `items` _[LinodeObjectStorageBucket](#linodeobjectstoragebucket) array_ | items is a list of LinodeObjectStorageBucket. |  |  |
 
 
 #### LinodeObjectStorageBucketSpec
@@ -870,12 +870,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `region` _string_ | Region is the ID of the Object Storage region for the bucket. |  |  |
-| `acl` _[ObjectStorageACL](#objectstorageacl)_ | Acl sets the Access Control Level of the bucket using a canned ACL string | private | Enum: [private public-read authenticated-read public-read-write] <br /> |
+| `region` _string_ | region is the ID of the Object Storage region for the bucket. |  |  |
+| `acl` _[ObjectStorageACL](#objectstorageacl)_ | acl sets the Access Control Level of the bucket using a canned ACL string | private | Enum: [private public-read authenticated-read public-read-write] <br /> |
 | `corsEnabled` _boolean_ | corsEnabled enables for all origins in the bucket .If set to false, CORS is disabled for all origins in the bucket | true |  |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.<br />If not supplied then the credentials of the controller will be used. |  |  |
-| `accessKeyRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | AccessKeyRef is a reference to a LinodeObjectStorageBucketKey for the bucket. |  |  |
-| `forceDeleteBucket` _boolean_ | ForceDeleteBucket enables the object storage bucket used to be deleted even if it contains objects. |  |  |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.<br />If not supplied then the credentials of the controller will be used. |  |  |
+| `accessKeyRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | accessKeyRef is a reference to a LinodeObjectStorageBucketKey for the bucket. |  |  |
+| `forceDeleteBucket` _boolean_ | forceDeleteBucket enables the object storage bucket used to be deleted even if it contains objects. |  |  |
 
 
 #### LinodeObjectStorageBucketStatus
@@ -891,11 +891,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ready` _boolean_ | Ready denotes that the bucket has been provisioned along with access keys. | false |  |
-| `failureMessage` _string_ | FailureMessage will be set in the event that there is a terminal problem<br />reconciling the Object Storage Bucket and will contain a verbose string<br />suitable for logging and human consumption. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions specify the service state of the LinodeObjectStorageBucket. |  |  |
-| `hostname` _string_ | Hostname is the address assigned to the bucket. |  |  |
-| `creationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#time-v1-meta)_ | CreationTime specifies the creation timestamp for the bucket. |  |  |
+| `ready` _boolean_ | ready denotes that the bucket has been provisioned along with access keys. | false |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Object Storage Bucket and will contain a verbose string<br />suitable for logging and human consumption. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions specify the service state of the LinodeObjectStorageBucket. |  |  |
+| `hostname` _string_ | hostname is the address assigned to the bucket. |  |  |
+| `creationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#time-v1-meta)_ | creationTime specifies the creation timestamp for the bucket. |  |  |
 
 
 #### LinodeObjectStorageKey
@@ -916,8 +916,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeObjectStorageKeySpec](#linodeobjectstoragekeyspec)_ |  |  |  |
-| `status` _[LinodeObjectStorageKeyStatus](#linodeobjectstoragekeystatus)_ |  |  |  |
+| `spec` _[LinodeObjectStorageKeySpec](#linodeobjectstoragekeyspec)_ | spec is the desired state of the LinodeObjectStorageKey. |  |  |
+| `status` _[LinodeObjectStorageKeyStatus](#linodeobjectstoragekeystatus)_ | status is the observed state of the LinodeObjectStorageKey. |  |  |
 
 
 #### LinodeObjectStorageKeyList
@@ -937,7 +937,7 @@ LinodeObjectStorageKeyList contains a list of LinodeObjectStorageKey
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodeObjectStorageKey](#linodeobjectstoragekey) array_ |  |  |  |
+| `items` _[LinodeObjectStorageKey](#linodeobjectstoragekey) array_ | Items represent the list of LinodeObjectStorageKey objects. |  |  |
 
 
 #### LinodeObjectStorageKeySpec
@@ -953,12 +953,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `bucketAccess` _[BucketAccessRef](#bucketaccessref) array_ | BucketAccess is the list of object storage bucket labels which can be accessed using the key |  | MinItems: 1 <br /> |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.<br />If not supplied then the credentials of the controller will be used. |  |  |
-| `keyGeneration` _integer_ | KeyGeneration may be modified to trigger a rotation of the access key. | 0 |  |
-| `generatedSecret` _[GeneratedSecret](#generatedsecret)_ | GeneratedSecret configures the Secret to generate containing access key details. |  |  |
-| `secretType` _[SecretType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secrettype-v1-core)_ | SecretType instructs the controller what type of secret to generate containing access key details.<br />Deprecated: Use generatedSecret.type. |  | Enum: [Opaque addons.cluster.x-k8s.io/resource-set] <br /> |
-| `secretDataFormat` _object (keys:string, values:string)_ | SecretDataFormat instructs the controller how to format the data stored in the secret containing access key details.<br />Deprecated: Use generatedSecret.format. |  |  |
+| `bucketAccess` _[BucketAccessRef](#bucketaccessref) array_ | bucketAccess is the list of object storage bucket labels which can be accessed using the key |  | MinItems: 1 <br /> |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.<br />If not supplied then the credentials of the controller will be used. |  |  |
+| `keyGeneration` _integer_ | keyGeneration may be modified to trigger a rotation of the access key. | 0 |  |
+| `generatedSecret` _[GeneratedSecret](#generatedsecret)_ | generatedSecret configures the Secret to generate containing access key details. |  |  |
+| `secretType` _[SecretType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secrettype-v1-core)_ | secretType instructs the controller what type of secret to generate containing access key details.<br />Deprecated: Use generatedSecret.type. |  | Enum: [Opaque addons.cluster.x-k8s.io/resource-set] <br /> |
+| `secretDataFormat` _object (keys:string, values:string)_ | secretDataFormat instructs the controller how to format the data stored in the secret containing access key details.<br />Deprecated: Use generatedSecret.format. |  |  |
 
 
 #### LinodeObjectStorageKeyStatus
@@ -974,12 +974,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ready` _boolean_ | Ready denotes that the key has been provisioned. | false |  |
-| `failureMessage` _string_ | FailureMessage will be set in the event that there is a terminal problem<br />reconciling the Object Storage Key and will contain a verbose string<br />suitable for logging and human consumption. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions specify the service state of the LinodeObjectStorageKey. |  |  |
-| `creationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#time-v1-meta)_ | CreationTime specifies the creation timestamp for the secret. |  |  |
-| `lastKeyGeneration` _integer_ | LastKeyGeneration tracks the last known value of .spec.keyGeneration. |  |  |
-| `accessKeyRef` _integer_ | AccessKeyRef stores the ID for Object Storage key provisioned. |  |  |
+| `ready` _boolean_ | ready denotes that the key has been provisioned. | false |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Object Storage Key and will contain a verbose string<br />suitable for logging and human consumption. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions specify the service state of the LinodeObjectStorageKey. |  |  |
+| `creationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#time-v1-meta)_ | creationTime specifies the creation timestamp for the secret. |  |  |
+| `lastKeyGeneration` _integer_ | lastKeyGeneration tracks the last known value of .spec.keyGeneration. |  |  |
+| `accessKeyRef` _integer_ | accessKeyRef stores the ID for Object Storage key provisioned. |  |  |
 
 
 #### LinodePlacementGroup
@@ -1000,8 +1000,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodePlacementGroupSpec](#linodeplacementgroupspec)_ |  |  |  |
-| `status` _[LinodePlacementGroupStatus](#linodeplacementgroupstatus)_ |  |  |  |
+| `spec` _[LinodePlacementGroupSpec](#linodeplacementgroupspec)_ | spec is the desired state of the LinodePlacementGroup. |  |  |
+| `status` _[LinodePlacementGroupStatus](#linodeplacementgroupstatus)_ | status is the observed state of the LinodePlacementGroup. |  |  |
 
 
 #### LinodePlacementGroupList
@@ -1021,7 +1021,7 @@ LinodePlacementGroupList contains a list of LinodePlacementGroup
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodePlacementGroup](#linodeplacementgroup) array_ |  |  |  |
+| `items` _[LinodePlacementGroup](#linodeplacementgroup) array_ | items is a list of LinodePlacementGroup. |  |  |
 
 
 #### LinodePlacementGroupSpec
@@ -1037,11 +1037,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `pgID` _integer_ |  |  |  |
-| `region` _string_ |  |  |  |
-| `placementGroupPolicy` _string_ |  | strict | Enum: [strict flexible] <br /> |
-| `placementGroupType` _string_ |  | anti_affinity:local | Enum: [anti_affinity:local] <br /> |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup. If not<br />supplied then the credentials of the controller will be used. |  |  |
+| `pgID` _integer_ | pgID is the ID of the PlacementGroup. |  |  |
+| `region` _string_ | region is the Linode region to create the PlacementGroup in. |  |  |
+| `placementGroupPolicy` _string_ | placementGroupPolicy defines the policy for the PlacementGroup. | strict | Enum: [strict flexible] <br /> |
+| `placementGroupType` _string_ | placementGroupType defines the type of the PlacementGroup. | anti_affinity:local | Enum: [anti_affinity:local] <br /> |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup.<br />If not supplied, then the credentials of the controller will be used. |  |  |
 
 
 #### LinodePlacementGroupStatus
@@ -1057,10 +1057,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ready` _boolean_ | Ready is true when the provider resource is ready. | false |  |
-| `failureReason` _[LinodePlacementGroupStatusError](#linodeplacementgroupstatuserror)_ | FailureReason will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
-| `failureMessage` _string_ | FailureMessage will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions defines current service state of the LinodePlacementGroup. |  |  |
+| `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
+| `failureReason` _[LinodePlacementGroupStatusError](#linodeplacementgroupstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions defines current service state of the LinodePlacementGroup. |  |  |
 
 
 #### LinodePlacementGroupStatusError
@@ -1098,8 +1098,8 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeVPCSpec](#linodevpcspec)_ |  |  |  |
-| `status` _[LinodeVPCStatus](#linodevpcstatus)_ |  |  |  |
+| `spec` _[LinodeVPCSpec](#linodevpcspec)_ | spec is the desired state of the LinodeVPC. |  |  |
+| `status` _[LinodeVPCStatus](#linodevpcstatus)_ | status is the observed state of the LinodeVPC. |  |  |
 
 
 #### LinodeVPCList
@@ -1119,7 +1119,7 @@ LinodeVPCList contains a list of LinodeVPC
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `items` _[LinodeVPC](#linodevpc) array_ |  |  |  |
+| `items` _[LinodeVPC](#linodevpc) array_ | items is a list of LinodeVPC. |  |  |
 
 
 #### LinodeVPCSpec
@@ -1135,14 +1135,14 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `vpcID` _integer_ |  |  |  |
-| `description` _string_ |  |  |  |
-| `region` _string_ |  |  |  |
-| `ipv6` _VPCIPv6Range array_ | IPv6 is a list of IPv6 ranges allocated to the VPC.<br />Once ranges are allocated based on the IPv6Range field, they will be<br />added to this field. |  |  |
-| `ipv6Range` _[VPCCreateOptionsIPv6](#vpccreateoptionsipv6) array_ | IPv6Range is a list of IPv6 ranges to allocate to the VPC.<br />If not specified, the VPC will not have an IPv6 range allocated.<br />Once ranges are allocated, they will be added to the IPv6 field. |  |  |
-| `subnets` _[VPCSubnetCreateOptions](#vpcsubnetcreateoptions) array_ |  |  |  |
-| `retain` _boolean_ | Retain allows you to keep the VPC after the LinodeVPC object is deleted.<br />This is useful if you want to use an existing VPC that was not created by this controller.<br />If set to true, the controller will not delete the VPC resource in Linode.<br />Defaults to false. | false |  |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not<br />supplied then the credentials of the controller will be used. |  |  |
+| `vpcID` _integer_ | vpcID is the ID of the VPC. |  |  |
+| `description` _string_ | description is the description of the VPC. |  |  |
+| `region` _string_ | region is the region to create the VPC in. |  |  |
+| `ipv6` _VPCIPv6Range array_ | ipv6 is a list of IPv6 ranges allocated to the VPC.<br />Once ranges are allocated based on the IPv6Range field, they will be<br />added to this field. |  |  |
+| `ipv6Range` _[VPCCreateOptionsIPv6](#vpccreateoptionsipv6) array_ | ipv6Range is a list of IPv6 ranges to allocate to the VPC.<br />If not specified, the VPC will not have an IPv6 range allocated.<br />Once ranges are allocated, they will be added to the IPv6 field. |  |  |
+| `subnets` _[VPCSubnetCreateOptions](#vpcsubnetcreateoptions) array_ | subnets is a list of subnets to create in the VPC. |  |  |
+| `retain` _boolean_ | retain allows you to keep the VPC after the LinodeVPC object is deleted.<br />This is useful if you want to use an existing VPC that was not created by this controller.<br />If set to true, the controller will not delete the VPC resource in Linode.<br />Defaults to false. | false |  |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC.<br />If not supplied, then the credentials of the controller will be used. |  |  |
 
 
 #### LinodeVPCStatus
@@ -1158,17 +1158,17 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ready` _boolean_ | Ready is true when the provider resource is ready. | false |  |
-| `failureReason` _[VPCStatusError](#vpcstatuserror)_ | FailureReason will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
-| `failureMessage` _string_ | FailureMessage will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | Conditions defines current service state of the LinodeVPC. |  |  |
+| `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
+| `failureReason` _[VPCStatusError](#vpcstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeVPC. |  |  |
 
 
 #### NetworkAddresses
 
 
 
-NetworkAddresses holds a list of IPv4 and IPv6 addresses
+NetworkAddresses holds a list of IPv4 and IPv6 addresses.
 We don't use linodego here since kubebuilder can't generate DeepCopyInto
 for linodego.NetworkAddresses
 
@@ -1179,8 +1179,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ipv4` _string_ |  |  |  |
-| `ipv6` _string_ |  |  |  |
+| `ipv4` _string_ | ipv4 defines a list of IPv4 address strings. |  |  |
+| `ipv6` _string_ | ipv6 defines a list of IPv6 address strings. |  |  |
 
 
 #### NetworkSpec
@@ -1196,21 +1196,21 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `loadBalancerType` _string_ | LoadBalancerType is the type of load balancer to use, defaults to NodeBalancer if not otherwise set | NodeBalancer | Enum: [NodeBalancer dns external] <br /> |
-| `dnsProvider` _string_ | DNSProvider is provider who manages the domain<br />Ignored if the LoadBalancerType is set to anything other than dns<br />If not set, defaults linode dns |  | Enum: [linode akamai] <br /> |
-| `dnsRootDomain` _string_ | DNSRootDomain is the root domain used to create a DNS entry for the control-plane endpoint<br />Ignored if the LoadBalancerType is set to anything other than dns |  |  |
-| `dnsUniqueIdentifier` _string_ | DNSUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique<br />DNS record<br />Ignored if the LoadBalancerType is set to anything other than dns<br />If not set, CAPL will create a unique identifier for you |  |  |
-| `dnsTTLsec` _integer_ | DNSTTLSec is the TTL for the domain record<br />Ignored if the LoadBalancerType is set to anything other than dns<br />If not set, defaults to 30 |  |  |
-| `dnsSubDomainOverride` _string_ | DNSSubDomainOverride is used to override CAPL's construction of the controlplane endpoint<br />If set, this will override the DNS subdomain from <clustername>-<uniqueid>.<rootdomain> to <overridevalue>.<rootdomain> |  |  |
+| `loadBalancerType` _string_ | loadBalancerType is the type of load balancer to use, defaults to NodeBalancer if not otherwise set. | NodeBalancer | Enum: [NodeBalancer dns external] <br /> |
+| `dnsProvider` _string_ | dnsProvider is the provider who manages the domain.<br />Ignored if the LoadBalancerType is set to anything other than dns<br />If not set, defaults linode dns |  | Enum: [linode akamai] <br /> |
+| `dnsRootDomain` _string_ | dnsRootDomain is the root domain used to create a DNS entry for the control-plane endpoint.<br />Ignored if the LoadBalancerType is set to anything other than dns |  |  |
+| `dnsUniqueIdentifier` _string_ | dnsUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique<br />DNS record<br />Ignored if the LoadBalancerType is set to anything other than dns<br />If not set, CAPL will create a unique identifier for you |  |  |
+| `dnsTTLsec` _integer_ | dnsTTLsec is the TTL for the domain record<br />Ignored if the LoadBalancerType is set to anything other than dns<br />If not set, defaults to 30 |  |  |
+| `dnsSubDomainOverride` _string_ | dnsSubDomainOverride is used to override CAPL's construction of the controlplane endpoint<br />If set, this will override the DNS subdomain from <clustername>-<uniqueid>.<rootdomain> to <overridevalue>.<rootdomain> |  |  |
 | `apiserverLoadBalancerPort` _integer_ | apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).<br />If omitted, default value is 6443. |  | Maximum: 65535 <br />Minimum: 1 <br /> |
-| `nodeBalancerID` _integer_ | NodeBalancerID is the id of NodeBalancer. |  |  |
-| `nodeBalancerFirewallID` _integer_ | NodeBalancerFirewallID is the id of NodeBalancer Firewall. |  |  |
+| `nodeBalancerID` _integer_ | nodeBalancerID is the id of NodeBalancer. |  |  |
+| `nodeBalancerFirewallID` _integer_ | nodeBalancerFirewallID is the id of NodeBalancer Firewall. |  |  |
 | `apiserverNodeBalancerConfigID` _integer_ | apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer config. |  |  |
 | `additionalPorts` _[LinodeNBPortConfig](#linodenbportconfig) array_ | additionalPorts contains list of ports to be configured with NodeBalancer. |  |  |
 | `subnetName` _string_ | subnetName is the name/label of the VPC subnet to be used by the cluster |  |  |
-| `useVlan` _boolean_ | UseVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally. |  |  |
-| `nodeBalancerBackendIPv4Range` _string_ | NodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.<br />example: 10.10.10.0/30 |  |  |
-| `enableVPCBackends` _boolean_ | EnableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.<br />If set to false (default), the NodeBalancer will not be created in a VPC and<br />backends will use Linode private IPs. If true, the NodeBalancer will be<br />created in the configured VPC (when VPCRef or VPCID is set) and backends<br />will use VPC IPs. | false |  |
+| `useVlan` _boolean_ | useVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally. |  |  |
+| `nodeBalancerBackendIPv4Range` _string_ | nodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.<br />example: 10.10.10.0/30 |  |  |
+| `enableVPCBackends` _boolean_ | enableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.<br />If set to false (default), the NodeBalancer will not be created in a VPC and<br />backends will use Linode private IPs. If true, the NodeBalancer will be<br />created in the configured VPC (when VPCRef or VPCID is set) and backends<br />will use VPC IPs. | false |  |
 
 
 #### ObjectStorageACL
@@ -1246,8 +1246,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `presignedURLDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#duration-v1-meta)_ | PresignedURLDuration defines the duration for which presigned URLs are valid.<br /><br />This is used to generate presigned URLs for S3 Bucket objects, which are used by<br />control-plane and worker nodes to fetch bootstrap data. |  |  |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store. |  |  |
+| `presignedURLDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#duration-v1-meta)_ | presignedURLDuration defines the duration for which presigned URLs are valid.<br /><br />This is used to generate presigned URLs for S3 Bucket objects, which are used by<br />control-plane and worker nodes to fetch bootstrap data. |  |  |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store. |  |  |
 
 
 #### PublicInterfaceCreateOptions
@@ -1263,8 +1263,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ipv4` _[PublicInterfaceIPv4CreateOptions](#publicinterfaceipv4createoptions)_ |  |  |  |
-| `ipv6` _[PublicInterfaceIPv6CreateOptions](#publicinterfaceipv6createoptions)_ |  |  |  |
+| `ipv4` _[PublicInterfaceIPv4CreateOptions](#publicinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the public interface. |  |  |
+| `ipv6` _[PublicInterfaceIPv6CreateOptions](#publicinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the public interface. |  |  |
 
 
 #### PublicInterfaceIPv4AddressCreateOptions
@@ -1280,8 +1280,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `address` _string_ |  |  |  |
-| `primary` _boolean_ |  |  |  |
+| `address` _string_ | address is the IPv4 address for the public interface. |  |  |
+| `primary` _boolean_ | primary is a boolean indicating whether the address is primary. |  |  |
 
 
 #### PublicInterfaceIPv4CreateOptions
@@ -1297,7 +1297,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `addresses` _[PublicInterfaceIPv4AddressCreateOptions](#publicinterfaceipv4addresscreateoptions) array_ |  |  |  |
+| `addresses` _[PublicInterfaceIPv4AddressCreateOptions](#publicinterfaceipv4addresscreateoptions) array_ | addresses is the IPv4 addresses for the public interface. |  |  |
 
 
 #### PublicInterfaceIPv6CreateOptions
@@ -1313,7 +1313,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `ranges` _[PublicInterfaceIPv6RangeCreateOptions](#publicinterfaceipv6rangecreateoptions) array_ |  |  |  |
+| `ranges` _[PublicInterfaceIPv6RangeCreateOptions](#publicinterfaceipv6rangecreateoptions) array_ | ranges is the IPv6 ranges for the public interface. |  |  |
 
 
 #### PublicInterfaceIPv6RangeCreateOptions
@@ -1329,7 +1329,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ |  |  |  |
+| `range` _string_ | range is the IPv6 range for the public interface. |  |  |
 
 
 #### VLANInterface
@@ -1345,8 +1345,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `vlan_label` _string_ |  |  |  |
-| `ipam_address` _string_ |  |  |  |
+| `vlan_label` _string_ | vlan_label is the label of the VLAN. |  |  |
+| `ipam_address` _string_ | ipam_address is the IP address to assign to the interface. |  |  |
 
 
 #### VPCCreateOptionsIPv6
@@ -1365,8 +1365,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ | Range is the IPv6 prefix for the VPC. |  |  |
-| `allocation_class` _string_ | IPv6 inventory from which the VPC prefix should be allocated. |  |  |
+| `range` _string_ | range is the IPv6 prefix for the VPC. |  |  |
+| `allocation_class` _string_ | allocation_class is the IPv6 inventory from which the VPC prefix should be allocated. |  |  |
 
 
 #### VPCIPv4
@@ -1382,8 +1382,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `vpc` _string_ |  |  |  |
-| `nat1to1` _string_ |  |  |  |
+| `vpc` _string_ | vpc is the ID of the VPC to use for the interface. |  |  |
+| `nat1to1` _string_ | nat1to1 is the NAT 1:1 address for the interface. |  |  |
 
 
 #### VPCInterfaceCreateOptions
@@ -1399,9 +1399,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `subnet_id` _integer_ |  |  |  |
-| `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ |  |  |  |
-| `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ |  |  |  |
+| `subnet_id` _integer_ | subnet_id is the ID of the subnet to use for the interface. |  |  |
+| `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the interface. |  |  |
+| `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  |  |
 
 
 #### VPCInterfaceIPv4AddressCreateOptions
@@ -1417,9 +1417,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `address` _string_ |  |  |  |
-| `primary` _boolean_ |  |  |  |
-| `nat_1_1_address` _string_ |  |  |  |
+| `address` _string_ | address is the IPv4 address for the interface. |  |  |
+| `primary` _boolean_ | primary is a boolean indicating whether the address is primary. |  |  |
+| `nat_1_1_address` _string_ | nat_1_1_address is the NAT 1:1 address for the interface. |  |  |
 
 
 #### VPCInterfaceIPv4CreateOptions
@@ -1435,8 +1435,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `addresses` _[VPCInterfaceIPv4AddressCreateOptions](#vpcinterfaceipv4addresscreateoptions) array_ |  |  |  |
-| `ranges` _[VPCInterfaceIPv4RangeCreateOptions](#vpcinterfaceipv4rangecreateoptions) array_ |  |  |  |
+| `addresses` _[VPCInterfaceIPv4AddressCreateOptions](#vpcinterfaceipv4addresscreateoptions) array_ | addresses is the IPv4 addresses for the interface. |  |  |
+| `ranges` _[VPCInterfaceIPv4RangeCreateOptions](#vpcinterfaceipv4rangecreateoptions) array_ | ranges is the IPv4 ranges for the interface. |  |  |
 
 
 #### VPCInterfaceIPv4RangeCreateOptions
@@ -1452,7 +1452,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ |  |  |  |
+| `range` _string_ | range is the IPv4 range for the interface. |  |  |
 
 
 #### VPCInterfaceIPv6CreateOptions
@@ -1468,9 +1468,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `slaac` _[VPCInterfaceIPv6SLAACCreateOptions](#vpcinterfaceipv6slaaccreateoptions) array_ |  |  |  |
-| `ranges` _[VPCInterfaceIPv6RangeCreateOptions](#vpcinterfaceipv6rangecreateoptions) array_ |  |  |  |
-| `is_public` _boolean_ |  |  |  |
+| `slaac` _[VPCInterfaceIPv6SLAACCreateOptions](#vpcinterfaceipv6slaaccreateoptions) array_ | slaac is the IPv6 SLAAC configuration for the interface. |  |  |
+| `ranges` _[VPCInterfaceIPv6RangeCreateOptions](#vpcinterfaceipv6rangecreateoptions) array_ | ranges is the IPv6 ranges for the interface. |  |  |
+| `is_public` _boolean_ | is_public is a boolean indicating whether the interface is public. |  |  |
 
 
 #### VPCInterfaceIPv6RangeCreateOptions
@@ -1486,7 +1486,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ |  |  |  |
+| `range` _string_ | range is the IPv6 range for the interface. |  |  |
 
 
 #### VPCInterfaceIPv6SLAACCreateOptions
@@ -1502,7 +1502,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ |  |  |  |
+| `range` _string_ | range is the IPv6 range for the interface. |  |  |
 
 
 #### VPCStatusError
@@ -1536,12 +1536,12 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `label` _string_ |  |  | MaxLength: 63 <br />MinLength: 3 <br /> |
-| `ipv4` _string_ |  |  |  |
-| `ipv6` _VPCIPv6Range array_ | IPv6 is a list of IPv6 ranges allocated to the subnet.<br />Once ranges are allocated based on the IPv6Range field, they will be<br />added to this field. |  |  |
-| `ipv6Range` _[VPCSubnetCreateOptionsIPv6](#vpcsubnetcreateoptionsipv6) array_ | IPv6Range is a list of IPv6 ranges to allocate to the subnet.<br />If not specified, the subnet will not have an IPv6 range allocated.<br />Once ranges are allocated, they will be added to the IPv6 field. |  |  |
-| `subnetID` _integer_ | SubnetID is subnet id for the subnet |  |  |
-| `retain` _boolean_ | Retain allows you to keep the Subnet after the LinodeVPC object is deleted.<br />This is only applicable when the parent VPC has retain set to true. | false |  |
+| `label` _string_ | label is the label of the subnet. |  | MaxLength: 63 <br />MinLength: 3 <br /> |
+| `ipv4` _string_ | ipv4 is the IPv4 address range of the subnet. |  |  |
+| `ipv6` _VPCIPv6Range array_ | ipv6 is a list of IPv6 ranges allocated to the subnet.<br />Once ranges are allocated based on the IPv6Range field, they will be<br />added to this field. |  |  |
+| `ipv6Range` _[VPCSubnetCreateOptionsIPv6](#vpcsubnetcreateoptionsipv6) array_ | ipv6Range is a list of IPv6 ranges to allocate to the subnet.<br />If not specified, the subnet will not have an IPv6 range allocated.<br />Once ranges are allocated, they will be added to the IPv6 field. |  |  |
+| `subnetID` _integer_ | subnetID is subnet id for the subnet |  |  |
+| `retain` _boolean_ | retain allows you to keep the Subnet after the LinodeVPC object is deleted.<br />This is only applicable when the parent VPC has retain set to true. | false |  |
 
 
 #### VPCSubnetCreateOptionsIPv6
@@ -1560,6 +1560,6 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ |  |  |  |
+| `range` _string_ | range is the IPv6 prefix for the subnet. |  |  |
 
 

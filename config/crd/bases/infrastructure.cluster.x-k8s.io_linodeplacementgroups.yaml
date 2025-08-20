@@ -49,12 +49,12 @@ spec:
           metadata:
             type: object
           spec:
-            description: LinodePlacementGroupSpec defines the desired state of LinodePlacementGroup
+            description: spec is the desired state of the LinodePlacementGroup.
             properties:
               credentialsRef:
                 description: |-
-                  CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup. If not
-                  supplied then the credentials of the controller will be used.
+                  credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup.
+                  If not supplied, then the credentials of the controller will be used.
                 properties:
                   name:
                     description: name is unique within a namespace to reference a
@@ -67,9 +67,11 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               pgID:
+                description: pgID is the ID of the PlacementGroup.
                 type: integer
               placementGroupPolicy:
                 default: strict
+                description: placementGroupPolicy defines the policy for the PlacementGroup.
                 enum:
                 - strict
                 - flexible
@@ -79,6 +81,7 @@ spec:
                   rule: self == oldSelf
               placementGroupType:
                 default: anti_affinity:local
+                description: placementGroupType defines the type of the PlacementGroup.
                 enum:
                 - anti_affinity:local
                 type: string
@@ -86,6 +89,8 @@ spec:
                 - message: Value is immutable
                   rule: self == oldSelf
               region:
+                description: region is the Linode region to create the PlacementGroup
+                  in.
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -94,11 +99,10 @@ spec:
             - region
             type: object
           status:
-            description: LinodePlacementGroupStatus defines the observed state of
-              LinodePlacementGroup
+            description: status is the observed state of the LinodePlacementGroup.
             properties:
               conditions:
-                description: Conditions defines current service state of the LinodePlacementGroup.
+                description: conditions defines current service state of the LinodePlacementGroup.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -156,7 +160,7 @@ spec:
                 type: array
               failureMessage:
                 description: |-
-                  FailureMessage will be set in the event that there is a terminal problem
+                  failureMessage will be set in the event that there is a terminal problem
                   reconciling the PlacementGroup and will contain a more verbose string suitable
                   for logging and human consumption.
 
@@ -175,7 +179,7 @@ spec:
                 type: string
               failureReason:
                 description: |-
-                  FailureReason will be set in the event that there is a terminal problem
+                  failureReason will be set in the event that there is a terminal problem
                   reconciling the PlacementGroup and will contain a succinct value suitable
                   for machine interpretation.
 
@@ -194,7 +198,7 @@ spec:
                 type: string
               ready:
                 default: false
-                description: Ready is true when the provider resource is ready.
+                description: ready is true when the provider resource is ready.
                 type: boolean
             type: object
         type: object

@@ -57,18 +57,23 @@ spec:
           metadata:
             type: object
           spec:
-            description: LinodeObjectStorageKeySpec defines the desired state of LinodeObjectStorageKey
+            description: spec is the desired state of the LinodeObjectStorageKey.
             properties:
               bucketAccess:
-                description: BucketAccess is the list of object storage bucket labels
+                description: bucketAccess is the list of object storage bucket labels
                   which can be accessed using the key
                 items:
                   properties:
                     bucketName:
+                      description: bucketName is the name of the bucket to grant access
+                        to.
                       type: string
                     permissions:
+                      description: permissions is the permissions to grant to the
+                        bucket.
                       type: string
                     region:
+                      description: region is the region of the bucket.
                       type: string
                   required:
                   - bucketName
@@ -79,7 +84,7 @@ spec:
                 type: array
               credentialsRef:
                 description: |-
-                  CredentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.
+                  credentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.
                   If not supplied then the credentials of the controller will be used.
                 properties:
                   name:
@@ -93,28 +98,28 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               generatedSecret:
-                description: GeneratedSecret configures the Secret to generate containing
+                description: generatedSecret configures the Secret to generate containing
                   access key details.
                 properties:
                   format:
                     additionalProperties:
                       type: string
                     description: |-
-                      How to format the data stored in the generated Secret.
-                      It supports Go template syntax and interpolating the following values: .AccessKey, .SecretKey .BucketName .BucketEndpoint .S3Endpoint
-                      If no format is supplied then a generic one is used containing the values specified.
+                      format of the data stored in the generated Secret.
+                      It supports Go template syntax and interpolating the following values: .AccessKey .SecretKey .BucketName .BucketEndpoint .S3Endpoint
+                      If no format is supplied, then a generic one is used containing the values specified.
                     type: object
                   name:
-                    description: The name of the generated Secret. If not set, the
-                      name is formatted as "{name-of-obj-key}-obj-key".
+                    description: name of the generated Secret. If not set, the name
+                      is formatted as "{name-of-obj-key}-obj-key".
                     type: string
                   namespace:
-                    description: The namespace for the generated Secret. If not set,
-                      defaults to the namespace of the LinodeObjectStorageKey.
+                    description: namespace for the generated Secret. If not set, defaults
+                      to the namespace of the LinodeObjectStorageKey.
                     type: string
                   type:
                     default: Opaque
-                    description: The type of the generated Secret.
+                    description: type of the generated Secret.
                     enum:
                     - Opaque
                     - addons.cluster.x-k8s.io/resource-set
@@ -125,19 +130,19 @@ spec:
                   rule: self == oldSelf
               keyGeneration:
                 default: 0
-                description: KeyGeneration may be modified to trigger a rotation of
+                description: keyGeneration may be modified to trigger a rotation of
                   the access key.
                 type: integer
               secretDataFormat:
                 additionalProperties:
                   type: string
                 description: |-
-                  SecretDataFormat instructs the controller how to format the data stored in the secret containing access key details.
+                  secretDataFormat instructs the controller how to format the data stored in the secret containing access key details.
                   Deprecated: Use generatedSecret.format.
                 type: object
               secretType:
                 description: |-
-                  SecretType instructs the controller what type of secret to generate containing access key details.
+                  secretType instructs the controller what type of secret to generate containing access key details.
                   Deprecated: Use generatedSecret.type.
                 enum:
                 - Opaque
@@ -149,14 +154,13 @@ spec:
             - keyGeneration
             type: object
           status:
-            description: LinodeObjectStorageKeyStatus defines the observed state of
-              LinodeObjectStorageKey
+            description: status is the observed state of the LinodeObjectStorageKey.
             properties:
               accessKeyRef:
-                description: AccessKeyRef stores the ID for Object Storage key provisioned.
+                description: accessKeyRef stores the ID for Object Storage key provisioned.
                 type: integer
               conditions:
-                description: Conditions specify the service state of the LinodeObjectStorageKey.
+                description: conditions specify the service state of the LinodeObjectStorageKey.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -212,23 +216,26 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               creationTime:
-                description: CreationTime specifies the creation timestamp for the
+                description: creationTime specifies the creation timestamp for the
                   secret.
                 format: date-time
                 type: string
               failureMessage:
                 description: |-
-                  FailureMessage will be set in the event that there is a terminal problem
+                  failureMessage will be set in the event that there is a terminal problem
                   reconciling the Object Storage Key and will contain a verbose string
                   suitable for logging and human consumption.
                 type: string
               lastKeyGeneration:
-                description: LastKeyGeneration tracks the last known value of .spec.keyGeneration.
+                description: lastKeyGeneration tracks the last known value of .spec.keyGeneration.
                 type: integer
               ready:
                 default: false
-                description: Ready denotes that the key has been provisioned.
+                description: ready denotes that the key has been provisioned.
                 type: boolean
             type: object
         type: object

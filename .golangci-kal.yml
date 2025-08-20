@@ -1,0 +1,32 @@
+version: "2"
+run:
+  issues-exit-code: 1
+output:
+  formats:
+    text:
+      path: stdout
+linters:
+  default: none
+  enable:
+    - kubeapilinter # linter for Kube API conventions
+  settings:
+    custom:
+      kubeapilinter:
+        type: "module"
+        description: Kube API LInter lints Kube like APIs based on API conventions and best practices.
+        settings:
+          linters:
+            enable:
+              - "commentstart"
+            disable:
+              - "*"
+          lintersConfig: { }
+  exclusions:
+    rules:
+      - path-except: "^api/"
+        linters:
+          - kubeapilinter
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
