@@ -43,19 +43,21 @@ spec:
           metadata:
             type: object
           spec:
-            description: AddressSetSpec defines the desired state of AddressSet
+            description: spec is the desired state of the AddressSet
             properties:
               ipv4:
+                description: ipv4 defines a list of IPv4 address strings
                 items:
                   type: string
                 type: array
               ipv6:
+                description: ipv6 defines a list of IPv6 address strings
                 items:
                   type: string
                 type: array
             type: object
           status:
-            description: AddressSetStatus defines the observed state of AddressSet
+            description: status is the observed state of the AddressSet
             type: object
         type: object
     served: true

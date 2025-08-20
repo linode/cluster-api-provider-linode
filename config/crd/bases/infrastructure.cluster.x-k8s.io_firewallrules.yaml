@@ -43,17 +43,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: FirewallRuleSpec defines the desired state of FirewallRule
+            description: spec is the desired state of the FirewallRule.
             properties:
               action:
-                description: |-
-                  INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                  Important: Run "make" to regenerate code after modifying this file
+                description: action is the action to take when the rule matches.
                 type: string
               addressSetRefs:
                 description: |-
-                  AddressSetRefs is a list of references to AddressSets as an alternative to
-                  using Addresses but can be used in conjunction with it
+                  addressSetRefs is a list of references to AddressSets as an alternative to
+                  using Addresses but can be used in conjunction with it.
                 items:
                   description: ObjectReference contains enough information to let
                     you inspect or modify the referred object.
@@ -100,28 +98,30 @@ spec:
                   x-kubernetes-map-type: atomic
                 type: array
               addresses:
-                description: |-
-                  NetworkAddresses holds a list of IPv4 and IPv6 addresses
-                  We don't use linodego here since kubebuilder can't generate DeepCopyInto
-                  for linodego.NetworkAddresses
+                description: addresses is a list of addresses to apply the rule to.
                 properties:
                   ipv4:
+                    description: ipv4 defines a list of IPv4 address strings.
                     items:
                       type: string
                     type: array
                   ipv6:
+                    description: ipv6 defines a list of IPv6 address strings.
                     items:
                       type: string
                     type: array
                 type: object
               description:
+                description: description is the description of the rule.
                 type: string
               label:
+                description: label is the label of the rule.
                 type: string
               ports:
+                description: ports is the ports to apply the rule to.
                 type: string
               protocol:
-                description: NetworkProtocol enum type
+                description: protocol is the protocol to apply the rule to.
                 enum:
                 - TCP
                 - UDP
@@ -134,7 +134,7 @@ spec:
             - protocol
             type: object
           status:
-            description: FirewallRuleStatus defines the observed state of FirewallRule
+            description: status is the observed state of the FirewallRule.
             type: object
         type: object
     served: true

@@ -129,7 +129,11 @@ gosec: ## Run gosec against code.
 
 .PHONY: lint
 lint: ## Run lint against code.
-	docker run --rm -w /workdir -v $(PWD):/workdir golangci/golangci-lint:$(GOLANGCI_LINT_VERSION) golangci-lint run -c .golangci.yml --fix
+	$(GOLANGCI_LINT) run -c .golangci.yml
+
+.PHONY: lint
+lint-api: golangci-lint-kal ## Run lint against code.
+	$(GOLANGCI_LINT_KAL) run -c .golangci-kal.yml
 
 .PHONY: nilcheck
 nilcheck: nilaway ## Run nil check against code.
@@ -356,6 +360,8 @@ NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
+GOLANGCI_LINT  ?= $(LOCALBIN)/golangci-lint
+GOLANGCI_LINT_KAL ?= $(CACHE_BIN)/golangci-lint-kube-api-linter
 S5CMD          ?= $(CACHE_BIN)/s5cmd
 
 ## Tool Versions
@@ -450,12 +456,15 @@ envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(CACHE_BIN)
 	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
-.PHONY: husky
-husky: $(HUSKY) ## Download husky locally if necessary.
-	@echo Execute install command to enable git hooks: ./bin/husky install
-	@echo Set any value for SKIP_GIT_PUSH_HOOK env variable to skip git hook execution.
-$(HUSKY): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/automation-co/husky@$(HUSKY_VERSION)
+.phony: golangci-lint
+golangci-lint: $(GOLANGCI_LINT)
+$(GOLANGCI_LINT): # Build golangci-lint from tools folder.
+	GOBIN=$(LOCALBIN)  go install  github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+.phony: golangci-lint-kal
+golangci-lint-kal: $(GOLANGCI_LINT_KAL)
+$(GOLANGCI_LINT_KAL): $(GOLANGCI_LINT) # Build golangci-lint-kal from custom configuration.
+	$(GOLANGCI_LINT) custom
 
 .PHONY: nilaway
 nilaway: $(NILAWAY) ## Download nilaway locally if necessary.

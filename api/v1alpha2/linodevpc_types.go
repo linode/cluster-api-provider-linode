@@ -30,26 +30,35 @@ const (
 
 // LinodeVPCSpec defines the desired state of LinodeVPC
 type LinodeVPCSpec struct {
+	// vpcID is the ID of the VPC.
 	// +optional
 	VPCID *int `json:"vpcID,omitempty"`
+
+	// description is the description of the VPC.
 	// +optional
 	Description string `json:"description,omitempty"`
+
+	// region is the region to create the VPC in.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
-	// +optional
-	// IPv6 is a list of IPv6 ranges allocated to the VPC.
+
+	// ipv6 is a list of IPv6 ranges allocated to the VPC.
 	// Once ranges are allocated based on the IPv6Range field, they will be
 	// added to this field.
-	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
 	// +optional
-	// IPv6Range is a list of IPv6 ranges to allocate to the VPC.
+	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
+
+	// ipv6Range is a list of IPv6 ranges to allocate to the VPC.
 	// If not specified, the VPC will not have an IPv6 range allocated.
 	// Once ranges are allocated, they will be added to the IPv6 field.
+	// +optional
 	IPv6Range []VPCCreateOptionsIPv6 `json:"ipv6Range,omitempty"`
+
+	// subnets is a list of subnets to create in the VPC.
 	// +optional
 	Subnets []VPCSubnetCreateOptions `json:"subnets,omitempty"`
 
-	// Retain allows you to keep the VPC after the LinodeVPC object is deleted.
+	// retain allows you to keep the VPC after the LinodeVPC object is deleted.
 	// This is useful if you want to use an existing VPC that was not created by this controller.
 	// If set to true, the controller will not delete the VPC resource in Linode.
 	// Defaults to false.
@@ -57,8 +66,8 @@ type LinodeVPCSpec struct {
 	// +kubebuilder:default=false
 	Retain bool `json:"retain,omitempty"`
 
-	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not
-	// supplied then the credentials of the controller will be used.
+	// credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC.
+	// If not supplied, then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
@@ -68,34 +77,42 @@ type LinodeVPCSpec struct {
 // Values supported by the linode API should be used here.
 // See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
 type VPCCreateOptionsIPv6 struct {
-	// Range is the IPv6 prefix for the VPC.
+	// range is the IPv6 prefix for the VPC.
 	Range *string `json:"range,omitempty"`
-	// IPv6 inventory from which the VPC prefix should be allocated.
+
+	// allocation_class is the IPv6 inventory from which the VPC prefix should be allocated.
 	AllocationClass *string `json:"allocation_class,omitempty"`
 }
 
 // VPCSubnetCreateOptions defines subnet options
 type VPCSubnetCreateOptions struct {
+	// label is the label of the subnet.
 	// +kubebuilder:validation:MinLength=3
 	// +kubebuilder:validation:MaxLength=63
 	// +optional
 	Label string `json:"label,omitempty"`
+
+	// ipv4 is the IPv4 address range of the subnet.
 	// +optional
 	IPv4 string `json:"ipv4,omitempty"`
-	// +optional
-	// IPv6 is a list of IPv6 ranges allocated to the subnet.
+
+	// ipv6 is a list of IPv6 ranges allocated to the subnet.
 	// Once ranges are allocated based on the IPv6Range field, they will be
 	// added to this field.
-	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
 	// +optional
-	// IPv6Range is a list of IPv6 ranges to allocate to the subnet.
+	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
+
+	// ipv6Range is a list of IPv6 ranges to allocate to the subnet.
 	// If not specified, the subnet will not have an IPv6 range allocated.
 	// Once ranges are allocated, they will be added to the IPv6 field.
+	// +optional
 	IPv6Range []VPCSubnetCreateOptionsIPv6 `json:"ipv6Range,omitempty"`
-	// SubnetID is subnet id for the subnet
+
+	// subnetID is subnet id for the subnet
 	// +optional
 	SubnetID int `json:"subnetID,omitempty"`
-	// Retain allows you to keep the Subnet after the LinodeVPC object is deleted.
+
+	// retain allows you to keep the Subnet after the LinodeVPC object is deleted.
 	// This is only applicable when the parent VPC has retain set to true.
 	// +optional
 	// +kubebuilder:default=false
@@ -107,17 +124,18 @@ type VPCSubnetCreateOptions struct {
 // Values supported by the linode API should be used here.
 // See https://techdocs.akamai.com/linode-api/reference/post-vpc-subnet for more details.
 type VPCSubnetCreateOptionsIPv6 struct {
+	// range is the IPv6 prefix for the subnet.
 	Range *string `json:"range,omitempty"`
 }
 
 // LinodeVPCStatus defines the observed state of LinodeVPC
 type LinodeVPCStatus struct {
-	// Ready is true when the provider resource is ready.
+	// ready is true when the provider resource is ready.
 	// +optional
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
-	// FailureReason will be set in the event that there is a terminal problem
+	// failureReason will be set in the event that there is a terminal problem
 	// reconciling the VPC and will contain a succinct value suitable
 	// for machine interpretation.
 	//
@@ -136,7 +154,7 @@ type LinodeVPCStatus struct {
 	// +optional
 	FailureReason *VPCStatusError `json:"failureReason,omitempty"`
 
-	// FailureMessage will be set in the event that there is a terminal problem
+	// failureMessage will be set in the event that there is a terminal problem
 	// reconciling the VPC and will contain a more verbose string suitable
 	// for logging and human consumption.
 	//
@@ -155,7 +173,7 @@ type LinodeVPCStatus struct {
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
-	// Conditions defines current service state of the LinodeVPC.
+	// conditions define the current service state of the LinodeVPC.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -169,10 +187,13 @@ type LinodeVPCStatus struct {
 
 // LinodeVPC is the Schema for the linodemachines API
 type LinodeVPC struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LinodeVPCSpec   `json:"spec,omitempty"`
+	// spec is the desired state of the LinodeVPC.
+	Spec LinodeVPCSpec `json:"spec,omitempty"`
+	// status is the observed state of the LinodeVPC.
 	Status LinodeVPCStatus `json:"status,omitempty"`
 }
 
@@ -202,8 +223,10 @@ func (lv *LinodeVPC) SetV1Beta2Conditions(conditions []metav1.Condition) {
 // LinodeVPCList contains a list of LinodeVPC
 type LinodeVPCList struct {
 	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard object's metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []LinodeVPC `json:"items"`
+	// items is a list of LinodeVPC.
+	Items []LinodeVPC `json:"items"`
 }
 
 func init() {

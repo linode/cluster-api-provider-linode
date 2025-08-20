@@ -29,16 +29,20 @@ const (
 
 // LinodePlacementGroupSpec defines the desired state of LinodePlacementGroup
 type LinodePlacementGroupSpec struct {
+	// pgID is the ID of the PlacementGroup.
 	// +optional
 	PGID *int `json:"pgID,omitempty"`
+	// region is the Linode region to create the PlacementGroup in.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
+	// placementGroupPolicy defines the policy for the PlacementGroup.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:default="strict"
 	// +kubebuilder:validation:Enum=strict;flexible
 	// +optional
 	PlacementGroupPolicy string `json:"placementGroupPolicy"`
 
+	// placementGroupType defines the type of the PlacementGroup.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:default="anti_affinity:local"
 	// +kubebuilder:validation:Enum="anti_affinity:local"
@@ -46,20 +50,20 @@ type LinodePlacementGroupSpec struct {
 	PlacementGroupType string `json:"placementGroupType"`
 	// TODO: add affinity as a type when available
 
-	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup. If not
-	// supplied then the credentials of the controller will be used.
+	// credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup.
+	// If not supplied, then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 
 // LinodePlacementGroupStatus defines the observed state of LinodePlacementGroup
 type LinodePlacementGroupStatus struct {
-	// Ready is true when the provider resource is ready.
+	// ready is true when the provider resource is ready.
 	// +optional
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
-	// FailureReason will be set in the event that there is a terminal problem
+	// failureReason will be set in the event that there is a terminal problem
 	// reconciling the PlacementGroup and will contain a succinct value suitable
 	// for machine interpretation.
 	//
@@ -78,7 +82,7 @@ type LinodePlacementGroupStatus struct {
 	// +optional
 	FailureReason *LinodePlacementGroupStatusError `json:"failureReason,omitempty"`
 
-	// FailureMessage will be set in the event that there is a terminal problem
+	// failureMessage will be set in the event that there is a terminal problem
 	// reconciling the PlacementGroup and will contain a more verbose string suitable
 	// for logging and human consumption.
 	//
@@ -97,7 +101,7 @@ type LinodePlacementGroupStatus struct {
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
-	// Conditions defines current service state of the LinodePlacementGroup.
+	// conditions defines current service state of the LinodePlacementGroup.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -110,10 +114,15 @@ type LinodePlacementGroupStatus struct {
 
 // LinodePlacementGroup is the Schema for the linodeplacementgroups API
 type LinodePlacementGroup struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LinodePlacementGroupSpec   `json:"spec,omitempty"`
+	// spec is the desired state of the LinodePlacementGroup.
+	Spec LinodePlacementGroupSpec `json:"spec,omitempty"`
+
+	// status is the observed state of the LinodePlacementGroup.
 	Status LinodePlacementGroupStatus `json:"status,omitempty"`
 }
 
@@ -143,8 +152,12 @@ func (lpg *LinodePlacementGroup) SetV1Beta2Conditions(conditions []metav1.Condit
 // LinodePlacementGroupList contains a list of LinodePlacementGroup
 type LinodePlacementGroupList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []LinodePlacementGroup `json:"items"`
+
+	// items is a list of LinodePlacementGroup.
+	Items []LinodePlacementGroup `json:"items"`
 }
 
 func init() {

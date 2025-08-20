@@ -57,11 +57,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: LinodeObjectStorageBucketSpec defines the desired state of
-              LinodeObjectStorageBucket
+            description: spec is the desired state of the LinodeObjectStorageBucket.
             properties:
               accessKeyRef:
-                description: AccessKeyRef is a reference to a LinodeObjectStorageBucketKey
+                description: accessKeyRef is a reference to a LinodeObjectStorageBucketKey
                   for the bucket.
                 properties:
                   apiVersion:
@@ -106,7 +105,7 @@ spec:
                 x-kubernetes-map-type: atomic
               acl:
                 default: private
-                description: Acl sets the Access Control Level of the bucket using
+                description: acl sets the Access Control Level of the bucket using
                   a canned ACL string
                 enum:
                 - private
@@ -121,7 +120,7 @@ spec:
                 type: boolean
               credentialsRef:
                 description: |-
-                  CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
+                  credentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
                   If not supplied then the credentials of the controller will be used.
                 properties:
                   name:
@@ -135,11 +134,11 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               forceDeleteBucket:
-                description: ForceDeleteBucket enables the object storage bucket used
+                description: forceDeleteBucket enables the object storage bucket used
                   to be deleted even if it contains objects.
                 type: boolean
               region:
-                description: Region is the ID of the Object Storage region for the
+                description: region is the ID of the Object Storage region for the
                   bucket.
                 type: string
                 x-kubernetes-validations:
@@ -149,11 +148,10 @@ spec:
             - region
             type: object
           status:
-            description: LinodeObjectStorageBucketStatus defines the observed state
-              of LinodeObjectStorageBucket
+            description: status is the observed state of the LinodeObjectStorageBucket.
             properties:
               conditions:
-                description: Conditions specify the service state of the LinodeObjectStorageBucket.
+                description: conditions specify the service state of the LinodeObjectStorageBucket.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -210,22 +208,22 @@ spec:
                   type: object
                 type: array
               creationTime:
-                description: CreationTime specifies the creation timestamp for the
+                description: creationTime specifies the creation timestamp for the
                   bucket.
                 format: date-time
                 type: string
               failureMessage:
                 description: |-
-                  FailureMessage will be set in the event that there is a terminal problem
+                  failureMessage will be set in the event that there is a terminal problem
                   reconciling the Object Storage Bucket and will contain a verbose string
                   suitable for logging and human consumption.
                 type: string
               hostname:
-                description: Hostname is the address assigned to the bucket.
+                description: hostname is the address assigned to the bucket.
                 type: string
               ready:
                 default: false
-                description: Ready denotes that the bucket has been provisioned along
+                description: ready denotes that the bucket has been provisioned along
                   with access keys.
                 type: boolean
             type: object

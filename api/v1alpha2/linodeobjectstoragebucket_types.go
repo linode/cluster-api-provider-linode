@@ -35,14 +35,12 @@ const (
 
 // LinodeObjectStorageBucketSpec defines the desired state of LinodeObjectStorageBucket
 type LinodeObjectStorageBucketSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 
-	// Region is the ID of the Object Storage region for the bucket.
+	// region is the ID of the Object Storage region for the bucket.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Region string `json:"region"`
 
-	// Acl sets the Access Control Level of the bucket using a canned ACL string
+	// acl sets the Access Control Level of the bucket using a canned ACL string
 	// +optional
 	// +kubebuilder:default=private
 	// +kubebuilder:validation:Enum=private;public-read;authenticated-read;public-read-write
@@ -53,45 +51,42 @@ type LinodeObjectStorageBucketSpec struct {
 	// +kubebuilder:default=true
 	CorsEnabled bool `json:"corsEnabled,omitempty"`
 
-	// CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
+	// credentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.
 	// If not supplied then the credentials of the controller will be used.
 	// +optional
-	CredentialsRef *corev1.SecretReference `json:"credentialsRef"`
+	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 
-	// AccessKeyRef is a reference to a LinodeObjectStorageBucketKey for the bucket.
+	// accessKeyRef is a reference to a LinodeObjectStorageBucketKey for the bucket.
 	// +optional
-	AccessKeyRef *corev1.ObjectReference `json:"accessKeyRef"`
+	AccessKeyRef *corev1.ObjectReference `json:"accessKeyRef,omitempty"`
 
-	// ForceDeleteBucket enables the object storage bucket used to be deleted even if it contains objects.
+	// forceDeleteBucket enables the object storage bucket used to be deleted even if it contains objects.
 	// +optional
 	ForceDeleteBucket bool `json:"forceDeleteBucket,omitempty"`
 }
 
 // LinodeObjectStorageBucketStatus defines the observed state of LinodeObjectStorageBucket
 type LinodeObjectStorageBucketStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Ready denotes that the bucket has been provisioned along with access keys.
+	// ready denotes that the bucket has been provisioned along with access keys.
 	// +optional
 	// +kubebuilder:default=false
-	Ready bool `json:"ready"`
+	Ready bool `json:"ready,omitempty"`
 
-	// FailureMessage will be set in the event that there is a terminal problem
+	// failureMessage will be set in the event that there is a terminal problem
 	// reconciling the Object Storage Bucket and will contain a verbose string
 	// suitable for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
-	// Conditions specify the service state of the LinodeObjectStorageBucket.
+	// conditions specify the service state of the LinodeObjectStorageBucket.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// Hostname is the address assigned to the bucket.
+	// hostname is the address assigned to the bucket.
 	// +optional
 	Hostname *string `json:"hostname,omitempty"`
 
-	// CreationTime specifies the creation timestamp for the bucket.
+	// creationTime specifies the creation timestamp for the bucket.
 	// +optional
 	CreationTime *metav1.Time `json:"creationTime,omitempty"`
 }
@@ -107,10 +102,15 @@ type LinodeObjectStorageBucketStatus struct {
 
 // LinodeObjectStorageBucket is the Schema for the linodeobjectstoragebuckets API
 type LinodeObjectStorageBucket struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LinodeObjectStorageBucketSpec   `json:"spec,omitempty"`
+	// spec is the desired state of the LinodeObjectStorageBucket.
+	Spec LinodeObjectStorageBucketSpec `json:"spec,omitempty"`
+
+	// status is the observed state of the LinodeObjectStorageBucket.
 	Status LinodeObjectStorageBucketStatus `json:"status,omitempty"`
 }
 
@@ -140,8 +140,12 @@ func (losb *LinodeObjectStorageBucket) SetV1Beta2Conditions(conditions []metav1.
 // LinodeObjectStorageBucketList contains a list of LinodeObjectStorageBucket
 type LinodeObjectStorageBucketList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []LinodeObjectStorageBucket `json:"items"`
+
+	// items is a list of LinodeObjectStorageBucket.
+	Items []LinodeObjectStorageBucket `json:"items"`
 }
 
 func init() {

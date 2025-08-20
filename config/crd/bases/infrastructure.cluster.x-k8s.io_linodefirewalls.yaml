@@ -48,11 +48,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: LinodeFirewallSpec defines the desired state of LinodeFirewall
+            description: spec is the desired state of the LinodeFirewall.
             properties:
               credentialsRef:
                 description: |-
-                  CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this Firewall. If not
+                  credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this Firewall. If not
                   supplied then the credentials of the controller will be used.
                 properties:
                   name:
@@ -67,12 +67,15 @@ spec:
                 x-kubernetes-map-type: atomic
               enabled:
                 default: false
+                description: enabled determines if the Firewall is enabled. Defaults
+                  to false if not defined.
                 type: boolean
               firewallID:
+                description: firewallID is the ID of the Firewall.
                 type: integer
               inboundPolicy:
                 default: ACCEPT
-                description: InboundPolicy determines if traffic by default should
+                description: inboundPolicy determines if traffic by default should
                   be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
                 enum:
                 - ACCEPT
@@ -80,7 +83,7 @@ spec:
                 type: string
               inboundRuleRefs:
                 description: |-
-                  InboundRuleRefs is a list of references to FirewallRules as an alternative to
+                  inboundRuleRefs is a list of references to FirewallRules as an alternative to
                   using InboundRules but can be used in conjunction with it
                 items:
                   description: ObjectReference contains enough information to let
@@ -128,18 +131,18 @@ spec:
                   x-kubernetes-map-type: atomic
                 type: array
               inboundRules:
+                description: inboundRules is a list of FirewallRules that will be
+                  applied to the Firewall.
                 items:
-                  description: FirewallRuleSpec defines the desired state of FirewallRule
+                  description: FirewallRuleSpec defines the desired state of FirewallRule.
                   properties:
                     action:
-                      description: |-
-                        INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                        Important: Run "make" to regenerate code after modifying this file
+                      description: action is the action to take when the rule matches.
                       type: string
                     addressSetRefs:
                       description: |-
-                        AddressSetRefs is a list of references to AddressSets as an alternative to
-                        using Addresses but can be used in conjunction with it
+                        addressSetRefs is a list of references to AddressSets as an alternative to
+                        using Addresses but can be used in conjunction with it.
                       items:
                         description: ObjectReference contains enough information to
                           let you inspect or modify the referred object.
@@ -186,28 +189,31 @@ spec:
                         x-kubernetes-map-type: atomic
                       type: array
                     addresses:
-                      description: |-
-                        NetworkAddresses holds a list of IPv4 and IPv6 addresses
-                        We don't use linodego here since kubebuilder can't generate DeepCopyInto
-                        for linodego.NetworkAddresses
+                      description: addresses is a list of addresses to apply the rule
+                        to.
                       properties:
                         ipv4:
+                          description: ipv4 defines a list of IPv4 address strings.
                           items:
                             type: string
                           type: array
                         ipv6:
+                          description: ipv6 defines a list of IPv6 address strings.
                           items:
                             type: string
                           type: array
                       type: object
                     description:
+                      description: description is the description of the rule.
                       type: string
                     label:
+                      description: label is the label of the rule.
                       type: string
                     ports:
+                      description: ports is the ports to apply the rule to.
                       type: string
                     protocol:
-                      description: NetworkProtocol enum type
+                      description: protocol is the protocol to apply the rule to.
                       enum:
                       - TCP
                       - UDP
@@ -222,7 +228,7 @@ spec:
                 type: array
               outboundPolicy:
                 default: ACCEPT
-                description: OutboundPolicy determines if traffic by default should
+                description: outboundPolicy determines if traffic by default should
                   be ACCEPTed or DROPped. Defaults to ACCEPT if not defined.
                 enum:
                 - ACCEPT
@@ -230,7 +236,7 @@ spec:
                 type: string
               outboundRuleRefs:
                 description: |-
-                  OutboundRuleRefs is a list of references to FirewallRules as an alternative to
+                  outboundRuleRefs is a list of references to FirewallRules as an alternative to
                   using OutboundRules but can be used in conjunction with it
                 items:
                   description: ObjectReference contains enough information to let
@@ -278,18 +284,18 @@ spec:
                   x-kubernetes-map-type: atomic
                 type: array
               outboundRules:
+                description: outboundRules is a list of FirewallRules that will be
+                  applied to the Firewall.
                 items:
-                  description: FirewallRuleSpec defines the desired state of FirewallRule
+                  description: FirewallRuleSpec defines the desired state of FirewallRule.
                   properties:
                     action:
-                      description: |-
-                        INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                        Important: Run "make" to regenerate code after modifying this file
+                      description: action is the action to take when the rule matches.
                       type: string
                     addressSetRefs:
                       description: |-
-                        AddressSetRefs is a list of references to AddressSets as an alternative to
-                        using Addresses but can be used in conjunction with it
+                        addressSetRefs is a list of references to AddressSets as an alternative to
+                        using Addresses but can be used in conjunction with it.
                       items:
                         description: ObjectReference contains enough information to
                           let you inspect or modify the referred object.
@@ -336,28 +342,31 @@ spec:
                         x-kubernetes-map-type: atomic
                       type: array
                     addresses:
-                      description: |-
-                        NetworkAddresses holds a list of IPv4 and IPv6 addresses
-                        We don't use linodego here since kubebuilder can't generate DeepCopyInto
-                        for linodego.NetworkAddresses
+                      description: addresses is a list of addresses to apply the rule
+                        to.
                       properties:
                         ipv4:
+                          description: ipv4 defines a list of IPv4 address strings.
                           items:
                             type: string
                           type: array
                         ipv6:
+                          description: ipv6 defines a list of IPv6 address strings.
                           items:
                             type: string
                           type: array
                       type: object
                     description:
+                      description: description is the description of the rule.
                       type: string
                     label:
+                      description: label is the label of the rule.
                       type: string
                     ports:
+                      description: ports is the ports to apply the rule to.
                       type: string
                     protocol:
-                      description: NetworkProtocol enum type
+                      description: protocol is the protocol to apply the rule to.
                       enum:
                       - TCP
                       - UDP
@@ -372,10 +381,10 @@ spec:
                 type: array
             type: object
           status:
-            description: LinodeFirewallStatus defines the observed state of LinodeFirewall
+            description: status is the observed state of the LinodeFirewall.
             properties:
               conditions:
-                description: Conditions defines current service state of the LinodeFirewall.
+                description: conditions define the current service state of the LinodeFirewall.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -433,7 +442,7 @@ spec:
                 type: array
               failureMessage:
                 description: |-
-                  FailureMessage will be set in the event that there is a terminal problem
+                  failureMessage will be set in the event that there is a terminal problem
                   reconciling the Firewall and will contain a more verbose string suitable
                   for logging and human consumption.
 
@@ -452,7 +461,7 @@ spec:
                 type: string
               failureReason:
                 description: |-
-                  FailureReason will be set in the event that there is a terminal problem
+                  failureReason will be set in the event that there is a terminal problem
                   reconciling the Firewall and will contain a succinct value suitable
                   for machine interpretation.
 
@@ -471,7 +480,7 @@ spec:
                 type: string
               ready:
                 default: false
-                description: Ready is true when the provider resource is ready.
+                description: ready is true when the provider resource is ready.
                 type: boolean
             type: object
         type: object

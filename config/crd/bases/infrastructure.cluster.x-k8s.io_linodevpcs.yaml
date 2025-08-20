@@ -48,12 +48,12 @@ spec:
           metadata:
             type: object
           spec:
-            description: LinodeVPCSpec defines the desired state of LinodeVPC
+            description: spec is the desired state of the LinodeVPC.
             properties:
               credentialsRef:
                 description: |-
-                  CredentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC. If not
-                  supplied then the credentials of the controller will be used.
+                  credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC.
+                  If not supplied, then the credentials of the controller will be used.
                 properties:
                   name:
                     description: name is unique within a namespace to reference a
@@ -66,10 +66,11 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               description:
+                description: description is the description of the VPC.
                 type: string
               ipv6:
                 description: |-
-                  IPv6 is a list of IPv6 ranges allocated to the VPC.
+                  ipv6 is a list of IPv6 ranges allocated to the VPC.
                   Once ranges are allocated based on the IPv6Range field, they will be
                   added to this field.
                 items:
@@ -84,7 +85,7 @@ spec:
                 type: array
               ipv6Range:
                 description: |-
-                  IPv6Range is a list of IPv6 ranges to allocate to the VPC.
+                  ipv6Range is a list of IPv6 ranges to allocate to the VPC.
                   If not specified, the VPC will not have an IPv6 range allocated.
                   Once ranges are allocated, they will be added to the IPv6 field.
                 items:
@@ -95,15 +96,16 @@ spec:
                     See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
                   properties:
                     allocation_class:
-                      description: IPv6 inventory from which the VPC prefix should
-                        be allocated.
+                      description: allocation_class is the IPv6 inventory from which
+                        the VPC prefix should be allocated.
                       type: string
                     range:
-                      description: Range is the IPv6 prefix for the VPC.
+                      description: range is the IPv6 prefix for the VPC.
                       type: string
                   type: object
                 type: array
               region:
+                description: region is the region to create the VPC in.
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -111,20 +113,22 @@ spec:
               retain:
                 default: false
                 description: |-
-                  Retain allows you to keep the VPC after the LinodeVPC object is deleted.
+                  retain allows you to keep the VPC after the LinodeVPC object is deleted.
                   This is useful if you want to use an existing VPC that was not created by this controller.
                   If set to true, the controller will not delete the VPC resource in Linode.
                   Defaults to false.
                 type: boolean
               subnets:
+                description: subnets is a list of subnets to create in the VPC.
                 items:
                   description: VPCSubnetCreateOptions defines subnet options
                   properties:
                     ipv4:
+                      description: ipv4 is the IPv4 address range of the subnet.
                       type: string
                     ipv6:
                       description: |-
-                        IPv6 is a list of IPv6 ranges allocated to the subnet.
+                        ipv6 is a list of IPv6 ranges allocated to the subnet.
                         Once ranges are allocated based on the IPv6Range field, they will be
                         added to this field.
                       items:
@@ -139,7 +143,7 @@ spec:
                       type: array
                     ipv6Range:
                       description: |-
-                        IPv6Range is a list of IPv6 ranges to allocate to the subnet.
+                        ipv6Range is a list of IPv6 ranges to allocate to the subnet.
                         If not specified, the subnet will not have an IPv6 range allocated.
                         Once ranges are allocated, they will be added to the IPv6 field.
                       items:
@@ -150,34 +154,37 @@ spec:
                           See https://techdocs.akamai.com/linode-api/reference/post-vpc-subnet for more details.
                         properties:
                           range:
+                            description: range is the IPv6 prefix for the subnet.
                             type: string
                         type: object
                       type: array
                     label:
+                      description: label is the label of the subnet.
                       maxLength: 63
                       minLength: 3
                       type: string
                     retain:
                       default: false
                       description: |-
-                        Retain allows you to keep the Subnet after the LinodeVPC object is deleted.
+                        retain allows you to keep the Subnet after the LinodeVPC object is deleted.
                         This is only applicable when the parent VPC has retain set to true.
                       type: boolean
                     subnetID:
-                      description: SubnetID is subnet id for the subnet
+                      description: subnetID is subnet id for the subnet
                       type: integer
                   type: object
                 type: array
               vpcID:
+                description: vpcID is the ID of the VPC.
                 type: integer
             required:
             - region
             type: object
           status:
-            description: LinodeVPCStatus defines the observed state of LinodeVPC
+            description: status is the observed state of the LinodeVPC.
             properties:
               conditions:
-                description: Conditions defines current service state of the LinodeVPC.
+                description: conditions define the current service state of the LinodeVPC.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -235,7 +242,7 @@ spec:
                 type: array
               failureMessage:
                 description: |-
-                  FailureMessage will be set in the event that there is a terminal problem
+                  failureMessage will be set in the event that there is a terminal problem
                   reconciling the VPC and will contain a more verbose string suitable
                   for logging and human consumption.
 
@@ -254,7 +261,7 @@ spec:
                 type: string
               failureReason:
                 description: |-
-                  FailureReason will be set in the event that there is a terminal problem
+                  failureReason will be set in the event that there is a terminal problem
                   reconciling the VPC and will contain a succinct value suitable
                   for machine interpretation.
 
@@ -273,7 +280,7 @@ spec:
                 type: string
               ready:
                 default: false
-                description: Ready is true when the provider resource is ready.
+                description: ready is true when the provider resource is ready.
                 type: boolean
             type: object
         type: object

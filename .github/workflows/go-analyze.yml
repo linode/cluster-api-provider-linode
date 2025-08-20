@@ -71,5 +71,8 @@ jobs:
         with:
           version: latest
 
+      - name: lint-api
+        run: make lint-api
+
       - name: Nilcheck
         run: make nilcheck
