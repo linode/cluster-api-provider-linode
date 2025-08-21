@@ -23,6 +23,7 @@ import (
 // LinodeMachineTemplateSpec defines the desired state of LinodeMachineTemplate
 type LinodeMachineTemplateSpec struct {
 	// template defines the specification for a LinodeMachine.
+	// +required
 	Template LinodeMachineTemplateResource `json:"template"`
 }
 
@@ -46,6 +47,7 @@ type LinodeMachineTemplateStatus struct {
 // LinodeMachineTemplateResource describes the data needed to create a LinodeMachine from a template.
 type LinodeMachineTemplateResource struct {
 	// spec is the specification of the desired behavior of the machine.
+	// +required
 	Spec LinodeMachineSpec `json:"spec"`
 }
 
@@ -59,12 +61,15 @@ type LinodeMachineTemplateResource struct {
 type LinodeMachineTemplate struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeMachineTemplate.
+	// +optional
 	Spec LinodeMachineTemplateSpec `json:"spec,omitempty"`
 
 	// status is the observed state of the LinodeMachineTemplate.
+	// +optional
 	Status LinodeMachineTemplateStatus `json:"status,omitempty"`
 }
 
@@ -96,9 +101,11 @@ type LinodeMachineTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// items is a list of LinodeMachineTemplate.
+	// +optional
 	Items []LinodeMachineTemplate `json:"items"`
 }
 

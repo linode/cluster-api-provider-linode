@@ -29,10 +29,15 @@ const (
 
 type BucketAccessRef struct {
 	// bucketName is the name of the bucket to grant access to.
+	// +required
 	BucketName string `json:"bucketName"`
+
 	// permissions is the permissions to grant to the bucket.
+	// +required
 	Permissions string `json:"permissions"`
+
 	// region is the region of the bucket.
+	// +required
 	Region string `json:"region"`
 }
 
@@ -62,6 +67,7 @@ type GeneratedSecret struct {
 type LinodeObjectStorageKeySpec struct {
 	// bucketAccess is the list of object storage bucket labels which can be accessed using the key
 	// +kubebuilder:validation:MinItems=1
+	// +required
 	BucketAccess []BucketAccessRef `json:"bucketAccess"`
 
 	// credentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.
@@ -71,10 +77,12 @@ type LinodeObjectStorageKeySpec struct {
 
 	// keyGeneration may be modified to trigger a rotation of the access key.
 	// +kubebuilder:default=0
+	// +required
 	KeyGeneration int `json:"keyGeneration"`
 
 	// generatedSecret configures the Secret to generate containing access key details.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +required
 	GeneratedSecret `json:"generatedSecret"`
 
 	// secretType instructs the controller what type of secret to generate containing access key details.
@@ -138,11 +146,15 @@ type LinodeObjectStorageKey struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeObjectStorageKey.
+	// +optional
 	Spec LinodeObjectStorageKeySpec `json:"spec,omitempty"`
+
 	// status is the observed state of the LinodeObjectStorageKey.
+	// +optional
 	Status LinodeObjectStorageKeyStatus `json:"status,omitempty"`
 }
 
@@ -173,6 +185,7 @@ type LinodeObjectStorageKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items represent the list of LinodeObjectStorageKey objects.
