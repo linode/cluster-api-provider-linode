@@ -23,12 +23,14 @@ import (
 // LinodeClusterTemplateSpec defines the desired state of LinodeClusterTemplate
 type LinodeClusterTemplateSpec struct {
 	// template defines the specification for a LinodeCluster.
+	// +required
 	Template LinodeClusterTemplateResource `json:"template"`
 }
 
 // LinodeClusterTemplateResource describes the data needed to create a LinodeCluster from a template.
 type LinodeClusterTemplateResource struct {
 	// spec is the specification of the LinodeCluster.
+	// +required
 	Spec LinodeClusterSpec `json:"spec"`
 }
 
@@ -40,8 +42,11 @@ type LinodeClusterTemplateResource struct {
 type LinodeClusterTemplate struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// spec is the desired state of the LinodeClusterTemplate.
+	// +optional
 	Spec LinodeClusterTemplateSpec `json:"spec,omitempty"`
 }
 

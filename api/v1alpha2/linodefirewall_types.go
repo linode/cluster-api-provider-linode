@@ -135,10 +135,15 @@ type LinodeFirewallStatus struct {
 type LinodeFirewall struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// spec is the desired state of the LinodeFirewall.
+	// +optional
 	Spec LinodeFirewallSpec `json:"spec,omitempty"`
+
 	// status is the observed state of the LinodeFirewall.
+	// +optional
 	Status LinodeFirewallStatus `json:"status,omitempty"`
 }
 

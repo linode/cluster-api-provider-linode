@@ -40,6 +40,7 @@ type LinodeVPCSpec struct {
 
 	// region is the region to create the VPC in.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +required
 	Region string `json:"region"`
 
 	// ipv6 is a list of IPv6 ranges allocated to the VPC.
@@ -78,9 +79,11 @@ type LinodeVPCSpec struct {
 // See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
 type VPCCreateOptionsIPv6 struct {
 	// range is the IPv6 prefix for the VPC.
+	// +optional
 	Range *string `json:"range,omitempty"`
 
 	// allocation_class is the IPv6 inventory from which the VPC prefix should be allocated.
+	// +optional
 	AllocationClass *string `json:"allocation_class,omitempty"`
 }
 
@@ -125,6 +128,7 @@ type VPCSubnetCreateOptions struct {
 // See https://techdocs.akamai.com/linode-api/reference/post-vpc-subnet for more details.
 type VPCSubnetCreateOptionsIPv6 struct {
 	// range is the IPv6 prefix for the subnet.
+	// +optional
 	Range *string `json:"range,omitempty"`
 }
 
@@ -189,11 +193,15 @@ type LinodeVPCStatus struct {
 type LinodeVPC struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeVPC.
+	// +optional
 	Spec LinodeVPCSpec `json:"spec,omitempty"`
+
 	// status is the observed state of the LinodeVPC.
+	// +optional
 	Status LinodeVPCStatus `json:"status,omitempty"`
 }
 
@@ -223,8 +231,11 @@ func (lv *LinodeVPC) SetV1Beta2Conditions(conditions []metav1.Condition) {
 // LinodeVPCList contains a list of LinodeVPC
 type LinodeVPCList struct {
 	metav1.TypeMeta `json:",inline"`
+
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
+
 	// items is a list of LinodeVPC.
 	Items []LinodeVPC `json:"items"`
 }

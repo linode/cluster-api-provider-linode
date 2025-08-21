@@ -31,6 +31,7 @@ const (
 // LinodeClusterSpec defines the desired state of LinodeCluster
 type LinodeClusterSpec struct {
 	// region the LinodeCluster lives in.
+	// +required
 	Region string `json:"region"`
 
 	// controlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane
@@ -102,11 +103,17 @@ type LinodeClusterStatus struct {
 // LinodeCluster is the Schema for the linodeclusters API
 type LinodeCluster struct {
 	metav1.TypeMeta `json:",inline"`
+
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// spec is the desired state of the LinodeCluster.
+	// +optional
 	Spec LinodeClusterSpec `json:"spec,omitempty"`
+
 	// status is the observed state of the LinodeCluster.
+	// +optional
 	Status LinodeClusterStatus `json:"status,omitempty"`
 }
 
@@ -139,56 +146,69 @@ type NetworkSpec struct {
 	// +kubebuilder:default=NodeBalancer
 	// +optional
 	LoadBalancerType string `json:"loadBalancerType,omitempty"`
+
 	// dnsProvider is the provider who manages the domain.
 	// Ignored if the LoadBalancerType is set to anything other than dns
 	// If not set, defaults linode dns
 	// +kubebuilder:validation:Enum=linode;akamai
 	// +optional
 	DNSProvider string `json:"dnsProvider,omitempty"`
+
 	// dnsRootDomain is the root domain used to create a DNS entry for the control-plane endpoint.
 	// Ignored if the LoadBalancerType is set to anything other than dns
 	// +optional
 	DNSRootDomain string `json:"dnsRootDomain,omitempty"`
+
 	// dnsUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
 	// DNS record
 	// Ignored if the LoadBalancerType is set to anything other than dns
 	// If not set, CAPL will create a unique identifier for you
 	// +optional
 	DNSUniqueIdentifier string `json:"dnsUniqueIdentifier,omitempty"`
+
 	// dnsTTLsec is the TTL for the domain record
 	// Ignored if the LoadBalancerType is set to anything other than dns
 	// If not set, defaults to 30
 	// +optional
 	DNSTTLSec int `json:"dnsTTLsec,omitempty"`
+
 	// dnsSubDomainOverride is used to override CAPL's construction of the controlplane endpoint
 	// If set, this will override the DNS subdomain from <clustername>-<uniqueid>.<rootdomain> to <overridevalue>.<rootdomain>
 	// +optional
 	DNSSubDomainOverride string `json:"dnsSubDomainOverride,omitempty"`
+
 	// apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
 	// If omitted, default value is 6443.
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +optional
 	ApiserverLoadBalancerPort int `json:"apiserverLoadBalancerPort,omitempty"`
+
 	// nodeBalancerID is the id of NodeBalancer.
 	// +optional
 	NodeBalancerID *int `json:"nodeBalancerID,omitempty"`
+
 	// nodeBalancerFirewallID is the id of NodeBalancer Firewall.
 	// +optional
 	NodeBalancerFirewallID *int `json:"nodeBalancerFirewallID,omitempty"`
+
 	// apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer config.
 	// +optional
 	ApiserverNodeBalancerConfigID *int `json:"apiserverNodeBalancerConfigID,omitempty"`
+
 	// additionalPorts contains list of ports to be configured with NodeBalancer.
 	// +optional
 	AdditionalPorts []LinodeNBPortConfig `json:"additionalPorts,omitempty"`
+
 	// subnetName is the name/label of the VPC subnet to be used by the cluster
 	// +optional
 	SubnetName string `json:"subnetName,omitempty"`
+
 	// useVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	UseVlan bool `json:"useVlan,omitempty"`
+
 	// nodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
 	// example: 10.10.10.0/30
 	// +optional
@@ -209,7 +229,9 @@ type LinodeNBPortConfig struct {
 	// port configured on the NodeBalancer. It must be valid port range (1-65535).
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
+	// +required
 	Port int `json:"port"`
+
 	// nodeBalancerConfigID is the config ID of port's NodeBalancer config.
 	// +optional
 	NodeBalancerConfigID *int `json:"nodeBalancerConfigID,omitempty"`
@@ -222,11 +244,11 @@ type ObjectStore struct {
 	//
 	// This is used to generate presigned URLs for S3 Bucket objects, which are used by
 	// control-plane and worker nodes to fetch bootstrap data.
-	//
 	// +optional
 	PresignedURLDuration *metav1.Duration `json:"presignedURLDuration,omitempty"`
 
 	// credentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store.
+	// +optional
 	CredentialsRef corev1.SecretReference `json:"credentialsRef,omitempty"`
 }
 

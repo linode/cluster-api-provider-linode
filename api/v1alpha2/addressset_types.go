@@ -23,8 +23,10 @@ import (
 // AddressSetSpec defines the desired state of AddressSet
 type AddressSetSpec struct {
 	// ipv4 defines a list of IPv4 address strings
+	// +optional
 	IPv4 *[]string `json:"ipv4,omitempty"`
 	// ipv6 defines a list of IPv6 address strings
+	// +optional
 	IPv6 *[]string `json:"ipv6,omitempty"`
 }
 
@@ -41,10 +43,13 @@ type AddressSetStatus struct {
 type AddressSet struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// spec is the desired state of the AddressSet
+	// +optional
 	Spec AddressSetSpec `json:"spec,omitempty"`
 	// status is the observed state of the AddressSet
+	// +optional
 	Status AddressSetStatus `json:"status,omitempty"`
 }
 
