@@ -16,10 +16,15 @@ linters:
         description: Kube API LInter lints Kube like APIs based on API conventions and best practices.
         settings:
           linters:
-            enable:
-              - "commentstart"
+            # TODO: remove linters from this list as we add support from them
             disable:
-              - "*"
+              - "ssatags"
+              - "nomaps"
+              - "integers"
+              - "conditions"
+              - "jsontags"
+              - "requiredfields"
+              - "optionalfields"
           lintersConfig: { }
   exclusions:
     rules:

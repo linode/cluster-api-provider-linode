@@ -25,20 +25,33 @@ import (
 // FirewallRuleSpec defines the desired state of FirewallRule.
 type FirewallRuleSpec struct {
 	// action is the action to take when the rule matches.
+	// +required
 	Action string `json:"action"`
+
 	// label is the label of the rule.
+	// +required
 	Label string `json:"label"`
+
 	// description is the description of the rule.
+	// +optional
 	Description string `json:"description,omitempty"`
+
 	// ports is the ports to apply the rule to.
+	// +optional
 	Ports string `json:"ports,omitempty"`
+
 	// protocol is the protocol to apply the rule to.
 	// +kubebuilder:validation:Enum=TCP;UDP;ICMP;IPENCAP
+	// +required
 	Protocol linodego.NetworkProtocol `json:"protocol"`
+
 	// addresses is a list of addresses to apply the rule to.
+	// +optional
 	Addresses *NetworkAddresses `json:"addresses,omitempty"`
+
 	// addressSetRefs is a list of references to AddressSets as an alternative to
 	// using Addresses but can be used in conjunction with it.
+	// +optional
 	AddressSetRefs []*corev1.ObjectReference `json:"addressSetRefs,omitempty"`
 }
 
@@ -47,8 +60,11 @@ type FirewallRuleSpec struct {
 // for linodego.NetworkAddresses
 type NetworkAddresses struct {
 	// ipv4 defines a list of IPv4 address strings.
+	// +optional
 	IPv4 *[]string `json:"ipv4,omitempty"`
+
 	// ipv6 defines a list of IPv6 address strings.
+	// +optional
 	IPv6 *[]string `json:"ipv6,omitempty"`
 }
 
@@ -66,11 +82,17 @@ type FirewallRuleStatus struct {
 // FirewallRule is the Schema for the firewallrules API
 type FirewallRule struct {
 	metav1.TypeMeta `json:",inline"`
+
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// spec is the desired state of the FirewallRule.
+	// +optional
 	Spec FirewallRuleSpec `json:"spec,omitempty"`
+
 	// status is the observed state of the FirewallRule.
+	// +optional
 	Status FirewallRuleStatus `json:"status,omitempty"`
 }
 
@@ -80,6 +102,7 @@ type FirewallRule struct {
 type FirewallRuleList struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	// items is a list of FirewallRule.
 	Items []FirewallRule `json:"items"`

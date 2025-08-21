@@ -38,6 +38,7 @@ type LinodeObjectStorageBucketSpec struct {
 
 	// region is the ID of the Object Storage region for the bucket.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +required
 	Region string `json:"region"`
 
 	// acl sets the Access Control Level of the bucket using a canned ACL string
@@ -105,12 +106,15 @@ type LinodeObjectStorageBucket struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeObjectStorageBucket.
+	// +optional
 	Spec LinodeObjectStorageBucketSpec `json:"spec,omitempty"`
 
 	// status is the observed state of the LinodeObjectStorageBucket.
+	// +optional
 	Status LinodeObjectStorageBucketStatus `json:"status,omitempty"`
 }
 
@@ -142,9 +146,11 @@ type LinodeObjectStorageBucketList struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is the standard object's metadata.
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// items is a list of LinodeObjectStorageBucket.
+	// +optional
 	Items []LinodeObjectStorageBucket `json:"items"`
 }
 
