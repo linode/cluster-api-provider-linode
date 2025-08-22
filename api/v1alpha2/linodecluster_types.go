@@ -109,7 +109,7 @@ type LinodeCluster struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeCluster.
-	// +optional
+	// +required
 	Spec LinodeClusterSpec `json:"spec,omitempty"`
 
 	// status is the observed state of the LinodeCluster.

@@ -122,7 +122,7 @@ type LinodePlacementGroup struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodePlacementGroup.
-	// +optional
+	// +required
 	Spec LinodePlacementGroupSpec `json:"spec,omitempty"`
 
 	// status is the observed state of the LinodePlacementGroup.

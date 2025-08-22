@@ -110,7 +110,7 @@ type LinodeObjectStorageBucket struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeObjectStorageBucket.
-	// +optional
+	// +required
 	Spec LinodeObjectStorageBucketSpec `json:"spec,omitempty"`
 
 	// status is the observed state of the LinodeObjectStorageBucket.

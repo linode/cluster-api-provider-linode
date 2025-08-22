@@ -139,7 +139,7 @@ type LinodeFirewall struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeFirewall.
-	// +optional
+	// +required
 	Spec LinodeFirewallSpec `json:"spec,omitempty"`
 
 	// status is the observed state of the LinodeFirewall.

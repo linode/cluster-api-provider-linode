@@ -540,7 +540,7 @@ type LinodeMachine struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec defines the specification of desired behavior for the LinodeMachine.
-	// +optional
+	// +required
 	Spec LinodeMachineSpec `json:"spec,omitempty"`
 
 	// status defines the observed state of LinodeMachine.
