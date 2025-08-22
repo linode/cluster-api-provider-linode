@@ -7,7 +7,6 @@ CONTROLLER_IMAGE    ?= $(REGISTRY)/$(IMAGE_NAME)
 TAG                 ?= dev
 ENVTEST_K8S_VERSION := 1.30.0
 VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
-GIT_REF             ?= $(shell git rev-parse --short HEAD)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
 .SHELLFLAGS          = -ec
@@ -161,7 +160,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: e2etest
 e2etest: generate local-release local-deploy chainsaw s5cmd
-	GIT_REF=$(GIT_REF) SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --parallel 2 --selector $(E2E_SELECTOR) $(E2E_FLAGS)
+	SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --parallel 2 --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
 .PHONY: local-deploy
 local-deploy: kind-cluster tilt kustomize clusterctl
@@ -175,7 +174,6 @@ kind-cluster: kind ctlptl
 
 LATEST_REF         := $(shell git rev-parse --short HEAD)
 LAST_RELEASE       := $(shell git describe --abbrev=0 --tags)
-COMMON_CLUSTER_REF := $(shell echo "up-$(LATEST_REF)" | cut -c1-8)
 COMMON_NAMESPACE   := test-upgrade
 
 .PHONY: checkout-latest-commit
@@ -188,13 +186,13 @@ checkout-last-release:
 
 .PHONY: last-release-cluster
 last-release-cluster: kind ctlptl tilt kustomize clusterctl chainsaw kind-cluster checkout-last-release local-release local-deploy
-	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) SKIP_CUSTOM_DELETE=true $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 600s --skip-delete ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
+	LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) SKIP_CUSTOM_DELETE=true $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 600s --skip-delete ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
 
 .PHONY: test-upgrade
 test-upgrade: last-release-cluster checkout-latest-commit
 	$(MAKE) local-release
 	$(MAKE) local-deploy
-	GIT_REF=$(COMMON_CLUSTER_REF) LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 800s ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
+	LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) $(CHAINSAW) test --namespace $(COMMON_NAMESPACE) --assert-timeout 800s ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
 
 .PHONY: clean-kind-cluster
 clean-kind-cluster: ctlptl

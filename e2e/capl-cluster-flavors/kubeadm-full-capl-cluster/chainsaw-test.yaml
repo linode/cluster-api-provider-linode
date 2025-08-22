@@ -13,7 +13,7 @@ spec:
   bindings:
     # Identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'kdmf-tst', random('[0-9a-z]{8}')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `29`)), '-'))
@@ -308,7 +308,7 @@ spec:
               - name: TARGET_API_VERSION
                 value: v4beta
               - name: BUCKET_NAME
-                value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF'), 'etcd-backup']))
+                value: (join('-', [($run), 'etcd-backup']))
               - name: URI
                 value: (join('/', ['object-storage', 'buckets', env('LINODE_REGION')]))
             content: |
@@ -357,9 +357,9 @@ spec:
               - name: CAPL_KUBECONFIG
                 value: ./kubeadm-full-cluster-kubeconfig.yaml
               - name: BUCKET_NAME
-                value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF'), 'etcd-backup']))
+                value: (join('-', [($run), 'etcd-backup']))
               - name: SECRET_NAME
-                value: (join('-', ['e2e', 'kdmf-tst', env('GIT_REF'), 'etcd-backup-obj-key']))
+                value: (join('-', [($run), 'etcd-backup-obj-key']))
               - name: BUCKET_ENDPOINT
                 value: (join('.', [(join('-', [env('LINODE_REGION'), '1'])), 'linodeobjects', 'com' ]))
               - name: LOCAL_BIN

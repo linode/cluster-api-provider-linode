@@ -13,7 +13,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'validating-webhooks', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'validating-webhooks', random('[0-9a-z]{8}')]))
     - name: name
       # Format a generic resource name
       value: (trim((truncate(($run), `29`)), '-'))
