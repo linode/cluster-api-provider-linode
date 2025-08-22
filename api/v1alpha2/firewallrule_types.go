@@ -88,7 +88,7 @@ type FirewallRule struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the FirewallRule.
-	// +optional
+	// +required
 	Spec FirewallRuleSpec `json:"spec,omitempty"`
 
 	// status is the observed state of the FirewallRule.
