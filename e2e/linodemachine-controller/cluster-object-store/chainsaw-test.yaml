@@ -11,7 +11,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'cluster-obj-store', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'cluster-obj-store', random('[0-9a-z]{8}')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `29`)), '-'))
