@@ -46,7 +46,7 @@ type AddressSet struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// spec is the desired state of the AddressSet
-	// +optional
+	// +required
 	Spec AddressSetSpec `json:"spec,omitempty"`
 	// status is the observed state of the AddressSet
 	// +optional
