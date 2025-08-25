@@ -42,7 +42,7 @@ var linodeobjectstoragebucketlog = logf.Log.WithName("linodeobjectstoragebucket-
 func SetupLinodeObjectStorageBucketWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&infrav1alpha2.LinodeObjectStorageBucket{}).
-		WithValidator(&LinodeObjectStorageBucketCustomValidator{}).
+		WithValidator(&LinodeObjectStorageBucketCustomValidator{Client: mgr.GetClient()}).
 		Complete()
 }
 
