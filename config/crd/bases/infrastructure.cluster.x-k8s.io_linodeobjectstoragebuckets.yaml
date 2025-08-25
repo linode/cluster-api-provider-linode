@@ -227,6 +227,8 @@ spec:
                   with access keys.
                 type: boolean
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

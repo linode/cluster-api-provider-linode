@@ -238,6 +238,8 @@ spec:
                 description: ready denotes that the key has been provisioned.
                 type: boolean
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

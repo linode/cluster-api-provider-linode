@@ -483,6 +483,8 @@ spec:
                 description: ready is true when the provider resource is ready.
                 type: boolean
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

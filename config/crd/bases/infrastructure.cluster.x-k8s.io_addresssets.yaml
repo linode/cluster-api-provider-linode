@@ -59,6 +59,8 @@ spec:
           status:
             description: status is the observed state of the AddressSet
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
