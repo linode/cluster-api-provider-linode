@@ -57,6 +57,8 @@ jobs:
       paths: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -113,6 +115,8 @@ jobs:
             linode.github.io:443
 
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
