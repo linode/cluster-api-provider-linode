@@ -64,7 +64,21 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateCreate(ctx context.Co
 	linodeobjectstoragebucketlog.Info("validate create", "name", bucket.Name)
 	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, v.Client, bucket.Spec.CredentialsRef,
 		bucket.Name, bucket.GetNamespace(), linodemachinelog)
-	return nil, v.validateLinodeObjectStorageBucket(ctx, bucket, linodeClient, skipAPIValidation)
+
+	var errs field.ErrorList
+	if err := validateLabelLength(bucket.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		errs = append(errs, err)
+	}
+	if err := v.validateLinodeObjectStorageBucketSpec(ctx, bucket, linodeClient, skipAPIValidation); err != nil {
+		errs = slices.Concat(errs, err)
+	}
+
+	if len(errs) == 0 {
+		return nil, nil
+	}
+	return nil, apierrors.NewInvalid(
+		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageBucket"},
+		bucket.Name, errs)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageBucket.
@@ -88,21 +102,6 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateDelete(ctx context.Co
 
 	// No validation needed for deletion
 	return nil, nil
-}
-
-func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucket(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, linodeClient clients.LinodeClient, skipAPIValidation bool) error {
-	var errs field.ErrorList
-
-	if err := v.validateLinodeObjectStorageBucketSpec(ctx, bucket, linodeClient, skipAPIValidation); err != nil {
-		errs = slices.Concat(errs, err)
-	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-	return apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageBucket"},
-		bucket.Name, errs)
 }
 
 func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucketSpec(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, linodeClient clients.LinodeClient, skipAPIValidation bool) field.ErrorList {

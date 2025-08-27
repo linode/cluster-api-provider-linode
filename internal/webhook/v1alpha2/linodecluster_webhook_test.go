@@ -89,7 +89,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 	)
 }
 
-func TestValidateCreate(t *testing.T) {
+func TestValidateLinodeClusterCreate(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -109,8 +109,19 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 		}
-		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
-		credentialsRefCluster  = infrav1alpha2.LinodeCluster{
+		clusterLongName = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      longName,
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "example",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "NodeBalancer",
+				},
+			},
+		}
+		credentialsRefCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
@@ -136,7 +147,16 @@ func TestValidateCreate(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &cluster)
-					assert.ErrorContains(t, err, expectedErrorSubString)
+					assert.ErrorContains(t, err, "\"example\" is invalid: spec.region: Not found:")
+				}),
+			),
+			Path(
+				Call("name too long", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &clusterLongName)
+					assert.ErrorContains(t, err, labelLengthDetail)
 				}),
 			),
 		),

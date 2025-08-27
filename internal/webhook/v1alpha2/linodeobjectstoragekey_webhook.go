@@ -19,6 +19,7 @@ package v1alpha2
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,7 +63,20 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateCreate(ctx context.Conte
 	}
 	linodeobjectstoragekeylog.Info("Validation for LinodeObjectStorageKey upon creation", "name", key.GetName())
 
-	return v.validateLinodeObjectStorageKey(key)
+	var errs field.ErrorList
+	if err := validateLabelLength(key.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		errs = append(errs, err)
+	}
+	if err := v.validateLinodeObjectStorageKey(key); err != nil {
+		errs = slices.Concat(errs, err)
+	}
+
+	if len(errs) == 0 {
+		return nil, nil
+	}
+	return nil, apierrors.NewInvalid(
+		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageKey"},
+		key.Name, errs)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageKey.
@@ -73,7 +87,14 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateUpdate(ctx context.Conte
 	}
 	linodeobjectstoragekeylog.Info("Validation for LinodeObjectStorageKey upon update", "name", key.GetName())
 
-	return v.validateLinodeObjectStorageKey(key)
+	errs := v.validateLinodeObjectStorageKey(key)
+
+	if len(errs) == 0 {
+		return nil, nil
+	}
+	return nil, apierrors.NewInvalid(
+		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageKey"},
+		key.Name, errs)
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageKey.
@@ -87,7 +108,7 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateDelete(ctx context.Conte
 	return nil, nil
 }
 
-func (v *LinodeObjectStorageKeyCustomValidator) validateLinodeObjectStorageKey(key *infrav1alpha2.LinodeObjectStorageKey) (admission.Warnings, error) {
+func (v *LinodeObjectStorageKeyCustomValidator) validateLinodeObjectStorageKey(key *infrav1alpha2.LinodeObjectStorageKey) field.ErrorList {
 	var errs field.ErrorList
 
 	if key.Spec.Type == clusteraddonsv1.ClusterResourceSetSecretType && len(key.Spec.Format) == 0 {
@@ -98,11 +119,10 @@ func (v *LinodeObjectStorageKeyCustomValidator) validateLinodeObjectStorageKey(k
 		))
 	}
 
-	if len(errs) > 0 {
-		return nil, apierrors.NewInvalid(schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageKey"}, key.Name, errs)
+	if len(errs) == 0 {
+		return nil
 	}
-
-	return nil, nil
+	return errs
 }
 
 // +kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha2-linodeobjectstoragekey,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys,verbs=create;update,versions=v1alpha2,name=mutation.linodeobjectstoragekey.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1

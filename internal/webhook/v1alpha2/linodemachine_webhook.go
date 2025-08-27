@@ -69,8 +69,6 @@ func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	var errs field.ErrorList
-
 	machine, ok := obj.(*infrav1alpha2.LinodeMachine)
 	if !ok {
 		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
@@ -81,6 +79,10 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime
 	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
 		machine.Name, machine.GetNamespace(), linodemachinelog)
 
+	var errs field.ErrorList
+	if err := validateLabelLength(machine.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		errs = append(errs, err)
+	}
 	if err := r.validateLinodeMachineSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}

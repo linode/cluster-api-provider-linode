@@ -237,6 +237,16 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
+		machineLongName = infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      longName,
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "example",
+				Type:   "example",
+			},
+		}
 		credentialsRefMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
@@ -250,8 +260,7 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
-		expectedErrorSubString = "\"example\" is invalid: [spec.region: Not found: \"example\", spec.type: Not found: \"example\"]"
-		validator              = &linodeMachineValidator{}
+		validator = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -261,7 +270,15 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &machine)
-					assert.ErrorContains(t, err, expectedErrorSubString)
+					assert.ErrorContains(t, err, "\"example\" is invalid: [spec.region: Not found: \"example\", spec.type: Not found: \"example\"]")
+				}),
+			),
+			Path(
+				Call("name too long", func(ctx context.Context, mck Mock) {
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &machineLongName)
+					assert.ErrorContains(t, err, labelLengthDetail)
 				}),
 			),
 		),

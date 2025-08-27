@@ -17,34 +17,65 @@ limitations under the License.
 package v1alpha2
 
 import (
-	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"context"
+	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/mock"
+
+	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
-var _ = Describe("LinodeFirewall Webhook", func() {
+func TestValidateLinodeFirewallCreate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	var (
-		obj       *infrav1alpha2.LinodeFirewall
-		oldObj    *infrav1alpha2.LinodeFirewall
-		validator LinodeFirewallCustomValidator
+		lfw = infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{},
+		}
+		lfwLongName = infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      longName,
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{},
+		}
+		validator = &LinodeFirewallCustomValidator{}
 	)
 
-	BeforeEach(func() {
-		obj = &infrav1alpha2.LinodeFirewall{}
-		oldObj = &infrav1alpha2.LinodeFirewall{}
-		validator = LinodeFirewallCustomValidator{}
-		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
-		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
-		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
-		// TODO (user): Add any setup logic common to all tests
-	})
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("name too long", func(ctx context.Context, mck Mock) {
 
-	AfterEach(func() {
-		// TODO (user): Add any teardown logic common to all tests
-	})
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &lfwLongName)
+					assert.ErrorContains(t, err, labelLengthDetail)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("valid", func(ctx context.Context, mck Mock) {
 
-	Context("When creating or updating LinodeFirewall under Validating Webhook", func() {
-		// TODO (user): Add logic for validating webhooks
-	})
-})
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &lfw)
+					require.NoError(t, err)
+				}),
+			),
+		),
+	)
+}

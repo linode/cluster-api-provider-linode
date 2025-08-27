@@ -58,6 +58,8 @@ var (
 
 var SkipAPIValidation = false
 
+const longName = "some-really-long-name-that-exceeds-the-63-character-limit-imposed-by-linode"
+
 func TestAPIs(t *testing.T) {
 	t.Parallel()
 	RegisterFailHandler(Fail)
