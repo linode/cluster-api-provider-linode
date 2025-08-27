@@ -30,6 +30,13 @@ type LinodeMachineTemplateSpec struct {
 // LinodeMachineTemplateStatus defines the observed state of LinodeMachineTemplate
 // It is used to store the status of the LinodeMachineTemplate, such as tags.
 type LinodeMachineTemplateStatus struct {
+	// conditions define the current service state of the LinodeMachineTemplate
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	// tags that are currently applied to the LinodeMachineTemplate.
 	// +optional
@@ -38,10 +45,6 @@ type LinodeMachineTemplateStatus struct {
 	// firewallID that is currently applied to the LinodeMachineTemplate.
 	// +optional
 	FirewallID int `json:"firewallID,omitempty"`
-
-	// conditions represent the latest available observations of a LinodeMachineTemplate's current state.
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // LinodeMachineTemplateResource describes the data needed to create a LinodeMachine from a template.

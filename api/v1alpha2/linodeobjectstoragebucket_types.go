@@ -68,6 +68,14 @@ type LinodeObjectStorageBucketSpec struct {
 
 // LinodeObjectStorageBucketStatus defines the observed state of LinodeObjectStorageBucket
 type LinodeObjectStorageBucketStatus struct {
+	// conditions define the current service state of the LinodeObjectStorageBucket.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// ready denotes that the bucket has been provisioned along with access keys.
 	// +optional
 	// +kubebuilder:default=false
@@ -78,10 +86,6 @@ type LinodeObjectStorageBucketStatus struct {
 	// suitable for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
-
-	// conditions specify the service state of the LinodeObjectStorageBucket.
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
 	// hostname is the address assigned to the bucket.
 	// +optional

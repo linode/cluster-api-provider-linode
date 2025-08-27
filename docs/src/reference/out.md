@@ -412,10 +412,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeCluster. |  |  |
 | `ready` _boolean_ | ready denotes that the cluster (infrastructure) is ready. |  |  |
 | `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a succinct value suitable<br />for machine interpretation. |  |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a more verbose string suitable<br />for logging and human consumption. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions defines current service state of the LinodeCluster. |  |  |
 
 
 #### LinodeClusterTemplate
@@ -570,10 +570,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeFirewall. |  |  |
 | `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
 | `failureReason` _[FirewallStatusError](#firewallstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeFirewall. |  |  |
 
 
 #### LinodeInterfaceCreateOptions
@@ -695,13 +695,13 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeMachine. |  |  |
 | `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
 | `addresses` _MachineAddress array_ | addresses contains the Linode instance associated addresses. |  |  |
 | `cloudinitMetadataSupport` _boolean_ | cloudinitMetadataSupport determines whether to use cloud-init or not.<br />Deprecated: Stackscript no longer in use, so this field is not used. | true |  |
 | `instanceState` _[InstanceStatus](#instancestatus)_ | instanceState is the state of the Linode instance for this machine. |  |  |
 | `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions defines current service state of the LinodeMachine. |  |  |
 | `tags` _string array_ | tags are the tags applied to the Linode Machine. |  |  |
 
 
@@ -793,9 +793,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeMachineTemplate |  |  |
 | `tags` _string array_ | tags that are currently applied to the LinodeMachineTemplate. |  |  |
 | `firewallID` _integer_ | firewallID that is currently applied to the LinodeMachineTemplate. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions represent the latest available observations of a LinodeMachineTemplate's current state. |  |  |
 
 
 #### LinodeNBPortConfig
@@ -891,9 +891,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeObjectStorageBucket. |  |  |
 | `ready` _boolean_ | ready denotes that the bucket has been provisioned along with access keys. | false |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Object Storage Bucket and will contain a verbose string<br />suitable for logging and human consumption. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions specify the service state of the LinodeObjectStorageBucket. |  |  |
 | `hostname` _string_ | hostname is the address assigned to the bucket. |  |  |
 | `creationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#time-v1-meta)_ | creationTime specifies the creation timestamp for the bucket. |  |  |
 
@@ -974,9 +974,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeObjectStorageKey. |  |  |
 | `ready` _boolean_ | ready denotes that the key has been provisioned. | false |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Object Storage Key and will contain a verbose string<br />suitable for logging and human consumption. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions specify the service state of the LinodeObjectStorageKey. |  |  |
 | `creationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#time-v1-meta)_ | creationTime specifies the creation timestamp for the secret. |  |  |
 | `lastKeyGeneration` _integer_ | lastKeyGeneration tracks the last known value of .spec.keyGeneration. |  |  |
 | `accessKeyRef` _integer_ | accessKeyRef stores the ID for Object Storage key provisioned. |  |  |
@@ -1057,10 +1057,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodePlacementGroup. |  |  |
 | `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
 | `failureReason` _[LinodePlacementGroupStatusError](#linodeplacementgroupstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions defines current service state of the LinodePlacementGroup. |  |  |
 
 
 #### LinodePlacementGroupStatusError
@@ -1158,10 +1158,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeVPC. |  |  |
 | `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
 | `failureReason` _[VPCStatusError](#vpcstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeVPC. |  |  |
 
 
 #### NetworkAddresses

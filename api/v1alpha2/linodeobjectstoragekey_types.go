@@ -101,6 +101,14 @@ type LinodeObjectStorageKeySpec struct {
 
 // LinodeObjectStorageKeyStatus defines the observed state of LinodeObjectStorageKey
 type LinodeObjectStorageKeyStatus struct {
+	// conditions define the current service state of the LinodeObjectStorageKey.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// ready denotes that the key has been provisioned.
 	// +optional
 	// +kubebuilder:default=false
@@ -111,14 +119,6 @@ type LinodeObjectStorageKeyStatus struct {
 	// suitable for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
-
-	// conditions specify the service state of the LinodeObjectStorageKey.
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +patchStrategy=merge
-	// +patchMergeKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	// creationTime specifies the creation timestamp for the secret.
 	// +optional
