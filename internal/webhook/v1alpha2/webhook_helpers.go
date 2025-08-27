@@ -40,7 +40,20 @@ import (
 const (
 	// defaultClientTimeout is the default timeout for a client Linode API call
 	defaultClientTimeout = time.Second * 10
+	// minLabelLength is the minimum length for a Linode resource label
+	minLabelLength = 3
+	// maxLabelLength is the maximum length for a Linode resource label
+	maxLabelLength    = 32
+	labelLengthDetail = "must be between 3 and 32 characters"
 )
+
+func validateLabelLength(label string, path *field.Path) *field.Error {
+	if len(label) < minLabelLength || len(label) > maxLabelLength {
+		return field.Invalid(path, label, labelLengthDetail)
+	}
+
+	return nil
+}
 
 func validateRegion(ctx context.Context, linodegoclient clients.LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {
 	region, err := linodegoclient.GetRegion(ctx, id)

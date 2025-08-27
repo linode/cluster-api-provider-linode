@@ -72,7 +72,9 @@ func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context
 		pg.Name, pg.GetNamespace(), linodeplacementgrouplog)
 
 	var errs field.ErrorList
-
+	if err := validateLabelLength(pg.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		errs = append(errs, err)
+	}
 	if err := v.validateLinodePlacementGroupSpec(ctx, linodeClient, pg.Spec, pg.Name, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}

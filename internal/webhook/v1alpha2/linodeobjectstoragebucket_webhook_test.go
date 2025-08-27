@@ -33,7 +33,7 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
-func TestValidateLinodeObjectStorageBucket(t *testing.T) {
+func TestValidateLinodeObjectStorageBucketSpec(t *testing.T) {
 	t.Parallel()
 
 	var (
@@ -63,7 +63,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "iad"
-					assert.NoError(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient, true))
+					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, true))
 				}),
 			),
 			Path(
@@ -75,7 +75,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-iad"
-					assert.NoError(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient, true))
+					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, true))
 				}),
 			),
 			Path(
@@ -87,7 +87,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-iad-1"
-					assert.NoError(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient, true))
+					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, true))
 				}),
 			),
 		),
@@ -98,7 +98,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "123invalid"
-					assert.Error(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient, false))
+					assert.NotNil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, false))
 				}),
 			),
 			Path(
@@ -107,7 +107,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "invalid-2-2"
-					assert.Error(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient, false))
+					assert.NotNil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, false))
 				}),
 			),
 			Path(
@@ -117,7 +117,7 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-1"
-					assert.Error(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient, false))
+					assert.NotNil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, false))
 				}),
 			),
 			Path(
@@ -127,7 +127,88 @@ func TestValidateLinodeObjectStorageBucket(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					assert.Error(t, objvalidator.validateLinodeObjectStorageBucket(ctx, &bucket, mck.LinodeClient, false))
+					assert.NotNil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, false))
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeObjectStorageBucketUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		oldBucket = infrav1alpha2.LinodeObjectStorageBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+				Region: "example",
+			},
+		}
+		newBucket = infrav1alpha2.LinodeObjectStorageBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &LinodeObjectStorageBucketCustomValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldBucket, &newBucket)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeObjectStorageBucketDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		bucket = infrav1alpha2.LinodeObjectStorageBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &LinodeObjectStorageBucketCustomValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &bucket)
+					assert.NoError(t, err)
 				}),
 			),
 		),

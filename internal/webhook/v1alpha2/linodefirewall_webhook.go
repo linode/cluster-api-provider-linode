@@ -20,7 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -38,9 +41,6 @@ func SetupLinodeFirewallWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 // NOTE: The 'path' attribute must follow a specific pattern and should not be modified directly here.
 // Modifying the path for an invalid path can cause API server errors; failing to locate the webhook.
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodefirewall,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls,verbs=create;update,versions=v1alpha2,name=validation.linodefirewall.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
@@ -64,8 +64,17 @@ func (v *LinodeFirewallCustomValidator) ValidateCreate(ctx context.Context, obj 
 	}
 	linodefirewalllog.Info("Validation for LinodeFirewall upon creation", "name", linodefirewall.GetName())
 
-	// TODO(user): fill in your validation logic upon object creation.
-	return nil, nil
+	var errs field.ErrorList
+	if err := validateLabelLength(linodefirewall.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) == 0 {
+		return nil, nil
+	}
+	return nil, apierrors.NewInvalid(
+		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeFirewall"},
+		linodefirewall.Name, errs)
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type LinodeFirewall.

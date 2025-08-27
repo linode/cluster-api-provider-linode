@@ -237,6 +237,16 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
+		machineLongName = infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      longName,
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "example",
+				Type:   "example",
+			},
+		}
 		credentialsRefMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
@@ -250,8 +260,7 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
-		expectedErrorSubString = "\"example\" is invalid: [spec.region: Not found: \"example\", spec.type: Not found: \"example\"]"
-		validator              = &linodeMachineValidator{}
+		validator = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -261,7 +270,15 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &machine)
-					assert.ErrorContains(t, err, expectedErrorSubString)
+					assert.ErrorContains(t, err, "\"example\" is invalid: [spec.region: Not found: \"example\", spec.type: Not found: \"example\"]")
+				}),
+			),
+			Path(
+				Call("name too long", func(ctx context.Context, mck Mock) {
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &machineLongName)
+					assert.ErrorContains(t, err, labelLengthDetail)
 				}),
 			),
 		),
@@ -288,6 +305,87 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefMachine.Spec.CredentialsRef, credentialsRefMachine.GetNamespace())
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeMachineUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		oldMachine = infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "example",
+			},
+		}
+		newMachine = infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &linodeMachineValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldMachine, &newMachine)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeMachineDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		machine = infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &linodeMachineValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &machine)
+					assert.NoError(t, err)
 				}),
 			),
 		),

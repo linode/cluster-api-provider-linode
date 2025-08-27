@@ -100,12 +100,17 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 		vpc.Name, vpc.GetNamespace(), linodevpclog)
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
-	errs := r.validateLinodeVPCSpec(ctx, linodeClient, spec, skipAPIValidation)
+	var errs field.ErrorList
+	if err := validateLabelLength(vpc.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		errs = append(errs, err)
+	}
+	if err := r.validateLinodeVPCSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
+		errs = slices.Concat(errs, err)
+	}
 
 	if len(errs) == 0 {
 		return nil, nil
 	}
-
 	return nil, apierrors.NewInvalid(
 		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
 		vpc.Name, errs)

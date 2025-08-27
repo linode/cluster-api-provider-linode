@@ -63,7 +63,9 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, obj runtime
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
-
+	if err := validateLabelLength(cluster.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		errs = append(errs, err)
+	}
 	if err := r.validateLinodeClusterSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}

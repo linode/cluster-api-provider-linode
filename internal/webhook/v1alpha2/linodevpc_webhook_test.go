@@ -422,9 +422,17 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 				Region: "example",
 			},
 		}
-		validator              = &linodeVPCValidator{}
-		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
-		credentialsRefVPC      = infrav1alpha2.LinodeVPC{
+		vpcLongName = infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      longName,
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "example",
+			},
+		}
+		validator         = &linodeVPCValidator{}
+		credentialsRefVPC = infrav1alpha2.LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
@@ -446,7 +454,16 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &vpc)
-					assert.ErrorContains(t, err, expectedErrorSubString)
+					assert.ErrorContains(t, err, "\"example\" is invalid: spec.region: Not found:")
+				}),
+			),
+			Path(
+				Call("name too long", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &vpcLongName)
+					assert.ErrorContains(t, err, labelLengthDetail)
 				}),
 			),
 		),
@@ -473,6 +490,87 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefVPC.Spec.CredentialsRef, vpc.GetNamespace())
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeVPCUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		oldVPC = infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "example",
+			},
+		}
+		newVPC = infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &linodeVPCValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldVPC, &newVPC)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeVPCDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		vpc = infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &linodeVPCValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &vpc)
+					assert.NoError(t, err)
 				}),
 			),
 		),

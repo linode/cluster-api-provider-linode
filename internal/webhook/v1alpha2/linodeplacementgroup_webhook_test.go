@@ -133,7 +133,15 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 				Region: "example",
 			},
 		}
-
+		pgLongName = infrav1alpha2.LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      longName,
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
+				Region: "example",
+			},
+		}
 		credentialsRefPG = infrav1alpha2.LinodePlacementGroup{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
@@ -146,8 +154,7 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 				Region: "us-ord",
 			},
 		}
-		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
-		validator              = LinodePlacementGroupCustomValidator{Client: mockK8sClient}
+		validator = LinodePlacementGroupCustomValidator{Client: mockK8sClient}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -157,7 +164,13 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &pg)
-					assert.ErrorContains(t, err, expectedErrorSubString)
+					assert.ErrorContains(t, err, "\"example\" is invalid: spec.region: Not found:")
+				}),
+				Call("name too long", func(ctx context.Context, mck Mock) {
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &pgLongName)
+					assert.ErrorContains(t, err, labelLengthDetail)
 				}),
 			),
 		),
@@ -184,6 +197,87 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefPG.Spec.CredentialsRef, credentialsRefPG.GetNamespace())
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodePlacementGroupUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		oldPG = infrav1alpha2.LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
+				Region: "example",
+			},
+		}
+		newPG = infrav1alpha2.LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &LinodePlacementGroupCustomValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldPG, &newPG)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodePlacementGroupDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		lpg = infrav1alpha2.LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &LinodePlacementGroupCustomValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &lpg)
+					assert.NoError(t, err)
 				}),
 			),
 		),

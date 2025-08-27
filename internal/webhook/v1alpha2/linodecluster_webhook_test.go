@@ -89,7 +89,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 	)
 }
 
-func TestValidateCreate(t *testing.T) {
+func TestValidateLinodeClusterCreate(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -109,8 +109,19 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 		}
-		expectedErrorSubString = "\"example\" is invalid: spec.region: Not found:"
-		credentialsRefCluster  = infrav1alpha2.LinodeCluster{
+		clusterLongName = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      longName,
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "example",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "NodeBalancer",
+				},
+			},
+		}
+		credentialsRefCluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
@@ -136,7 +147,16 @@ func TestValidateCreate(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &cluster)
-					assert.ErrorContains(t, err, expectedErrorSubString)
+					assert.ErrorContains(t, err, "\"example\" is invalid: spec.region: Not found:")
+				}),
+			),
+			Path(
+				Call("name too long", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &clusterLongName)
+					assert.ErrorContains(t, err, labelLengthDetail)
 				}),
 			),
 		),
@@ -163,6 +183,96 @@ func TestValidateCreate(t *testing.T) {
 					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefCluster.Spec.CredentialsRef, cluster.GetNamespace())
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeClusterUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		oldCluster = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "example",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "NodeBalancer",
+				},
+			},
+		}
+		newCluster = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "example",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "dns",
+				},
+			},
+		}
+
+		validator = &linodeClusterValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldCluster, &newCluster)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeClusterDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		cluster = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "example",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "NodeBalancer",
+				},
+			},
+		}
+
+		validator = &linodeClusterValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &cluster)
+					assert.NoError(t, err)
 				}),
 			),
 		),
