@@ -74,8 +74,9 @@ spec:
                   Once ranges are allocated based on the IPv6Range field, they will be
                   added to this field.
                 items:
-                  description: VPCIPv6Range represents a single IPv6 range assigned
-                    to a VPC.
+                  description: |-
+                    VPCIPv6Range represents a single IPv6 range assigned to a VPC.
+                    NOTE: IPv6 VPCs may not currently be available to all users.
                   properties:
                     range:
                       type: string
@@ -132,8 +133,9 @@ spec:
                         Once ranges are allocated based on the IPv6Range field, they will be
                         added to this field.
                       items:
-                        description: VPCIPv6Range represents a single IPv6 range assigned
-                          to a VPC.
+                        description: |-
+                          VPCIPv6Range represents a single IPv6 range assigned to a VPC.
+                          NOTE: IPv6 VPCs may not currently be available to all users.
                         properties:
                           range:
                             type: string

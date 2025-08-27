@@ -675,7 +675,7 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
 					NAT1To1Address: ptr.To("auto"),
-					Address:        "auto",
+					Address:        ptr.To("auto"),
 				}},
 			},
 		},
@@ -760,7 +760,7 @@ func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *
 				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
 					NAT1To1Address: ptr.To("auto"),
-					Address:        "auto",
+					Address:        ptr.To("auto"),
 				}},
 			},
 		},
@@ -953,7 +953,7 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 				IPv6: iface.DefaultRoute.IPv6,
 			}
 		}
-		ifaceCreateOpts.FirewallID = iface.FirewallID
+		ifaceCreateOpts.FirewallID = ptr.To(iface.FirewallID)
 		// createOpts is now fully populated with the interface options
 		linodeInterfaces[idx] = ifaceCreateOpts
 	}
@@ -973,7 +973,7 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 	if iface.VPC.IPv4 != nil {
 		for _, addr := range iface.VPC.IPv4.Addresses {
 			ipv4Addrs = append(ipv4Addrs, linodego.VPCInterfaceIPv4AddressCreateOptions{
-				Address:        addr.Address,
+				Address:        ptr.To(addr.Address),
 				Primary:        addr.Primary,
 				NAT1To1Address: addr.NAT1To1Address,
 			})
@@ -989,7 +989,7 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 			{
 				Primary:        ptr.To(true),
 				NAT1To1Address: ptr.To("auto"),
-				Address:        "auto", // Default to auto-assigned address
+				Address:        ptr.To("auto"), // Default to auto-assigned address
 			},
 		}
 	}
@@ -1029,7 +1029,7 @@ func constructLinodeInterfacePublic(iface infrav1alpha2.LinodeInterfaceCreateOpt
 	if iface.Public.IPv4 != nil {
 		for _, addr := range iface.Public.IPv4.Addresses {
 			ipv4Addrs = append(ipv4Addrs, linodego.PublicInterfaceIPv4AddressCreateOptions{
-				Address: addr.Address,
+				Address: ptr.To(addr.Address),
 				Primary: addr.Primary,
 			})
 		}
@@ -1518,7 +1518,7 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 
 	// If using LinodeInterfaces that needs to know about the firewall ID
 	for i := range createConfig.LinodeInterfaces {
-		createConfig.LinodeInterfaces[i].FirewallID = ptr.To(fwID)
+		createConfig.LinodeInterfaces[i].FirewallID = ptr.To(ptr.To(fwID))
 	}
 
 	return nil
