@@ -712,8 +712,7 @@ spec:
             description: status is the observed state of the LinodeMachineTemplate.
             properties:
               conditions:
-                description: conditions represent the latest available observations
-                  of a LinodeMachineTemplate's current state.
+                description: conditions define the current service state of the LinodeMachineTemplate
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -769,6 +768,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               firewallID:
                 description: firewallID that is currently applied to the LinodeMachineTemplate.
                 type: integer

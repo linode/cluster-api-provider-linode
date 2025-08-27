@@ -21,7 +21,6 @@ linters:
               - "ssatags"
               - "nomaps"
               - "integers"
-              - "conditions"
               - "jsontags"
               - "requiredfields"
               - "optionalfields"

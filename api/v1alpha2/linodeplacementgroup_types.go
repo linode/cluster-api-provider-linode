@@ -59,6 +59,14 @@ type LinodePlacementGroupSpec struct {
 
 // LinodePlacementGroupStatus defines the observed state of LinodePlacementGroup
 type LinodePlacementGroupStatus struct {
+	// conditions define the current service state of the LinodePlacementGroup.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// ready is true when the provider resource is ready.
 	// +optional
 	// +kubebuilder:default=false
@@ -101,10 +109,6 @@ type LinodePlacementGroupStatus struct {
 	// controller's output.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
-
-	// conditions defines current service state of the LinodePlacementGroup.
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

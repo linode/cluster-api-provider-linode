@@ -76,6 +76,14 @@ type LinodeFirewallSpec struct {
 
 // LinodeFirewallStatus defines the observed state of LinodeFirewall
 type LinodeFirewallStatus struct {
+	// conditions define the current service state of the LinodeFirewall.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// ready is true when the provider resource is ready.
 	// +optional
 	// +kubebuilder:default=false
@@ -118,10 +126,6 @@ type LinodeFirewallStatus struct {
 	// controller's output.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
-
-	// conditions define the current service state of the LinodeFirewall.
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

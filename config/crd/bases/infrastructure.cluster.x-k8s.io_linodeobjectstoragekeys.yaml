@@ -160,7 +160,7 @@ spec:
                 description: accessKeyRef stores the ID for Object Storage key provisioned.
                 type: integer
               conditions:
-                description: conditions specify the service state of the LinodeObjectStorageKey.
+                description: conditions define the current service state of the LinodeObjectStorageKey.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.

@@ -71,6 +71,14 @@ type LinodeClusterSpec struct {
 
 // LinodeClusterStatus defines the observed state of LinodeCluster
 type LinodeClusterStatus struct {
+	// conditions define the current service state of the LinodeCluster.
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// ready denotes that the cluster (infrastructure) is ready.
 	// +optional
 	Ready bool `json:"ready"`
@@ -86,10 +94,6 @@ type LinodeClusterStatus struct {
 	// for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
-
-	// conditions defines current service state of the LinodeCluster.
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true

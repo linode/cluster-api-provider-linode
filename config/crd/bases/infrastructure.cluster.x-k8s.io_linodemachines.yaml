@@ -730,7 +730,7 @@ spec:
                   Deprecated: Stackscript no longer in use, so this field is not used.
                 type: boolean
               conditions:
-                description: conditions defines current service state of the LinodeMachine.
+                description: conditions define the current service state of the LinodeMachine.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -786,6 +786,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               failureMessage:
                 description: |-
                   failureMessage will be set in the event that there is a terminal problem

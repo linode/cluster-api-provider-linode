@@ -5,7 +5,7 @@ REGISTRY            ?= docker.io/linode
 IMAGE_NAME          ?= cluster-api-provider-linode
 CONTROLLER_IMAGE    ?= $(REGISTRY)/$(IMAGE_NAME)
 TAG                 ?= dev
-ENVTEST_K8S_VERSION := 1.30.0
+ENVTEST_K8S_VERSION := $(shell go list -m -f '{{.Version}}' k8s.io/client-go)
 VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
@@ -154,7 +154,7 @@ docs:
 
 .PHONY: test
 test: generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use ${ENVTEST_K8S_VERSION#v} --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
 	grep -v "zz_generated.*" cover.out.tmp > cover.out
 	rm cover.out.tmp
 
