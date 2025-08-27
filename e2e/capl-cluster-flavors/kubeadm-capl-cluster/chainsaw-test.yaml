@@ -13,7 +13,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'default-cluster', env('GIT_REF')]))
+      value: (join('-', ['e2e', 'default-cluster', random('[0-9a-z]{7}')]))
     - name: cluster
       # Format the cluster name
       # linode firewall has limit of max 32 chars, so we truncate the cluster name to 29 chars
