@@ -189,6 +189,96 @@ func TestValidateLinodeClusterCreate(t *testing.T) {
 	)
 }
 
+func TestValidateLinodeClusterUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		oldCluster = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "example",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "NodeBalancer",
+				},
+			},
+		}
+		newCluster = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "example",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "dns",
+				},
+			},
+		}
+
+		validator = &linodeClusterValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldCluster, &newCluster)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeClusterDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		cluster = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "example",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "NodeBalancer",
+				},
+			},
+		}
+
+		validator = &linodeClusterValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &cluster)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
 func TestValidateDNSLinodeCluster(t *testing.T) {
 	t.Parallel()
 

@@ -22,7 +22,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -31,6 +30,7 @@ import (
 	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
@@ -78,6 +78,77 @@ func TestValidateLinodeObjectStorageKeyCreate(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					_, err := validator.ValidateCreate(ctx, &lfw)
 					require.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeObjectStorageKeyUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	var (
+		oldKey = infrav1alpha2.LinodeObjectStorageKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{},
+		}
+		newKey = infrav1alpha2.LinodeObjectStorageKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{},
+		}
+
+		validator = &LinodeObjectStorageKeyCustomValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldKey, &newKey)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeObjectStorageKeyDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	var (
+		key = infrav1alpha2.LinodeObjectStorageKey{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{},
+		}
+
+		validator = &LinodeObjectStorageKeyCustomValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &key)
+					assert.NoError(t, err)
 				}),
 			),
 		),

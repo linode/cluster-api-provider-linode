@@ -133,3 +133,84 @@ func TestValidateLinodeObjectStorageBucketSpec(t *testing.T) {
 		),
 	)
 }
+
+func TestValidateLinodeObjectStorageBucketUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		oldBucket = infrav1alpha2.LinodeObjectStorageBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+				Region: "example",
+			},
+		}
+		newBucket = infrav1alpha2.LinodeObjectStorageBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &LinodeObjectStorageBucketCustomValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldBucket, &newBucket)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeObjectStorageBucketDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+
+	var (
+		bucket = infrav1alpha2.LinodeObjectStorageBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeObjectStorageBucketSpec{
+				Region: "example",
+			},
+		}
+
+		validator = &LinodeObjectStorageBucketCustomValidator{Client: mockK8sClient}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &bucket)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}

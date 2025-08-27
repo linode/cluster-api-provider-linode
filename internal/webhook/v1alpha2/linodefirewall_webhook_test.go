@@ -79,3 +79,74 @@ func TestValidateLinodeFirewallCreate(t *testing.T) {
 		),
 	)
 }
+
+func TestValidateLinodeFirewallUpdate(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	var (
+		oldFW = infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{},
+		}
+		newFW = infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{},
+		}
+
+		validator = &LinodeFirewallCustomValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("update", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateUpdate(ctx, &oldFW, &newFW)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
+
+func TestValidateLinodeFirewallDelete(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	var (
+		lfw = infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{},
+		}
+
+		validator = &LinodeFirewallCustomValidator{}
+	)
+
+	NewSuite(t, mock.MockLinodeClient{}).Run(
+		OneOf(
+			Path(
+				Call("delete", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateDelete(ctx, &lfw)
+					assert.NoError(t, err)
+				}),
+			),
+		),
+	)
+}
