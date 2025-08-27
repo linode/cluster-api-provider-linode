@@ -12,7 +12,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'min-firewall', random('[0-9a-z]{8}')]))
+      value: (join('-', ['e2e', 'min-firewall', random('[0-9a-z]{7}')]))
     - name: firewall
       # Format the firewall name into a valid Kubernetes object name
       value: (trim((truncate(($run), `63`)), '-'))
