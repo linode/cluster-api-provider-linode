@@ -45,7 +45,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 	t.Parallel()
 
 	var (
-		machine = infrav1alpha2.LinodeMachine{
+		testMachine = infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
@@ -55,17 +55,16 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
-		region                                      = linodego.Region{ID: "test"}
-		capabilities                                = []string{linodego.CapabilityLinodeInterfaces}
-		disk                                        = infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
-		disk_zero                                   = infrav1alpha2.InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
-		plan                                        = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
-		plan_zero                                   = linodego.LinodeType{Disk: 0}
-		plan_max                                    = linodego.LinodeType{Disk: math.MaxInt}
-		expectedErrorSubStringOSDisk                = "Invalid value: \"1G\": sum disk sizes exceeds plan storage: 2G"
-		expectedErrorSubStringOSDiskDataDiskInvalid = "spec.dataDisks.sda: Forbidden: allowed device paths: [sdb sdc sdd sde sdf sdg sdh]"
-		expectedErrorSubStringOSDiskOSDiskInvalid   = "spec.osDisk: Invalid value: \"0\": invalid size"
-		validator                                   = &linodeMachineValidator{}
+		region                                    = linodego.Region{ID: "test"}
+		capabilities                              = []string{linodego.CapabilityLinodeInterfaces}
+		disk                                      = infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+		disk_zero                                 = infrav1alpha2.InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
+		plan                                      = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
+		plan_zero                                 = linodego.LinodeType{Disk: 0}
+		plan_max                                  = linodego.LinodeType{Disk: math.MaxInt}
+		expectedErrorSubStringOSDisk              = "sum disk sizes exceeds plan storage: 2G"
+		expectedErrorSubStringOSDiskOSDiskInvalid = "spec.osDisk: Invalid value: \"0\": invalid size"
+		validator                                 = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -76,17 +75,19 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, testMachine.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
+			),
+			Path(
 				Call("valid with disks", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					machine := machine
-					machine.Spec.OSDisk = disk.DeepCopy()
-					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": disk.DeepCopy()}
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
@@ -103,7 +104,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+			errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, testMachine.Spec, SkipAPIValidation)
 			for _, err := range errs {
 				require.Error(t, err)
 			}
@@ -115,8 +116,8 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_zero, nil).AnyTimes()
 				}),
 				Result("os disk too large", func(ctx context.Context, mck Mock) {
-					machine := machine
-					machine.Spec.OSDisk = disk.DeepCopy()
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, strconv.Itoa(plan_zero.Disk))
@@ -128,10 +129,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan, nil).AnyTimes()
 				}),
-				Result("data disk too large", func(ctx context.Context, mck Mock) {
-					machine := machine
-					machine.Spec.OSDisk = disk.DeepCopy()
-					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": disk.DeepCopy(), "sdc": disk.DeepCopy()}
+				Result("SDB data disk too large", func(ctx context.Context, mck Mock) {
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("2G")}}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
@@ -139,16 +140,92 @@ func TestValidateLinodeMachine(t *testing.T) {
 				}),
 			),
 			Path(
-				Call("data disk invalid path", func(ctx context.Context, mck Mock) {
+				Call("exceed plan storage", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan, nil).AnyTimes()
 				}),
-				Result("error", func(ctx context.Context, mck Mock) {
-					machine := machine
-					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sda": disk.DeepCopy()}
+				Result("SDC data disk too large", func(ctx context.Context, mck Mock) {
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDC: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
-						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskDataDiskInvalid)
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
+					}
+				}),
+			),
+			Path(
+				Call("exceed plan storage", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan, nil).AnyTimes()
+				}),
+				Result("SDD data disk too large", func(ctx context.Context, mck Mock) {
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDD: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
+					}
+				}),
+			),
+			Path(
+				Call("exceed plan storage", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan, nil).AnyTimes()
+				}),
+				Result("SDE data disk too large", func(ctx context.Context, mck Mock) {
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDE: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
+					}
+				}),
+			),
+			Path(
+				Call("exceed plan storage", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan, nil).AnyTimes()
+				}),
+				Result("SDF data disk too large", func(ctx context.Context, mck Mock) {
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDF: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
+					}
+				}),
+			),
+			Path(
+				Call("exceed plan storage", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan, nil).AnyTimes()
+				}),
+				Result("SDG data disk too large", func(ctx context.Context, mck Mock) {
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDG: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
+					}
+				}),
+			),
+			Path(
+				Call("exceed plan storage", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan, nil).AnyTimes()
+				}),
+				Result("SDH data disk too large", func(ctx context.Context, mck Mock) {
+					machine := testMachine.DeepCopy()
+					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDH: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					for _, err := range errs {
+						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
 				}),
 			),
@@ -158,7 +235,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					machine := machine
+					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = disk_zero.DeepCopy()
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
@@ -174,7 +251,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					machine := machine
+					machine := testMachine.DeepCopy()
 					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
 					machine.Spec.PrivateIP = ptr.To(true)
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
@@ -191,7 +268,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					machine := machine
+					machine := testMachine.DeepCopy()
 					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
 					machine.Spec.Interfaces = []infrav1alpha2.InstanceConfigInterfaceCreateOptions{{}}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
@@ -207,7 +284,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					machine := machine
+					machine := testMachine.DeepCopy()
 					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {

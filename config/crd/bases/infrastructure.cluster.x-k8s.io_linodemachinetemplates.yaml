@@ -115,41 +115,234 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       dataDisks:
-                        additionalProperties:
-                          description: InstanceDisk defines a list of disks to use
-                            for an instance
-                          properties:
-                            diskID:
-                              description: diskID is the linode assigned ID of the
-                                disk.
-                              type: integer
-                            filesystem:
-                              description: filesystem of disk to provision, the default
-                                disk filesystem is "ext4".
-                              enum:
-                              - raw
-                              - swap
-                              - ext3
-                              - ext4
-                              - initrd
-                              type: string
-                            label:
-                              description: label for the instance disk, if nothing
-                                is provided, it will match the device name.
-                              type: string
-                            size:
-                              anyOf:
-                              - type: integer
-                              - type: string
-                              description: size of the disk in resource.Quantity notation.
-                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                              x-kubernetes-int-or-string: true
-                          required:
-                          - size
-                          type: object
                         description: |-
                           dataDisks is a map of any additional disks to add to an instance,
                           The sum of these disks + the OSDisk must not be more than allowed on a linodes plan
+                        properties:
+                          sdb:
+                            description: sdb is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdc:
+                            description: sdc is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdd:
+                            description: sdd is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sde:
+                            description: sde is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdf:
+                            description: sdf is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdg:
+                            description: sdg is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdh:
+                            description: sdh is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
                         type: object
                       diskEncryption:
                         description: diskEncryption determines if the disks of the

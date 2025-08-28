@@ -291,13 +291,13 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name            string
-		instanceDisks   map[string]*infrav1alpha2.InstanceDisk
+		instanceDisks   *infrav1alpha2.InstanceDisks
 		expectedDiskMap linodego.InstanceConfigDeviceMap
 		expectedError   error
 	}{
 		{
 			name: "Success - single disk gets added to config",
-			instanceDisks: map[string]*infrav1alpha2.InstanceDisk{"sdb": {
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{
 				DiskID: 101,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
@@ -307,32 +307,37 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 			},
 		},
 		{
+			name:            "Success - no disks",
+			instanceDisks:   nil,
+			expectedDiskMap: linodego.InstanceConfigDeviceMap{SDA: &linodego.InstanceConfigDevice{DiskID: 100}},
+		},
+		{
 			name: "Success - multiple disks gets added to config",
-			instanceDisks: map[string]*infrav1alpha2.InstanceDisk{"sdb": {
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{
 				DiskID: 101,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
-			}, "sdc": {
+			}, SDC: &infrav1alpha2.InstanceDisk{
 				DiskID: 102,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
-			}, "sdd": {
+			}, SDD: &infrav1alpha2.InstanceDisk{
 				DiskID: 103,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
-			}, "sde": {
+			}, SDE: &infrav1alpha2.InstanceDisk{
 				DiskID: 104,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
-			}, "sdf": {
+			}, SDF: &infrav1alpha2.InstanceDisk{
 				DiskID: 105,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
-			}, "sdg": {
+			}, SDG: &infrav1alpha2.InstanceDisk{
 				DiskID: 106,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
-			}, "sdh": {
+			}, SDH: &infrav1alpha2.InstanceDisk{
 				DiskID: 107,
 				Size:   resource.MustParse("10Gi"),
 				Label:  "disk1",
@@ -348,15 +353,6 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 				SDH: &linodego.InstanceConfigDevice{DiskID: 107},
 			},
 		},
-		{
-			name: "Error - single disk with invalid name",
-			instanceDisks: map[string]*infrav1alpha2.InstanceDisk{"sdx": {
-				DiskID: 101,
-				Size:   resource.MustParse("10Gi"),
-				Label:  "disk1",
-			}},
-			expectedError: fmt.Errorf("unknown device name: \"sdx\""),
-		},
 	}
 	for _, tt := range tests {
 		testcase := tt
@@ -369,7 +365,7 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 					SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 				},
 			}
-			err := createInstanceConfigDeviceMap(testcase.instanceDisks, actualConfig.Devices)
+			createInstanceConfigDeviceMap(testcase.instanceDisks, actualConfig.Devices)
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
@@ -380,6 +376,180 @@ func TestCreateInstanceConfigDeviceMap(t *testing.T) {
 				assert.Equal(t, actualConfig.Devices.SDE, testcase.expectedDiskMap.SDE)
 				assert.Equal(t, actualConfig.Devices.SDF, testcase.expectedDiskMap.SDF)
 				assert.Equal(t, actualConfig.Devices.SDG, testcase.expectedDiskMap.SDG)
+			}
+		})
+	}
+}
+func disksEqual(t *testing.T, expected, actual *infrav1alpha2.InstanceDisks) {
+	t.Helper()
+	if expected == nil || actual == nil {
+		return
+	}
+	if expected.SDB != nil {
+		assert.Equal(t, expected.SDB.DiskID, actual.SDB.DiskID)
+	}
+	if expected.SDC != nil {
+		assert.Equal(t, expected.SDC.DiskID, actual.SDC.DiskID)
+	}
+	if expected.SDD != nil {
+		assert.Equal(t, expected.SDD.DiskID, actual.SDD.DiskID)
+	}
+	if expected.SDE != nil {
+		assert.Equal(t, expected.SDE.DiskID, actual.SDE.DiskID)
+	}
+	if expected.SDF != nil {
+		assert.Equal(t, expected.SDF.DiskID, actual.SDF.DiskID)
+	}
+	if expected.SDG != nil {
+		assert.Equal(t, expected.SDG.DiskID, actual.SDG.DiskID)
+	}
+	if expected.SDH != nil {
+		assert.Equal(t, expected.SDH.DiskID, actual.SDH.DiskID)
+	}
+}
+func TestCreateDisks(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                  string
+		instanceDisks         *infrav1alpha2.InstanceDisks
+		instanceDiskIDs       map[string]int
+		expectedInstanceDisks *infrav1alpha2.InstanceDisks
+		expectedError         string
+	}{
+		{
+			name: "Success - single disk created",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+			}},
+			instanceDiskIDs: map[string]int{"sdb": 101},
+			expectedInstanceDisks: &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{
+				DiskID: 101,
+				Size:   resource.MustParse("10Gi"),
+			}},
+		},
+		{
+			name:                  "Success - no disks",
+			expectedInstanceDisks: &infrav1alpha2.InstanceDisks{},
+		},
+		{
+			name: "Success - single existing disk used",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+				DiskID:     101,
+			}},
+			expectedInstanceDisks: &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{
+				DiskID: 101,
+				Size:   resource.MustParse("10Gi"),
+			}},
+		},
+		{
+			name: "Failure - sdb",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+			}},
+			instanceDiskIDs: map[string]int{"sdb": 101},
+			expectedError:   "failed to create disk: sdb",
+		},
+		{
+			name: "Failure - sdc",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDC: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+			}},
+			instanceDiskIDs: map[string]int{"sdc": 101},
+			expectedError:   "failed to create disk: sdc",
+		},
+		{
+			name: "Failure - sdd",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDD: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+			}},
+			instanceDiskIDs: map[string]int{"sdd": 101},
+			expectedError:   "failed to create disk: sdd",
+		},
+		{
+			name: "Failure - sde",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDE: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+			}},
+			instanceDiskIDs: map[string]int{"sde": 101},
+			expectedError:   "failed to create disk: sde",
+		},
+		{
+			name: "Failure - sdf",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDF: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+			}},
+			instanceDiskIDs: map[string]int{"sdf": 101},
+			expectedError:   "failed to create disk: sdf",
+		},
+		{
+			name: "Failure - sdg",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDG: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+			}},
+			instanceDiskIDs: map[string]int{"sdg": 101},
+			expectedError:   "failed to create disk: sdg",
+		},
+		{
+			name: "Failure - sdh",
+			instanceDisks: &infrav1alpha2.InstanceDisks{SDH: &infrav1alpha2.InstanceDisk{
+				Size:       resource.MustParse("10Gi"),
+				Filesystem: "raw",
+			}},
+			instanceDiskIDs: map[string]int{"sdh": 101},
+			expectedError:   "failed to create disk: sdh",
+		},
+	}
+	for _, tc := range tests {
+		testcase := tc
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			// Create test context
+			ctx := t.Context()
+			logger := testr.New(t)
+			ctrl := gomock.NewController(t)
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			machineScope := &scope.MachineScope{
+				LinodeClient:  mockLinodeClient,
+				Client:        mockK8sClient,
+				LinodeMachine: &infrav1alpha2.LinodeMachine{Spec: infrav1alpha2.LinodeMachineSpec{DataDisks: testcase.instanceDisks, InstanceID: ptr.To(123)}},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{Spec: infrav1alpha2.LinodeClusterSpec{}},
+			}
+			for device, id := range testcase.instanceDiskIDs {
+				if testcase.expectedError == "" {
+					mockLinodeClient.EXPECT().CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+						Label:      device,
+						Size:       10738,
+						Filesystem: "raw",
+					}).Return(&linodego.InstanceDisk{
+						ID: id,
+					}, nil)
+				} else {
+					mockLinodeClient.EXPECT().CreateInstanceDisk(ctx, 123, gomock.Any()).Return(nil, fmt.Errorf("failed to create disk: %s", device))
+				}
+			}
+			if testcase.instanceDisks != nil && testcase.expectedError == "" {
+				mockLinodeClient.EXPECT().ListInstanceConfigs(ctx, 123, gomock.Any()).Return([]linodego.InstanceConfig{{
+					ID:      123,
+					Devices: &linodego.InstanceConfigDeviceMap{},
+				}}, nil)
+				mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 123, gomock.Any()).Return(&linodego.InstanceConfig{}, nil)
+			}
+			err := createDisks(ctx, logger, machineScope, 123)
+			if testcase.expectedError != "" {
+				assert.ErrorContainsf(t, err, testcase.expectedError, "expected an error containing %s", testcase.expectedError)
+			} else {
+				disksEqual(t, testcase.instanceDisks, testcase.expectedInstanceDisks)
+				assert.NoError(t, err)
 			}
 		})
 	}

@@ -761,7 +761,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	Context("creates a instance with disks", func() {
 		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
+			extraDisk := resource.MustParse("128Mi")
+			linodeMachine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{
+				SDB: ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")}),
+				SDC: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk2", Size: extraDisk}),
+				SDD: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk3", Size: extraDisk}),
+				SDE: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk4", Size: extraDisk}),
+				SDF: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk5", Size: extraDisk}),
+				SDG: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk6", Size: extraDisk}),
+				SDH: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk7", Size: extraDisk}),
+			}
+			extraDiskSize := int(extraDisk.ScaledValue(resource.Mega))
 
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().
@@ -798,7 +808,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				GetInstanceDisk(ctx, 123, 100).
 				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
 			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 4262).
+				ResizeInstanceDisk(ctx, 123, 100, 3452).
 				After(getInstDisk).
 				Return(nil)
 			createEtcdDisk := mockLinodeClient.EXPECT().
@@ -809,9 +819,57 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				}).
 				After(resizeInstDisk).
 				Return(&linodego.InstanceDisk{ID: 101}, nil)
+			createAdditionalDisk2 := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "disk2",
+					Size:       extraDiskSize,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
+				After(createEtcdDisk).
+				Return(&linodego.InstanceDisk{ID: 102}, nil)
+			createAdditionalDisk3 := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "disk3",
+					Size:       extraDiskSize,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
+				After(createAdditionalDisk2).
+				Return(&linodego.InstanceDisk{ID: 103}, nil)
+			createAdditionalDisk4 := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "disk4",
+					Size:       extraDiskSize,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
+				After(createAdditionalDisk3).
+				Return(&linodego.InstanceDisk{ID: 104}, nil)
+			createAdditionalDisk5 := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "disk5",
+					Size:       extraDiskSize,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
+				After(createAdditionalDisk4).
+				Return(&linodego.InstanceDisk{ID: 105}, nil)
+			createAdditionalDisk6 := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "disk6",
+					Size:       extraDiskSize,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
+				After(createAdditionalDisk5).
+				Return(&linodego.InstanceDisk{ID: 106}, nil)
+			createAdditionalDisk7 := mockLinodeClient.EXPECT().
+				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
+					Label:      "disk7",
+					Size:       extraDiskSize,
+					Filesystem: string(linodego.FilesystemExt4),
+				}).
+				After(createAdditionalDisk6).
+				Return(&linodego.InstanceDisk{ID: 107}, nil)
 			listInstConfsForProfile := mockLinodeClient.EXPECT().
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
-				After(createEtcdDisk).
+				After(createAdditionalDisk7).
 				Return([]linodego.InstanceConfig{{
 					ID: 1,
 					Devices: &linodego.InstanceConfigDeviceMap{
@@ -823,6 +881,12 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					Devices: &linodego.InstanceConfigDeviceMap{
 						SDA: &linodego.InstanceConfigDevice{DiskID: 100},
 						SDB: &linodego.InstanceConfigDevice{DiskID: 101},
+						SDC: &linodego.InstanceConfigDevice{DiskID: 102},
+						SDD: &linodego.InstanceConfigDevice{DiskID: 103},
+						SDE: &linodego.InstanceConfigDevice{DiskID: 104},
+						SDF: &linodego.InstanceConfigDevice{DiskID: 105},
+						SDG: &linodego.InstanceConfigDevice{DiskID: 106},
+						SDH: &linodego.InstanceConfigDevice{DiskID: 107},
 					}}).
 				After(listInstConfsForProfile)
 			bootInst := mockLinodeClient.EXPECT().
@@ -911,7 +975,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		It("in multiple calls when disks are delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
+			linodeMachine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().
