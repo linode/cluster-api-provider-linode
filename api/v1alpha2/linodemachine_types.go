@@ -118,7 +118,7 @@ type LinodeMachineSpec struct {
 	// dataDisks is a map of any additional disks to add to an instance,
 	// The sum of these disks + the OSDisk must not be more than allowed on a linodes plan
 	// +optional
-	DataDisks map[string]*InstanceDisk `json:"dataDisks,omitempty"`
+	DataDisks *InstanceDisks `json:"dataDisks,omitempty"`
 
 	// diskEncryption determines if the disks of the instance should be encrypted. The default is disabled.
 	// +optional
@@ -208,6 +208,30 @@ type IPv6CreateOptions struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	IsPublicIPv6 *bool `json:"isPublicIPv6,omitempty"`
+}
+
+type InstanceDisks struct {
+	// sdb is a disk for the instance.
+	// +optional
+	SDB *InstanceDisk `json:"sdb,omitempty"`
+	// sdc is a disk for the instance.
+	// +optional
+	SDC *InstanceDisk `json:"sdc,omitempty"`
+	// sdd is a disk for the instance.
+	// +optional
+	SDD *InstanceDisk `json:"sdd,omitempty"`
+	// sde is a disk for the instance.
+	// +optional
+	SDE *InstanceDisk `json:"sde,omitempty"`
+	// sdf is a disk for the instance.
+	// +optional
+	SDF *InstanceDisk `json:"sdf,omitempty"`
+	// sdg is a disk for the instance.
+	// +optional
+	SDG *InstanceDisk `json:"sdg,omitempty"`
+	// sdh is a disk for the instance.
+	// +optional
+	SDH *InstanceDisk `json:"sdh,omitempty"`
 }
 
 // InstanceDisk defines a list of disks to use for an instance

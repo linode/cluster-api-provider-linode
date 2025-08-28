@@ -1192,32 +1192,31 @@ func deleteBootstrapData(ctx context.Context, machineScope *scope.MachineScope) 
 	return nil
 }
 
-func createInstanceConfigDeviceMap(instanceDisks map[string]*infrav1alpha2.InstanceDisk, instanceConfig *linodego.InstanceConfigDeviceMap) error {
-	for deviceName, disk := range instanceDisks {
-		dev := linodego.InstanceConfigDevice{
-			DiskID: disk.DiskID,
-		}
-		switch deviceName {
-		case "sdb":
-			instanceConfig.SDB = &dev
-		case "sdc":
-			instanceConfig.SDC = &dev
-		case "sdd":
-			instanceConfig.SDD = &dev
-		case "sde":
-			instanceConfig.SDE = &dev
-		case "sdf":
-			instanceConfig.SDF = &dev
-		case "sdg":
-			instanceConfig.SDG = &dev
-		case "sdh":
-			instanceConfig.SDH = &dev
-		default:
-			return fmt.Errorf("unknown device name: %q", deviceName)
-		}
+func createInstanceConfigDeviceMap(instanceDisks *infrav1alpha2.InstanceDisks, instanceConfig *linodego.InstanceConfigDeviceMap) {
+	if instanceDisks == nil {
+		return
 	}
-
-	return nil
+	if instanceDisks.SDB != nil {
+		instanceConfig.SDB = &linodego.InstanceConfigDevice{DiskID: instanceDisks.SDB.DiskID}
+	}
+	if instanceDisks.SDC != nil {
+		instanceConfig.SDC = &linodego.InstanceConfigDevice{DiskID: instanceDisks.SDC.DiskID}
+	}
+	if instanceDisks.SDD != nil {
+		instanceConfig.SDD = &linodego.InstanceConfigDevice{DiskID: instanceDisks.SDD.DiskID}
+	}
+	if instanceDisks.SDE != nil {
+		instanceConfig.SDE = &linodego.InstanceConfigDevice{DiskID: instanceDisks.SDE.DiskID}
+	}
+	if instanceDisks.SDF != nil {
+		instanceConfig.SDF = &linodego.InstanceConfigDevice{DiskID: instanceDisks.SDF.DiskID}
+	}
+	if instanceDisks.SDG != nil {
+		instanceConfig.SDG = &linodego.InstanceConfigDevice{DiskID: instanceDisks.SDG.DiskID}
+	}
+	if instanceDisks.SDH != nil {
+		instanceConfig.SDH = &linodego.InstanceConfigDevice{DiskID: instanceDisks.SDH.DiskID}
+	}
 }
 
 func configureDisks(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
@@ -1237,44 +1236,31 @@ func configureDisks(ctx context.Context, logger logr.Logger, machineScope *scope
 }
 
 func createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
-	for deviceName, disk := range machineScope.LinodeMachine.Spec.DataDisks {
-		if disk.DiskID != 0 {
-			continue
-		}
-		label := disk.Label
-		if label == "" {
-			label = deviceName
-		}
-		// create the disk
-		diskFilesystem := defaultDiskFilesystem
-		if disk.Filesystem != "" {
-			diskFilesystem = disk.Filesystem
-		}
-		linodeDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
-			ctx,
-			linodeInstanceID,
-			linodego.InstanceDiskCreateOptions{
-				Label:      label,
-				Size:       int(disk.Size.ScaledValue(resource.Mega)),
-				Filesystem: diskFilesystem,
-			},
-		)
-		if err != nil {
-			if !linodego.ErrHasStatus(err, linodeBusyCode) {
-				logger.Error(err, "Failed to create disk", "DiskLabel", label)
-			}
-
-			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
-				Type:    ConditionPreflightAdditionalDisksCreated,
-				Status:  metav1.ConditionFalse,
-				Reason:  util.CreateError,
-				Message: err.Error(),
-			})
-			return err
-		}
-		disk.DiskID = linodeDisk.ID
-		machineScope.LinodeMachine.Spec.DataDisks[deviceName] = disk
+	if machineScope.LinodeMachine.Spec.DataDisks == nil {
+		return nil
 	}
+	if err := configureDisk(ctx, logger, machineScope, linodeInstanceID, machineScope.LinodeMachine.Spec.DataDisks.SDB, "sdb"); err != nil {
+		return err
+	}
+	if err := configureDisk(ctx, logger, machineScope, linodeInstanceID, machineScope.LinodeMachine.Spec.DataDisks.SDC, "sdc"); err != nil {
+		return err
+	}
+	if err := configureDisk(ctx, logger, machineScope, linodeInstanceID, machineScope.LinodeMachine.Spec.DataDisks.SDD, "sdd"); err != nil {
+		return err
+	}
+	if err := configureDisk(ctx, logger, machineScope, linodeInstanceID, machineScope.LinodeMachine.Spec.DataDisks.SDE, "sde"); err != nil {
+		return err
+	}
+	if err := configureDisk(ctx, logger, machineScope, linodeInstanceID, machineScope.LinodeMachine.Spec.DataDisks.SDF, "sdf"); err != nil {
+		return err
+	}
+	if err := configureDisk(ctx, logger, machineScope, linodeInstanceID, machineScope.LinodeMachine.Spec.DataDisks.SDG, "sdg"); err != nil {
+		return err
+	}
+	if err := configureDisk(ctx, logger, machineScope, linodeInstanceID, machineScope.LinodeMachine.Spec.DataDisks.SDH, "sdh"); err != nil {
+		return err
+	}
+
 	err := updateInstanceConfigProfile(ctx, logger, machineScope, linodeInstanceID)
 	if err != nil {
 		return err
@@ -1284,6 +1270,48 @@ func createDisks(ctx context.Context, logger logr.Logger, machineScope *scope.Ma
 		Status: metav1.ConditionTrue,
 		Reason: "AdditionalDisksCreated",
 	})
+	return nil
+}
+
+func configureDisk(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int, disk *infrav1alpha2.InstanceDisk, deviceName string) error {
+	if disk == nil {
+		return nil
+	}
+	if disk.DiskID != 0 {
+		return nil
+	}
+	label := disk.Label
+	if label == "" {
+		label = deviceName
+	}
+	// create the disk
+	diskFilesystem := defaultDiskFilesystem
+	if disk.Filesystem != "" {
+		diskFilesystem = disk.Filesystem
+	}
+	linodeDisk, err := machineScope.LinodeClient.CreateInstanceDisk(
+		ctx,
+		linodeInstanceID,
+		linodego.InstanceDiskCreateOptions{
+			Label:      label,
+			Size:       int(disk.Size.ScaledValue(resource.Mega)),
+			Filesystem: diskFilesystem,
+		},
+	)
+	if err != nil {
+		if !linodego.ErrHasStatus(err, linodeBusyCode) {
+			logger.Error(err, "Failed to create disk", "DiskLabel", label)
+		}
+
+		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+			Type:    ConditionPreflightAdditionalDisksCreated,
+			Status:  metav1.ConditionFalse,
+			Reason:  util.CreateError,
+			Message: err.Error(),
+		})
+		return err
+	}
+	disk.DiskID = linodeDisk.ID
 	return nil
 }
 
@@ -1334,14 +1362,7 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 			return err
 		}
 		// dynamically calculate root disk size unless an explicit OS disk is being set
-		additionalDiskSize := 0
-		for _, disk := range machineScope.LinodeMachine.Spec.DataDisks {
-			additionalDiskSize += int(disk.Size.ScaledValue(resource.Mega))
-		}
-		diskSize := rootDisk.Size - additionalDiskSize
-		if machineScope.LinodeMachine.Spec.OSDisk != nil {
-			diskSize = int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))
-		}
+		diskSize := calculateRootDisk(machineScope, rootDisk)
 
 		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
 			conditions.Set(machineScope.LinodeMachine, metav1.Condition{
@@ -1369,6 +1390,42 @@ func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope
 	return nil
 }
 
+func calculateRootDisk(machineScope *scope.MachineScope, rootDisk *linodego.InstanceDisk) int {
+	additionalDiskSize := 0
+	// If the user has specified an OS disk, use it's size.
+	if machineScope.LinodeMachine.Spec.OSDisk != nil {
+		return int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))
+	}
+	// If no DataDisks are specified, use the default root disk size.
+	if machineScope.LinodeMachine.Spec.DataDisks == nil {
+		return rootDisk.Size
+	}
+	// If DataDisks are specified, calculate the size of the additional disk + root disk for resizing.
+	if machineScope.LinodeMachine.Spec.DataDisks.SDB != nil {
+		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDB.Size.ScaledValue(resource.Mega))
+	}
+	if machineScope.LinodeMachine.Spec.DataDisks.SDC != nil {
+		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDC.Size.ScaledValue(resource.Mega))
+	}
+	if machineScope.LinodeMachine.Spec.DataDisks.SDD != nil {
+		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDD.Size.ScaledValue(resource.Mega))
+	}
+	if machineScope.LinodeMachine.Spec.DataDisks.SDE != nil {
+		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDE.Size.ScaledValue(resource.Mega))
+	}
+	if machineScope.LinodeMachine.Spec.DataDisks.SDF != nil {
+		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDF.Size.ScaledValue(resource.Mega))
+	}
+	if machineScope.LinodeMachine.Spec.DataDisks.SDG != nil {
+		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDG.Size.ScaledValue(resource.Mega))
+	}
+	if machineScope.LinodeMachine.Spec.DataDisks.SDH != nil {
+		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDH.Size.ScaledValue(resource.Mega))
+	}
+	diskSize := rootDisk.Size - additionalDiskSize
+	return diskSize
+}
+
 func updateInstanceConfigProfile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
 	// get the default instance config
 	configs, err := machineScope.LinodeClient.ListInstanceConfigs(ctx, linodeInstanceID, &linodego.ListOptions{})
@@ -1379,12 +1436,9 @@ func updateInstanceConfigProfile(ctx context.Context, logger logr.Logger, machin
 	}
 	instanceConfig := configs[0]
 
-	if machineScope.LinodeMachine.Spec.DataDisks != nil {
-		if err := createInstanceConfigDeviceMap(machineScope.LinodeMachine.Spec.DataDisks, instanceConfig.Devices); err != nil {
-			return err
-		}
-	}
-	if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, linodeInstanceID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Devices: instanceConfig.Devices}); err != nil {
+	createInstanceConfigDeviceMap(machineScope.LinodeMachine.Spec.DataDisks, instanceConfig.Devices)
+
+	if _, err = machineScope.LinodeClient.UpdateInstanceConfig(ctx, linodeInstanceID, instanceConfig.ID, linodego.InstanceConfigUpdateOptions{Devices: instanceConfig.Devices}); err != nil {
 		return err
 	}
 

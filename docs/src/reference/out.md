@@ -304,6 +304,7 @@ InstanceDisk defines a list of disks to use for an instance
 
 
 _Appears in:_
+- [InstanceDisks](#instancedisks)
 - [LinodeMachineSpec](#linodemachinespec)
 
 | Field | Description | Default | Validation |
@@ -312,6 +313,28 @@ _Appears in:_
 | `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ | size of the disk in resource.Quantity notation. |  |  |
 | `label` _string_ | label for the instance disk, if nothing is provided, it will match the device name. |  |  |
 | `filesystem` _string_ | filesystem of disk to provision, the default disk filesystem is "ext4". |  | Enum: [raw swap ext3 ext4 initrd] <br /> |
+
+
+#### InstanceDisks
+
+
+
+
+
+
+
+_Appears in:_
+- [LinodeMachineSpec](#linodemachinespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `sdb` _[InstanceDisk](#instancedisk)_ | sdb is a disk for the instance. |  |  |
+| `sdc` _[InstanceDisk](#instancedisk)_ | sdc is a disk for the instance. |  |  |
+| `sdd` _[InstanceDisk](#instancedisk)_ | sdd is a disk for the instance. |  |  |
+| `sde` _[InstanceDisk](#instancedisk)_ | sde is a disk for the instance. |  |  |
+| `sdf` _[InstanceDisk](#instancedisk)_ | sdf is a disk for the instance. |  |  |
+| `sdg` _[InstanceDisk](#instancedisk)_ | sdg is a disk for the instance. |  |  |
+| `sdh` _[InstanceDisk](#instancedisk)_ | sdh is a disk for the instance. |  |  |
 
 
 
@@ -669,7 +692,7 @@ _Appears in:_
 | `tags` _string array_ | tags is a list of tags to apply to the Linode instance. |  |  |
 | `firewallID` _integer_ | firewallID is the id of the cloud firewall to apply to the Linode Instance |  |  |
 | `osDisk` _[InstanceDisk](#instancedisk)_ | osDisk is a configuration for the root disk that includes the OS,<br />if not specified, this defaults to whatever space is not taken up by the DataDisks |  |  |
-| `dataDisks` _object (keys:string, values:[InstanceDisk](#instancedisk))_ | dataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on a linodes plan |  |  |
+| `dataDisks` _[InstanceDisks](#instancedisks)_ | dataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on a linodes plan |  |  |
 | `diskEncryption` _string_ | diskEncryption determines if the disks of the instance should be encrypted. The default is disabled. |  | Enum: [enabled disabled] <br /> |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials<br />to use for provisioning this machine. If not supplied then these<br />credentials will be used in-order:<br />  1. LinodeMachine<br />  2. Owner LinodeCluster<br />  3. Controller |  |  |
 | `configuration` _[InstanceConfiguration](#instanceconfiguration)_ | configuration is the Akamai instance configuration OS,<br />if not specified, this defaults to the default configuration associated to the instance. |  |  |
