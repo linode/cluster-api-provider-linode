@@ -122,25 +122,28 @@ type LinodeObjectStorageBucket struct {
 	Status LinodeObjectStorageBucketStatus `json:"status,omitempty"`
 }
 
-func (losb *LinodeObjectStorageBucket) GetConditions() []metav1.Condition {
-	for i := range losb.Status.Conditions {
-		if losb.Status.Conditions[i].Reason == "" {
-			losb.Status.Conditions[i].Reason = DefaultConditionReason
+func (lobj *LinodeObjectStorageBucket) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
+	for i := range lobj.Status.Conditions {
+		if lobj.Status.Conditions[i].Type == cond.Type {
+			lobj.Status.Conditions[i] = cond
+
+			return
 		}
 	}
-	return losb.Status.Conditions
+	lobj.Status.Conditions = append(lobj.Status.Conditions, cond)
 }
 
-func (losb *LinodeObjectStorageBucket) SetConditions(conditions []metav1.Condition) {
-	losb.Status.Conditions = conditions
-}
+func (lobj *LinodeObjectStorageBucket) GetCondition(condType string) *metav1.Condition {
+	for i := range lobj.Status.Conditions {
+		if lobj.Status.Conditions[i].Type == condType {
+			return &lobj.Status.Conditions[i]
+		}
+	}
 
-func (losb *LinodeObjectStorageBucket) GetV1Beta2Conditions() []metav1.Condition {
-	return losb.GetConditions()
-}
-
-func (losb *LinodeObjectStorageBucket) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	losb.SetConditions(conditions)
+	return nil
 }
 
 // +kubebuilder:object:root=true

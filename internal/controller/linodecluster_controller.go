@@ -31,8 +31,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
-	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -115,11 +113,7 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 
-	isPaused, _, err := paused.EnsurePausedCondition(ctx, clusterScope.Client, clusterScope.Cluster, clusterScope.LinodeCluster)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if isPaused {
+	if clusterScope.LinodeCluster.IsPaused() {
 		logger.Info("linodeCluster or linked cluster is marked as paused, won't reconcile.")
 		return ctrl.Result{}, nil
 	}
@@ -165,8 +159,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	// Handle deleted clusters
 	if !clusterScope.LinodeCluster.DeletionTimestamp.IsZero() {
 		if err := r.reconcileDelete(ctx, logger, clusterScope); err != nil {
-			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster,
-				string(clusterv1.ReadyCondition),
+			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster.GetCondition(string(clusterv1.ReadyCondition)),
 				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 				logger.Info("re-queuing cluster/nb deletion")
 				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -189,8 +182,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	// Create
 	if clusterScope.LinodeCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		if err := r.reconcileCreate(ctx, logger, clusterScope); err != nil {
-			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster,
-				string(clusterv1.ReadyCondition),
+			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster.GetCondition(string(clusterv1.ReadyCondition)),
 				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 				logger.Info("re-queuing cluster/load-balancer creation")
 				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
@@ -201,7 +193,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	clusterScope.LinodeCluster.Status.Ready = true
-	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:   string(clusterv1.ReadyCondition),
 		Status: metav1.ConditionTrue,
 		Reason: "LoadBalancerReady", // We have to set the reason to not fail object patching
@@ -224,7 +216,7 @@ func (r *LinodeClusterReconciler) reconcile(
 func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
 	// Check VPC configuration - either direct ID or reference
 	if clusterScope.LinodeCluster.Spec.VPCID != nil || clusterScope.LinodeCluster.Spec.VPCRef != nil {
-		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeVPCReady) {
+		if !reconciler.ConditionTrue(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeVPCReady)) {
 			res, err := r.reconcilePreflightLinodeVPCCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				// The condition is already set in reconcilePreflightLinodeVPCCheck, so we don't need to set it again
@@ -234,7 +226,7 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 	}
 
 	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
-		if !reconciler.ConditionTrue(clusterScope.LinodeCluster, ConditionPreflightLinodeNBFirewallReady) {
+		if !reconciler.ConditionTrue(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady)) {
 			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, clusterScope)
 			if err != nil || !res.IsZero() {
 				return res, err
@@ -253,7 +245,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 		_, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
 		if err != nil {
 			logger.Error(err, "Failed to get NodeBalancer firewall with provided ID", "firewallID", firewallID)
-			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 				Type:    ConditionPreflightLinodeNBFirewallReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  util.CreateError,
@@ -261,7 +253,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 			})
 			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 		}
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeNBFirewallReady,
 			Status: metav1.ConditionTrue,
 			Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
@@ -285,10 +277,9 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	err := clusterScope.Client.Get(ctx, objectKey, linodeFirewall)
 	if err != nil {
 		logger.Error(err, "Failed to fetch LinodeFirewall")
-		if reconciler.HasStaleCondition(clusterScope.LinodeCluster,
-			ConditionPreflightLinodeNBFirewallReady,
+		if reconciler.HasStaleCondition(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
-			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 				Type:    ConditionPreflightLinodeNBFirewallReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  util.CreateError,
@@ -297,7 +288,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 
 			return ctrl.Result{}, err
 		}
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeNBFirewallReady,
 			Status: metav1.ConditionFalse,
 			Reason: "LinodeFirewallNotYetAvailable", // We have to set the reason to not fail object patching
@@ -307,7 +298,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	}
 	if linodeFirewall.Spec.FirewallID == nil {
 		logger.Info("Linode firewall not yet available")
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeNBFirewallReady,
 			Status: metav1.ConditionFalse,
 			Reason: "LinodeFirewallNotYetAvailable", // We have to set the reason to not fail object patching
@@ -319,7 +310,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "Linode firewall is now available")
 
 	// Only set to true if there was no error
-	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeNBFirewallReady,
 		Status: metav1.ConditionTrue,
 		Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
@@ -335,7 +326,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		vpc, err := clusterScope.LinodeClient.GetVPC(ctx, vpcID)
 		if err != nil {
 			logger.Error(err, "Failed to get VPC with provided ID", "vpcID", vpcID)
-			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 				Type:    ConditionPreflightLinodeVPCReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  util.CreateError,
@@ -347,7 +338,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		if len(vpc.Subnets) == 0 {
 			err := fmt.Errorf("VPC with ID %d has no subnets", vpcID)
 			logger.Error(err, "Failed preflight check: VPC has no subnets")
-			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 				Type:    ConditionPreflightLinodeVPCReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  util.CreateError,
@@ -358,7 +349,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), fmt.Sprintf("VPC with ID %d is available", vpcID))
 
 		// Only set to true if there was no error
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeVPCReady,
 			Status: metav1.ConditionTrue,
 			Reason: "LinodeVPCReady", // We have to set the reason to not fail object patching
@@ -381,10 +372,9 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 	}
 	if err := clusterScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
 		logger.Error(err, "Failed to fetch LinodeVPC")
-		if reconciler.HasStaleCondition(clusterScope.LinodeCluster,
-			ConditionPreflightLinodeVPCReady,
+		if reconciler.HasStaleCondition(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeVPCReady),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
-			conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+			clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 				Type:    ConditionPreflightLinodeVPCReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  util.CreateError,
@@ -392,7 +382,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 			})
 			return ctrl.Result{}, err
 		}
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeVPCReady,
 			Status: metav1.ConditionFalse,
 			Reason: "LinodeVPCNotYetAvailable", // We have to set the reason to not fail object patching
@@ -400,7 +390,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	} else if !linodeVPC.Status.Ready {
 		logger.Info("LinodeVPC is not yet available")
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeVPCReady,
 			Status: metav1.ConditionFalse,
 			Reason: "LinodeVPCNotYetAvailable", // We have to set the reason to not fail object patching
@@ -410,7 +400,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 	r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "LinodeVPC is now available")
 
 	// Only set to true if there was no error
-	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeVPCReady,
 		Status: metav1.ConditionTrue,
 		Reason: "LinodeVPCReady", // We have to set the reason to not fail object patching
@@ -422,7 +412,7 @@ func setFailureReason(clusterScope *scope.ClusterScope, failureReason string, er
 	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
 	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(err.Error())
 
-	conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:    string(clusterv1.ReadyCondition),
 		Status:  metav1.ConditionFalse,
 		Reason:  failureReason,
@@ -456,7 +446,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	switch {
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeExternal:
 		logger.Info("LoadBalacing managed externally, nothing to do.")
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(clusterv1.DeletedReason),
@@ -468,7 +458,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		if err := removeMachineFromDNS(ctx, logger, clusterScope); err != nil {
 			return fmt.Errorf("remove machine from loadbalancer: %w", err)
 		}
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(clusterv1.DeletedReason),
@@ -492,7 +482,7 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			return err
 		}
 
-		conditions.Set(clusterScope.LinodeCluster, metav1.Condition{
+		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(clusterv1.DeletedReason),

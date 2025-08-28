@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -208,7 +207,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("update requeues for update rules error", func(ctx context.Context, mck Mock) {
-						conditions.Set(fwScope.LinodeFirewall, metav1.Condition{
+						fwScope.LinodeFirewall.SetCondition(metav1.Condition{
 							Type:    string(clusterv1.ReadyCondition),
 							Status:  metav1.ConditionFalse,
 							Reason:  "test",
