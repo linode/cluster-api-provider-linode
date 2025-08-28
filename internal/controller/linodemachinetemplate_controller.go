@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -89,14 +88,14 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if outErr != nil {
-			conditions.Set(lmtScope.LinodeMachineTemplate, metav1.Condition{
+			lmtScope.LinodeMachineTemplate.SetCondition(metav1.Condition{
 				Type:    string(clusterv1.ReadyCondition),
 				Status:  metav1.ConditionFalse,
 				Reason:  failureReason,
 				Message: outErr.Error(),
 			})
 		} else {
-			conditions.Set(lmtScope.LinodeMachineTemplate, metav1.Condition{
+			lmtScope.LinodeMachineTemplate.SetCondition(metav1.Condition{
 				Type:    string(clusterv1.ReadyCondition),
 				Status:  metav1.ConditionTrue,
 				Reason:  "Reconciled",

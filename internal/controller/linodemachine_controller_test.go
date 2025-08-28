@@ -33,7 +33,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -161,7 +160,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeFalse())
+			Expect(linodeMachine.GetCondition(ConditionPreflightLinodeFirewallReady).Status).To(Equal(metav1.ConditionFalse))
 		})
 
 		It("firewall present but status is not yet ready", func(ctx SpecContext) {
@@ -192,7 +191,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeFalse())
+			Expect(linodeMachine.GetCondition(ConditionPreflightLinodeFirewallReady).Status).To(Equal(metav1.ConditionFalse))
 		})
 
 		It("firewall present and status is ready", func(ctx SpecContext) {
@@ -273,7 +272,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeTrue())
+			Expect(linodeMachine.GetCondition(ConditionPreflightLinodeFirewallReady).Status).To(Equal(metav1.ConditionTrue))
 		})
 	})
 
@@ -300,7 +299,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+			Expect(linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionFalse))
 		})
 
 		It("vpc present but status is not yet ready", func(ctx SpecContext) {
@@ -341,7 +340,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			result, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result.RequeueAfter).To(Equal(rutil.DefaultClusterControllerReconcileDelay))
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+			Expect(linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionFalse))
 
 			Expect(k8sClient.Delete(ctx, linodeVPC)).To(Succeed())
 		})
@@ -436,7 +435,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeTrue())
+			Expect(linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionTrue))
 
 			Expect(k8sClient.Delete(ctx, linodeVPC)).To(Succeed())
 		})
@@ -511,11 +510,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+		Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightBootTriggered).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightReady).Status).To(Equal(metav1.ConditionTrue))
 
 		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
@@ -608,11 +607,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+		Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightBootTriggered).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightReady).Status).To(Equal(metav1.ConditionTrue))
 
 		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
@@ -672,9 +671,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeFalse())
-			condition := conditions.Get(&linodeMachine, ConditionPreflightCreated)
+			Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionFalse))
+			condition := linodeMachine.GetCondition(ConditionPreflightCreated)
 			Expect(condition).ToNot(BeNil())
 			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			Expect(condition.Reason).To(Equal(util.CreateError))
@@ -884,11 +883,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+			Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightBootTriggered).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightReady).Status).To(Equal(metav1.ConditionTrue))
 
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
@@ -981,10 +980,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeFalse())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightAdditionalDisksCreated)).To(BeFalse())
+			Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionFalse))
+			Expect(linodeMachine.GetCondition(ConditionPreflightAdditionalDisksCreated).Status).To(Equal(metav1.ConditionFalse))
 
 			mockLinodeClient.EXPECT().
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
@@ -1076,11 +1075,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-			Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+			Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightBootTriggered).Status).To(Equal(metav1.ConditionTrue))
+			Expect(linodeMachine.GetCondition(ConditionPreflightReady).Status).To(Equal(metav1.ConditionTrue))
 
 			Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
@@ -1246,10 +1245,10 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+		Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightBootTriggered).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightReady).Status).To(Equal(metav1.ConditionTrue))
 
 		Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 		Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
@@ -1429,7 +1428,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						Name:      "test-missing-fw",
 						Namespace: namespace,
 					}
-					conditions.Set(mScope.LinodeMachine, metav1.Condition{
+					mScope.LinodeMachine.SetCondition(metav1.Condition{
 						Type:   ConditionPreflightMetadataSupportConfigured,
 						Status: metav1.ConditionTrue,
 						Reason: "LinodeMetadataSupportConfigured", // We have to set the reason to not fail object patching
@@ -1439,7 +1438,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 					Path(Result("firewall ready condition is not set", func(ctx context.Context, mck Mock) {
 						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(rutil.ConditionTrue(mScope.LinodeMachine, ConditionPreflightLinodeFirewallReady)).To(BeFalse())
+						Expect(linodeMachine.GetCondition(ConditionPreflightLinodeFirewallReady).Status).To(Equal(metav1.ConditionFalse))
 					})),
 				),
 			),
@@ -1576,10 +1575,10 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-						Expect(rutil.ConditionTrue(linodeMachine, ConditionPreflightReady)).To(BeTrue())
+						Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+						Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionTrue))
+						Expect(linodeMachine.GetCondition(ConditionPreflightBootTriggered).Status).To(Equal(metav1.ConditionTrue))
+						Expect(linodeMachine.GetCondition(ConditionPreflightReady).Status).To(Equal(metav1.ConditionTrue))
 
 						Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceOffline))
 						Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
@@ -1756,7 +1755,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					res, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceRunning))
-					Expect(rutil.ConditionTrue(linodeMachine, string(clusterv1.ReadyCondition))).To(BeTrue())
+					Expect(linodeMachine.GetCondition(string(clusterv1.ReadyCondition)).Status).To(Equal(metav1.ConditionTrue))
 				})),
 		),
 		Path(
@@ -3074,11 +3073,11 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+		Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightBootTriggered).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightReady).Status).To(Equal(metav1.ConditionTrue))
 	})
 })
 
@@ -3250,11 +3249,11 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 		_, err = reconciler.reconcileCreate(ctx, logger, &mScope)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightMetadataSupportConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightCreated)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightConfigured)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightBootTriggered)).To(BeTrue())
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightReady)).To(BeTrue())
+		Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightConfigured).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightBootTriggered).Status).To(Equal(metav1.ConditionTrue))
+		Expect(linodeMachine.GetCondition(ConditionPreflightReady).Status).To(Equal(metav1.ConditionTrue))
 	})
 })
 
@@ -3424,7 +3423,7 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 		}
 
 		// Set the VPC preflight check condition to true
-		conditions.Set(&linodeMachine, metav1.Condition{
+		linodeMachine.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeVPCReady,
 			Status: metav1.ConditionTrue,
 			Reason: "VPCReady",
@@ -3446,7 +3445,7 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 		Expect(result.IsZero()).To(BeTrue())
 
 		// Verify that the preflight check for VPC is successful
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeTrue())
+		Expect(linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionTrue))
 	})
 })
 
@@ -3617,7 +3616,7 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 		}
 
 		// Set the VPC preflight check condition to true
-		conditions.Set(&linodeMachine, metav1.Condition{
+		linodeMachine.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeVPCReady,
 			Status: metav1.ConditionTrue,
 			Reason: "VPCReady",
@@ -3639,7 +3638,7 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 		Expect(result.IsZero()).To(BeTrue())
 
 		// Verify that the preflight check for VPC is successful
-		Expect(rutil.ConditionTrue(&linodeMachine, ConditionPreflightLinodeVPCReady)).To(BeTrue())
+		Expect(linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionTrue))
 	})
 })
 
@@ -3715,7 +3714,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 			It("should succeed and set condition to true", func() {
 				err := reconciler.validateVPC(ctx, 123, machineScope, logger, "Test")
 				Expect(err).NotTo(HaveOccurred())
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 			})
@@ -3735,7 +3734,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				err := reconciler.validateVPC(ctx, 123, machineScope, logger, "Test")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Test VPC with ID 123 has no subnets"))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			})
@@ -3750,7 +3749,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				err := reconciler.validateVPC(ctx, 123, machineScope, logger, "Test")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Test VPC with ID 123 not found"))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			})
@@ -3779,7 +3778,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(ctrl.Result{}))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 			})
@@ -3797,7 +3796,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Machine VPC with ID 123 not found"))
 				Expect(result).To(Equal(ctrl.Result{}))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			})
@@ -3824,7 +3823,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(ctrl.Result{}))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 			})
@@ -3842,7 +3841,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("Cluster VPC with ID 456 not found"))
 				Expect(result).To(Equal(ctrl.Result{}))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			})
@@ -3874,7 +3873,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 					Fail("Expected event, but none was recorded")
 				}
 
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 			})
@@ -3900,7 +3899,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(ctrl.Result{}))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
 			})
@@ -3939,7 +3938,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(ctrl.Result{RequeueAfter: rutil.DefaultClusterControllerReconcileDelay}))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			})
@@ -3951,7 +3950,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 
 				// Set stale condition
 				oldTime := metav1.NewTime(time.Now().Add(-24 * time.Hour)) // 24 hours ago
-				conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+				linodeMachine.SetCondition(metav1.Condition{
 					Type:               ConditionPreflightLinodeVPCReady,
 					Status:             metav1.ConditionFalse,
 					Reason:             "TestReason",
@@ -3969,7 +3968,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("VPC not found"))
 				Expect(result).To(Equal(ctrl.Result{}))
-				condition := conditions.Get(machineScope.LinodeMachine, ConditionPreflightLinodeVPCReady)
+				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
 			})

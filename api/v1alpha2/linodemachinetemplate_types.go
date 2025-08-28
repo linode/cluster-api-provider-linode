@@ -76,25 +76,18 @@ type LinodeMachineTemplate struct {
 	Status LinodeMachineTemplateStatus `json:"status,omitempty"`
 }
 
-func (lmt *LinodeMachineTemplate) GetConditions() []metav1.Condition {
+func (lmt *LinodeMachineTemplate) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
 	for i := range lmt.Status.Conditions {
-		if lmt.Status.Conditions[i].Reason == "" {
-			lmt.Status.Conditions[i].Reason = DefaultConditionReason
+		if lmt.Status.Conditions[i].Type == cond.Type {
+			lmt.Status.Conditions[i] = cond
+
+			return
 		}
 	}
-	return lmt.Status.Conditions
-}
-
-func (lmt *LinodeMachineTemplate) SetConditions(conditions []metav1.Condition) {
-	lmt.Status.Conditions = conditions
-}
-
-func (lmt *LinodeMachineTemplate) GetV1Beta2Conditions() []metav1.Condition {
-	return lmt.GetConditions()
-}
-
-func (lmt *LinodeMachineTemplate) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lmt.SetConditions(conditions)
+	lmt.Status.Conditions = append(lmt.Status.Conditions, cond)
 }
 
 // +kubebuilder:object:root=true
