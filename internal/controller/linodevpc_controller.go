@@ -32,8 +32,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
-	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -126,11 +124,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// Only check pause if not deleting or if cluster still exists
 	if linodeVPC.DeletionTimestamp.IsZero() || cluster != nil {
-		isPaused, _, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if isPaused {
+		if vpcScope.LinodeVPC.IsPaused() {
 			log.Info("linodeVPC or linked cluster is paused, skipping reconciliation")
 			return ctrl.Result{}, nil
 		}
@@ -156,8 +150,7 @@ func (r *LinodeVPCReconciler) reconcile(
 		if err != nil {
 			vpcScope.LinodeVPC.Status.FailureReason = util.Pointer(failureReason)
 			vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer(err.Error())
-
-			conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+			vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 				Type:    string(clusterv1.ReadyCondition),
 				Status:  metav1.ConditionFalse,
 				Reason:  string(failureReason),
@@ -206,7 +199,7 @@ func (r *LinodeVPCReconciler) reconcile(
 		logger = logger.WithValues("vpcID", *vpcScope.LinodeVPC.Spec.VPCID)
 
 		err = r.reconcileUpdate(ctx, logger, vpcScope)
-		if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC, string(clusterv1.ReadyCondition),
+		if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC.GetCondition(string(clusterv1.ReadyCondition)),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 			logger.Info("re-queuing VPC update")
 
@@ -221,7 +214,8 @@ func (r *LinodeVPCReconciler) reconcile(
 	failureReason = infrav1alpha2.CreateVPCError
 
 	err = r.reconcileCreate(ctx, logger, vpcScope)
-	if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC, string(clusterv1.ReadyCondition),
+
+	if err != nil && !reconciler.HasStaleCondition(vpcScope.LinodeVPC.GetCondition(string(clusterv1.ReadyCondition)),
 		reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 		logger.Info("re-queuing VPC creation")
 
@@ -238,7 +232,7 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 
 	if err := vpcScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
-		conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+		vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.CreateVPCError),
@@ -251,7 +245,7 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 
 	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
-		conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+		vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.CreateVPCError),
@@ -275,7 +269,7 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 
 	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
-		conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+		vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.UpdateVPCError),
@@ -304,7 +298,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		return ctrl.Result{}, err
 	}
 
-	conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+	vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 		Type:    string(clusterv1.ReadyCondition),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(clusterv1.DeletedReason),
@@ -342,7 +336,7 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 		return ctrl.Result{}, err
 	}
 
-	conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+	vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 		Type:    string(clusterv1.ReadyCondition),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(clusterv1.DeletedReason),
@@ -402,7 +396,7 @@ func (r *LinodeVPCReconciler) handleRetainedSubnets(ctx context.Context, logger 
 					return util.ErrReconcileAgain
 				}
 
-				conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+				vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 					Type:    string(clusterv1.ReadyCondition),
 					Status:  metav1.ConditionFalse,
 					Reason:  string(clusterv1.DeletionFailedReason),
@@ -455,7 +449,7 @@ func (r *LinodeVPCReconciler) deleteVPCResources(ctx context.Context, logger log
 			return util.ErrReconcileAgain
 		}
 
-		conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+		vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(clusterv1.DeletionFailedReason),

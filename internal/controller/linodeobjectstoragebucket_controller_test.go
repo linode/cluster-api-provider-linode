@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -149,7 +148,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(obj.Status.Ready).To(BeTrue())
 					Expect(obj.Status.FailureMessage).To(BeNil())
 					Expect(obj.Status.Conditions).To(HaveLen(1))
-					readyCond := conditions.Get(&obj, string(clusterv1.ReadyCondition))
+					readyCond := obj.GetCondition(string(clusterv1.ReadyCondition))
 					Expect(readyCond).NotTo(BeNil())
 					Expect(*obj.Status.Hostname).To(Equal("hostname"))
 					Expect(obj.Status.CreationTime).NotTo(BeNil())

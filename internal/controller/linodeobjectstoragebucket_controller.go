@@ -30,7 +30,6 @@ import (
 	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -152,7 +151,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectStorageBucketScope, err error) {
 	bScope.Bucket.Status.FailureMessage = util.Pointer(err.Error())
 	r.Recorder.Event(bScope.Bucket, corev1.EventTypeWarning, "Failed", err.Error())
-	conditions.Set(bScope.Bucket, metav1.Condition{
+	bScope.Bucket.SetCondition(metav1.Condition{
 		Type:    string(clusterv1.ReadyCondition),
 		Status:  metav1.ConditionFalse,
 		Reason:  "Failed",
@@ -192,7 +191,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Synced", "Object storage bucket synced")
 
 	bScope.Bucket.Status.Ready = true
-	conditions.Set(bScope.Bucket, metav1.Condition{
+	bScope.Bucket.SetCondition(metav1.Condition{
 		Type:   string(clusterv1.ReadyCondition),
 		Status: metav1.ConditionTrue,
 		Reason: "ObjectStorageBucketReady", // We have to set the reason to not fail object patching

@@ -121,26 +121,36 @@ type LinodeCluster struct {
 	Status LinodeClusterStatus `json:"status,omitempty"`
 }
 
-func (lc *LinodeCluster) GetConditions() []metav1.Condition {
+func (lc *LinodeCluster) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
 	for i := range lc.Status.Conditions {
-		if lc.Status.Conditions[i].Reason == "" {
-			lc.Status.Conditions[i].Reason = DefaultConditionReason
+		if lc.Status.Conditions[i].Type == cond.Type {
+			lc.Status.Conditions[i] = cond
+			return
 		}
 	}
-	return lc.Status.Conditions
+	lc.Status.Conditions = append(lc.Status.Conditions, cond)
 }
 
-func (lc *LinodeCluster) SetConditions(conditions []metav1.Condition) {
-	lc.Status.Conditions = conditions
+func (lc *LinodeCluster) GetCondition(condType string) *metav1.Condition {
+	for i := range lc.Status.Conditions {
+		if lc.Status.Conditions[i].Type == condType {
+			return &lc.Status.Conditions[i]
+		}
+	}
+
+	return nil
 }
 
-// We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api
-func (lc *LinodeCluster) GetV1Beta2Conditions() []metav1.Condition {
-	return lc.GetConditions()
-}
-
-func (lc *LinodeCluster) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lc.SetConditions(conditions)
+func (lc *LinodeCluster) IsPaused() bool {
+	for i := range lc.Status.Conditions {
+		if lc.Status.Conditions[i].Type == "Paused" {
+			return lc.Status.Conditions[i].Status == metav1.ConditionTrue
+		}
+	}
+	return false
 }
 
 // NetworkSpec encapsulates Linode networking resources.

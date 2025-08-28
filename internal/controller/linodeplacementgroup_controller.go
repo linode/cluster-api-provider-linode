@@ -31,14 +31,12 @@ import (
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
-	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
-	controllerutil "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -121,11 +119,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 
 	// Only check pause if not deleting or if cluster still exists
 	if linodeplacementgroup.DeletionTimestamp.IsZero() || cluster != nil {
-		isPaused, _, err := paused.EnsurePausedCondition(ctx, pgScope.Client, pgScope.Cluster, pgScope.LinodePlacementGroup)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if isPaused {
+		if pgScope.LinodePlacementGroup.IsPaused() {
 			log.Info("linodeplacementgroup or linked cluster is paused, skipping reconciliation")
 			return ctrl.Result{}, nil
 		}
@@ -152,7 +146,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 			pgScope.LinodePlacementGroup.Status.FailureReason = util.Pointer(failureReason)
 			pgScope.LinodePlacementGroup.Status.FailureMessage = util.Pointer(err.Error())
 
-			conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+			pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
 				Type:    string(clusterv1.ReadyCondition),
 				Status:  metav1.ConditionFalse,
 				Reason:  string(failureReason),
@@ -210,7 +204,8 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 	failureReason = infrav1alpha2.CreatePlacementGroupError
 
 	err = r.reconcileCreate(ctx, logger, pgScope)
-	if err != nil && !reconciler.HasStaleCondition(pgScope.LinodePlacementGroup, string(clusterv1.ReadyCondition), reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)) {
+	if err != nil && !reconciler.HasStaleCondition(pgScope.LinodePlacementGroup.GetCondition(string(clusterv1.ReadyCondition)),
+		reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)) {
 		logger.Info("re-queuing Placement Group creation")
 
 		res = ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}
@@ -226,7 +221,7 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 
 	if err := pgScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
-		conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+		pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.CreatePlacementGroupError),
@@ -239,7 +234,7 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 
 	if err := r.reconcilePlacementGroup(ctx, pgScope, logger); err != nil {
 		logger.Error(err, "Failed to create Placement Group")
-		conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+		pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
 			Type:    string(clusterv1.ReadyCondition),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.CreatePlacementGroupError),
@@ -293,7 +288,7 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 
 				// Wait timeout exceeded, fail the deletion
 				logger.Error(nil, "Placement Group deletion timed out waiting for node(s) to detach", "timeout", waitTimeout)
-				conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+				pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
 					Type:    string(clusterv1.ReadyCondition),
 					Status:  metav1.ConditionFalse,
 					Reason:  string(clusterv1.DeletionFailedReason),
@@ -329,7 +324,7 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 		logger.Info("Placement Group ID is missing, nothing to do")
 	}
 
-	conditions.Set(pgScope.LinodePlacementGroup, metav1.Condition{
+	pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
 		Type:    string(clusterv1.ReadyCondition),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(clusterv1.DeletedReason),

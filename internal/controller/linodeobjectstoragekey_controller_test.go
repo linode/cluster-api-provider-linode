@@ -31,7 +31,6 @@ import (
 	"k8s.io/utils/ptr"
 	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -126,7 +125,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(key.Status.Ready).To(BeTrue())
 					Expect(key.Status.FailureMessage).To(BeNil())
 					Expect(key.Status.Conditions).To(HaveLen(1))
-					readyCond := conditions.Get(&key, string(clusterv1.ReadyCondition))
+					readyCond := key.GetCondition(string(clusterv1.ReadyCondition))
 					Expect(readyCond).NotTo(BeNil())
 					Expect(key.Status.CreationTime).NotTo(BeNil())
 					Expect(*key.Status.LastKeyGeneration).To(Equal(key.Spec.KeyGeneration))
