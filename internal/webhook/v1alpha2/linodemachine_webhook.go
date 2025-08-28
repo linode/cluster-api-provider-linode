@@ -36,21 +36,6 @@ import (
 	"github.com/linode/cluster-api-provider-linode/clients"
 )
 
-var (
-	// The list of valid device slots that data device disks may attach to.
-	// NOTE: sda is reserved for the OS device disk.
-	LinodeMachineDevicePaths = []string{"sdb", "sdc", "sdd", "sde", "sdf", "sdg", "sdh"}
-
-	// The maximum number of device disks allowed per [Configuration Profile per Linode's Instance].
-	//
-	// [Configuration Profile per Linode's Instance]: https://www.linode.com/docs/api/linode-instances/#configuration-profile-view
-	LinodeMachineMaxDisk = 8
-
-	// The maximum number of data device disks allowed in a Linode's Instance's configuration profile.
-	// NOTE: The first device disk is reserved for the OS disk
-	LinodeMachineMaxDataDisk = LinodeMachineMaxDisk - 1
-)
-
 var linodemachinelog = logf.Log.WithName("linodemachine-resource")
 
 type linodeMachineValidator struct {
@@ -206,56 +191,61 @@ func (r *linodeMachineValidator) validateLinodeMachineDisks(plan *linodego.Linod
 		// https://www.linode.com/docs/api/linode-types/#type-view
 		planSize   = resource.MustParse(fmt.Sprintf("%d%s", plan.Disk, "M"))
 		remainSize = &resource.Quantity{}
-		err        *field.Error
 	)
 	planSize.DeepCopyInto(remainSize)
 
-	if remainSize, err = validateDisk(spec.OSDisk, field.NewPath("spec").Child("osDisk"), remainSize, &planSize); err != nil {
+	if err := validateDisk(spec.OSDisk, field.NewPath("spec").Child("osDisk"), remainSize, &planSize); err != nil {
 		return err
 	}
-	if _, err := validateDataDisks(spec.DataDisks, field.NewPath("spec").Child("dataDisks"), remainSize, &planSize); err != nil {
+	if err := validateDataDisks(spec.DataDisks, field.NewPath("spec").Child("dataDisks"), remainSize, &planSize); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func validateDataDisks(disks map[string]*infrav1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
-	devs := []string{}
-
-	for dev, disk := range disks {
-		if !slices.Contains(LinodeMachineDevicePaths, dev) {
-			return nil, field.Forbidden(path.Child(dev), fmt.Sprintf("allowed device paths: %v", LinodeMachineDevicePaths))
-		}
-		if slices.Contains(devs, dev) {
-			return nil, field.Duplicate(path.Child(dev), "duplicate device path")
-		}
-		devs = append(devs, dev)
-		if len(devs) > LinodeMachineMaxDataDisk {
-			return nil, field.TooMany(path, len(devs), LinodeMachineMaxDataDisk)
-		}
-
-		var err *field.Error
-		if remainSize, err = validateDisk(disk, path.Child(dev), remainSize, planSize); err != nil {
-			return nil, err
-		}
+func validateDataDisks(disks *infrav1alpha2.InstanceDisks, path *field.Path, remainSize, planSize *resource.Quantity) *field.Error {
+	if disks == nil {
+		return nil
 	}
-	return remainSize, nil
+	if err := validateDisk(disks.SDB, path.Child("SDB"), remainSize, planSize); err != nil {
+		return err
+	}
+	if err := validateDisk(disks.SDC, path.Child("SDC"), remainSize, planSize); err != nil {
+		return err
+	}
+	if err := validateDisk(disks.SDD, path.Child("SDD"), remainSize, planSize); err != nil {
+		return err
+	}
+	if err := validateDisk(disks.SDE, path.Child("SDE"), remainSize, planSize); err != nil {
+		return err
+	}
+	if err := validateDisk(disks.SDF, path.Child("SDF"), remainSize, planSize); err != nil {
+		return err
+	}
+	if err := validateDisk(disks.SDG, path.Child("SDG"), remainSize, planSize); err != nil {
+		return err
+	}
+	if err := validateDisk(disks.SDH, path.Child("SDH"), remainSize, planSize); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func validateDisk(disk *infrav1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) (*resource.Quantity, *field.Error) {
+func validateDisk(disk *infrav1alpha2.InstanceDisk, path *field.Path, remainSize, planSize *resource.Quantity) *field.Error {
 	if disk == nil {
-		return remainSize, nil
+		return nil
 	}
 
 	if disk.Size.Sign() < 1 {
-		return nil, field.Invalid(path, disk.Size.String(), "invalid size")
+		return field.Invalid(path, disk.Size.String(), "invalid size")
 	}
 	if remainSize.Cmp(disk.Size) == -1 {
-		return nil, field.Invalid(path, disk.Size.String(), fmt.Sprintf("sum disk sizes exceeds plan storage: %s", planSize.String()))
+		return field.Invalid(path, disk.Size.String(), fmt.Sprintf("sum disk sizes exceeds plan storage: %s", planSize.String()))
 	}
 
 	// Decrement the remaining amount of space available
 	remainSize.Sub(disk.Size)
-	return remainSize, nil
+	return nil
 }

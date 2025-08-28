@@ -55,17 +55,16 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
-		region                                      = linodego.Region{ID: "test"}
-		capabilities                                = []string{linodego.CapabilityLinodeInterfaces}
-		disk                                        = infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
-		disk_zero                                   = infrav1alpha2.InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
-		plan                                        = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
-		plan_zero                                   = linodego.LinodeType{Disk: 0}
-		plan_max                                    = linodego.LinodeType{Disk: math.MaxInt}
-		expectedErrorSubStringOSDisk                = "Invalid value: \"1G\": sum disk sizes exceeds plan storage: 2G"
-		expectedErrorSubStringOSDiskDataDiskInvalid = "spec.dataDisks.sda: Forbidden: allowed device paths: [sdb sdc sdd sde sdf sdg sdh]"
-		expectedErrorSubStringOSDiskOSDiskInvalid   = "spec.osDisk: Invalid value: \"0\": invalid size"
-		validator                                   = &linodeMachineValidator{}
+		region                                    = linodego.Region{ID: "test"}
+		capabilities                              = []string{linodego.CapabilityLinodeInterfaces}
+		disk                                      = infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
+		disk_zero                                 = infrav1alpha2.InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
+		plan                                      = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}
+		plan_zero                                 = linodego.LinodeType{Disk: 0}
+		plan_max                                  = linodego.LinodeType{Disk: math.MaxInt}
+		expectedErrorSubStringOSDisk              = "Invalid value: \"1G\": sum disk sizes exceeds plan storage: 2G"
+		expectedErrorSubStringOSDiskOSDiskInvalid = "spec.osDisk: Invalid value: \"0\": invalid size"
+		validator                                 = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -86,7 +85,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
-					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": disk.DeepCopy()}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: disk.DeepCopy()}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
@@ -131,24 +130,10 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("data disk too large", func(ctx context.Context, mck Mock) {
 					machine := machine
 					machine.Spec.OSDisk = disk.DeepCopy()
-					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sdb": disk.DeepCopy(), "sdc": disk.DeepCopy()}
+					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: disk.DeepCopy(), SDC: disk.DeepCopy()}
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
-					}
-				}),
-			),
-			Path(
-				Call("data disk invalid path", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
-				}),
-				Result("error", func(ctx context.Context, mck Mock) {
-					machine := machine
-					machine.Spec.DataDisks = map[string]*infrav1alpha2.InstanceDisk{"sda": disk.DeepCopy()}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
-					for _, err := range errs {
-						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskDataDiskInvalid)
 					}
 				}),
 			),
