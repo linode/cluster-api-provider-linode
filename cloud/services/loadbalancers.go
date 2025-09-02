@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -399,7 +399,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 		}
 		for _, IPs := range linodeMachine.Status.Addresses {
 			// Look for internal IPs that are NOT linode private IPs (likely VPC IPs)
-			if IPs.Type == v1beta1.MachineInternalIP && !util.IsLinodePrivateIP(IPs.Address) {
+			if IPs.Type == v1beta2.MachineInternalIP && !util.IsLinodePrivateIP(IPs.Address) {
 				if err := processAndCreateNodeBalancerNodes(ctx, IPs.Address, clusterScope, nodeBalancerNodes, subnetID); err != nil {
 					logger.Error(err, "Failed to process and create NB nodes")
 					return err
@@ -412,7 +412,7 @@ func AddNodesToNB(ctx context.Context, logger logr.Logger, clusterScope *scope.C
 	// We will use private IP address as the default
 	internalIPFound := false
 	for _, IPs := range linodeMachine.Status.Addresses {
-		if IPs.Type != v1beta1.MachineInternalIP || !util.IsLinodePrivateIP(IPs.Address) {
+		if IPs.Type != v1beta2.MachineInternalIP || !util.IsLinodePrivateIP(IPs.Address) {
 			continue
 		}
 		internalIPFound = true
