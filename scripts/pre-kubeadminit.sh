@@ -88,11 +88,17 @@ KillMode=process
 Restart=always
 RestartSec=5
 
-# Having non-zero Limit*s causes performance problems due to accounting overhead
+# Having non-zero Limits causes performance problems due to accounting overhead
 # in the kernel. We recommend using cgroups to do container-local accounting.
 LimitNPROC=infinity
 LimitCORE=infinity
+
+# Increase the open file limit to the kernel default
 LimitNOFILE=infinity
+
+# Increase RLIMIT_MEMLOCK to the newer linux kernel default.
+# This improves support for certain workloads running on linux kernel versions <= 5.15
+LimitMEMLOCK=8388608
 
 # Comment TasksMax if your systemd version does not supports it.
 # Only systemd 226 and above support this version.
