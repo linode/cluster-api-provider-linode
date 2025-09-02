@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -447,9 +447,9 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeExternal:
 		logger.Info("LoadBalacing managed externally, nothing to do.")
 		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(clusterv1.DeletedReason),
+			Reason:  clusterv1.DeletionCompletedReason,
 			Message: "Deletion in progress",
 		})
 		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeWarning, "LoadBalancing managed externally", "LoadBalancing managed externally, nothing to do.")
@@ -459,12 +459,12 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 			return fmt.Errorf("remove machine from loadbalancer: %w", err)
 		}
 		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(clusterv1.DeletedReason),
+			Reason:  clusterv1.DeletionCompletedReason,
 			Message: "Load balancing for Type DNS deleted",
 		})
-		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancing for Type DNS deleted")
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletionCompletedReason, "Load balancing for Type DNS deleted")
 
 	case clusterScope.LinodeCluster.Spec.Network.LoadBalancerType == lbTypeNB && clusterScope.LinodeCluster.Spec.Network.NodeBalancerID == nil:
 		logger.Info("NodeBalancer ID is missing for Type NodeBalancer, nothing to do")
@@ -483,12 +483,12 @@ func (r *LinodeClusterReconciler) reconcileDelete(ctx context.Context, logger lo
 		}
 
 		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(clusterv1.DeletedReason),
+			Reason:  clusterv1.DeletionCompletedReason,
 			Message: "Load balancer for Type NodeBalancer deleted",
 		})
-		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletedReason, "Load balancer for Type NodeBalancer deleted")
+		r.Recorder.Event(clusterScope.LinodeCluster, corev1.EventTypeNormal, clusterv1.DeletionCompletedReason, "Load balancer for Type NodeBalancer deleted")
 
 		clusterScope.LinodeCluster.Spec.Network.NodeBalancerID = nil
 		clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
@@ -525,7 +525,7 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 			handler.EnqueueRequestsFromMapFunc(
 				kutil.ClusterToInfrastructureMapFunc(context.TODO(), infrav1alpha2.GroupVersion.WithKind("LinodeCluster"), mgr.GetClient(), &infrav1alpha2.LinodeCluster{}),
 			),
-			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), mgr.GetLogger())),
 		).
 		Watches(
 			&infrav1alpha2.LinodeMachine{},
