@@ -13,7 +13,7 @@ import (
 	"github.com/linode/linodego"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -105,15 +105,15 @@ func IsLinodePrivateIP(ipAddress string) bool {
 func SetOwnerReferenceToLinodeCluster(ctx context.Context, k8sclient client.Client, cluster *clusterv1.Cluster, obj client.Object, scheme *runtime.Scheme) error {
 	logger := log.Log.WithName("SetOwnerReferenceToLinodeCluster")
 
-	if cluster == nil || cluster.Spec.InfrastructureRef == nil {
-		logger.Info("the Cluster or InfrastructureRef is nil, cannot fetch LinodeCluster")
+	if cluster == nil || cluster.Spec.InfrastructureRef.Name == "" {
+		logger.Info("the Cluster is nil, cannot fetch LinodeCluster")
 		return nil
 	}
 
 	var linodeCluster infrav1alpha2.LinodeCluster
 	key := types.NamespacedName{
-		Namespace: cluster.Spec.InfrastructureRef.Namespace,
 		Name:      cluster.Spec.InfrastructureRef.Name,
+		Namespace: cluster.Namespace,
 	}
 	if err := k8sclient.Get(ctx, key, &linodeCluster); err != nil {
 		if client.IgnoreNotFound(err) != nil {
