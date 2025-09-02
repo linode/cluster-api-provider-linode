@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -289,12 +289,12 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 				// Wait timeout exceeded, fail the deletion
 				logger.Error(nil, "Placement Group deletion timed out waiting for node(s) to detach", "timeout", waitTimeout)
 				pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
-					Type:    string(clusterv1.ReadyCondition),
+					Type:    clusterv1.ReadyCondition,
 					Status:  metav1.ConditionFalse,
-					Reason:  string(clusterv1.DeletionFailedReason),
+					Reason:  clusterv1.NotDeletingReason,
 					Message: fmt.Sprintf("skipped due to %d node(s) still attached after %s timeout", len(pg.Members), waitTimeout),
 				})
-				r.Recorder.Eventf(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, clusterv1.DeletionFailedReason, "Will not delete Placement Group %d with %d node(s) attached after %s timeout", pg.ID, len(pg.Members), waitTimeout)
+				r.Recorder.Eventf(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, clusterv1.NotDeletingReason, "Will not delete Placement Group %d with %d node(s) attached after %s timeout", pg.ID, len(pg.Members), waitTimeout)
 				return ctrl.Result{}, errors.New("will not delete Placement Group with node(s) attached")
 			}
 
@@ -325,13 +325,13 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 	}
 
 	pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
-		Type:    string(clusterv1.ReadyCondition),
+		Type:    clusterv1.ReadyCondition,
 		Status:  metav1.ConditionFalse,
-		Reason:  string(clusterv1.DeletedReason),
+		Reason:  clusterv1.DeletionCompletedReason,
 		Message: "Placement Group deleted",
 	})
 
-	r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, clusterv1.DeletedReason, "Placement Group has been cleaned up")
+	r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, clusterv1.DeletionCompletedReason, "Placement Group has been cleaned up")
 
 	pgScope.LinodePlacementGroup.Spec.PGID = nil
 
@@ -386,7 +386,7 @@ func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, opti
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodePlacementGroupMapper),
-			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)

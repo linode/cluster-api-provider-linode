@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -278,7 +278,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 		return err
 	}
 
-	r.Recorder.Event(keyScope.Key, clusterv1.DeletedReason, "KeyRevoked", "Object storage key revoked")
+	r.Recorder.Event(keyScope.Key, clusterv1.DeletionCompletedReason, "KeyRevoked", "Object storage key revoked")
 
 	// If this key's Secret was generated in another namespace, manually delete it since it has no owner reference.
 	if keyScope.Key.Spec.Namespace != keyScope.Key.Namespace {
@@ -332,7 +332,7 @@ func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, op
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeObjectStorageKeyMapper),
-			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)

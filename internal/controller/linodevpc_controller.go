@@ -30,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -270,7 +270,7 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to update VPC")
 		vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.UpdateVPCError),
 			Message: err.Error(),
@@ -299,12 +299,12 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 	}
 
 	vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-		Type:    string(clusterv1.ReadyCondition),
+		Type:    clusterv1.ReadyCondition,
 		Status:  metav1.ConditionFalse,
-		Reason:  string(clusterv1.DeletedReason),
+		Reason:  clusterv1.DeletionCompletedReason,
 		Message: "VPC deleted",
 	})
-	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletedReason, "VPC has cleaned up")
+	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletionCompletedReason, "VPC is cleaning up")
 
 	vpcScope.LinodeVPC.Spec.VPCID = nil
 
@@ -337,9 +337,9 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 	}
 
 	vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-		Type:    string(clusterv1.ReadyCondition),
+		Type:    clusterv1.ReadyCondition,
 		Status:  metav1.ConditionFalse,
-		Reason:  string(clusterv1.DeletedReason),
+		Reason:  clusterv1.NotDeletingReason,
 		Message: "VPC retained as requested, associated cloud resource was not deleted.",
 	})
 
@@ -397,9 +397,9 @@ func (r *LinodeVPCReconciler) handleRetainedSubnets(ctx context.Context, logger 
 				}
 
 				vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-					Type:    string(clusterv1.ReadyCondition),
+					Type:    clusterv1.ReadyCondition,
 					Status:  metav1.ConditionFalse,
-					Reason:  string(clusterv1.DeletionFailedReason),
+					Reason:  clusterv1.NotDeletingReason,
 					Message: fmt.Sprintf("will not delete subnet %d with node(s) attached", subnet.SubnetID),
 				})
 				return fmt.Errorf("will not delete subnet %d with node(s) attached", subnet.SubnetID)
@@ -450,9 +450,9 @@ func (r *LinodeVPCReconciler) deleteVPCResources(ctx context.Context, logger log
 		}
 
 		vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
-			Reason:  string(clusterv1.DeletionFailedReason),
+			Reason:  clusterv1.NotDeletingReason,
 			Message: "skipped due to node(s) attached",
 		})
 		return errors.New("will not delete VPC with node(s) attached")
@@ -505,7 +505,7 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeVPCMapper),
-			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureReady(mgr.GetScheme(), mgr.GetLogger())),
+			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), mgr.GetLogger())),
 		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
