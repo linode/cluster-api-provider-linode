@@ -160,7 +160,7 @@ func (lpg *LinodePlacementGroup) GetCondition(condType string) *metav1.Condition
 
 func (lpg *LinodePlacementGroup) IsPaused() bool {
 	for i := range lpg.Status.Conditions {
-		if lpg.Status.Conditions[i].Type == "Paused" {
+		if lpg.Status.Conditions[i].Type == ConditionPaused {
 			return lpg.Status.Conditions[i].Status == metav1.ConditionTrue
 		}
 	}
