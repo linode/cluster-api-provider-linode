@@ -235,7 +235,7 @@ func (lv *LinodeVPC) GetCondition(condType string) *metav1.Condition {
 
 func (lv *LinodeVPC) IsPaused() bool {
 	for i := range lv.Status.Conditions {
-		if lv.Status.Conditions[i].Type == "Paused" {
+		if lv.Status.Conditions[i].Type == ConditionPaused {
 			return lv.Status.Conditions[i].Status == metav1.ConditionTrue
 		}
 	}

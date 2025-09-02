@@ -1302,7 +1302,7 @@ func configureDisk(ctx context.Context, logger logr.Logger, machineScope *scope.
 			logger.Error(err, "Failed to create disk", "DiskLabel", label)
 		}
 
-		conditions.Set(machineScope.LinodeMachine, metav1.Condition{
+		machineScope.LinodeMachine.SetCondition(metav1.Condition{
 			Type:    ConditionPreflightAdditionalDisksCreated,
 			Status:  metav1.ConditionFalse,
 			Reason:  util.CreateError,

@@ -176,7 +176,7 @@ func (lfw *LinodeFirewall) GetCondition(condType string) *metav1.Condition {
 
 func (lfw *LinodeFirewall) IsPaused() bool {
 	for i := range lfw.Status.Conditions {
-		if lfw.Status.Conditions[i].Type == "Paused" {
+		if lfw.Status.Conditions[i].Type == ConditionPaused {
 			return lfw.Status.Conditions[i].Status == metav1.ConditionTrue
 		}
 	}

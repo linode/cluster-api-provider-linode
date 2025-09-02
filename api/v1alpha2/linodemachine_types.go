@@ -610,7 +610,7 @@ func (lm *LinodeMachine) DeleteCondition(condType string) {
 
 func (lm *LinodeMachine) IsPaused() bool {
 	for i := range lm.Status.Conditions {
-		if lm.Status.Conditions[i].Type == "Paused" {
+		if lm.Status.Conditions[i].Type == ConditionPaused {
 			return lm.Status.Conditions[i].Status == metav1.ConditionTrue
 		}
 	}

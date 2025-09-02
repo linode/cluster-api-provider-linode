@@ -26,6 +26,7 @@ const (
 	// ClusterFinalizer allows ReconcileLinodeCluster to clean up Linode resources associated
 	// with LinodeCluster before removing it from the apiserver.
 	ClusterFinalizer = "linodecluster.infrastructure.cluster.x-k8s.io"
+	ConditionPaused  = "Paused"
 )
 
 // LinodeClusterSpec defines the desired state of LinodeCluster
@@ -146,7 +147,7 @@ func (lc *LinodeCluster) GetCondition(condType string) *metav1.Condition {
 
 func (lc *LinodeCluster) IsPaused() bool {
 	for i := range lc.Status.Conditions {
-		if lc.Status.Conditions[i].Type == "Paused" {
+		if lc.Status.Conditions[i].Type == ConditionPaused {
 			return lc.Status.Conditions[i].Status == metav1.ConditionTrue
 		}
 	}
