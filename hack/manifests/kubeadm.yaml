@@ -5,9 +5,7 @@ metadata:
   name: kubeadm
   namespace: kubeadm-bootstrap-system
 spec:
-  manager:
-    featureGates:
-      KubeadmBootstrapFormatIgnition: true
+  version: v1.10.6
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
@@ -15,7 +13,7 @@ metadata:
   name: kubeadm
   namespace: kubeadm-control-plane-system
 spec:
+  version: v1.10.6
   manager:
     featureGates:
       ClusterTopology: true
-      KubeadmBootstrapFormatIgnition: true
