@@ -21,6 +21,7 @@ helm_resource(
         "--create-namespace",
         "--set=installCRDs=true",
         "--set=global.leaderElection.namespace=cert-manager",
+        "--version=1.18.2",
     ],
     labels=["cert-manager"],
 )
@@ -32,7 +33,7 @@ helm_resource(
     flags=[
       "--create-namespace",
       "--wait",
-      "--version=0.14.0",
+      "--version=0.23.0",
     ],
     resource_deps=["capi-operator-repo", "cert-manager"],
     labels=["CAPI"],
