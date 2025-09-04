@@ -104,30 +104,12 @@ if os.getenv("USE_CAPI_OPERATOR", "false") == "true":
             labels=["CAPI"],
         )
 else:
-    if os.getenv("INSTALL_HELM_PROVIDER", "true") == "true":
-        local_resource(
-            'capi-controller-manager',
-            cmd="EXP_CLUSTER_RESOURCE_SET=true CLUSTER_TOPOLOGY=true clusterctl init --addon helm --core cluster-api:${capi_version} --bootstrap kubeadm:${capi_version} --control-plane kubeadm:${capi_version}",
-            env={'capi_version': os.getenv("CAPI_VERSION", "v1.11.1")},
-        )
-    else:
-        local_resource(
-            'capi-controller-manager',
-            cmd="EXP_CLUSTER_RESOURCE_SET=true CLUSTER_TOPOLOGY=true clusterctl init --core cluster-api:${capi_version} --bootstrap kubeadm:${capi_version} --control-plane kubeadm:${capi_version}",
-            env={'capi_version': os.getenv("CAPI_VERSION", "v1.11.1")},
-        )
-
-    if os.getenv("INSTALL_K3S_PROVIDER", "false") == "true":
-        local_resource(
-            'capi-k3s-controller-manager',
-            cmd='clusterctl init --bootstrap k3s --control-plane k3s --config ./hack/clusterctl.yaml',
-        )
-
-    if os.getenv("INSTALL_RKE2_PROVIDER", "false") == "true":
-        local_resource(
-            'capi-rke2-controller-manager',
-            cmd='clusterctl init --bootstrap rke2 --control-plane rke2 --config ./hack/clusterctl.yaml',
-        )
+    # install all providers in one shot because clusterctl init hangs on cert-manager if we try to do each conditionally
+    local_resource(
+        'capi-controller-manager',
+        cmd="EXP_CLUSTER_RESOURCE_SET=true CLUSTER_TOPOLOGY=true clusterctl init --addon helm --core cluster-api:${capi_version} --bootstrap kubeadm:${capi_version},k3s,rke2 --control-plane kubeadm:${capi_version},k3s,rke2 --config ./hack/clusterctl.yaml",
+        env={'capi_version': os.getenv("CAPI_VERSION", "v1.11.1")},
+    )
 
 capl_resources = [
     "capl-system:namespace",
