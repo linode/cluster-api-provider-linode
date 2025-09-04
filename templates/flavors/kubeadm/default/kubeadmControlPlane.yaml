@@ -1,6 +1,6 @@
 ---
 kind: KubeadmControlPlane
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 metadata:
   name: ${CLUSTER_NAME}-control-plane
 spec:
@@ -19,13 +19,16 @@ spec:
         local:
           dataDir: /var/lib/etcd_data/etcd
           extraArgs:
-            quota-backend-bytes: "8589934592"
+            - name: "quota-backend-bytes"
+              value: "8589934592"
       apiServer:
         extraArgs:
-          cloud-provider: external
+          - name: "cloud-provider"
+            value: "external"
       controllerManager:
         extraArgs:
-          cloud-provider: external
+          - name: "cloud-provider"
+            value: "external"
     initConfiguration:
       localAPIEndpoint:
         bindPort: ${APISERVER_PORT:=6443}
@@ -33,11 +36,13 @@ spec:
         - addon/kube-proxy
       nodeRegistration:
         kubeletExtraArgs:
-          cloud-provider: external
+          - name: "cloud-provider"
+            value: "external"
         name: '{{ ds.meta_data.label }}'
     joinConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
-          cloud-provider: external
+          - name: "cloud-provider"
+            value: "external"
         name: '{{ ds.meta_data.label }}'
   version: "${KUBERNETES_VERSION}"

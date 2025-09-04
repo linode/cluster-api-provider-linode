@@ -8,10 +8,12 @@ spec:
         clusterConfiguration:
             apiServer:
                 extraArgs:
-                    cloud-provider: external
+                    - name: "cloud-provider"
+                      value: "external"
             controllerManager:
                 extraArgs:
-                    cloud-provider: external
+                    - name: "cloud-provider"
+                      value: "external"
     machineTemplate:
         infrastructureRef:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2

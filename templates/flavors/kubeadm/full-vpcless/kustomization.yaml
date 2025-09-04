@@ -79,17 +79,17 @@ patches:
         path: /spec/nodeBalancerFirewallRef
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
       - op: remove
         path: /spec/kubeadmConfigSpec/initConfiguration/skipPhases
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -105,10 +105,10 @@ patches:
               - fd03::/108
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
@@ -120,10 +120,10 @@ patches:
                 node-cidr-mask-size-ipv6: "96"
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: MachineDeployment
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: MachineDeployment
       metadata:
         name: ${CLUSTER_NAME}-md-0
@@ -149,10 +149,10 @@ patches:
                 size: 10Gi
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
@@ -171,10 +171,10 @@ patches:
               - /var/lib/etcd_data
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
@@ -185,10 +185,10 @@ patches:
           minHealthyPeriod: 2h
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -197,10 +197,10 @@ patches:
           cluster-autoscaler: "true"
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-control-plane
