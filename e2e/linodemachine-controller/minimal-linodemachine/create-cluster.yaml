@@ -5,11 +5,10 @@ metadata:
   name: ($cluster)
 spec:
   controlPlaneRef:
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    apiGroup: controlplane.cluster.x-k8s.io
     kind: KubeadmControlPlane
     name: ($cluster)
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
     kind: LinodeCluster
     name: ($cluster)
 ---

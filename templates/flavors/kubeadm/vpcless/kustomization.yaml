@@ -129,7 +129,7 @@ patches:
         path: /spec/nodeBalancerFirewallRef
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
       - op: remove

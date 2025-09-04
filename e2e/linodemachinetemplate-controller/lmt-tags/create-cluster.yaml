@@ -5,11 +5,10 @@ metadata:
   name: ($cluster)
 spec:
   controlPlaneRef:
-    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    apiGroup: controlplane.cluster.x-k8s.io
     kind: KubeadmControlPlane
     name: ($cluster)
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
     kind: LinodeCluster
     name: ($cluster)
 ---
@@ -29,12 +28,13 @@ spec:
         clusterConfiguration:
             controllerManager:
                 extraArgs:
-                    cloud-provider: external
+                    - name: "cloud-provider"
+                      value: "external"
     machineTemplate:
-        infrastructureRef:
-            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-            kind: LinodeMachineTemplate
-            name: ($cluster)
+        spec:
+            infrastructureRef:
+                kind: LinodeMachineTemplate
+                name: ($cluster)
     replicas: 1
     version: 1.33.4
 ---

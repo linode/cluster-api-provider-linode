@@ -1,46 +1,43 @@
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineHealthCheck
 metadata:
   name: ${CLUSTER_NAME}-node-unhealthy-5m
 spec:
   clusterName: ${CLUSTER_NAME}
   # (Optional) maxUnhealthy prevents further remediation if the cluster is already partially unhealthy
-  maxUnhealthy: 40%
-  # (Optional) nodeStartupTimeout determines how long a MachineHealthCheck should wait for
-  # a Node to join the cluster, before considering a Machine unhealthy.
-  # Defaults to 10 minutes if not specified.
-  # Set to 0 to disable the node startup timeout.
-  # Disabling this timeout will prevent a Machine from being considered unhealthy when
-  # the Node it created has not yet registered with the cluster. This can be useful when
-  # Nodes take a long time to start up or when you only want condition based checks for
-  # Machine health.
-  nodeStartupTimeout: 10m
+  remediation:
+    triggerIf:
+      unhealthyLessThanOrEqualTo: 2
   # Conditions to check on Nodes for matched Machines, if any condition is matched for the duration of its timeout, the Machine is considered unhealthy
   selector:
     matchLabels:
       cluster.x-k8s.io/deployment-name: ${CLUSTER_NAME}
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 300s
-    - type: Ready
-      status: "False"
-      timeout: 300s
+  checks:
+    unhealthyNodeConditions:
+      - type: Ready
+        status: Unknown
+        timeoutSeconds: 300
+      - type: Ready
+        status: "False"
+        timeoutSeconds: 300
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineHealthCheck
 metadata:
   name: ${CLUSTER_NAME}-kcp-unhealthy-5m
 spec:
   clusterName: ${CLUSTER_NAME}
-  maxUnhealthy: 100%
+  remediation:
+    triggerIf:
+      unhealthyLessThanOrEqualTo: 2
   selector:
     matchLabels:
       cluster.x-k8s.io/control-plane: ""
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 300s
-    - type: Ready
-      status: "False"
-      timeout: 300s
+  checks:
+    unhealthyNodeConditions:
+      - type: Ready
+        status: Unknown
+        timeoutSeconds: 300
+      - type: Ready
+        status: "False"
+        timeoutSeconds: 300
