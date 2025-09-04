@@ -78,7 +78,7 @@ spec:
           access: {{ .AccessKey }}
           secret: {{ .SecretKey }}
 ---
-apiVersion: addons.cluster.x-k8s.io/v1beta1
+apiVersion: addons.cluster.x-k8s.io/v1beta2
 kind: ClusterResourceSet
 metadata:
   name: ${CLUSTER_NAME}-etcd-backup-obj-key

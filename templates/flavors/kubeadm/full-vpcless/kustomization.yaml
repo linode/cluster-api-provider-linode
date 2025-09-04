@@ -79,17 +79,17 @@ patches:
         path: /spec/nodeBalancerFirewallRef
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
       - op: remove
         path: /spec/kubeadmConfigSpec/initConfiguration/skipPhases
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -105,10 +105,10 @@ patches:
               - fd03::/108
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-cp
@@ -117,13 +117,14 @@ patches:
           clusterConfiguration:
             controllerManager:
               extraArgs:
-                node-cidr-mask-size-ipv6: "96"
+                - name: "node-cidr-mask-size-ipv6"
+                  value: "96"
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: MachineDeployment
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: MachineDeployment
       metadata:
         name: ${CLUSTER_NAME}
@@ -149,10 +150,10 @@ patches:
                 size: 10Gi
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-cp
@@ -171,24 +172,24 @@ patches:
               - /var/lib/etcd_data
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-cp
       spec:
-        remediationStrategy:
+        remediation:
           maxRetry: 5
-          retryPeriod: 2m
-          minHealthyPeriod: 2h
+          retryPeriodSeconds: 120
+          minHealthyPeriodSeconds: 7200
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -197,18 +198,18 @@ patches:
           cluster-autoscaler: "true"
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-cp
       spec:
-        remediationStrategy:
+        remediation:
           maxRetry: 5
-          retryPeriod: 2m
-          minHealthyPeriod: 2h
+          retryPeriodSeconds: 120
+          minHealthyPeriodSeconds: 7200
   - target:
       kind: LinodeFirewall
     patch: |-

@@ -13,7 +13,6 @@
     - [Etcd](./topics/etcd.md)
     - [Firewalling](./topics/firewalling.md)
     - [Flavors](./topics/flavors/flavors.md)
-      - [Cilium BGP LB (kubeadm)](./topics/flavors/cilium-bgp-lb.md)
       - [Cluster Autoscaler](./topics/flavors/cluster-autoscaler.md)
       - [ClusterClass kubeadm](./topics/flavors/clusterclass-kubeadm.md)
       - [DNS based apiserver Load Balancing](./topics/flavors/dns-loadbalancing.md)

@@ -23,10 +23,10 @@ patches:
           - range: auto
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
