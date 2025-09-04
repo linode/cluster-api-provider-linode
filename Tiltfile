@@ -120,13 +120,13 @@ else:
     if os.getenv("INSTALL_K3S_PROVIDER", "false") == "true":
         local_resource(
             'capi-k3s-controller-manager',
-            cmd='clusterctl init --bootstrap k3s --control-plane k3s',
+            cmd='clusterctl init --bootstrap k3s --control-plane k3s --config ./hack/clusterctl.yaml',
         )
 
     if os.getenv("INSTALL_RKE2_PROVIDER", "false") == "true":
         local_resource(
             'capi-rke2-controller-manager',
-            cmd='clusterctl init --bootstrap rke2 --control-plane rke2',
+            cmd='clusterctl init --bootstrap rke2 --control-plane rke2 --config ./hack/clusterctl.yaml',
         )
 
 capl_resources = [
