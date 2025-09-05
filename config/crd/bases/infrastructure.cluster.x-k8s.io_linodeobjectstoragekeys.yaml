@@ -82,6 +82,7 @@ spec:
                   type: object
                 minItems: 1
                 type: array
+                x-kubernetes-list-type: atomic
               credentialsRef:
                 description: |-
                   credentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.

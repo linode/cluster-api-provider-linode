@@ -52,6 +52,7 @@ type FirewallRuleSpec struct {
 	// addressSetRefs is a list of references to AddressSets as an alternative to
 	// using Addresses but can be used in conjunction with it.
 	// +optional
+	// +listType=atomic
 	AddressSetRefs []*corev1.ObjectReference `json:"addressSetRefs,omitempty"`
 }
 

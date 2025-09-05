@@ -107,6 +107,9 @@ spec:
                               - port
                               type: object
                             type: array
+                            x-kubernetes-list-map-keys:
+                            - port
+                            x-kubernetes-list-type: map
                           apiserverLoadBalancerPort:
                             description: |-
                               apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).

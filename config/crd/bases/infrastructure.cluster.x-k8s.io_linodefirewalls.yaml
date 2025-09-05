@@ -130,6 +130,7 @@ spec:
                   type: object
                   x-kubernetes-map-type: atomic
                 type: array
+                x-kubernetes-list-type: atomic
               inboundRules:
                 description: inboundRules is a list of FirewallRules that will be
                   applied to the Firewall.
@@ -188,6 +189,7 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       type: array
+                      x-kubernetes-list-type: atomic
                     addresses:
                       description: addresses is a list of addresses to apply the rule
                         to.
@@ -226,6 +228,7 @@ spec:
                   - protocol
                   type: object
                 type: array
+                x-kubernetes-list-type: atomic
               outboundPolicy:
                 default: ACCEPT
                 description: outboundPolicy determines if traffic by default should
@@ -283,6 +286,7 @@ spec:
                   type: object
                   x-kubernetes-map-type: atomic
                 type: array
+                x-kubernetes-list-type: atomic
               outboundRules:
                 description: outboundRules is a list of FirewallRules that will be
                   applied to the Firewall.
@@ -341,6 +345,7 @@ spec:
                         type: object
                         x-kubernetes-map-type: atomic
                       type: array
+                      x-kubernetes-list-type: atomic
                     addresses:
                       description: addresses is a list of addresses to apply the rule
                         to.
@@ -379,6 +384,7 @@ spec:
                   - protocol
                   type: object
                 type: array
+                x-kubernetes-list-type: atomic
             type: object
           status:
             description: status is the observed state of the LinodeFirewall.

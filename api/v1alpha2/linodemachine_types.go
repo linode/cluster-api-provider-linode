@@ -64,11 +64,13 @@ type LinodeMachineSpec struct {
 	// authorizedKeys is a list of SSH public keys to add to the instance.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=set
 	AuthorizedKeys []string `json:"authorizedKeys,omitempty"`
 
 	// authorizedUsers is a list of usernames to add to the instance.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=set
 	AuthorizedUsers []string `json:"authorizedUsers,omitempty"`
 
 	// backupID is the ID of the backup to restore the instance from.
@@ -84,12 +86,14 @@ type LinodeMachineSpec struct {
 	// interfaces is a list of legacy network interfaces to use for the instance.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=atomic
 	Interfaces []InstanceConfigInterfaceCreateOptions `json:"interfaces,omitempty"`
 
 	// linodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:object:generate=true
+	// +listType=atomic
 	LinodeInterfaces []LinodeInterfaceCreateOptions `json:"linodeInterfaces,omitempty"`
 
 	// backupsEnabled is a boolean indicating whether backups should be enabled for the instance.
@@ -104,6 +108,7 @@ type LinodeMachineSpec struct {
 
 	// tags is a list of tags to apply to the Linode instance.
 	// +optional
+	// +listType=set
 	Tags []string `json:"tags,omitempty"`
 
 	// firewallID is the id of the cloud firewall to apply to the Linode Instance
@@ -298,6 +303,7 @@ type InstanceConfigInterfaceCreateOptions struct {
 
 	// ipRanges is a list of IPv4 ranges to assign to the interface.
 	// +optional
+	// +listType=set
 	IPRanges []string `json:"ipRanges,omitempty"`
 }
 
@@ -350,6 +356,8 @@ type PublicInterfaceCreateOptions struct {
 type PublicInterfaceIPv4CreateOptions struct {
 	// addresses is the IPv4 addresses for the public interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=address
 	Addresses []PublicInterfaceIPv4AddressCreateOptions `json:"addresses,omitempty"`
 }
 
@@ -368,6 +376,8 @@ type PublicInterfaceIPv4AddressCreateOptions struct {
 type PublicInterfaceIPv6CreateOptions struct {
 	// ranges is the IPv6 ranges for the public interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	Ranges []PublicInterfaceIPv6RangeCreateOptions `json:"ranges,omitempty"`
 }
 
@@ -397,10 +407,14 @@ type VPCInterfaceCreateOptions struct {
 type VPCInterfaceIPv6CreateOptions struct {
 	// slaac is the IPv6 SLAAC configuration for the interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	SLAAC []VPCInterfaceIPv6SLAACCreateOptions `json:"slaac,omitempty"`
 
 	// ranges is the IPv6 ranges for the interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	Ranges []VPCInterfaceIPv6RangeCreateOptions `json:"ranges,omitempty"`
 
 	// is_public is a boolean indicating whether the interface is public.
@@ -426,10 +440,14 @@ type VPCInterfaceIPv6RangeCreateOptions struct {
 type VPCInterfaceIPv4CreateOptions struct {
 	// addresses is the IPv4 addresses for the interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=address
 	Addresses []VPCInterfaceIPv4AddressCreateOptions `json:"addresses,omitempty"`
 
 	// ranges is the IPv4 ranges for the interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	Ranges []VPCInterfaceIPv4RangeCreateOptions `json:"ranges,omitempty"`
 }
 
@@ -494,6 +512,8 @@ type LinodeMachineStatus struct {
 
 	// addresses contains the Linode instance associated addresses.
 	// +optional
+	// +listType=map
+	// +listMapKey=address
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
 	// cloudinitMetadataSupport determines whether to use cloud-init or not.
@@ -547,6 +567,7 @@ type LinodeMachineStatus struct {
 
 	// tags are the tags applied to the Linode Machine.
 	// +optional
+	// +listType=set
 	Tags []string `json:"tags,omitempty"`
 }
 
