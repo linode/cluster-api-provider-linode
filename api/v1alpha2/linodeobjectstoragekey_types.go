@@ -158,25 +158,28 @@ type LinodeObjectStorageKey struct {
 	Status LinodeObjectStorageKeyStatus `json:"status,omitempty"`
 }
 
-func (losk *LinodeObjectStorageKey) GetConditions() []metav1.Condition {
-	for i := range losk.Status.Conditions {
-		if losk.Status.Conditions[i].Reason == "" {
-			losk.Status.Conditions[i].Reason = DefaultConditionReason
+func (key *LinodeObjectStorageKey) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
+	for i := range key.Status.Conditions {
+		if key.Status.Conditions[i].Type == cond.Type {
+			key.Status.Conditions[i] = cond
+
+			return
 		}
 	}
-	return losk.Status.Conditions
+	key.Status.Conditions = append(key.Status.Conditions, cond)
 }
 
-func (losk *LinodeObjectStorageKey) SetConditions(conditions []metav1.Condition) {
-	losk.Status.Conditions = conditions
-}
+func (key *LinodeObjectStorageKey) GetCondition(condType string) *metav1.Condition {
+	for i := range key.Status.Conditions {
+		if key.Status.Conditions[i].Type == condType {
+			return &key.Status.Conditions[i]
+		}
+	}
 
-func (losk *LinodeObjectStorageKey) GetV1Beta2Conditions() []metav1.Condition {
-	return losk.GetConditions()
-}
-
-func (losk *LinodeObjectStorageKey) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	losk.SetConditions(conditions)
+	return nil
 }
 
 // LinodeObjectStorageKeyList contains a list of LinodeObjectStorageKey

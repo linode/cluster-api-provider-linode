@@ -31,7 +31,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -162,7 +161,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcile(ctx context.Context, keySco
 func (r *LinodeObjectStorageKeyReconciler) setFailure(keyScope *scope.ObjectStorageKeyScope, err error) {
 	keyScope.Key.Status.FailureMessage = util.Pointer(err.Error())
 	r.Recorder.Event(keyScope.Key, corev1.EventTypeWarning, "Failed", err.Error())
-	conditions.Set(keyScope.Key, metav1.Condition{
+	keyScope.Key.SetCondition(metav1.Condition{
 		Type:    string(clusterv1.ReadyCondition),
 		Status:  metav1.ConditionFalse,
 		Reason:  "Failed",
@@ -259,7 +258,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 	keyScope.Key.Status.LastKeyGeneration = &keyScope.Key.Spec.KeyGeneration
 	keyScope.Key.Status.Ready = true
 
-	conditions.Set(keyScope.Key, metav1.Condition{
+	keyScope.Key.SetCondition(metav1.Condition{
 		Type:   string(clusterv1.ReadyCondition),
 		Status: metav1.ConditionTrue,
 		Reason: "LinodeObjectStorageKeySynced", // We have to set the reason to not fail object patching

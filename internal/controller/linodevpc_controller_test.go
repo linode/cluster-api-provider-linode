@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -170,7 +169,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("update requeues", func(ctx context.Context, mck Mock) {
-						conditions.Set(vpcScope.LinodeVPC, metav1.Condition{
+						vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 							Type:    string(clusterv1.ReadyCondition),
 							Status:  metav1.ConditionFalse,
 							Reason:  "test",

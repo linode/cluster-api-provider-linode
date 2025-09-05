@@ -209,25 +209,37 @@ type LinodeVPC struct {
 	Status LinodeVPCStatus `json:"status,omitempty"`
 }
 
-func (lv *LinodeVPC) GetConditions() []metav1.Condition {
+func (lv *LinodeVPC) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
 	for i := range lv.Status.Conditions {
-		if lv.Status.Conditions[i].Reason == "" {
-			lv.Status.Conditions[i].Reason = DefaultConditionReason
+		if lv.Status.Conditions[i].Type == cond.Type {
+			lv.Status.Conditions[i] = cond
+
+			return
 		}
 	}
-	return lv.Status.Conditions
+	lv.Status.Conditions = append(lv.Status.Conditions, cond)
 }
 
-func (lv *LinodeVPC) SetConditions(conditions []metav1.Condition) {
-	lv.Status.Conditions = conditions
+func (lv *LinodeVPC) GetCondition(condType string) *metav1.Condition {
+	for i := range lv.Status.Conditions {
+		if lv.Status.Conditions[i].Type == condType {
+			return &lv.Status.Conditions[i]
+		}
+	}
+
+	return nil
 }
 
-func (lv *LinodeVPC) GetV1Beta2Conditions() []metav1.Condition {
-	return lv.GetConditions()
-}
-
-func (lv *LinodeVPC) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lv.SetConditions(conditions)
+func (lv *LinodeVPC) IsPaused() bool {
+	for i := range lv.Status.Conditions {
+		if lv.Status.Conditions[i].Type == ConditionPaused {
+			return lv.Status.Conditions[i].Status == metav1.ConditionTrue
+		}
+	}
+	return false
 }
 
 // +kubebuilder:object:root=true

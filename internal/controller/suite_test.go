@@ -56,6 +56,11 @@ var (
 	basepath          = filepath.Dir(b)
 )
 
+const (
+	defaultNamespace    = "default"
+	gzipCompressionFlag = false
+)
+
 func TestControllers(t *testing.T) {
 	t.Parallel()
 

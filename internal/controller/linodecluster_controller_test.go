@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	conditions "sigs.k8s.io/cluster-api/util/conditions/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -119,6 +118,18 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 	ctlrSuite.Run(
 		OneOf(
 			Path(
+				Path(
+					Call("vpc doesn't exist", func(ctx context.Context, mck Mock) {
+					}),
+					OneOf(
+						Path(Result("", func(ctx context.Context, mck Mock) {
+							reconciler.Client = k8sClient
+							_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+							Expect(err).NotTo(HaveOccurred())
+							Expect(linodeCluster.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionFalse))
+						})),
+					),
+				),
 				Call("vpc present but not ready", func(ctx context.Context, mck Mock) {
 					Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
 					linodeVPC.Status.Ready = false
@@ -133,13 +144,16 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						// second for real
 						_, err = reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
+						Expect(linodeCluster.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionFalse))
 					})),
 				),
 			),
 			Path(
 				Call("firewall doesn't exist", func(ctx context.Context, mck Mock) {
 					cScope.LinodeCluster.Spec.NodeBalancerFirewallRef = &corev1.ObjectReference{Name: "firewalltest"}
+					Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
+					linodeVPC.Status.Ready = true
+					Expect(k8sClient.Status().Update(ctx, &linodeVPC)).To(Succeed())
 				}),
 				Result("", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
@@ -150,34 +164,21 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					// second reconcile is for real
 					_, err = reconciler.reconcile(ctx, cScope, mck.Logger())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeNBFirewallReady)).To(BeFalse())
+					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady).Status).To(Equal(metav1.ConditionFalse))
 				}),
 			),
 			Path(
 				Call("firewall present but not ready", func(ctx context.Context, mck Mock) {
 					cScope.LinodeCluster.Spec.NodeBalancerFirewallRef = &corev1.ObjectReference{Name: "firewalltest"}
-					Expect(k8sClient.Create(ctx, &linodeFirewall)).To(Succeed())
 					linodeFirewall.Spec.FirewallID = nil
-					k8sClient.Update(ctx, &linodeFirewall)
+					Expect(k8sClient.Create(ctx, &linodeFirewall)).To(Succeed())
 				}),
 				Result("", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
 					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeNBFirewallReady)).To(BeFalse())
+					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady).Status).To(Equal(metav1.ConditionFalse))
 				}),
-			),
-			Path(
-				Call("vpc doesn't exist", func(ctx context.Context, mck Mock) {
-				}),
-				OneOf(
-					Path(Result("", func(ctx context.Context, mck Mock) {
-						reconciler.Client = k8sClient
-						_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
-						Expect(err).NotTo(HaveOccurred())
-						Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
-					})),
-				),
 			),
 			Path(
 				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, mck Mock) {
@@ -189,7 +190,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					// Create and mark firewall as ready if using firewall ref
 					if cScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
 						linodeFirewall.Spec.FirewallID = util.Pointer(123)
-						k8sClient.Update(ctx, &linodeFirewall)
+						Expect(k8sClient.Update(ctx, &linodeFirewall)).To(Succeed())
 					}
 
 					// If using direct firewall ID
@@ -321,9 +322,9 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(3))
-					Expect(conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition)).Status).To(Equal(metav1.ConditionTrue))
-					Expect(conditions.Get(&linodeCluster, ConditionPreflightLinodeNBFirewallReady)).NotTo(BeNil())
-					Expect(conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)).NotTo(BeNil())
+					Expect(linodeCluster.GetCondition(string(clusterv1.ReadyCondition)).Status).To(Equal(metav1.ConditionTrue))
+					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady)).NotTo(BeNil())
+					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeVPCReady)).NotTo(BeNil())
 					By("checking NB id")
 					Expect(linodeCluster.Spec.Network.NodeBalancerID).To(Equal(&nodebalancerID))
 
@@ -439,7 +440,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
-					readyCond := conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition))
+					readyCond := linodeCluster.GetCondition(string(clusterv1.ReadyCondition))
 					Expect(readyCond).NotTo(BeNil())
 
 					By("checking controlPlaneEndpoint/NB host and port")
@@ -713,7 +714,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
-					cond := conditions.Get(&linodeCluster, string(clusterv1.ReadyCondition))
+					cond := linodeCluster.GetCondition(string(clusterv1.ReadyCondition))
 					Expect(cond).NotTo(BeNil())
 
 					By("checking controlPlaneEndpoint/NB host and port")
@@ -869,7 +870,7 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 					reconciler.Client = k8sClient
 					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeTrue())
+					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionTrue))
 				}),
 			),
 			Path(
@@ -877,7 +878,7 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 					cScope.LinodeClient = mck.LinodeClient
 
 					// Set the condition to false initially
-					conditions.Set(cScope.LinodeCluster, metav1.Condition{
+					cScope.LinodeCluster.SetCondition(metav1.Condition{
 						Type:   ConditionPreflightLinodeVPCReady,
 						Status: metav1.ConditionFalse,
 						Reason: "InitialState",
@@ -914,8 +915,8 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 					reconciler.Client = k8sClient
 					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
-					condition := conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)
+					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionFalse))
+					condition := linodeCluster.GetCondition(ConditionPreflightLinodeVPCReady)
 					Expect(condition).NotTo(BeNil())
 					Expect(condition.Message).To(ContainSubstring("VPC with ID 12345 has no subnets"))
 				}),
@@ -950,8 +951,8 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 					reconciler.Client = k8sClient
 					_, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(rec.ConditionTrue(&linodeCluster, ConditionPreflightLinodeVPCReady)).To(BeFalse())
-					condition := conditions.Get(&linodeCluster, ConditionPreflightLinodeVPCReady)
+					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionFalse))
+					condition := linodeCluster.GetCondition(ConditionPreflightLinodeVPCReady)
 					Expect(condition).NotTo(BeNil())
 					Expect(condition.Message).To(ContainSubstring("VPC not found"))
 				}),

@@ -134,25 +134,37 @@ type LinodePlacementGroup struct {
 	Status LinodePlacementGroupStatus `json:"status,omitempty"`
 }
 
-func (lpg *LinodePlacementGroup) GetConditions() []metav1.Condition {
+func (lpg *LinodePlacementGroup) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
 	for i := range lpg.Status.Conditions {
-		if lpg.Status.Conditions[i].Reason == "" {
-			lpg.Status.Conditions[i].Reason = DefaultConditionReason
+		if lpg.Status.Conditions[i].Type == cond.Type {
+			lpg.Status.Conditions[i] = cond
+
+			return
 		}
 	}
-	return lpg.Status.Conditions
+	lpg.Status.Conditions = append(lpg.Status.Conditions, cond)
 }
 
-func (lpg *LinodePlacementGroup) SetConditions(conditions []metav1.Condition) {
-	lpg.Status.Conditions = conditions
+func (lpg *LinodePlacementGroup) GetCondition(condType string) *metav1.Condition {
+	for i := range lpg.Status.Conditions {
+		if lpg.Status.Conditions[i].Type == condType {
+			return &lpg.Status.Conditions[i]
+		}
+	}
+
+	return nil
 }
 
-func (lpg *LinodePlacementGroup) GetV1Beta2Conditions() []metav1.Condition {
-	return lpg.GetConditions()
-}
-
-func (lpg *LinodePlacementGroup) SetV1Beta2Conditions(conditions []metav1.Condition) {
-	lpg.SetConditions(conditions)
+func (lpg *LinodePlacementGroup) IsPaused() bool {
+	for i := range lpg.Status.Conditions {
+		if lpg.Status.Conditions[i].Type == ConditionPaused {
+			return lpg.Status.Conditions[i].Status == metav1.ConditionTrue
+		}
+	}
+	return false
 }
 
 // +kubebuilder:object:root=true
