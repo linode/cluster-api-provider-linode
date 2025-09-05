@@ -13,7 +13,7 @@ spec:
   bindings:
     # Identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'kdmf-tst', random('[0-9a-z]{7}')]))
+      value: (join('-', ['e2e', 'kdmf', random('[0-9a-z]{7}')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `29`)), '-'))
@@ -357,9 +357,9 @@ spec:
               - name: CAPL_KUBECONFIG
                 value: ./kubeadm-full-cluster-kubeconfig.yaml
               - name: BUCKET_NAME
-                value: (join('-', [($run), 'etcd-backup']))
+                value: (join('-', [($run), 'etcdb']))
               - name: SECRET_NAME
-                value: (join('-', [($run), 'etcd-backup-obj-key']))
+                value: (join('-', [($run), 'etcdb-obj-key']))
               - name: BUCKET_ENDPOINT
                 value: (join('.', [(join('-', [env('LINODE_REGION'), '1'])), 'linodeobjects', 'com' ]))
               - name: LOCAL_BIN
