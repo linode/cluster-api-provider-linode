@@ -20,7 +20,7 @@ metadata:
 replacements:
   - source:
       kind: KubeadmControlPlane
-      name: ${CLUSTER_NAME}-control-plane
+      name: ${CLUSTER_NAME}-cp
       fieldPath: spec
     targets:
       - select:
