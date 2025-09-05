@@ -68,6 +68,7 @@ type LinodeObjectStorageKeySpec struct {
 	// bucketAccess is the list of object storage bucket labels which can be accessed using the key
 	// +kubebuilder:validation:MinItems=1
 	// +required
+	// +listType=atomic
 	BucketAccess []BucketAccessRef `json:"bucketAccess"`
 
 	// credentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.

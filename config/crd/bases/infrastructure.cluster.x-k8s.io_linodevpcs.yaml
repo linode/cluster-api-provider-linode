@@ -84,6 +84,9 @@ spec:
                   - range
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - range
+                x-kubernetes-list-type: map
               ipv6Range:
                 description: |-
                   ipv6Range is a list of IPv6 ranges to allocate to the VPC.
@@ -105,6 +108,7 @@ spec:
                       type: string
                   type: object
                 type: array
+                x-kubernetes-list-type: atomic
               region:
                 description: region is the region to create the VPC in.
                 type: string
@@ -143,6 +147,9 @@ spec:
                         - range
                         type: object
                       type: array
+                      x-kubernetes-list-map-keys:
+                      - range
+                      x-kubernetes-list-type: map
                     ipv6Range:
                       description: |-
                         ipv6Range is a list of IPv6 ranges to allocate to the subnet.
@@ -160,6 +167,7 @@ spec:
                             type: string
                         type: object
                       type: array
+                      x-kubernetes-list-type: atomic
                     label:
                       description: label is the label of the subnet.
                       maxLength: 63
@@ -176,6 +184,7 @@ spec:
                       type: integer
                   type: object
                 type: array
+                x-kubernetes-list-type: atomic
               vpcID:
                 description: vpcID is the ID of the VPC.
                 type: integer
