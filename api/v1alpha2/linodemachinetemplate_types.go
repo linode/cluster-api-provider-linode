@@ -40,6 +40,7 @@ type LinodeMachineTemplateStatus struct {
 
 	// tags that are currently applied to the LinodeMachineTemplate.
 	// +optional
+	// +listType=set
 	Tags []string `json:"tags,omitempty"`
 
 	// firewallID that is currently applied to the LinodeMachineTemplate.
