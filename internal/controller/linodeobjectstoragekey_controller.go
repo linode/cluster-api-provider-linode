@@ -278,7 +278,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileDelete(ctx context.Context, 
 		return err
 	}
 
-	r.Recorder.Event(keyScope.Key, clusterv1.DeletionCompletedReason, "KeyRevoked", "Object storage key revoked")
+	r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyRevoked", "Object storage key revoked")
 
 	// If this key's Secret was generated in another namespace, manually delete it since it has no owner reference.
 	if keyScope.Key.Spec.Namespace != keyScope.Key.Namespace {
