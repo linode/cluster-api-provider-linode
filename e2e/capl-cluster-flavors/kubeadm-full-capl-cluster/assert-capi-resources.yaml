@@ -66,7 +66,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: capi-kubeadm-bootstrap-controller-manager
-  namespace: kubeadm-bootstrap-system
+  namespace: capi-kubeadm-bootstrap-system
 status:
   availableReplicas: 1
 ---
@@ -74,6 +74,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: capi-kubeadm-control-plane-controller-manager
-  namespace: kubeadm-control-plane-system
+  namespace: capi-kubeadm-control-plane-system
 status:
   availableReplicas: 1
