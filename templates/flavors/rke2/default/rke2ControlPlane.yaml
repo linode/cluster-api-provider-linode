@@ -2,13 +2,13 @@
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 kind: RKE2ControlPlane
 metadata:
-  name: ${CLUSTER_NAME}-control-plane
+  name: ${CLUSTER_NAME}-cp
 spec:
   version: ${KUBERNETES_VERSION}
   infrastructureRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
     kind: LinodeMachineTemplate
-    name: ${CLUSTER_NAME}-control-plane
+    name: ${CLUSTER_NAME}-cp
   registrationMethod: internal-only-ips
   rolloutStrategy:
     rollingUpdate:
