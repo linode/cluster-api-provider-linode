@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -109,7 +110,7 @@ func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBu
 	if skipAPIValidation {
 		return errs
 	}
-	if err := validateObjectStorageRegion(ctx, linodeClient, bucket.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
+	if err := validateRegion(ctx, linodeClient, bucket.Spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityObjectStorage); err != nil {
 		errs = append(errs, err)
 	}
 
