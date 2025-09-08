@@ -45,7 +45,7 @@ spec:
               - name: ETCD_BACKUP_SCHEDULE
                 value: '* * * * *'
               - name: KUBERNETES_VERSION
-                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
+                value: (env('KUBERNETES_VERSION') || 'v1.33.4')
             content: |
               set -e
               if [ -z "$SSE_KEY" ]; then

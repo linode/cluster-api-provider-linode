@@ -220,7 +220,7 @@ you can deploy a workload cluster with the default flavor:
 
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
-  --kubernetes-version v1.29.1 \
+  --kubernetes-version v1.33.4 \
   --infrastructure local-linode:v0.0.0 \
   | kubectl apply -f -
 ```
@@ -240,7 +240,7 @@ management cluster has the [ClusterTopology feature gate set](https://cluster-ap
 
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
-  --kubernetes-version v1.29.1 \
+  --kubernetes-version v1.33.4 \
   --infrastructure local-linode:v0.0.0 \
   --flavor clusterclass-kubeadm \
   | kubectl apply -f -

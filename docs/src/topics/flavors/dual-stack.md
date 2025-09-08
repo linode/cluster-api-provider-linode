@@ -13,7 +13,7 @@ This flavor enables allocating both IPv4 and IPv6 ranges to nodes within k8s clu
 1. Generate cluster yaml
     ```bash
     clusterctl generate cluster test-cluster \
-        --kubernetes-version v1.29.1 \
+        --kubernetes-version v1.33.4 \
         --infrastructure linode-linode \
         --flavor <controlplane>-dual-stack > test-cluster.yaml
     ```

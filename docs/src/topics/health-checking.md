@@ -9,7 +9,7 @@ While it is possible to manually create and apply a `MachineHealthCheck` resourc
 using the `self-healing` flavor is the quickest way to get started:
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
-  --kubernetes-version v1.29.1 \
+  --kubernetes-version v1.33.4 \
   --infrastructure linode-linode \
   --flavor self-healing \
   | kubectl apply -f -

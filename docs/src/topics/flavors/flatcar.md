@@ -42,7 +42,7 @@ By following this import step, you will get the Flatcar image ID stored into `IM
 2. Generate cluster yaml
     ```bash
     clusterctl generate cluster test-cluster \
-        --kubernetes-version v1.29.1 \
+        --kubernetes-version v1.33.4 \
         --infrastructure linode-linode \
         --flavor kubeadm-flatcar > test-cluster.yaml
     ```

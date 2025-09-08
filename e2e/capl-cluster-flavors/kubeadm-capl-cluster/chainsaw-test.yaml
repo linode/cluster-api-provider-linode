@@ -36,7 +36,7 @@ spec:
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: KUBERNETES_VERSION
-                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
+                value: (env('KUBERNETES_VERSION') || 'v1.33.4')
             content: |
               set -e
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
