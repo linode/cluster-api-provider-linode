@@ -11,7 +11,7 @@
 1. Generate cluster yaml
     ```bash
     clusterctl generate cluster test-cluster \
-        --kubernetes-version v1.29.1 \
+        --kubernetes-version v1.33.4 \
         --infrastructure linode-linode \
         --flavor <controlplane>-etcd-backup-restore > test-cluster.yaml
     ```

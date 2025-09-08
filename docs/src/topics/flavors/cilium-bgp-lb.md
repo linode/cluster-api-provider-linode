@@ -59,7 +59,7 @@ or the policy is set to audit (default) instead of enforce (see [https://github.
 
     ```sh
     clusterctl generate cluster test-cluster \
-        --kubernetes-version v1.29.1 \
+        --kubernetes-version v1.33.4 \
         --infrastructure linode-linode \
         --flavor kubeadm-cilium-bgp-lb > test-cluster.yaml
     ```

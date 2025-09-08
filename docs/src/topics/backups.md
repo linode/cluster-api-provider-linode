@@ -11,7 +11,7 @@ Enabling this addon requires enabling Object Storage in the account where the re
 To enable backups, use the addon flag during provisioning to select the etcd-backup-restore addon
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
-  --kubernetes-version v1.29.1 \
+  --kubernetes-version v1.33.4 \
   --infrastructure linode-linode \
   --flavor etcd-backup-restore \
   | kubectl apply -f -
