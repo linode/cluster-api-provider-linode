@@ -12,7 +12,7 @@ patches:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: KubeadmControlPlane
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
         remediationStrategy:
           maxRetry: 5

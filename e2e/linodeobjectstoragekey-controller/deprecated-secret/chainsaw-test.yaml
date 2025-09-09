@@ -13,7 +13,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'deprecated-secret', random('[0-9a-z]{7}')]))
+      value: (join('-', ['e2e', 'deprecated-secret', random('[0-9a-z]{5}')]))
     - name: key
       # Format the key name into a valid Kubernetes object name
       # TODO: This is over-truncated to account for the Kubernetes access key Secret

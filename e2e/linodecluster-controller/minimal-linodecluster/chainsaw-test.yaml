@@ -13,7 +13,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'min-cluster', random('[0-9a-z]{7}')]))
+      value: (join('-', ['e2e', 'min-cluster', random('[0-9a-z]{5}')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `29`)), '-'))

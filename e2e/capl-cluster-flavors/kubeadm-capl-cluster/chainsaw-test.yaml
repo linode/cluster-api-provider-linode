@@ -3,7 +3,7 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   creationTimestamp: null
-  name: default-capl-cluster
+  name: default-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
     all:
@@ -13,7 +13,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'default-cluster', random('[0-9a-z]{7}')]))
+      value: (join('-', ['e2e', 'default', random('[0-9a-z]{5}')]))
     - name: cluster
       # Format the cluster name
       # linode firewall has limit of max 32 chars, so we truncate the cluster name to 29 chars

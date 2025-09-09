@@ -27,7 +27,7 @@ _Example template where the VPC interface is not the primary interface_
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: test-cluster-md-0
+  name: test-cluster
   namespace: default
 spec:
   template:

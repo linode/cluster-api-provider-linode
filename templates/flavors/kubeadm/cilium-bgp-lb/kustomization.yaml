@@ -61,7 +61,7 @@ transformers:
     replacements:
       - source:
           kind: KubeadmConfigTemplate
-          name: ${CLUSTER_NAME}-md-0
+          name: ${CLUSTER_NAME}
           fieldPath: .spec
         targets:
           - select:
@@ -73,7 +73,7 @@ transformers:
               create: true
       - source:
           kind: LinodeMachineTemplate
-          name: ${CLUSTER_NAME}-md-0
+          name: ${CLUSTER_NAME}
           fieldPath: .spec
         targets:
           - select:
@@ -85,7 +85,7 @@ transformers:
               create: true
       - source:
           kind: MachineDeployment
-          name: ${CLUSTER_NAME}-md-0
+          name: ${CLUSTER_NAME}
           fieldPath: .spec.template
         targets:
           - select:

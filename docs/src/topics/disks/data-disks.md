@@ -63,7 +63,7 @@ spec:
 kind: KubeadmControlPlane
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
-  name: "${CLUSTER_NAME}-control-plane"
+  name: "${CLUSTER_NAME}-cp"
 spec:
     diskSetup:
       filesystems:
