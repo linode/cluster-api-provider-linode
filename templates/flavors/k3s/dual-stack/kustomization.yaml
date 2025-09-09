@@ -47,7 +47,7 @@ patches:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
         template:
           spec:
@@ -62,7 +62,7 @@ patches:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
-        name: ${CLUSTER_NAME}-md-0
+        name: ${CLUSTER_NAME}
       spec:
         template:
           spec:
@@ -77,7 +77,7 @@ patches:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KThreesControlPlane
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
         kthreesConfigSpec:
           serverConfig:
