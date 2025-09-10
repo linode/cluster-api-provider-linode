@@ -29,7 +29,7 @@ spec:
             file: create-cluster.yaml
       catch:
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Cluster
         - podLogs:
             namespace: capl-system
@@ -50,7 +50,7 @@ spec:
             selector: control-plane=controller-manager
             tail: 250
         - describe:
-            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta2
             kind: KubeadmControlPlane
     - name: Check if the Linodes were created
       try:
@@ -79,7 +79,7 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: cluster.x-k8s.io/v1beta1
+              apiVersion: cluster.x-k8s.io/v1beta2
               kind: Cluster
               name: ($cluster)
         - error:
