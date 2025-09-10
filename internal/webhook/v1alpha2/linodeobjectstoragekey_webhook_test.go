@@ -27,7 +27,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
+	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta2"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
