@@ -137,7 +137,7 @@ patches:
           secretRef:
             name: "linode-token-region"
           image:
-            tag: v0.9.1
+            tag: ${LINODE_CCM_VERSION:=v0.9.1}
             pullPolicy: IfNotPresent
           enableNodeIPAM: true
           tolerations:
