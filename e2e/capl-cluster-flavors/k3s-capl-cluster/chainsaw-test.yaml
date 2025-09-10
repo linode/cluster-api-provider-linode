@@ -6,9 +6,9 @@ metadata:
   name: k3s-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
-    all:
+#    all:
     k3s:
-    flavors:
+#    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
