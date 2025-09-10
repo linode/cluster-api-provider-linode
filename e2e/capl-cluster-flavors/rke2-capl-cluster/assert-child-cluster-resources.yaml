@@ -11,7 +11,7 @@ status:
   ready: true
   instanceState: running
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   labels:
@@ -22,7 +22,7 @@ status:
   bootstrapReady: true
   infrastructureReady: true
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   labels:
@@ -35,7 +35,7 @@ status:
   unavailableReplicas: 0
   availableReplicas: 1
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: RKE2ControlPlane
 metadata:
   labels:
