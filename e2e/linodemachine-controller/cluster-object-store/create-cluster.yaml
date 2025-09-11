@@ -9,7 +9,7 @@ spec:
     kind: KubeadmControlPlane
     name: ($cluster)
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: LinodeCluster
     name: ($cluster)
 ---

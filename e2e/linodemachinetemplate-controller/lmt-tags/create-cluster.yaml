@@ -9,6 +9,7 @@ spec:
     kind: KubeadmControlPlane
     name: ($cluster)
   infrastructureRef:
+    apiGroup: infrastructure.cluster.x-k8s.io
     kind: LinodeCluster
     name: ($cluster)
 ---
@@ -33,6 +34,7 @@ spec:
     machineTemplate:
         spec:
             infrastructureRef:
+                apiGroup: infrastructure.cluster.x-k8s.io
                 kind: LinodeMachineTemplate
                 name: ($cluster)
     replicas: 1

@@ -19,8 +19,9 @@ metadata:
 spec:
   clusterName: ($cluster)
 status:
-  bootstrapReady: true
-  infrastructureReady: true
+  initialization:
+    bootstrapDataSecretCreated: true
+    infrastructureProvisioned: true
 ---
 apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
@@ -32,7 +33,6 @@ spec:
   replicas: 1
 status:
   readyReplicas: 1
-  unavailableReplicas: 0
   availableReplicas: 1
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta2
@@ -42,8 +42,9 @@ metadata:
     cluster.x-k8s.io/cluster-name: ($cluster)
 status:
   readyReplicas: 1
-  unavailableReplicas: 0
-  ready: true
+  availableReplicas: 1
+  initialization:
+    controlPlaneInitialized: true
 ---
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmReleaseProxy
@@ -72,5 +73,6 @@ kind: Cluster
 metadata:
   name: ($cluster)
 status:
-  infrastructureReady: true
-  phase: Provisioned
+  initialization:
+    controlPlaneInitialized: true
+    infrastructureProvisioned: true

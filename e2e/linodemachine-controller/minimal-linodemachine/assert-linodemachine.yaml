@@ -19,5 +19,6 @@ metadata:
 spec:
   clusterName: ($cluster)
 status:
-  bootstrapReady: true
-  infrastructureReady: true
+  initialization:
+    bootstrapDataSecretCreated: true
+    infrastructureProvisioned: true
