@@ -35,7 +35,7 @@ spec:
             file: assert-vpc.yaml
       catch:
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Cluster
         - describe:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
@@ -54,7 +54,7 @@ spec:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeMachine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Machine
     - name: Check if the Linodes & VPC were created
       try:
@@ -108,7 +108,7 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: cluster.x-k8s.io/v1beta1
+              apiVersion: cluster.x-k8s.io/v1beta2
               kind: Cluster
               name: ($cluster)
         - delete:

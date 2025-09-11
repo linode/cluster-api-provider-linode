@@ -6,10 +6,10 @@ resources:
 patches:
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -41,10 +41,10 @@ patches:
           - range: auto
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
         name: ${CLUSTER_NAME}-cp
@@ -53,7 +53,8 @@ patches:
           clusterConfiguration:
             controllerManager:
               extraArgs:
-                allocate-node-cidrs: "false"
+                - name: "allocate-node-cidrs"
+                  value: "false"
   - target:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2

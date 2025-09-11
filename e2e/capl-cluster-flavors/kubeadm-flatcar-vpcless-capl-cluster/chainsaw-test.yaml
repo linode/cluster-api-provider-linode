@@ -94,13 +94,13 @@ spec:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeMachine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Machine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: MachineDeployment
         - describe:
-            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta2
             kind: KubeadmControlPlane
         - describe:
             apiVersion: addons.cluster.x-k8s.io/v1alpha1
@@ -169,7 +169,7 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: cluster.x-k8s.io/v1beta1
+              apiVersion: cluster.x-k8s.io/v1beta2
               kind: Cluster
               name: ($cluster)
         - error:
