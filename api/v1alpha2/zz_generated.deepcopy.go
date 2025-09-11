@@ -1418,6 +1418,11 @@ func (in *LinodeObjectStorageKeySpec) DeepCopyInto(out *LinodeObjectStorageKeySp
 		*out = new(v1.SecretReference)
 		**out = **in
 	}
+	if in.KeyGeneration != nil {
+		in, out := &in.KeyGeneration, &out.KeyGeneration
+		*out = new(int)
+		**out = **in
+	}
 	in.GeneratedSecret.DeepCopyInto(&out.GeneratedSecret)
 	if in.SecretDataFormat != nil {
 		in, out := &in.SecretDataFormat, &out.SecretDataFormat
@@ -2087,6 +2092,11 @@ func (in *VPCInterfaceIPv6CreateOptions) DeepCopyInto(out *VPCInterfaceIPv6Creat
 		in, out := &in.Ranges, &out.Ranges
 		*out = make([]VPCInterfaceIPv6RangeCreateOptions, len(*in))
 		copy(*out, *in)
+	}
+	if in.IsPublic != nil {
+		in, out := &in.IsPublic, &out.IsPublic
+		*out = new(bool)
+		**out = **in
 	}
 }
 

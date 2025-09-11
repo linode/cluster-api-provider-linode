@@ -111,6 +111,7 @@ spec:
                 x-kubernetes-list-type: atomic
               region:
                 description: region is the region to create the VPC in.
+                minLength: 1
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -297,6 +298,8 @@ spec:
                 description: ready is true when the provider resource is ready.
                 type: boolean
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

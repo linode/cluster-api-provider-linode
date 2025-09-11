@@ -72,6 +72,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
+			Region: "us-east",
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
 				ApiserverNodeBalancerConfigID: ptr.To(2),
@@ -111,6 +112,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region:         "us-east",
 				Type:           "g6-nanode-1",
 				Image:          rutil.DefaultMachineControllerLinodeImage,
 				DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
@@ -304,7 +306,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					Namespace: defaultNamespace,
 				},
 				Spec: infrav1alpha2.LinodeVPCSpec{
-					VPCID: ptr.To(1),
+					Region: "us-ord",
+					VPCID:  ptr.To(1),
 				},
 				Status: infrav1alpha2.LinodeVPCStatus{
 					Ready: false,
@@ -347,7 +350,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					Namespace: defaultNamespace,
 				},
 				Spec: infrav1alpha2.LinodeVPCSpec{
-					VPCID: ptr.To(1),
+					VPCID:  ptr.To(1),
+					Region: "us-ord",
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 1,
@@ -1350,8 +1354,9 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
-			Type:  "g6-nanode-1",
-			Image: rutil.DefaultMachineControllerLinodeImage,
+			Type:   "g6-nanode-1",
+			Image:  rutil.DefaultMachineControllerLinodeImage,
+			Region: "us-east",
 		},
 	}
 	machineKey := client.ObjectKeyFromObject(linodeMachine)
@@ -1383,6 +1388,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 			Labels:    make(map[string]string),
 		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
+			Region: "us-east",
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
 				ApiserverNodeBalancerConfigID: ptr.To(2),
@@ -1671,6 +1677,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
+			Region:     "us-ord",
 			Type:       "g6-nanode-1",
 			Image:      rutil.DefaultMachineControllerLinodeImage,
 			ProviderID: util.Pointer("linode://11111"),
@@ -1705,6 +1712,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 			Labels:    make(map[string]string),
 		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
+			Region: "us-east",
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
 				ApiserverNodeBalancerConfigID: ptr.To(2),

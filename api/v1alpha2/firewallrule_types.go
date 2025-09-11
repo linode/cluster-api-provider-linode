@@ -25,12 +25,14 @@ import (
 // FirewallRuleSpec defines the desired state of FirewallRule.
 type FirewallRuleSpec struct {
 	// action is the action to take when the rule matches.
+	// +kubebuilder:validation:Enum=ACCEPT;DROP
 	// +required
-	Action string `json:"action"`
+	Action string `json:"action,omitempty"`
 
 	// label is the label of the rule.
+	// +kubebuilder:validation:MinLength=3
 	// +required
-	Label string `json:"label"`
+	Label string `json:"label,omitempty"`
 
 	// description is the description of the rule.
 	// +optional
@@ -43,7 +45,7 @@ type FirewallRuleSpec struct {
 	// protocol is the protocol to apply the rule to.
 	// +kubebuilder:validation:Enum=TCP;UDP;ICMP;IPENCAP
 	// +required
-	Protocol linodego.NetworkProtocol `json:"protocol"`
+	Protocol linodego.NetworkProtocol `json:"protocol,omitempty"`
 
 	// addresses is a list of addresses to apply the rule to.
 	// +optional
@@ -89,8 +91,8 @@ type FirewallRule struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the FirewallRule.
-	// +optional
-	Spec FirewallRuleSpec `json:"spec,omitempty"`
+	// +required
+	Spec FirewallRuleSpec `json:"spec,omitzero,omitempty"`
 
 	// status is the observed state of the FirewallRule.
 	// +optional

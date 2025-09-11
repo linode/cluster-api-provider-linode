@@ -276,6 +276,7 @@ spec:
                         type: object
                       region:
                         description: region the LinodeCluster lives in.
+                        minLength: 1
                         type: string
                       vpcID:
                         description: vpcID is the ID of an existing VPC in Linode.

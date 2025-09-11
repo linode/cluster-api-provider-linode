@@ -1003,7 +1003,9 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 				Range: rng.Range,
 			})
 		}
-		ipv6IsPublic = iface.VPC.IPv6.IsPublic
+		if iface.VPC.IPv6.IsPublic != nil {
+			ipv6IsPublic = *iface.VPC.IPv6.IsPublic
+		}
 	}
 	return &linodego.VPCInterfaceCreateOptions{
 		SubnetID: iface.VPC.SubnetID,

@@ -28,6 +28,7 @@ const (
 )
 
 // LinodeFirewallSpec defines the desired state of LinodeFirewall
+// +kubebuilder:validation:MinProperties=1
 type LinodeFirewallSpec struct {
 	// firewallID is the ID of the Firewall.
 	// +optional
@@ -147,8 +148,8 @@ type LinodeFirewall struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeFirewall.
-	// +optional
-	Spec LinodeFirewallSpec `json:"spec,omitempty"`
+	// +required
+	Spec LinodeFirewallSpec `json:"spec,omitzero,omitempty"`
 
 	// status is the observed state of the LinodeFirewall.
 	// +optional

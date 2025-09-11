@@ -89,6 +89,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		},
 		Spec: infrav1alpha2.LinodeFirewallSpec{
 			FirewallID: util.Pointer(123), // Test firewall ID
+			Enabled:    true,
 		},
 	}
 
@@ -361,6 +362,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 			UID:       "12345",
 		},
 		Spec: infrav1alpha2.LinodeMachineSpec{
+			Region:         "us-ord",
 			Type:           "g6-nanode-1",
 			Image:          rec.DefaultMachineControllerLinodeImage,
 			DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
@@ -640,6 +642,8 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeMachineSpec{
+			Region:     "us-ord",
+			Type:       "g6-standard-1",
 			ProviderID: ptr.To("linode://123"),
 		},
 		Status: infrav1alpha2.LinodeMachineStatus{

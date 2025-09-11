@@ -558,6 +558,7 @@ spec:
                                   address:
                                     description: address is the IPv4 address for the
                                       public interface.
+                                    minLength: 1
                                     type: string
                                   primary:
                                     description: primary is a boolean indicating whether
@@ -585,6 +586,7 @@ spec:
                                   range:
                                     description: range is the IPv6 range for the public
                                       interface.
+                                    minLength: 1
                                     type: string
                                 required:
                                 - range
@@ -605,6 +607,7 @@ spec:
                           type: string
                         vlan_label:
                           description: vlan_label is the label of the VLAN.
+                          minLength: 1
                           type: string
                       required:
                       - vlan_label
@@ -626,6 +629,7 @@ spec:
                                   address:
                                     description: address is the IPv4 address for the
                                       interface.
+                                    minLength: 1
                                     type: string
                                   nat_1_1_address:
                                     description: nat_1_1_address is the NAT 1:1 address
@@ -650,6 +654,7 @@ spec:
                                 properties:
                                   range:
                                     description: range is the IPv4 range for the interface.
+                                    minLength: 1
                                     type: string
                                 required:
                                 - range
@@ -674,6 +679,7 @@ spec:
                                 properties:
                                   range:
                                     description: range is the IPv6 range for the interface.
+                                    minLength: 1
                                     type: string
                                 required:
                                 - range
@@ -691,6 +697,7 @@ spec:
                                 properties:
                                   range:
                                     description: range is the IPv6 range for the interface.
+                                    minLength: 1
                                     type: string
                                 required:
                                 - range
@@ -705,6 +712,7 @@ spec:
                         subnet_id:
                           description: subnet_id is the ID of the subnet to use for
                             the interface.
+                          minimum: 1
                           type: integer
                       required:
                       - subnet_id
@@ -817,6 +825,7 @@ spec:
                 type: string
               region:
                 description: region is the Linode region to create the instance in.
+                minLength: 1
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -835,6 +844,7 @@ spec:
                 x-kubernetes-list-type: set
               type:
                 description: type is the Linode instance type to create.
+                minLength: 1
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -1049,6 +1059,8 @@ spec:
                 type: array
                 x-kubernetes-list-type: set
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

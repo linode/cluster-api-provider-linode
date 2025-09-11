@@ -60,6 +60,55 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 				IPRanges: []string{"ip"},
 			},
 		},
+		LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{{
+			FirewallID: ptr.To(123),
+			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
+				IPv4: ptr.To(true),
+				IPv6: ptr.To(true),
+			},
+			Public: &infrav1alpha2.PublicInterfaceCreateOptions{
+				IPv4: &infrav1alpha2.PublicInterfaceIPv4CreateOptions{Addresses: []infrav1alpha2.PublicInterfaceIPv4AddressCreateOptions{{
+					Address: "1.2.3.4",
+					Primary: nil,
+				}}},
+				IPv6: &infrav1alpha2.PublicInterfaceIPv6CreateOptions{Ranges: []infrav1alpha2.PublicInterfaceIPv6RangeCreateOptions{{
+					Range: "1234:5678:90ab:cdef:1234:5678:90ab:cdef/64",
+				}}},
+			},
+		}, {
+			FirewallID: ptr.To(123),
+			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
+				IPv4: ptr.To(true),
+				IPv6: ptr.To(true),
+			},
+			VPC: &infrav1alpha2.VPCInterfaceCreateOptions{
+				IPv4: &infrav1alpha2.VPCInterfaceIPv4CreateOptions{Addresses: []infrav1alpha2.VPCInterfaceIPv4AddressCreateOptions{{
+					Address:        "1.2.3.4",
+					Primary:        nil,
+					NAT1To1Address: ptr.To("true"),
+				}},
+					Ranges: []infrav1alpha2.VPCInterfaceIPv4RangeCreateOptions{{
+						Range: "1.2.3.4/32",
+					}}},
+				IPv6: &infrav1alpha2.VPCInterfaceIPv6CreateOptions{
+					SLAAC: []infrav1alpha2.VPCInterfaceIPv6SLAACCreateOptions{{Range: "1234:5678:90ab:cdef:1234:5678:90ab:cdef/64"}},
+					Ranges: []infrav1alpha2.VPCInterfaceIPv6RangeCreateOptions{{
+						Range: "1234:5678:90ab:cdef:1234:5678:90ab:cdef/64",
+					}},
+					IsPublic: ptr.To(false),
+				},
+			},
+		}, {
+			FirewallID: ptr.To(123),
+			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
+				IPv4: ptr.To(true),
+				IPv6: ptr.To(true),
+			},
+			VLAN: &infrav1alpha2.VLANInterface{
+				VLANLabel:   "test-label",
+				IPAMAddress: nil,
+			},
+		}},
 		BackupsEnabled: true,
 		PrivateIP:      util.Pointer(true),
 	}

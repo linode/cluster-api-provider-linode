@@ -279,6 +279,7 @@ spec:
                 type: object
               region:
                 description: region the LinodeCluster lives in.
+                minLength: 1
                 type: string
               vpcID:
                 description: vpcID is the ID of an existing VPC in Linode.
@@ -415,6 +416,8 @@ spec:
                 description: ready denotes that the cluster (infrastructure) is ready.
                 type: boolean
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

@@ -75,7 +75,7 @@ func TestRotateObjectStorageKey(t *testing.T) {
 						Key: &infrav1alpha2.LinodeObjectStorageKey{
 							ObjectMeta: metav1.ObjectMeta{Name: "key"},
 							Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-								KeyGeneration: 1,
+								KeyGeneration: ptr.To(1),
 							},
 							Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
 								LastKeyGeneration: ptr.To(0),
@@ -100,7 +100,7 @@ func TestRotateObjectStorageKey(t *testing.T) {
 						Key: &infrav1alpha2.LinodeObjectStorageKey{
 							ObjectMeta: metav1.ObjectMeta{Name: "key"},
 							Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-								KeyGeneration: 1,
+								KeyGeneration: ptr.To(1),
 							},
 							Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
 								LastKeyGeneration: ptr.To(0),
