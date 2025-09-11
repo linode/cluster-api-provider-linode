@@ -22,7 +22,6 @@ linters:
               - "integers"
               # jsontags linter will force the json fields to go from _ usage to camelCase, we will wait for v1beta1 to enable this
               - "jsontags"
-              - "requiredfields"
               - "optionalfields"
           lintersConfig: { }
   exclusions:

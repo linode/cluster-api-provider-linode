@@ -24,7 +24,7 @@ import (
 type LinodeMachineTemplateSpec struct {
 	// template defines the specification for a LinodeMachine.
 	// +required
-	Template LinodeMachineTemplateResource `json:"template"`
+	Template LinodeMachineTemplateResource `json:"template,omitempty,omitzero"`
 }
 
 // LinodeMachineTemplateStatus defines the observed state of LinodeMachineTemplate
@@ -52,7 +52,7 @@ type LinodeMachineTemplateStatus struct {
 type LinodeMachineTemplateResource struct {
 	// spec is the specification of the desired behavior of the machine.
 	// +required
-	Spec LinodeMachineSpec `json:"spec"`
+	Spec LinodeMachineSpec `json:"spec,omitempty,omitzero"`
 }
 
 // +kubebuilder:object:root=true
@@ -70,7 +70,7 @@ type LinodeMachineTemplate struct {
 
 	// spec is the desired state of the LinodeMachineTemplate.
 	// +optional
-	Spec LinodeMachineTemplateSpec `json:"spec,omitempty"`
+	Spec LinodeMachineTemplateSpec `json:"spec,omitzero,omitempty"`
 
 	// status is the observed state of the LinodeMachineTemplate.
 	// +optional

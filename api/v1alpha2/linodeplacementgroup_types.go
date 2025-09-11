@@ -33,9 +33,10 @@ type LinodePlacementGroupSpec struct {
 	// +optional
 	PGID *int `json:"pgID,omitempty"`
 	// region is the Linode region to create the PlacementGroup in.
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +required
-	Region string `json:"region"`
+	Region string `json:"region,omitempty"`
 	// placementGroupPolicy defines the policy for the PlacementGroup.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:default="strict"
@@ -126,8 +127,8 @@ type LinodePlacementGroup struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodePlacementGroup.
-	// +optional
-	Spec LinodePlacementGroupSpec `json:"spec,omitempty"`
+	// +required
+	Spec LinodePlacementGroupSpec `json:"spec,omitzero,omitempty"`
 
 	// status is the observed state of the LinodePlacementGroup.
 	// +optional

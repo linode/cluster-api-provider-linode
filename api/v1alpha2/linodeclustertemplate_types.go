@@ -24,14 +24,14 @@ import (
 type LinodeClusterTemplateSpec struct {
 	// template defines the specification for a LinodeCluster.
 	// +required
-	Template LinodeClusterTemplateResource `json:"template"`
+	Template LinodeClusterTemplateResource `json:"template,omitzero"`
 }
 
 // LinodeClusterTemplateResource describes the data needed to create a LinodeCluster from a template.
 type LinodeClusterTemplateResource struct {
 	// spec is the specification of the LinodeCluster.
 	// +required
-	Spec LinodeClusterSpec `json:"spec"`
+	Spec LinodeClusterSpec `json:"spec,omitzero,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -47,7 +47,7 @@ type LinodeClusterTemplate struct {
 
 	// spec is the desired state of the LinodeClusterTemplate.
 	// +optional
-	Spec LinodeClusterTemplateSpec `json:"spec,omitempty"`
+	Spec LinodeClusterTemplateSpec `json:"spec,omitzero,omitempty"`
 }
 
 // +kubebuilder:object:root=true

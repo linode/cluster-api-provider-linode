@@ -168,7 +168,7 @@ func (s *ObjectStorageKeyScope) ShouldInitKey() bool {
 
 func (s *ObjectStorageKeyScope) ShouldRotateKey() bool {
 	return s.Key.Status.LastKeyGeneration != nil &&
-		s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
+		*s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
 }
 
 // Override the controller credentials with ones from the Cluster's Secret reference (if supplied).

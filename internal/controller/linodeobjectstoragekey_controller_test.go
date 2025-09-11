@@ -128,7 +128,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					readyCond := key.GetCondition(string(clusterv1.ReadyCondition))
 					Expect(readyCond).NotTo(BeNil())
 					Expect(key.Status.CreationTime).NotTo(BeNil())
-					Expect(*key.Status.LastKeyGeneration).To(Equal(key.Spec.KeyGeneration))
+					Expect(*key.Status.LastKeyGeneration).To(Equal(*key.Spec.KeyGeneration))
 					Expect(*key.Status.LastKeyGeneration).To(Equal(0))
 					Expect(*key.Status.AccessKeyRef).To(Equal(1))
 
@@ -152,7 +152,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 			),
 		),
 		Call("keyGeneration is modified", func(ctx context.Context, _ Mock) {
-			key.Spec.KeyGeneration = 1
+			key.Spec.KeyGeneration = ptr.To(1)
 			Expect(k8sClient.Update(ctx, &key)).To(Succeed())
 		}),
 		OneOf(
@@ -507,8 +507,8 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("api error"))
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					keyScope.Key.Spec.KeyGeneration = 1
-					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
+					keyScope.Key.Spec.KeyGeneration = ptr.To(1)
+					keyScope.Key.Status.LastKeyGeneration = keyScope.Key.Spec.KeyGeneration
 					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Client = mck.K8sClient
@@ -533,8 +533,8 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					mck.K8sClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("secret creation error"))
 				}),
 				Result("creation error", func(ctx context.Context, mck Mock) {
-					keyScope.Key.Spec.KeyGeneration = 1
-					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
+					keyScope.Key.Spec.KeyGeneration = ptr.To(1)
+					keyScope.Key.Status.LastKeyGeneration = keyScope.Key.Spec.KeyGeneration
 					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
 
 					keyScope.LinodeClient = mck.LinodeClient
@@ -551,8 +551,8 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					keyScope.Key.Spec.KeyGeneration = 1
-					keyScope.Key.Status.LastKeyGeneration = ptr.To(keyScope.Key.Spec.KeyGeneration)
+					keyScope.Key.Spec.KeyGeneration = ptr.To(1)
+					keyScope.Key.Status.LastKeyGeneration = keyScope.Key.Spec.KeyGeneration
 					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
 
 					keyScope.LinodeClient = mck.LinodeClient

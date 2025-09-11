@@ -170,6 +170,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			Path(Result("unable to create with too many rules", func(ctx context.Context, mck Mock) {
 				for idx := 0; idx < 255; idx++ {
 					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRuleSpec{
+						Label:    "test",
 						Action:   "ACCEPT",
 						Ports:    "22",
 						Protocol: "TCP",
@@ -245,6 +246,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						ipv4s = append(ipv4s, fmt.Sprintf("192.168.%d.%d", idx, 0))
 					}
 					linodeFW.Spec.InboundRules = append(linodeFW.Spec.InboundRules, infrav1alpha2.FirewallRuleSpec{
+						Label:    "test",
 						Action:   "ACCEPT",
 						Ports:    "22",
 						Protocol: "TCP",

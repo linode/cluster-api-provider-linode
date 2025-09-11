@@ -44,6 +44,7 @@ spec:
             type: object
           spec:
             description: spec is the desired state of the AddressSet
+            minProperties: 1
             properties:
               ipv4:
                 description: ipv4 defines a list of IPv4 address strings
@@ -59,6 +60,8 @@ spec:
           status:
             description: status is the observed state of the AddressSet
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

@@ -255,7 +255,7 @@ func (r *LinodeObjectStorageKeyReconciler) reconcileApply(ctx context.Context, k
 		r.Recorder.Event(keyScope.Key, corev1.EventTypeNormal, "KeyStored", "Object storage key stored in secret")
 	}
 
-	keyScope.Key.Status.LastKeyGeneration = &keyScope.Key.Spec.KeyGeneration
+	keyScope.Key.Status.LastKeyGeneration = keyScope.Key.Spec.KeyGeneration
 	keyScope.Key.Status.Ready = true
 
 	keyScope.Key.SetCondition(metav1.Condition{

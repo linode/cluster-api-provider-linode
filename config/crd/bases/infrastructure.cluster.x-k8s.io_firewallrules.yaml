@@ -47,6 +47,9 @@ spec:
             properties:
               action:
                 description: action is the action to take when the rule matches.
+                enum:
+                - ACCEPT
+                - DROP
                 type: string
               addressSetRefs:
                 description: |-
@@ -117,6 +120,7 @@ spec:
                 type: string
               label:
                 description: label is the label of the rule.
+                minLength: 3
                 type: string
               ports:
                 description: ports is the ports to apply the rule to.
@@ -137,6 +141,8 @@ spec:
           status:
             description: status is the observed state of the FirewallRule.
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

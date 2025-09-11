@@ -40,8 +40,9 @@ type LinodeVPCSpec struct {
 
 	// region is the region to create the VPC in.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Region string `json:"region"`
+	Region string `json:"region,omitempty"`
 
 	// ipv6 is a list of IPv6 ranges allocated to the VPC.
 	// Once ranges are allocated based on the IPv6Range field, they will be
@@ -208,8 +209,8 @@ type LinodeVPC struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeVPC.
-	// +optional
-	Spec LinodeVPCSpec `json:"spec,omitempty"`
+	// +required
+	Spec LinodeVPCSpec `json:"spec,omitzero,omitempty"`
 
 	// status is the observed state of the LinodeVPC.
 	// +optional

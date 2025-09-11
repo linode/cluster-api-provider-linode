@@ -140,6 +140,7 @@ spec:
               region:
                 description: region is the ID of the Object Storage region for the
                   bucket.
+                minLength: 1
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -230,6 +231,8 @@ spec:
                   with access keys.
                 type: boolean
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

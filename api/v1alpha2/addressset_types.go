@@ -21,6 +21,7 @@ import (
 )
 
 // AddressSetSpec defines the desired state of AddressSet
+// +kubebuilder:validation:MinProperties=1
 type AddressSetSpec struct {
 	// ipv4 defines a list of IPv4 address strings
 	// +optional
@@ -46,8 +47,8 @@ type AddressSet struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// spec is the desired state of the AddressSet
-	// +optional
-	Spec AddressSetSpec `json:"spec,omitempty"`
+	// +required
+	Spec AddressSetSpec `json:"spec,omitzero,omitempty"`
 	// status is the observed state of the AddressSet
 	// +optional
 	Status AddressSetStatus `json:"status,omitempty"`
