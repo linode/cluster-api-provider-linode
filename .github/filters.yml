@@ -27,6 +27,7 @@ kubeadm-full:
 #  - templates/flavors/kubeadm/konnectivity/*
 kubeadm-flatcar:
  - templates/flavors/kubeadm/flatcar/*
+ - e2e/capl-cluster-flavors/kubeadm-flatcar-vpcless-capl-cluster/*
 
 #k3s:
 #  - templates/flavors/k3s/default/*

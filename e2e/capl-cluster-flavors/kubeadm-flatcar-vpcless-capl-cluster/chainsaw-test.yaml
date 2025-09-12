@@ -10,6 +10,26 @@ metadata:
     kubeadm-flatcar:
     flavors:
 spec:
+  catch:
+    - script:
+        env:
+          - name: TARGET_API
+            value: api.linode.com
+          - name: TARGET_API_VERSION
+            value: v4
+          - name: URI
+            value: images
+          - name: LINODE_REGION
+            value: (env('LINODE_REGION'))
+        content: |
+          set -ex
+          # Get the latest version on Alpha channel.
+          # NOTE: This can be changed to Beta or Stable when Akamai support will come on these channels.
+          IMAGE_ID=$(cat image-id)
+          curl --request DELETE \
+            --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}/${IMAGE_ID}" \
+            --header "Authorization: Bearer ${LINODE_TOKEN}" \
+            --header "accept: application/json"
   bindings:
     # A short identifier for the E2E test run
     - name: run
@@ -218,11 +238,11 @@ spec:
               - name: LINODE_REGION
                 value: (env('LINODE_REGION'))
             content: |
-              set -e
+              set -ex
               # Get the latest version on Alpha channel.
               # NOTE: This can be changed to Beta or Stable when Akamai support will come on these channels.
               IMAGE_ID=$(cat image-id)
-              curl -s --request DELETE \
-                --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}/${IMAGE_ID}" \
-                --header "Authorization: Bearer ${LINODE_TOKEN}" \
-                --header "accept: application/json"
+              curl --request DELETE \
+              --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}/${IMAGE_ID}" \
+              --header "Authorization: Bearer ${LINODE_TOKEN}" \
+              --header "accept: application/json"
