@@ -6,102 +6,111 @@ load("ext://secret", "secret_from_dict")
 load("ext://base64", "decode_base64")
 update_settings(k8s_upsert_timeout_secs=120)
 
-helm_repo(
-    "capi-operator-repo",
-    "https://kubernetes-sigs.github.io/cluster-api-operator",
-    labels=["helm-repos"],
-)
-helm_repo("jetstack-repo", "https://charts.jetstack.io", labels=["helm-repos"])
-helm_resource(
-    "cert-manager",
-    "jetstack-repo/cert-manager",
-    namespace="cert-manager",
-    resource_deps=["jetstack-repo"],
-    flags=[
-        "--create-namespace",
-        "--set=installCRDs=true",
-        "--set=global.leaderElection.namespace=cert-manager",
-    ],
-    labels=["cert-manager"],
-)
-
-helm_resource(
-    "capi-operator",
-    "capi-operator-repo/cluster-api-operator",
-    namespace="capi-operator-system",
-    flags=[
-      "--create-namespace",
-      "--wait",
-      "--version=0.14.0",
-    ],
-    resource_deps=["capi-operator-repo", "cert-manager"],
-    labels=["CAPI"],
-)
-namespace_create("capi-system")
-k8s_yaml("./hack/manifests/core.yaml")
-k8s_resource(
-    new_name="capi-controller-manager",
-    objects=["capi-system:namespace", "cluster-api:coreprovider"],
-    resource_deps=["capi-operator"],
-    labels=["CAPI"],
-)
-if os.getenv("INSTALL_KUBEADM_PROVIDER", "true") == "true":
-    namespace_create("kubeadm-control-plane-system")
-    namespace_create("kubeadm-bootstrap-system")
-    k8s_yaml("./hack/manifests/kubeadm.yaml")
-    k8s_resource(
-        new_name="kubeadm-controller-manager",
-        objects=[
-            "kubeadm-bootstrap-system:namespace",
-            "kubeadm-control-plane-system:namespace",
-            "kubeadm:bootstrapprovider",
-            "kubeadm:controlplaneprovider",
+if os.getenv("USE_CAPI_OPERATOR", "false") == "true":
+    helm_repo(
+        "capi-operator-repo",
+        "https://kubernetes-sigs.github.io/cluster-api-operator",
+        labels=["helm-repos"],
+    )
+    helm_repo("jetstack-repo", "https://charts.jetstack.io", labels=["helm-repos"])
+    helm_resource(
+        "cert-manager",
+        "jetstack-repo/cert-manager",
+        namespace="cert-manager",
+        resource_deps=["jetstack-repo"],
+        flags=[
+            "--create-namespace",
+            "--set=installCRDs=true",
+            "--set=global.leaderElection.namespace=cert-manager",
         ],
-        resource_deps=["capi-controller-manager"],
-        labels=["CAPI"],
+        labels=["cert-manager"],
     )
-
-if os.getenv("INSTALL_HELM_PROVIDER", "true") == "true":
-    namespace_create("caaph-system")
-    k8s_yaml("./hack/manifests/helm.yaml")
-    k8s_resource(
-        new_name="helm-controller-manager",
-        objects=["caaph-system:namespace", "helm:addonprovider"],
-        resource_deps=["capi-controller-manager"],
-        labels=["CAPI"],
-    )
-
-if os.getenv("INSTALL_K3S_PROVIDER", "false") == "true":
-    namespace_create("capi-k3s-control-plane-system")
-    namespace_create("capi-k3s-bootstrap-system")
-    k8s_yaml("./hack/manifests/k3s.yaml")
-    k8s_resource(
-        new_name="k3s-controller-manager",
-        objects=[
-            "capi-k3s-bootstrap-system:namespace",
-            "capi-k3s-control-plane-system:namespace",
-            "k3s:bootstrapprovider",
-            "k3s:controlplaneprovider",
+    helm_resource(
+        "capi-operator",
+        "capi-operator-repo/cluster-api-operator",
+        namespace="capi-operator-system",
+        flags=[
+          "--create-namespace",
+          "--wait",
+          "--version=0.14.0",
         ],
-        resource_deps=["capi-controller-manager"],
+        resource_deps=["capi-operator-repo", "cert-manager"],
+        labels=["CAPI"],
+    )
+    namespace_create("capi-system")
+    k8s_yaml("./hack/manifests/core.yaml")
+    k8s_resource(
+        new_name="capi-controller-manager",
+        objects=["capi-system:namespace", "cluster-api:coreprovider"],
+        resource_deps=["capi-operator"],
         labels=["CAPI"],
     )
 
-if os.getenv("INSTALL_RKE2_PROVIDER", "false") == "true":
-    namespace_create("rke2-control-plane-system")
-    namespace_create("rke2-bootstrap-system")
-    k8s_yaml("./hack/manifests/rke2.yaml")
-    k8s_resource(
-        new_name="capi-rke2-controller-manager",
-        objects=[
-            "rke2-bootstrap-system:namespace",
-            "rke2-control-plane-system:namespace",
-            "rke2:bootstrapprovider",
-            "rke2:controlplaneprovider",
-        ],
-        resource_deps=["capi-controller-manager"],
-        labels=["CAPI"],
+    if os.getenv("INSTALL_KUBEADM_PROVIDER", "true") == "true":
+        namespace_create("kubeadm-control-plane-system")
+        namespace_create("kubeadm-bootstrap-system")
+        k8s_yaml("./hack/manifests/kubeadm.yaml")
+        k8s_resource(
+            new_name="kubeadm-controller-manager",
+            objects=[
+                "kubeadm-bootstrap-system:namespace",
+                "kubeadm-control-plane-system:namespace",
+                "kubeadm:bootstrapprovider",
+                "kubeadm:controlplaneprovider",
+            ],
+            resource_deps=["capi-controller-manager"],
+            labels=["CAPI"],
+        )
+
+    if os.getenv("INSTALL_HELM_PROVIDER", "true") == "true":
+        namespace_create("caaph-system")
+        k8s_yaml("./hack/manifests/helm.yaml")
+        k8s_resource(
+            new_name="helm-controller-manager",
+            objects=["caaph-system:namespace", "helm:addonprovider"],
+            resource_deps=["capi-controller-manager"],
+            labels=["CAPI"],
+        )
+
+    if os.getenv("INSTALL_K3S_PROVIDER", "false") == "true":
+        namespace_create("capi-k3s-control-plane-system")
+        namespace_create("capi-k3s-bootstrap-system")
+        k8s_yaml("./hack/manifests/k3s.yaml")
+        k8s_resource(
+            new_name="k3s-controller-manager",
+            objects=[
+                "capi-k3s-bootstrap-system:namespace",
+                "capi-k3s-control-plane-system:namespace",
+                "k3s:bootstrapprovider",
+                "k3s:controlplaneprovider",
+            ],
+            resource_deps=["capi-controller-manager"],
+            labels=["CAPI"],
+        )
+
+    if os.getenv("INSTALL_RKE2_PROVIDER", "false") == "true":
+        namespace_create("rke2-control-plane-system")
+        namespace_create("rke2-bootstrap-system")
+        k8s_yaml("./hack/manifests/rke2.yaml")
+        k8s_resource(
+            new_name="capi-rke2-controller-manager",
+            objects=[
+                "rke2-bootstrap-system:namespace",
+                "rke2-control-plane-system:namespace",
+                "rke2:bootstrapprovider",
+                "rke2:controlplaneprovider",
+            ],
+            resource_deps=["capi-controller-manager"],
+            labels=["CAPI"],
+        )
+else:
+    # install all providers in one shot because clusterctl init hangs on cert-manager if we try to do each conditionally
+    local_resource(
+        'capi-controller-manager',
+        cmd="EXP_CLUSTER_RESOURCE_SET=true CLUSTER_TOPOLOGY=true EXP_KUBEADM_BOOTSTRAP_FORMAT_IGNITION=true clusterctl init --addon helm --core cluster-api:${capi_version} --bootstrap kubeadm:${capi_version},k3s:${k3s_version},rke2:${rke2_version} --control-plane kubeadm:${capi_version},k3s:${k3s_version},rke2:${rke2_version} --config ./hack/clusterctl.yaml",
+        env={'capi_version': os.getenv("CAPI_VERSION", "v1.11.1"), 'k3s_version': os.getenv("K3S_VERSION", "v0.3.0"), 'rke2_version': os.getenv("RKE2_VERSION", "v0.20.1")},
     )
+
 capl_resources = [
     "capl-system:namespace",
     "addresssets.infrastructure.cluster.x-k8s.io:customresourcedefinition",

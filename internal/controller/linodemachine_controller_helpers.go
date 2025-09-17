@@ -38,7 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -396,18 +396,13 @@ func requestsForCluster(ctx context.Context, tracedClient client.Client, namespa
 
 	result := make([]ctrl.Request, 0, len(machineList.Items))
 	for _, item := range machineList.Items {
-		if item.Spec.InfrastructureRef.GroupVersionKind().Kind != "LinodeMachine" || item.Spec.InfrastructureRef.Name == "" {
+		if item.Spec.InfrastructureRef.Kind != "LinodeMachine" || item.Spec.InfrastructureRef.Name == "" {
 			continue
-		}
-
-		infraNs := item.Spec.InfrastructureRef.Namespace
-		if infraNs == "" {
-			infraNs = item.Namespace
 		}
 
 		result = append(result, ctrl.Request{
 			NamespacedName: client.ObjectKey{
-				Namespace: infraNs,
+				Namespace: item.Namespace,
 				Name:      item.Spec.InfrastructureRef.Name,
 			},
 		})

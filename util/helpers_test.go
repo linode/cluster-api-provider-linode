@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -300,11 +300,9 @@ func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 			Namespace: "test-namespace",
 		},
 		Spec: clusterv1.ClusterSpec{
-			InfrastructureRef: &corev1.ObjectReference{
-				Name:       validLinodeCluster.Name,
-				Namespace:  validLinodeCluster.Namespace,
-				Kind:       linodeClusterGVK.Kind,
-				APIVersion: linodeClusterGVK.GroupVersion().String(),
+			InfrastructureRef: clusterv1.ContractVersionedObjectReference{
+				Name: validLinodeCluster.Name,
+				Kind: linodeClusterGVK.Kind,
 			},
 		},
 	}
@@ -379,10 +377,10 @@ func TestSetOwnerReferenceToLinodeCluster(t *testing.T) {
 			expectedError: "",
 		},
 		{
-			name: "cluster infrastructureRef is nil - can happen when deleting",
+			name: "cluster infrastructureRef is empty - can happen when deleting",
 			cluster: func() *clusterv1.Cluster {
 				c := validCluster.DeepCopy()
-				c.Spec.InfrastructureRef = nil
+				c.Spec.InfrastructureRef = clusterv1.ContractVersionedObjectReference{}
 				return c
 			}(),
 			obj:           baseObjToOwn.DeepCopy(),

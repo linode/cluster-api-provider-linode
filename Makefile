@@ -353,7 +353,6 @@ TILT           ?= $(LOCALBIN)/tilt
 KIND           ?= $(LOCALBIN)/kind
 CHAINSAW       ?= $(LOCALBIN)/chainsaw
 ENVTEST        ?= $(CACHE_BIN)/setup-envtest
-HUSKY          ?= $(LOCALBIN)/husky
 NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
 MOCKGEN        ?= $(LOCALBIN)/mockgen
@@ -365,7 +364,7 @@ S5CMD          ?= $(CACHE_BIN)/s5cmd
 ## Tool Versions
 KUSTOMIZE_VERSION        ?= v5.4.3
 CTLPTL_VERSION           ?= v0.8.29
-CLUSTERCTL_VERSION       ?= v1.7.2
+CLUSTERCTL_VERSION       ?= v1.11.1
 CRD_REF_DOCS_VERSION     ?= v0.1.0
 KUBECTL_VERSION          ?= v1.28.0
 KUBEBUILDER_VERSION      ?= v3.15.1

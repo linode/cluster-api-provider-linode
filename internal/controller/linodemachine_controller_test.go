@@ -32,7 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,6 +72,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Port: 6443,
+			},
 			Region: "us-east",
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
@@ -1389,6 +1392,9 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-east",
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Port: 6443,
+			},
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
 				ApiserverNodeBalancerConfigID: ptr.To(2),
@@ -1410,9 +1416,8 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 				Namespace: namespace,
 			},
 			Spec: clusterv1.ClusterSpec{
-				InfrastructureRef: &corev1.ObjectReference{
-					Name:      "test-cluster",
-					Namespace: namespace,
+				InfrastructureRef: clusterv1.ContractVersionedObjectReference{
+					Name: "test-cluster",
 				},
 			},
 		}
@@ -1712,6 +1717,9 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 			Labels:    make(map[string]string),
 		},
 		Spec: infrav1alpha2.LinodeClusterSpec{
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Port: 6443,
+			},
 			Region: "us-east",
 			Network: infrav1alpha2.NetworkSpec{
 				NodeBalancerID:                ptr.To(1),
@@ -1738,9 +1746,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				Namespace: namespace,
 			},
 			Spec: clusterv1.ClusterSpec{
-				InfrastructureRef: &corev1.ObjectReference{
-					Name:      "test-cluster-2",
-					Namespace: namespace,
+				InfrastructureRef: clusterv1.ContractVersionedObjectReference{
+					Name: "test-cluster-2",
 				},
 			},
 		}
