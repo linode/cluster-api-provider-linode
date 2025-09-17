@@ -20,8 +20,7 @@ linters:
             disable:
               # integers linter will force type change from int to int32/int64, we are going to wait for v1beta1 to enable this
               - "integers"
-              # jsontags linter will force the json fields to go from _ usage to camelCase, we will wait for v1beta1 to enable this
-              - "jsontags"
+              # optionalfields requires changing fields to pointers in a way that might be hard to support in a backwards compatible way
               - "optionalfields"
           lintersConfig: { }
   exclusions:
