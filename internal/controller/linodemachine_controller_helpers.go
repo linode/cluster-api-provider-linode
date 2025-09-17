@@ -1007,8 +1007,12 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 			ipv6IsPublic = *iface.VPC.IPv6.IsPublic
 		}
 	}
+	subnetID := 0
+	if iface.VPC.SubnetID != nil {
+		subnetID = *iface.VPC.SubnetID
+	}
 	return &linodego.VPCInterfaceCreateOptions{
-		SubnetID: iface.VPC.SubnetID,
+		SubnetID: subnetID,
 		IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 			Addresses: ipv4Addrs,
 			Ranges:    ipv4Ranges,
