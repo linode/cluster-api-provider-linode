@@ -5,10 +5,11 @@ metadata:
   creationTimestamp: null
   name: flatcar-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
-  labels:
-    all:
-    kubeadm-flatcar:
-    flavors:
+  # TODO: re-enable this test once flatcar provisioning is working again
+#  labels:
+#    all:
+#    kubeadm-flatcar:
+#    flavors:
 spec:
   catch:
     - script:
@@ -22,7 +23,7 @@ spec:
           - name: LINODE_REGION
             value: (env('LINODE_REGION'))
         content: |
-          set -ex
+          set -e
           # Get the latest version on Alpha channel.
           # NOTE: This can be changed to Beta or Stable when Akamai support will come on these channels.
           IMAGE_ID=$(cat image-id)
@@ -238,7 +239,7 @@ spec:
               - name: LINODE_REGION
                 value: (env('LINODE_REGION'))
             content: |
-              set -ex
+              set -e
               # Get the latest version on Alpha channel.
               # NOTE: This can be changed to Beta or Stable when Akamai support will come on these channels.
               IMAGE_ID=$(cat image-id)
