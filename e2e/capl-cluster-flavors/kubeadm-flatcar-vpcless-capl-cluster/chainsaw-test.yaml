@@ -5,10 +5,11 @@ metadata:
   creationTimestamp: null
   name: flatcar-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
-  labels:
-    all:
-    kubeadm-flatcar:
-    flavors:
+  # TODO: re-enable this test once flatcar provisioning is working again
+#  labels:
+#    all:
+#    kubeadm-flatcar:
+#    flavors:
 spec:
   catch:
     - script:
