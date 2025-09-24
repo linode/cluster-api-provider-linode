@@ -11,7 +11,7 @@ status:
   ready: true
   instanceState: running
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   labels:
@@ -19,5 +19,6 @@ metadata:
 spec:
   clusterName: ($cluster)
 status:
-  bootstrapReady: true
-  infrastructureReady: true
+  initialization:
+    bootstrapDataSecretCreated: true
+    infrastructureProvisioned: true

@@ -11,7 +11,7 @@ status:
   ready: true
   instanceState: running
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: Machine
 metadata:
   labels:
@@ -19,10 +19,11 @@ metadata:
 spec:
   clusterName: ($cluster)
 status:
-  bootstrapReady: true
-  infrastructureReady: true
+  initialization:
+    bootstrapDataSecretCreated: true
+    infrastructureProvisioned: true
 ---
-apiVersion: cluster.x-k8s.io/v1beta1
+apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
 metadata:
   labels:
@@ -32,18 +33,16 @@ spec:
   replicas: 1
 status:
   readyReplicas: 1
-  unavailableReplicas: 0
   availableReplicas: 1
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: KubeadmControlPlane
 metadata:
   labels:
     cluster.x-k8s.io/cluster-name: ($cluster)
 status:
   readyReplicas: 1
-  unavailableReplicas: 0
-  ready: true
+  availableReplicas: 1
 ---
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmReleaseProxy
