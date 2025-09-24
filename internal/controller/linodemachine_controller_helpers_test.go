@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -140,13 +140,13 @@ func TestSetUserData(t *testing.T) {
 	}{
 		{
 			name: "Success - SetUserData metadata",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
+			machineScope: &scope.MachineScope{Machine: &v1beta2.Machine{
+				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
+					Bootstrap: v1beta2.Bootstrap{
 						DataSecretName: ptr.To("test-data"),
 					},
-					InfrastructureRef: corev1.ObjectReference{},
+					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
 			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
@@ -173,13 +173,13 @@ func TestSetUserData(t *testing.T) {
 		},
 		{
 			name: "Success - SetUserData metadata and cluster object store (large bootstrap data)",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
+			machineScope: &scope.MachineScope{Machine: &v1beta2.Machine{
+				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
+					Bootstrap: v1beta2.Bootstrap{
 						DataSecretName: ptr.To("test-data"),
 					},
-					InfrastructureRef: corev1.ObjectReference{},
+					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
 			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
@@ -230,14 +230,13 @@ https://object.bucket.example.com
 		},
 		{
 			name: "Error - SetUserData get bootstrap data",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
+			machineScope: &scope.MachineScope{Machine: &v1beta2.Machine{
+				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
-						ConfigRef:      nil,
+					Bootstrap: v1beta2.Bootstrap{
 						DataSecretName: nil,
 					},
-					InfrastructureRef: corev1.ObjectReference{},
+					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
 			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
@@ -255,13 +254,13 @@ https://object.bucket.example.com
 		},
 		{
 			name: "Error - SetUserData failed to upload to Cluster Object Store",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
+			machineScope: &scope.MachineScope{Machine: &v1beta2.Machine{
+				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
+					Bootstrap: v1beta2.Bootstrap{
 						DataSecretName: ptr.To("test-data"),
 					},
-					InfrastructureRef: corev1.ObjectReference{},
+					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
 			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{

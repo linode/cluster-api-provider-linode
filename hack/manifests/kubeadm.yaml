@@ -3,18 +3,20 @@ apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: BootstrapProvider
 metadata:
   name: kubeadm
-  namespace: kubeadm-bootstrap-system
+  namespace: capi-kubeadm-bootstrap-system
 spec:
   manager:
     featureGates:
       KubeadmBootstrapFormatIgnition: true
+  version: v1.11.1
 ---
 apiVersion: operator.cluster.x-k8s.io/v1alpha2
 kind: ControlPlaneProvider
 metadata:
   name: kubeadm
-  namespace: kubeadm-control-plane-system
+  namespace: capi-kubeadm-control-plane-system
 spec:
+  version: v1.11.1
   manager:
     featureGates:
       ClusterTopology: true
