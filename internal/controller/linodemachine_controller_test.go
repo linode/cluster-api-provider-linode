@@ -2816,7 +2816,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				VPC: &linodego.VPCInterfaceCreateOptions{
 					SubnetID: 1,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+						Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
 							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
 							Address:        ptr.To("auto"),
@@ -2883,7 +2883,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				VPC: &linodego.VPCInterfaceCreateOptions{
 					SubnetID: 1,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+						Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
 							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
 							Address:        ptr.To("auto"),
@@ -2956,7 +2956,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				VPC: &linodego.VPCInterfaceCreateOptions{
 					SubnetID: 27,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+						Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
 							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
 							Address:        ptr.To("auto"),

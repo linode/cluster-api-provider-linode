@@ -646,15 +646,19 @@ func validateInterfaceExpectations(
 		require.NotNil(t, linodeIface)
 		require.NotNil(t, linodeIface.VPC)
 		if linodeIface.VPC.IPv6 != nil && linodeIface.VPC.IPv6.SLAAC != nil {
-			require.Equal(t, defaultNodeIPv6CIDRRange, linodeIface.VPC.IPv6.SLAAC[0].Range)
+			slaac := *linodeIface.VPC.IPv6.SLAAC
+			require.Equal(t, defaultNodeIPv6CIDRRange, slaac[0].Range)
 		} else if linodeIface.VPC.IPv6 != nil && linodeIface.VPC.IPv6.Ranges != nil {
-			require.Equal(t, defaultNodeIPv6CIDRRange, linodeIface.VPC.IPv6.Ranges[0].Range)
+			ranges := *linodeIface.VPC.IPv6.Ranges
+			require.Equal(t, defaultNodeIPv6CIDRRange, ranges[0].Range)
 		}
 		require.NotNil(t, linodeIface.VPC.SubnetID)
 		require.Equal(t, expectSubnetID, linodeIface.VPC.SubnetID)
 		require.NotNil(t, linodeIface.VPC.IPv4)
-		require.NotNil(t, linodeIface.VPC.IPv4.Addresses[0].NAT1To1Address)
-		require.Equal(t, "auto", *linodeIface.VPC.IPv4.Addresses[0].NAT1To1Address)
+		require.NotNil(t, linodeIface.VPC.IPv4.Addresses)
+		addresses := *linodeIface.VPC.IPv4.Addresses
+		require.NotNil(t, addresses[0].NAT1To1Address)
+		require.Equal(t, "auto", *addresses[0].NAT1To1Address)
 	} else {
 		require.Nil(t, linodeIface)
 	}
