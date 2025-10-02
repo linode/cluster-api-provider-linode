@@ -9,7 +9,7 @@ spec:
   repoURL: https://helm.cilium.io/
   chartName: cilium
   namespace: kube-system
-  version: ${CILIUM_VERSION:=1.16.10}
+  version: ${CILIUM_VERSION:=1.18.2}
   options:
     waitForJobs: true
     wait: true
@@ -18,6 +18,8 @@ spec:
     bgpControlPlane:
       enabled: true
     routingMode: native
+    nodePort:
+      directRoutingDevice: eth+
     kubeProxyReplacement: true
     ipv4NativeRoutingCIDR: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
     tunnelProtocol: ""
