@@ -64,6 +64,7 @@ jobs:
             cli.codecov.io:443
             api.codecov.io:443
             ingest.codecov.io:443
+            dl.k8s.io:443
 
       - uses: actions/checkout@v4
 
