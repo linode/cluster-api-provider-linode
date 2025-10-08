@@ -391,7 +391,7 @@ $(KIND): $(LOCALBIN)
 	curl -Lso $(KIND) https://github.com/kubernetes-sigs/kind/releases/download/v$(KIND_VERSION)/kind-$(OS)-$(ARCH_SHORT)
 	chmod +x $(KIND)
 
-.phony: golangci-lint-kal
+.PHONY: golangci-lint-kal
 golangci-lint-kal: $(GOLANGCI_LINT_KAL)
-$(GOLANGCI_LINT_KAL): $(GOLANGCI_LINT) # Build golangci-lint-kal from custom configuration.
-	$(GOLANGCI_LINT) custom
+$(GOLANGCI_LINT_KAL): tools # Build golangci-lint-kal from custom configuration.
+	golangci-lint custom
