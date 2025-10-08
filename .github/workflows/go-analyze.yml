@@ -56,6 +56,7 @@ jobs:
             vuln.go.dev:443
             storage.googleapis.com:443
             golangci-lint.run:443
+            dl.k8s.io:443
 
       - uses: actions/checkout@v4
 
