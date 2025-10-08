@@ -233,7 +233,7 @@ require (
 	github.com/kulti/thelper v0.7.1 // indirect
 	github.com/kunwardeep/paralleltest v1.0.14 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/kyverno/chainsaw v0.2.13 // indirect
+	github.com/kyverno/chainsaw v0.2.12 // indirect
 	github.com/kyverno/kyverno-json v0.0.4-0.20241008103124-b294ee72a2bf // indirect
 	github.com/kyverno/pkg/ext v0.0.0-20240418121121-df8add26c55c // indirect
 	github.com/lanrat/extsort v1.0.2 // indirect
