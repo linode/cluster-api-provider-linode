@@ -114,6 +114,7 @@ jobs:
             helm.cilium.io:443
             linode.github.io:443
             dl.k8s.io:443
+            cdn.dl.k8s.io:443
 
       - uses: actions/checkout@v4
         with:
