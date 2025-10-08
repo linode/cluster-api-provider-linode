@@ -123,8 +123,8 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: gosec
-gosec: ## Run gosec against code.
-	docker run --rm -w /workdir -v $(PWD):/workdir securego/gosec:2.19.0 -exclude-dir=bin -exclude-generated ./...
+gosec: tools ## Run gosec against code.
+	gosec -exclude-dir=bin -exclude-generated ./...
 
 .PHONY: lint
 lint: tools ## Run lint against code.

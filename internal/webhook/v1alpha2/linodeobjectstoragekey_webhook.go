@@ -37,6 +37,7 @@ import (
 // log is for logging in this package.
 var linodeobjectstoragekeylog = logf.Log.WithName("linodeobjectstoragekey-resource")
 
+//gosec:disable G101 -- This is a false positive
 const defaultKeySecretNameTemplate = "%s-obj-key"
 
 // SetupLinodeObjectStorageKeyWebhookWithManager registers the webhook for LinodeObjectStorageKey in the manager.
