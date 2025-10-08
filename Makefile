@@ -128,7 +128,7 @@ gosec: ## Run gosec against code.
 
 .PHONY: lint
 lint: tools ## Run lint against code.
-	golang-ci-lint run -c .golangci.yml
+	golangci-lint run -c .golangci.yml
 
 .PHONY: lint
 lint-api: golangci-lint-kal ## Run lint against code.

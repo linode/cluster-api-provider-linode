@@ -399,6 +399,8 @@ func processIPRules(ips []string, rule infrav1alpha2.FirewallRuleSpec, ruleLabel
 				Addresses:   linodego.NetworkAddresses{IPv6: &chunk},
 			})
 		}
+	default:
+		return
 	}
 }
 
