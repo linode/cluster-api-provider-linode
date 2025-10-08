@@ -354,10 +354,13 @@ KUBECTL_VERSION          ?= v1.28.0
 KUBEBUILDER_VERSION      ?= v3.15.1
 TILT_VERSION             ?= 0.33.10
 KIND_VERSION             ?= 0.23.0
+CHAINSAW_VERSION         ?= v0.2.13
 
 .PHONY: tools
 tools: $(CLUSTERCTL) $(KUBECTL) $(KUBEBUILDER) $(TILT) $(KIND)
 	go install tool
+##@ we can't manage this with go tools because it causes a panic due to missing CRDs when running chainsaw
+	go install github.com/kyverno/chainsaw@$(CHAINSAW_VERSION)
 
 .PHONY: clusterctl
 clusterctl: $(CLUSTERCTL) ## Download clusterctl locally if necessary.
