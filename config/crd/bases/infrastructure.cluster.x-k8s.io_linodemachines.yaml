@@ -414,9 +414,6 @@ spec:
               image:
                 description: image is the Linode image to use for the instance.
                 type: string
-                x-kubernetes-validations:
-                - message: Value is immutable
-                  rule: self == oldSelf
               instanceID:
                 description: instanceID is the Linode instance ID for this machine.
                 type: integer
