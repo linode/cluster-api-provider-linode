@@ -186,7 +186,7 @@ checkout-last-release:
 	git checkout $(LAST_RELEASE)
 
 .PHONY: last-release-cluster
-last-release-cluster: kind-cluster checkout-last-release local-release local-deploy
+last-release-cluster: tools kind-cluster checkout-last-release local-release local-deploy
 	LOCALBIN=$(CACHE_BIN) CLUSTERCTL_CONFIG=$(CLUSTERCTL_CONFIG) SKIP_CUSTOM_DELETE=true chainsaw test --namespace $(COMMON_NAMESPACE) --assert-timeout 600s --skip-delete ./e2e/capl-cluster-flavors/kubeadm-capl-cluster
 
 .PHONY: test-upgrade
