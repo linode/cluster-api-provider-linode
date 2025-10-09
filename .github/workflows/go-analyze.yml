@@ -69,12 +69,16 @@ jobs:
           cache: false
 
       - name: lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: latest
+        run: make lint
 
       - name: lint-api
         run: make lint-api
 
       - name: Nilcheck
         run: make nilcheck
+
+      - name: Vulncheck
+        run: make vulncheck
+
+      - name: Gosec
+        run: make gosec

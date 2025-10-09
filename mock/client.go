@@ -29,6 +29,7 @@ import (
 type MockLinodeClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeClientMockRecorder is the mock recorder for MockLinodeClient.
@@ -979,6 +980,7 @@ func (mr *MockLinodeClientMockRecorder) UpdatePlacementGroup(ctx, id, options an
 type MockAkamClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockAkamClientMockRecorder
+	isgomock struct{}
 }
 
 // MockAkamClientMockRecorder is the mock recorder for MockAkamClient.
@@ -1074,6 +1076,7 @@ func (mr *MockAkamClientMockRecorder) UpdateRecord(arg0, arg1, arg2 any, arg3 ..
 type MockAkamEdgeDNSClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockAkamEdgeDNSClientMockRecorder
+	isgomock struct{}
 }
 
 // MockAkamEdgeDNSClientMockRecorder is the mock recorder for MockAkamEdgeDNSClient.
@@ -1169,6 +1172,7 @@ func (mr *MockAkamEdgeDNSClientMockRecorder) UpdateRecord(arg0, arg1, arg2 any, 
 type MockLinodeInstanceClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeInstanceClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeInstanceClientMockRecorder is the mock recorder for MockLinodeInstanceClient.
@@ -1444,6 +1448,7 @@ func (mr *MockLinodeInstanceClientMockRecorder) UpdateInstanceFirewalls(ctx, lin
 type MockLinodeVPCClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeVPCClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeVPCClientMockRecorder is the mock recorder for MockLinodeVPCClient.
@@ -1555,6 +1560,7 @@ func (mr *MockLinodeVPCClientMockRecorder) ListVPCs(ctx, opts any) *gomock.Call 
 type MockLinodeNodeBalancerClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeNodeBalancerClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeNodeBalancerClientMockRecorder is the mock recorder for MockLinodeNodeBalancerClient.
@@ -1696,6 +1702,7 @@ func (mr *MockLinodeNodeBalancerClientMockRecorder) ListNodeBalancerNodes(ctx, n
 type MockLinodeObjectStorageClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeObjectStorageClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeObjectStorageClientMockRecorder is the mock recorder for MockLinodeObjectStorageClient.
@@ -1836,6 +1843,7 @@ func (mr *MockLinodeObjectStorageClientMockRecorder) UpdateObjectStorageBucketAc
 type MockLinodeDNSClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeDNSClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeDNSClientMockRecorder is the mock recorder for MockLinodeDNSClient.
@@ -1933,6 +1941,7 @@ func (mr *MockLinodeDNSClientMockRecorder) UpdateDomainRecord(ctx, domainID, dom
 type MockLinodePlacementGroupClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodePlacementGroupClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodePlacementGroupClientMockRecorder is the mock recorder for MockLinodePlacementGroupClient.
@@ -2060,6 +2069,7 @@ func (mr *MockLinodePlacementGroupClientMockRecorder) UpdatePlacementGroup(ctx, 
 type MockLinodeFirewallClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeFirewallClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeFirewallClientMockRecorder is the mock recorder for MockLinodeFirewallClient.
@@ -2201,6 +2211,7 @@ func (mr *MockLinodeFirewallClientMockRecorder) UpdateFirewallRules(ctx, firewal
 type MockLinodeInterfacesClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeInterfacesClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeInterfacesClientMockRecorder is the mock recorder for MockLinodeInterfacesClient.
@@ -2254,6 +2265,7 @@ func (mr *MockLinodeInterfacesClientMockRecorder) ListInterfaces(ctx, linodeID, 
 type MockK8sClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockK8sClientMockRecorder
+	isgomock struct{}
 }
 
 // MockK8sClientMockRecorder is the mock recorder for MockK8sClient.
@@ -2515,6 +2527,7 @@ func (mr *MockK8sClientMockRecorder) Update(ctx, obj any, opts ...any) *gomock.C
 type MockS3Client struct {
 	ctrl     *gomock.Controller
 	recorder *MockS3ClientMockRecorder
+	isgomock struct{}
 }
 
 // MockS3ClientMockRecorder is the mock recorder for MockS3Client.
@@ -2678,6 +2691,7 @@ func (mr *MockS3ClientMockRecorder) PutObject(ctx, params any, optFns ...any) *g
 type MockS3PresignClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockS3PresignClientMockRecorder
+	isgomock struct{}
 }
 
 // MockS3PresignClientMockRecorder is the mock recorder for MockS3PresignClient.
@@ -2721,6 +2735,7 @@ func (mr *MockS3PresignClientMockRecorder) PresignGetObject(ctx, params any, opt
 type MockLinodeTokenClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockLinodeTokenClientMockRecorder
+	isgomock struct{}
 }
 
 // MockLinodeTokenClientMockRecorder is the mock recorder for MockLinodeTokenClient.
