@@ -88,6 +88,20 @@ func (r *linodeMachineValidator) ValidateUpdate(ctx context.Context, oldObj, new
 	}
 	linodemachinelog.Info("validate update", "name", old.Name)
 
+	new, ok := newObj.(*infrav1alpha2.LinodeMachine)
+	if !ok {
+		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
+	}
+
+	// ensure that spec.Image is immutable
+	if old.Spec.Image != new.Spec.Image {
+		return nil, &field.Error{
+			Field:  "spec.image",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Field is immutable",
+		}
+	}
+
 	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
