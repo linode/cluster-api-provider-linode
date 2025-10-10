@@ -49,6 +49,13 @@
       "matchPackageNames": [
         "github.com/aws/**"
       ]
+    },
+    {
+      "groupName": "devbox",
+      "groupSlug": "devbox",
+      "matchDatasources": [
+        "devbox"
+      ]
     }
   ]
 }
