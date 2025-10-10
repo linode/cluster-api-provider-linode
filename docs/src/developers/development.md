@@ -57,20 +57,6 @@ git clone https://github.com/linode/cluster-api-provider-linode
 cd cluster-api-provider-linode
 ```
 
-### Enable git hooks
-
-To enable automatic code validation on code push, execute the following commands:
-
-```sh
-PATH="$PWD/bin:$PATH" make husky && husky install
-```
-
-If you would like to temporarily disable git hook, set `SKIP_GIT_PUSH_HOOK` value:
-
-```sh
-SKIP_GIT_PUSH_HOOK=1 git push
-```
-
 ### [Recommended] Set up devbox
 
 1. Install dependent packages in your project
