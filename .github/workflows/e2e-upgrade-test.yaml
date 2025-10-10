@@ -83,6 +83,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
+
       - name: Run Upgrade Test
         env:
           LINODE_REGION: us-sea
