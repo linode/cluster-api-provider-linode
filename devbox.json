@@ -4,7 +4,6 @@
     "docker@latest",
     "go-tools@latest",
     "go@1.25",
-    "kind@latest",
     "tilt@latest",
     "mdbook@latest",
     "mdbook-admonish@latest",
