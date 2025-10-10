@@ -388,7 +388,7 @@ spec:
               EOL
               
               # delete the objects
-              $LOCAL_BIN/s5cmd --credentials-file .s5cfg --endpoint-url https://$BUCKET_ENDPOINT rm s3://$BUCKET_NAME/etcd-backup/v2/*
+              s5cmd --credentials-file .s5cfg --endpoint-url https://$BUCKET_ENDPOINT rm s3://$BUCKET_NAME/etcd-backup/v2/*
               
               # delete the bucket 
               curl --request DELETE \
