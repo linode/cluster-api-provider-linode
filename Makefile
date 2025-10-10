@@ -5,7 +5,7 @@ REGISTRY            ?= docker.io/linode
 IMAGE_NAME          ?= cluster-api-provider-linode
 CONTROLLER_IMAGE    ?= $(REGISTRY)/$(IMAGE_NAME)
 TAG                 ?= dev
-ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
+ENVTEST_K8SVERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
 VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
@@ -15,7 +15,7 @@ MDBOOK_DEV_HOST      = 0.0.0.0
 MDBOOK_DEV_PORT      = 3000
 E2E_SELECTOR        ?= all
 
-# ENVTEST_K8S_VERSION
+# ENVTEST_K8SVERSION
 # - refers to the version of kubebuilder assets to be downloaded by envtest binary.
 # CONTAINER_TOOL
 # - defines the container tool to be used for building images.
@@ -155,7 +155,7 @@ docs:
 .PHONY: test
 test: generate fmt vet ## Run tests.
 	go env -w GOTOOLCHAIN=go1.25.0+auto
-	KUBEBUILDER_ASSETS="$(shell setup-envtest use $(ENVTEST_K8S_VERSION) --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
+	KUBEBUILDER_ASSETS="$(shell setup-envtest use $(ENVTEST_K8SVERSION) --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
 	grep -v "zz_generated.*" cover.out.tmp > cover.out
 	rm cover.out.tmp
 
