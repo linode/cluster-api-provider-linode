@@ -345,7 +345,6 @@ KUBECTL        ?= $(LOCALBIN)/kubectl
 CLUSTERCTL     ?= $(LOCALBIN)/clusterctl
 KUBEBUILDER    ?= $(LOCALBIN)/kubebuilder
 TILT           ?= $(LOCALBIN)/tilt
-KIND           ?= $(LOCALBIN)/kind
 GOLANGCI_LINT_KAL ?= $(CACHE_BIN)/golangci-lint-kube-api-linter
 
 ## Tool Versions
@@ -353,11 +352,10 @@ CLUSTERCTL_VERSION       ?= v1.11.1
 KUBECTL_VERSION          ?= v1.28.0
 KUBEBUILDER_VERSION      ?= v3.15.1
 TILT_VERSION             ?= 0.33.10
-KIND_VERSION             ?= 0.23.0
 CHAINSAW_VERSION         ?= v0.2.13
 
 .PHONY: tools
-tools: $(CLUSTERCTL) $(KUBECTL) $(KUBEBUILDER) $(TILT) $(KIND)
+tools: $(CLUSTERCTL) $(KUBECTL) $(KUBEBUILDER) $(TILT)
 	go install tool
 ##@ we can't manage this with go tools because it causes a panic due to missing CRDs when running chainsaw
 	go install github.com/kyverno/chainsaw@$(CHAINSAW_VERSION)
@@ -388,12 +386,6 @@ $(TILT): $(LOCALBIN)
 		TILT_OS=mac; \
 	fi; \
 	curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$(TILT_VERSION)/tilt.$(TILT_VERSION).$$TILT_OS.$(ARCH).tar.gz | tar -xzvm -C $(LOCALBIN) tilt
-
-.PHONY: kind
-kind: $(KIND) ## Download kind locally if necessary.
-$(KIND): $(LOCALBIN)
-	curl -Lso $(KIND) https://github.com/kubernetes-sigs/kind/releases/download/v$(KIND_VERSION)/kind-$(OS)-$(ARCH_SHORT)
-	chmod +x $(KIND)
 
 .PHONY: golangci-lint-kal
 golangci-lint-kal: $(GOLANGCI_LINT_KAL)
