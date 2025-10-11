@@ -97,7 +97,7 @@
         }
       }
     },
-    "docker@latest": {
+    "docker@28.3.3": {
       "last_modified": "2025-09-18T16:33:27Z",
       "resolved": "github:NixOS/nixpkgs/f4b140d5b253f5e2a1ff4e5506edbf8267724bde#docker",
       "source": "devbox-search",
@@ -149,7 +149,7 @@
       "last_modified": "2025-10-05T02:43:53Z",
       "resolved": "github:NixOS/nixpkgs/d7f52a7a640bc54c7bb414cca603835bf8dd4b10?lastModified=1759632233&narHash=sha256-krgZxGAIIIKFJS%2BUB0l8do3sYUDWJc75M72tepmVMzE%3D"
     },
-    "go-tools@latest": {
+    "go-tools@2025.1.1": {
       "last_modified": "2025-09-18T16:33:27Z",
       "resolved": "github:NixOS/nixpkgs/f4b140d5b253f5e2a1ff4e5506edbf8267724bde#go-tools",
       "source": "devbox-search",
@@ -245,7 +245,7 @@
         }
       }
     },
-    "golangci-lint@latest": {
+    "golangci-lint@2.4.0": {
       "last_modified": "2025-09-18T16:33:27Z",
       "resolved": "github:NixOS/nixpkgs/f4b140d5b253f5e2a1ff4e5506edbf8267724bde#golangci-lint",
       "source": "devbox-search",
@@ -293,7 +293,7 @@
         }
       }
     },
-    "govulncheck@latest": {
+    "govulncheck@1.1.4": {
       "last_modified": "2025-09-18T16:33:27Z",
       "resolved": "github:NixOS/nixpkgs/f4b140d5b253f5e2a1ff4e5506edbf8267724bde#govulncheck",
       "source": "devbox-search",
@@ -733,7 +733,7 @@
         }
       }
     },
-    "kustomize@latest": {
+    "kustomize@5.7.1": {
       "last_modified": "2025-09-18T16:33:27Z",
       "resolved": "github:NixOS/nixpkgs/f4b140d5b253f5e2a1ff4e5506edbf8267724bde#kustomize",
       "source": "devbox-search",
@@ -973,51 +973,51 @@
         }
       }
     },
-    "mockgen@latest": {
-      "last_modified": "2025-09-18T16:33:27Z",
-      "resolved": "github:NixOS/nixpkgs/f4b140d5b253f5e2a1ff4e5506edbf8267724bde#mockgen",
+    "mockgen@1.6.0": {
+      "last_modified": "2023-12-13T22:54:10Z",
+      "resolved": "github:NixOS/nixpkgs/fd04bea4cbf76f86f244b9e2549fca066db8ddff#mockgen",
       "source": "devbox-search",
-      "version": "0.6.0",
+      "version": "1.6.0",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/r522cmzfdvswnbgmm9637ic9yy4xg0gn-mockgen-0.6.0",
+              "path": "/nix/store/8jsr1j1h8g3k3j5rg8vv79aviffxrfny-mockgen-1.6.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/r522cmzfdvswnbgmm9637ic9yy4xg0gn-mockgen-0.6.0"
+          "store_path": "/nix/store/8jsr1j1h8g3k3j5rg8vv79aviffxrfny-mockgen-1.6.0"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/8f4r73bswayv93kxcq0f76rpf24qajsd-mockgen-0.6.0",
+              "path": "/nix/store/34rrlc5lz43mibljdd7ai0qyi7zcq4ic-mockgen-1.6.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/8f4r73bswayv93kxcq0f76rpf24qajsd-mockgen-0.6.0"
+          "store_path": "/nix/store/34rrlc5lz43mibljdd7ai0qyi7zcq4ic-mockgen-1.6.0"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/c17vj62wfwr0kak9jwryz9k5dxr3w5r2-mockgen-0.6.0",
+              "path": "/nix/store/cj1r5vllmiq7fh4izsmlacjrdkw2h4b5-mockgen-1.6.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/c17vj62wfwr0kak9jwryz9k5dxr3w5r2-mockgen-0.6.0"
+          "store_path": "/nix/store/cj1r5vllmiq7fh4izsmlacjrdkw2h4b5-mockgen-1.6.0"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/0phqllnxvr1rq19g55dyfdsshhrzp5a4-mockgen-0.6.0",
+              "path": "/nix/store/hs49h3p9ss5f5bqv6phgsx93s4cawif2-mockgen-1.6.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/0phqllnxvr1rq19g55dyfdsshhrzp5a4-mockgen-0.6.0"
+          "store_path": "/nix/store/hs49h3p9ss5f5bqv6phgsx93s4cawif2-mockgen-1.6.0"
         }
       }
     },
