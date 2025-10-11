@@ -20,7 +20,7 @@ jobs:
       # Expose matched filters as job 'src' output variable
       paths: ${{ steps.filter.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -39,7 +39,7 @@ jobs:
     needs: changes
     if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Validate YAML file
         run: yamllint templates
 
@@ -67,7 +67,7 @@ jobs:
             dl.k8s.io:443
             cdn.dl.k8s.io:443
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -106,7 +106,7 @@ jobs:
             gcr.io:443
             storage.googleapis.com:443
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Docker cache
         uses: ScribeMD/docker-cache@0.5.0
