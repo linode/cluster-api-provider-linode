@@ -1,8 +1,8 @@
 {
   "packages": [
     "clusterctl@1.11.1",
-    "docker@20.10.26",
-    "go-tools@2020.2.4",
+    "docker@28.3.3",
+    "go-tools@2025.1.1",
     "go@1.25",
     "tilt@0.35.1",
     "mdbook@0.4.52",
