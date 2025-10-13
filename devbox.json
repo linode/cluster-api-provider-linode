@@ -1,17 +1,17 @@
 {
   "packages": [
-    "clusterctl@latest",
-    "docker@latest",
-    "go-tools@latest",
+    "clusterctl@1.11.1",
+    "docker@20.10.26",
+    "go-tools@2020.2.4",
     "go@1.25",
-    "tilt@latest",
-    "mdbook@latest",
-    "mdbook-admonish@latest",
-    "kyverno-chainsaw@latest",
-    "kubernetes-helm@latest",
-    "kubectl@latest",
-    "kubebuilder@4.2.0",
-    "jq@latest"
+    "tilt@0.35.1",
+    "mdbook@0.4.52",
+    "mdbook-admonish@1.20.0",
+    "kyverno-chainsaw@0.2.12",
+    "kubernetes-helm@3.19.0",
+    "kubectl@1.33.4",
+    "kubebuilder@4.8.0",
+    "jq@1.8.1"
   ],
   "shell": {
     "init_hook": [
