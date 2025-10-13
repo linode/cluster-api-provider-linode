@@ -1,5 +1,6 @@
 {
   "packages": [
+    "apple-sdk_15@15.2",
     "clusterctl@1.11.1",
     "docker@28.3.3",
     "go-tools@2025.1.1",
