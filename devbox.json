@@ -1,22 +1,25 @@
 {
-  "packages": [
-    "apple-sdk_15@15.2",
-    "clusterctl@1.11.1",
-    "docker@28.3.3",
-    "go-tools@2025.1.1",
-    "go@1.25",
-    "tilt@0.35.1",
-    "mdbook@0.4.52",
-    "mdbook-admonish@1.20.0",
-    "kyverno-chainsaw@0.2.12",
-    "kubernetes-helm@3.19.0",
-    "kubectl@1.33.4",
-    "kubebuilder@4.8.0",
-    "jq@1.8.1"
-  ],
+  "packages": {
+    "apple-sdk_15": {
+      "version":            "15.2",
+      "excluded_platforms": ["x86_64-linux"]
+    },
+    "clusterctl":       "1.11.1",
+    "docker":           "28.3.3",
+    "go-tools":         "2025.1.1",
+    "go":               "1.25",
+    "tilt":             "0.35.1",
+    "mdbook":           "0.4.52",
+    "mdbook-admonish":  "1.20.0",
+    "kyverno-chainsaw": "0.2.12",
+    "kubernetes-helm":  "3.19.0",
+    "kubectl":          "1.33.4",
+    "kubebuilder":      "4.8.0",
+    "jq":               "1.8.1"
+  },
   "shell": {
     "init_hook": [
-      "export \"GOROOT=$(go env GOROOT)\""
+      "export \"GOROOT=$(go env GOROOT)\"; export GOTOOLCHAIN=auto"
     ],
     "scripts": {}
   }
