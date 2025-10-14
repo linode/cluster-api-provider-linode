@@ -42,7 +42,8 @@ to create, configure, and manage Kubernetes clusters.
 ## Compatibility
 
 ### Cluster API Versions
-CAPL is compatible only with the `v1beta1` version of CAPI (v1.x).
+CAPL v0.10.X and onwards is compatible only with the `v1beta2` version of CAPI (v1.11).
+All previous releases are only compatible with the `v1beta1` version of CAPI.
 
 ### Kubernetes Versions
 

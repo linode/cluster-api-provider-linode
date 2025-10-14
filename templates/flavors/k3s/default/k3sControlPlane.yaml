@@ -2,13 +2,13 @@
 apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: KThreesControlPlane
 metadata:
-  name: ${CLUSTER_NAME}-control-plane
+  name: ${CLUSTER_NAME}-cp
 spec:
   machineTemplate:
     infrastructureRef:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
-      name: ${CLUSTER_NAME}-control-plane
+      name: ${CLUSTER_NAME}-cp
   kthreesConfigSpec:
     files:
       - path: /etc/rancher/k3s/config.yaml.d/capi-config.yaml

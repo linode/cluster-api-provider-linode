@@ -6,15 +6,15 @@ resources:
 patches:
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
-        remediationStrategy:
+        remediation:
           maxRetry: 5
-          retryPeriod: 2m
-          minHealthyPeriod: 2h
+          retryPeriodSeconds: 120
+          minHealthyPeriodSeconds: 7200

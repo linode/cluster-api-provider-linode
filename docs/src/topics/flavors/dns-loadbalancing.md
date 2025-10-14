@@ -79,7 +79,7 @@ You can read about how you can create these [here](https://techdocs.akamai.com/d
 1. Generate cluster yaml
     ```bash
     clusterctl generate cluster test-cluster \
-        --kubernetes-version v1.29.1 \
+        --kubernetes-version v1.33.4 \
         --infrastructure linode-linode \
         --control-plane-machine-count 3 --worker-machine-count 3 \
         --flavor <controlplane>-dns-loadbalancing > test-cluster.yaml

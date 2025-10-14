@@ -21,7 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 const (
@@ -42,14 +42,16 @@ type LinodeMachineSpec struct {
 	InstanceID *int `json:"instanceID,omitempty"`
 
 	// region is the Linode region to create the instance in.
+	// +kubebuilder:validation:MinLength=1
 	// +required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Region string `json:"region"`
+	Region string `json:"region,omitempty"`
 
 	// type is the Linode instance type to create.
+	// +kubebuilder:validation:MinLength=1
 	// +required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Type string `json:"type"`
+	Type string `json:"type,omitempty"`
 
 	// group is the Linode group to create the instance in.
 	// +optional
@@ -64,11 +66,13 @@ type LinodeMachineSpec struct {
 	// authorizedKeys is a list of SSH public keys to add to the instance.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=set
 	AuthorizedKeys []string `json:"authorizedKeys,omitempty"`
 
 	// authorizedUsers is a list of usernames to add to the instance.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=set
 	AuthorizedUsers []string `json:"authorizedUsers,omitempty"`
 
 	// backupID is the ID of the backup to restore the instance from.
@@ -84,12 +88,14 @@ type LinodeMachineSpec struct {
 	// interfaces is a list of legacy network interfaces to use for the instance.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=atomic
 	Interfaces []InstanceConfigInterfaceCreateOptions `json:"interfaces,omitempty"`
 
 	// linodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:object:generate=true
+	// +listType=atomic
 	LinodeInterfaces []LinodeInterfaceCreateOptions `json:"linodeInterfaces,omitempty"`
 
 	// backupsEnabled is a boolean indicating whether backups should be enabled for the instance.
@@ -104,6 +110,7 @@ type LinodeMachineSpec struct {
 
 	// tags is a list of tags to apply to the Linode instance.
 	// +optional
+	// +listType=set
 	Tags []string `json:"tags,omitempty"`
 
 	// firewallID is the id of the cloud firewall to apply to the Linode Instance
@@ -298,18 +305,19 @@ type InstanceConfigInterfaceCreateOptions struct {
 
 	// ipRanges is a list of IPv4 ranges to assign to the interface.
 	// +optional
+	// +listType=set
 	IPRanges []string `json:"ipRanges,omitempty"`
 }
 
 // LinodeInterfaceCreateOptions defines the linode network interface config
 type LinodeInterfaceCreateOptions struct {
-	// firewall_id is the ID of the firewall to use for the interface.
+	// firewallID is the ID of the firewall to use for the interface.
 	// +optional
-	FirewallID *int `json:"firewall_id,omitempty"`
+	FirewallID *int `json:"firewallID,omitempty"`
 
-	// default_route is the default route for the interface.
+	// defaultRoute is the default route for the interface.
 	// +optional
-	DefaultRoute *InterfaceDefaultRoute `json:"default_route,omitempty"`
+	DefaultRoute *InterfaceDefaultRoute `json:"defaultRoute,omitempty"`
 
 	// public is the public interface configuration for the interface.
 	// +optional
@@ -350,14 +358,17 @@ type PublicInterfaceCreateOptions struct {
 type PublicInterfaceIPv4CreateOptions struct {
 	// addresses is the IPv4 addresses for the public interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=address
 	Addresses []PublicInterfaceIPv4AddressCreateOptions `json:"addresses,omitempty"`
 }
 
 // PublicInterfaceIPv4AddressCreateOptions defines the public IPv4 address and whether it is primary
 type PublicInterfaceIPv4AddressCreateOptions struct {
 	// address is the IPv4 address for the public interface.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Address string `json:"address"`
+	Address string `json:"address,omitempty"`
 
 	// primary is a boolean indicating whether the address is primary.
 	// +optional
@@ -368,21 +379,24 @@ type PublicInterfaceIPv4AddressCreateOptions struct {
 type PublicInterfaceIPv6CreateOptions struct {
 	// ranges is the IPv6 ranges for the public interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	Ranges []PublicInterfaceIPv6RangeCreateOptions `json:"ranges,omitempty"`
 }
 
 // PublicInterfaceIPv6RangeCreateOptions defines the IPv6 range for a public interface
 type PublicInterfaceIPv6RangeCreateOptions struct {
 	// range is the IPv6 range for the public interface.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Range string `json:"range"`
+	Range string `json:"range,omitempty"`
 }
 
 // VPCInterfaceCreateOptions defines the VPC interface configuration for an instance
 type VPCInterfaceCreateOptions struct {
-	// subnet_id is the ID of the subnet to use for the interface.
-	// +required
-	SubnetID int `json:"subnet_id"`
+	// subnetId is the ID of the subnet to use for the interface.
+	// +optional
+	SubnetID *int `json:"subnetId,omitempty"`
 
 	// ipv4 is the IPv4 configuration for the interface.
 	// +optional
@@ -397,73 +411,86 @@ type VPCInterfaceCreateOptions struct {
 type VPCInterfaceIPv6CreateOptions struct {
 	// slaac is the IPv6 SLAAC configuration for the interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	SLAAC []VPCInterfaceIPv6SLAACCreateOptions `json:"slaac,omitempty"`
 
 	// ranges is the IPv6 ranges for the interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	Ranges []VPCInterfaceIPv6RangeCreateOptions `json:"ranges,omitempty"`
 
-	// is_public is a boolean indicating whether the interface is public.
+	// isPublic is a boolean indicating whether the interface is public.
 	// +required
-	IsPublic bool `json:"is_public"`
+	IsPublic *bool `json:"isPublic,omitempty"`
 }
 
 // VPCInterfaceIPv6SLAACCreateOptions defines the Range for IPv6 SLAAC
 type VPCInterfaceIPv6SLAACCreateOptions struct {
 	// range is the IPv6 range for the interface.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Range string `json:"range"`
+	Range string `json:"range,omitempty"`
 }
 
 // VPCInterfaceIPv6RangeCreateOptions defines the IPv6 range for a VPC interface
 type VPCInterfaceIPv6RangeCreateOptions struct {
 	// range is the IPv6 range for the interface.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Range string `json:"range"`
+	Range string `json:"range,omitempty"`
 }
 
 // VPCInterfaceIPv4CreateOptions defines the IPv4 address and range configuration for a VPC interface
 type VPCInterfaceIPv4CreateOptions struct {
 	// addresses is the IPv4 addresses for the interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=address
 	Addresses []VPCInterfaceIPv4AddressCreateOptions `json:"addresses,omitempty"`
 
 	// ranges is the IPv4 ranges for the interface.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	Ranges []VPCInterfaceIPv4RangeCreateOptions `json:"ranges,omitempty"`
 }
 
 // VPCInterfaceIPv4AddressCreateOptions defines the IPv4 configuration for a VPC interface
 type VPCInterfaceIPv4AddressCreateOptions struct {
 	// address is the IPv4 address for the interface.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Address string `json:"address"`
+	Address string `json:"address,omitempty"`
 
 	// primary is a boolean indicating whether the address is primary.
 	// +optional
 	Primary *bool `json:"primary,omitempty"`
 
-	// nat_1_1_address is the NAT 1:1 address for the interface.
+	// nat1to1Address is the NAT 1:1 address for the interface.
 	// +optional
-	NAT1To1Address *string `json:"nat_1_1_address,omitempty"`
+	NAT1To1Address *string `json:"nat1to1Address,omitempty"`
 }
 
 // VPCInterfaceIPv4RangeCreateOptions defines the IPv4 range for a VPC interface
 type VPCInterfaceIPv4RangeCreateOptions struct {
 	// range is the IPv4 range for the interface.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Range string `json:"range"`
+	Range string `json:"range,omitempty"`
 }
 
 // VLANInterface defines the VLAN interface configuration for an instance
 type VLANInterface struct {
-	// vlan_label is the label of the VLAN.
+	// vlanLabel is the label of the VLAN.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	VLANLabel string `json:"vlan_label"`
+	VLANLabel string `json:"vlanLabel,omitempty"`
 
-	// ipam_address is the IP address to assign to the interface.
+	// ipamAddress is the IP address to assign to the interface.
 	// +optional
-	IPAMAddress *string `json:"ipam_address,omitempty"`
+	IPAMAddress *string `json:"ipamAddress,omitempty"`
 }
 
 // VPCIPv4 defines VPC IPV4 settings
@@ -494,6 +521,8 @@ type LinodeMachineStatus struct {
 
 	// addresses contains the Linode instance associated addresses.
 	// +optional
+	// +listType=map
+	// +listMapKey=address
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
 	// cloudinitMetadataSupport determines whether to use cloud-init or not.
@@ -547,6 +576,7 @@ type LinodeMachineStatus struct {
 
 	// tags are the tags applied to the Linode Machine.
 	// +optional
+	// +listType=set
 	Tags []string `json:"tags,omitempty"`
 }
 
@@ -568,8 +598,8 @@ type LinodeMachine struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec defines the specification of desired behavior for the LinodeMachine.
-	// +optional
-	Spec LinodeMachineSpec `json:"spec,omitempty"`
+	// +required
+	Spec LinodeMachineSpec `json:"spec,omitzero,omitempty"`
 
 	// status defines the observed state of LinodeMachine.
 	// +optional

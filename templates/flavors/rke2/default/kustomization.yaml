@@ -12,7 +12,7 @@ resources:
 patches:
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
       - op: replace
@@ -20,10 +20,10 @@ patches:
         value: RKE2ControlPlane
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -34,7 +34,7 @@ patches:
           crs: ${CLUSTER_NAME}-crs
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: MachineDeployment
     patch: |-
       - op: replace

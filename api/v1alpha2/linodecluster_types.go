@@ -19,7 +19,7 @@ package v1alpha2
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 )
 
 const (
@@ -32,8 +32,9 @@ const (
 // LinodeClusterSpec defines the desired state of LinodeCluster
 type LinodeClusterSpec struct {
 	// region the LinodeCluster lives in.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Region string `json:"region"`
+	Region string `json:"region,omitempty"`
 
 	// controlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane
 	// If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used.
@@ -114,8 +115,8 @@ type LinodeCluster struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeCluster.
-	// +optional
-	Spec LinodeClusterSpec `json:"spec,omitempty"`
+	// +required
+	Spec LinodeClusterSpec `json:"spec,omitzero,omitempty"`
 
 	// status is the observed state of the LinodeCluster.
 	// +optional
@@ -213,6 +214,8 @@ type NetworkSpec struct {
 
 	// additionalPorts contains list of ports to be configured with NodeBalancer.
 	// +optional
+	// +listType=map
+	// +listMapKey=port
 	AdditionalPorts []LinodeNBPortConfig `json:"additionalPorts,omitempty"`
 
 	// subnetName is the name/label of the VPC subnet to be used by the cluster
@@ -245,7 +248,7 @@ type LinodeNBPortConfig struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +required
-	Port int `json:"port"`
+	Port int `json:"port,omitempty"`
 
 	// nodeBalancerConfigID is the config ID of port's NodeBalancer config.
 	// +optional

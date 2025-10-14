@@ -38,7 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -396,18 +396,13 @@ func requestsForCluster(ctx context.Context, tracedClient client.Client, namespa
 
 	result := make([]ctrl.Request, 0, len(machineList.Items))
 	for _, item := range machineList.Items {
-		if item.Spec.InfrastructureRef.GroupVersionKind().Kind != "LinodeMachine" || item.Spec.InfrastructureRef.Name == "" {
+		if item.Spec.InfrastructureRef.Kind != "LinodeMachine" || item.Spec.InfrastructureRef.Name == "" {
 			continue
-		}
-
-		infraNs := item.Spec.InfrastructureRef.Namespace
-		if infraNs == "" {
-			infraNs = item.Namespace
 		}
 
 		result = append(result, ctrl.Request{
 			NamespacedName: client.ObjectKey{
-				Namespace: infraNs,
+				Namespace: item.Namespace,
 				Name:      item.Spec.InfrastructureRef.Name,
 			},
 		})
@@ -671,7 +666,7 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 		VPC: &linodego.VPCInterfaceCreateOptions{
 			SubnetID: subnetID,
 			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+				Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
 					NAT1To1Address: ptr.To("auto"),
 					Address:        ptr.To("auto"),
@@ -756,7 +751,7 @@ func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *
 		VPC: &linodego.VPCInterfaceCreateOptions{
 			SubnetID: subnetID,
 			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+				Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
 					NAT1To1Address: ptr.To("auto"),
 					Address:        ptr.To("auto"),
@@ -846,10 +841,7 @@ func isIPv6ConfigEmpty(opts *linodego.InstanceConfigInterfaceCreateOptionsIPv6) 
 }
 
 func isVPCInterfaceIPv6ConfigEmpty(opts *linodego.VPCInterfaceIPv6CreateOptions) bool {
-	return opts == nil ||
-		len(opts.SLAAC) == 0 &&
-			len(opts.Ranges) == 0 &&
-			!opts.IsPublic
+	return opts == nil || (opts.SLAAC == nil && opts.Ranges == nil && opts.IsPublic == nil)
 }
 
 // getMachineIPv6Config returns the IPv6 configuration for a LinodeMachine.
@@ -903,18 +895,18 @@ func getVPCLinodeInterfaceIPv6Config(machineScope *scope.MachineScope, numIPv6Ra
 
 	if machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6 != nil {
 		// Set the public IPv6 flag based on the IsPublicIPv6 specification.
-		intfOpts.IsPublic = *machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6
+		intfOpts.IsPublic = machineScope.LinodeMachine.Spec.IPv6Options.IsPublicIPv6
 	}
 
 	if machineScope.LinodeMachine.Spec.IPv6Options.EnableSLAAC != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableSLAAC {
-		intfOpts.SLAAC = []linodego.VPCInterfaceIPv6SLAACCreateOptions{
+		intfOpts.SLAAC = &[]linodego.VPCInterfaceIPv6SLAACCreateOptions{
 			{
 				Range: defaultNodeIPv6CIDRRange,
 			},
 		}
 	}
 	if machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges {
-		intfOpts.Ranges = []linodego.VPCInterfaceIPv6RangeCreateOptions{
+		intfOpts.Ranges = &[]linodego.VPCInterfaceIPv6RangeCreateOptions{
 			{
 				Range: defaultNodeIPv6CIDRRange,
 			},
@@ -1003,18 +995,24 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 				Range: rng.Range,
 			})
 		}
-		ipv6IsPublic = iface.VPC.IPv6.IsPublic
+		if iface.VPC.IPv6.IsPublic != nil {
+			ipv6IsPublic = *iface.VPC.IPv6.IsPublic
+		}
+	}
+	subnetID := 0
+	if iface.VPC.SubnetID != nil {
+		subnetID = *iface.VPC.SubnetID
 	}
 	return &linodego.VPCInterfaceCreateOptions{
-		SubnetID: iface.VPC.SubnetID,
+		SubnetID: subnetID,
 		IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-			Addresses: ipv4Addrs,
-			Ranges:    ipv4Ranges,
+			Addresses: &ipv4Addrs,
+			Ranges:    &ipv4Ranges,
 		},
 		IPv6: &linodego.VPCInterfaceIPv6CreateOptions{
-			SLAAC:    ipv6SLAAC,
-			Ranges:   ipv6Ranges,
-			IsPublic: ipv6IsPublic,
+			SLAAC:    &ipv6SLAAC,
+			Ranges:   &ipv6Ranges,
+			IsPublic: &ipv6IsPublic,
 		},
 	}
 }
@@ -1042,10 +1040,10 @@ func constructLinodeInterfacePublic(iface infrav1alpha2.LinodeInterfaceCreateOpt
 	}
 	return &linodego.PublicInterfaceCreateOptions{
 		IPv4: &linodego.PublicInterfaceIPv4CreateOptions{
-			Addresses: ipv4Addrs,
+			Addresses: &ipv4Addrs,
 		},
 		IPv6: &linodego.PublicInterfaceIPv6CreateOptions{
-			Ranges: ipv6Ranges,
+			Ranges: &ipv6Ranges,
 		},
 	}
 }

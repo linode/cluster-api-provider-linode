@@ -5,15 +5,36 @@ metadata:
   creationTimestamp: null
   name: flatcar-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
-  labels:
-    all:
-    kubeadm-flatcar:
-    flavors:
+  # TODO: re-enable this test once flatcar provisioning is working again
+#  labels:
+#    all:
+#    kubeadm-flatcar:
+#    flavors:
 spec:
+  catch:
+    - script:
+        env:
+          - name: TARGET_API
+            value: api.linode.com
+          - name: TARGET_API_VERSION
+            value: v4
+          - name: URI
+            value: images
+          - name: LINODE_REGION
+            value: (env('LINODE_REGION'))
+        content: |
+          set -e
+          # Get the latest version on Alpha channel.
+          # NOTE: This can be changed to Beta or Stable when Akamai support will come on these channels.
+          IMAGE_ID=$(cat image-id)
+          curl --request DELETE \
+            --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}/${IMAGE_ID}" \
+            --header "Authorization: Bearer ${LINODE_TOKEN}" \
+            --header "accept: application/json"
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'flatcar-cluster', random('[0-9a-z]{7}')]))
+      value: (join('-', ['e2e', 'flatcar', random('[0-9a-z]{5}')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `29`)), '-'))
@@ -71,7 +92,7 @@ spec:
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: KUBERNETES_VERSION
-                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
+                value: (env('KUBERNETES_VERSION') || 'v1.33.4')
             content: |
               set -e
               export FLATCAR_IMAGE_NAME=$(cat image-id)
@@ -94,13 +115,13 @@ spec:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeMachine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Machine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: MachineDeployment
         - describe:
-            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta2
             kind: KubeadmControlPlane
         - describe:
             apiVersion: addons.cluster.x-k8s.io/v1alpha1
@@ -169,7 +190,7 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: cluster.x-k8s.io/v1beta1
+              apiVersion: cluster.x-k8s.io/v1beta2
               kind: Cluster
               name: ($cluster)
         - error:
@@ -222,7 +243,7 @@ spec:
               # Get the latest version on Alpha channel.
               # NOTE: This can be changed to Beta or Stable when Akamai support will come on these channels.
               IMAGE_ID=$(cat image-id)
-              curl -s --request DELETE \
-                --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}/${IMAGE_ID}" \
-                --header "Authorization: Bearer ${LINODE_TOKEN}" \
-                --header "accept: application/json"
+              curl --request DELETE \
+              --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}/${IMAGE_ID}" \
+              --header "Authorization: Bearer ${LINODE_TOKEN}" \
+              --header "accept: application/json"

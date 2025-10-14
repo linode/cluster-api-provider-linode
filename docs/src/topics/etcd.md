@@ -38,7 +38,7 @@ export OBJ_BUCKET_REGION=us-ord
 export ETCDBR_IMAGE=docker.io/username/your-custom-image:version
 export SSE_KEY=cdQdZ3PrKgm5vmqxeqwQCuAWJ7pPVyHg
 clusterctl generate cluster $CLUSTER_NAME \
-  --kubernetes-version v1.29.1 \
+  --kubernetes-version v1.33.4 \
   --infrastructure linode-linode \
   --flavor etcd-backup-restore \
   | kubectl apply -f -

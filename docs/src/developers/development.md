@@ -57,20 +57,6 @@ git clone https://github.com/linode/cluster-api-provider-linode
 cd cluster-api-provider-linode
 ```
 
-### Enable git hooks
-
-To enable automatic code validation on code push, execute the following commands:
-
-```sh
-PATH="$PWD/bin:$PATH" make husky && husky install
-```
-
-If you would like to temporarily disable git hook, set `SKIP_GIT_PUSH_HOOK` value:
-
-```sh
-SKIP_GIT_PUSH_HOOK=1 git push
-```
-
 ### [Recommended] Set up devbox
 
 1. Install dependent packages in your project
@@ -220,7 +206,7 @@ you can deploy a workload cluster with the default flavor:
 
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
-  --kubernetes-version v1.29.1 \
+  --kubernetes-version v1.33.4 \
   --infrastructure local-linode:v0.0.0 \
   | kubectl apply -f -
 ```
@@ -240,7 +226,7 @@ management cluster has the [ClusterTopology feature gate set](https://cluster-ap
 
 ```sh
 clusterctl generate cluster $CLUSTER_NAME \
-  --kubernetes-version v1.29.1 \
+  --kubernetes-version v1.33.4 \
   --infrastructure local-linode:v0.0.0 \
   --flavor clusterclass-kubeadm \
   | kubectl apply -f -

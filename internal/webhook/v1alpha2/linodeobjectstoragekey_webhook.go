@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
+	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -37,6 +37,7 @@ import (
 // log is for logging in this package.
 var linodeobjectstoragekeylog = logf.Log.WithName("linodeobjectstoragekey-resource")
 
+//gosec:disable G101 -- This is a false positive
 const defaultKeySecretNameTemplate = "%s-obj-key"
 
 // SetupLinodeObjectStorageKeyWebhookWithManager registers the webhook for LinodeObjectStorageKey in the manager.

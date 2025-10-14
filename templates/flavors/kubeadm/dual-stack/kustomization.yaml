@@ -6,10 +6,10 @@ resources:
 patches:
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -41,19 +41,20 @@ patches:
           - range: auto
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
         kubeadmConfigSpec:
           clusterConfiguration:
             controllerManager:
               extraArgs:
-                allocate-node-cidrs: "false"
+                - name: "allocate-node-cidrs"
+                  value: "false"
   - target:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
@@ -62,7 +63,7 @@ patches:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
         template:
           spec:
@@ -77,7 +78,7 @@ patches:
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
-        name: ${CLUSTER_NAME}-md-0
+        name: ${CLUSTER_NAME}
       spec:
         template:
           spec:
@@ -137,7 +138,7 @@ patches:
           secretRef:
             name: "linode-token-region"
           image:
-            tag: v0.9.0
+            tag: ${LINODE_CCM_VERSION:=v0.9.1}
             pullPolicy: IfNotPresent
           enableNodeIPAM: true
           tolerations:

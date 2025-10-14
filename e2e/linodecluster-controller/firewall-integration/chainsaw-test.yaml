@@ -12,7 +12,7 @@ spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'firewall-integration', random('[0-9a-z]{7}')]))
+      value: (join('-', ['e2e', 'firewall-integration', random('[0-9a-z]{5}')]))
     - name: firewall
       # Format the firewall name into a valid Kubernetes object name
       value: (trim((truncate(($run), `63`)), '-'))
@@ -60,7 +60,7 @@ spec:
             file: create-cluster.yaml
       catch:
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Cluster
     - name: Create LinodeCluster resource
       try:
@@ -131,7 +131,7 @@ spec:
               name: ($firewall)
         - delete:
             ref:
-              apiVersion: cluster.x-k8s.io/v1beta1
+              apiVersion: cluster.x-k8s.io/v1beta2
               kind: Cluster
               name: ($cluster)
         - error:

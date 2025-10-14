@@ -23,7 +23,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,7 +47,14 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				Name:      "machine-template-no-machines",
 				Namespace: "default",
 			},
-			Spec: infrav1alpha2.LinodeMachineTemplateSpec{},
+			Spec: infrav1alpha2.LinodeMachineTemplateSpec{
+				Template: infrav1alpha2.LinodeMachineTemplateResource{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						Region: "us-ord",
+						Type:   "g6-standard-1",
+					},
+				},
+			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -57,7 +64,9 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 			Spec: infrav1alpha2.LinodeMachineTemplateSpec{
 				Template: infrav1alpha2.LinodeMachineTemplateResource{
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						Tags: []string{"test-tag"},
+						Region: "us-ord",
+						Type:   "g6-standard-1",
+						Tags:   []string{"test-tag"},
 					},
 				},
 			},
@@ -70,7 +79,9 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 			Spec: infrav1alpha2.LinodeMachineTemplateSpec{
 				Template: infrav1alpha2.LinodeMachineTemplateResource{
 					Spec: infrav1alpha2.LinodeMachineSpec{
-						Tags: []string{"test-tag1"},
+						Region: "us-ord",
+						Type:   "g6-standard-1",
+						Tags:   []string{"test-tag1"},
 					},
 				},
 			},
@@ -86,6 +97,8 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 			Spec: infrav1alpha2.LinodeMachineTemplateSpec{
 				Template: infrav1alpha2.LinodeMachineTemplateResource{
 					Spec: infrav1alpha2.LinodeMachineSpec{
+						Region:     "us-ord",
+						Type:       "g6-standard-1",
 						FirewallID: 12345,
 					},
 				},
@@ -99,6 +112,8 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 			Spec: infrav1alpha2.LinodeMachineTemplateSpec{
 				Template: infrav1alpha2.LinodeMachineTemplateResource{
 					Spec: infrav1alpha2.LinodeMachineSpec{
+						Region:     "us-ord",
+						Type:       "g6-standard-1",
 						FirewallID: 67890,
 					},
 				},
@@ -118,6 +133,10 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 					clusterv1.TemplateClonedFromNameAnnotation: "machine-template-with-spec-tags",
 				},
 			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
+			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -126,6 +145,10 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				Annotations: map[string]string{
 					clusterv1.TemplateClonedFromNameAnnotation: "machine-template-no-tags-change",
 				},
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
 			},
 		},
 		{
@@ -136,6 +159,10 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 					clusterv1.TemplateClonedFromNameAnnotation: "machine-template-with-firewall-id",
 				},
 			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
+			},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -144,6 +171,10 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				Annotations: map[string]string{
 					clusterv1.TemplateClonedFromNameAnnotation: "machine-template-no-firewall-change",
 				},
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
 			},
 		},
 	}

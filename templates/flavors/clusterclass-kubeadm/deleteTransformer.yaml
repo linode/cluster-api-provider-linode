@@ -18,7 +18,7 @@ metadata:
   name: patch-delete-cluster
 patch: |-
   $patch: delete
-  apiVersion: cluster.x-k8s.io/v1beta1
+  apiVersion: cluster.x-k8s.io/v1beta2
   kind: Cluster
   metadata:
     name: ${CLUSTER_NAME}
@@ -30,10 +30,10 @@ metadata:
   name: kubeadm-patch-delete
 patch: |-
   $patch: delete
-  apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+  apiVersion: controlplane.cluster.x-k8s.io/v1beta2
   kind: KubeadmControlPlane
   metadata:
-    name: ${CLUSTER_NAME}-control-plane
+    name: ${CLUSTER_NAME}-cp
 ---
 # delete machineDeployment from ../base
 apiVersion: builtin
@@ -42,10 +42,10 @@ metadata:
   name: patch-delete-machineDeployment
 patch: |-
   $patch: delete
-  apiVersion: cluster.x-k8s.io/v1beta1
+  apiVersion: cluster.x-k8s.io/v1beta2
   kind: MachineDeployment
   metadata:
-    name: ${CLUSTER_NAME}-md-0
+    name: ${CLUSTER_NAME}
 ---
 # delete extra fields from kubeadmControlPlaneTemplate
 apiVersion: builtin

@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
+	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -577,7 +577,7 @@ func TestShouldRotateKey(t *testing.T) {
 	assert.False(t, (&ObjectStorageKeyScope{
 		Key: &infrav1alpha2.LinodeObjectStorageKey{
 			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-				KeyGeneration: 0,
+				KeyGeneration: ptr.To(0),
 			},
 			Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
 				LastKeyGeneration: ptr.To(0),
@@ -588,7 +588,7 @@ func TestShouldRotateKey(t *testing.T) {
 	assert.True(t, (&ObjectStorageKeyScope{
 		Key: &infrav1alpha2.LinodeObjectStorageKey{
 			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-				KeyGeneration: 1,
+				KeyGeneration: ptr.To(1),
 			},
 			Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
 				LastKeyGeneration: ptr.To(0),

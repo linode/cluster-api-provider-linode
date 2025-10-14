@@ -22,7 +22,7 @@ jobs:
       # Expose matched filters as job 'src' output variable
       paths: ${{ steps.filter.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -76,10 +76,18 @@ jobs:
             charts.jetstack.io:443
             helm.cilium.io:443
             linode.github.io:443
+            dl.k8s.io:443
+            cdn.dl.k8s.io:443
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          check-latest: true
 
       - name: Run Upgrade Test
         env:

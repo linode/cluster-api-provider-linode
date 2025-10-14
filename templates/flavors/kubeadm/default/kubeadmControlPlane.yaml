@@ -1,15 +1,16 @@
 ---
 kind: KubeadmControlPlane
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 metadata:
-  name: ${CLUSTER_NAME}-control-plane
+  name: ${CLUSTER_NAME}-cp
 spec:
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
   machineTemplate:
-    infrastructureRef:
-      kind: LinodeMachineTemplate
-      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
-      name: ${CLUSTER_NAME}-control-plane
+    spec:
+      infrastructureRef:
+        kind: LinodeMachineTemplate
+        apiGroup: infrastructure.cluster.x-k8s.io
+        name: ${CLUSTER_NAME}-cp
   kubeadmConfigSpec:
     preKubeadmCommands:
       - curl -fsSL https://github.com/linode/cluster-api-provider-linode/raw/dd76b1f979696ef22ce093d420cdbd0051a1d725/scripts/pre-kubeadminit.sh | bash -s ${KUBERNETES_VERSION}
@@ -19,13 +20,12 @@ spec:
         local:
           dataDir: /var/lib/etcd_data/etcd
           extraArgs:
-            quota-backend-bytes: "8589934592"
-      apiServer:
-        extraArgs:
-          cloud-provider: external
+            - name: "quota-backend-bytes"
+              value: "8589934592"
       controllerManager:
         extraArgs:
-          cloud-provider: external
+          - name: "cloud-provider"
+            value: "external"
     initConfiguration:
       localAPIEndpoint:
         bindPort: ${APISERVER_PORT:=6443}
@@ -33,11 +33,13 @@ spec:
         - addon/kube-proxy
       nodeRegistration:
         kubeletExtraArgs:
-          cloud-provider: external
+          - name: "cloud-provider"
+            value: "external"
         name: '{{ ds.meta_data.label }}'
     joinConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
-          cloud-provider: external
+          - name: "cloud-provider"
+            value: "external"
         name: '{{ ds.meta_data.label }}'
   version: "${KUBERNETES_VERSION}"

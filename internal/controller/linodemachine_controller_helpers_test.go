@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -60,6 +60,55 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 				IPRanges: []string{"ip"},
 			},
 		},
+		LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{{
+			FirewallID: ptr.To(123),
+			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
+				IPv4: ptr.To(true),
+				IPv6: ptr.To(true),
+			},
+			Public: &infrav1alpha2.PublicInterfaceCreateOptions{
+				IPv4: &infrav1alpha2.PublicInterfaceIPv4CreateOptions{Addresses: []infrav1alpha2.PublicInterfaceIPv4AddressCreateOptions{{
+					Address: "1.2.3.4",
+					Primary: nil,
+				}}},
+				IPv6: &infrav1alpha2.PublicInterfaceIPv6CreateOptions{Ranges: []infrav1alpha2.PublicInterfaceIPv6RangeCreateOptions{{
+					Range: "1234:5678:90ab:cdef:1234:5678:90ab:cdef/64",
+				}}},
+			},
+		}, {
+			FirewallID: ptr.To(123),
+			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
+				IPv4: ptr.To(true),
+				IPv6: ptr.To(true),
+			},
+			VPC: &infrav1alpha2.VPCInterfaceCreateOptions{
+				IPv4: &infrav1alpha2.VPCInterfaceIPv4CreateOptions{Addresses: []infrav1alpha2.VPCInterfaceIPv4AddressCreateOptions{{
+					Address:        "1.2.3.4",
+					Primary:        nil,
+					NAT1To1Address: ptr.To("true"),
+				}},
+					Ranges: []infrav1alpha2.VPCInterfaceIPv4RangeCreateOptions{{
+						Range: "1.2.3.4/32",
+					}}},
+				IPv6: &infrav1alpha2.VPCInterfaceIPv6CreateOptions{
+					SLAAC: []infrav1alpha2.VPCInterfaceIPv6SLAACCreateOptions{{Range: "1234:5678:90ab:cdef:1234:5678:90ab:cdef/64"}},
+					Ranges: []infrav1alpha2.VPCInterfaceIPv6RangeCreateOptions{{
+						Range: "1234:5678:90ab:cdef:1234:5678:90ab:cdef/64",
+					}},
+					IsPublic: ptr.To(false),
+				},
+			},
+		}, {
+			FirewallID: ptr.To(123),
+			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
+				IPv4: ptr.To(true),
+				IPv6: ptr.To(true),
+			},
+			VLAN: &infrav1alpha2.VLANInterface{
+				VLANLabel:   "test-label",
+				IPAMAddress: nil,
+			},
+		}},
 		BackupsEnabled: true,
 		PrivateIP:      util.Pointer(true),
 	}
@@ -91,13 +140,13 @@ func TestSetUserData(t *testing.T) {
 	}{
 		{
 			name: "Success - SetUserData metadata",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
+			machineScope: &scope.MachineScope{Machine: &v1beta2.Machine{
+				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
+					Bootstrap: v1beta2.Bootstrap{
 						DataSecretName: ptr.To("test-data"),
 					},
-					InfrastructureRef: corev1.ObjectReference{},
+					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
 			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
@@ -124,13 +173,13 @@ func TestSetUserData(t *testing.T) {
 		},
 		{
 			name: "Success - SetUserData metadata and cluster object store (large bootstrap data)",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
+			machineScope: &scope.MachineScope{Machine: &v1beta2.Machine{
+				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
+					Bootstrap: v1beta2.Bootstrap{
 						DataSecretName: ptr.To("test-data"),
 					},
-					InfrastructureRef: corev1.ObjectReference{},
+					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
 			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
@@ -181,14 +230,13 @@ https://object.bucket.example.com
 		},
 		{
 			name: "Error - SetUserData get bootstrap data",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
+			machineScope: &scope.MachineScope{Machine: &v1beta2.Machine{
+				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
-						ConfigRef:      nil,
+					Bootstrap: v1beta2.Bootstrap{
 						DataSecretName: nil,
 					},
-					InfrastructureRef: corev1.ObjectReference{},
+					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
 			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
@@ -206,13 +254,13 @@ https://object.bucket.example.com
 		},
 		{
 			name: "Error - SetUserData failed to upload to Cluster Object Store",
-			machineScope: &scope.MachineScope{Machine: &v1beta1.Machine{
-				Spec: v1beta1.MachineSpec{
+			machineScope: &scope.MachineScope{Machine: &v1beta2.Machine{
+				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
-					Bootstrap: v1beta1.Bootstrap{
+					Bootstrap: v1beta2.Bootstrap{
 						DataSecretName: ptr.To("test-data"),
 					},
-					InfrastructureRef: corev1.ObjectReference{},
+					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
 			}, LinodeMachine: &infrav1alpha2.LinodeMachine{
 				ObjectMeta: metav1.ObjectMeta{
@@ -598,15 +646,19 @@ func validateInterfaceExpectations(
 		require.NotNil(t, linodeIface)
 		require.NotNil(t, linodeIface.VPC)
 		if linodeIface.VPC.IPv6 != nil && linodeIface.VPC.IPv6.SLAAC != nil {
-			require.Equal(t, defaultNodeIPv6CIDRRange, linodeIface.VPC.IPv6.SLAAC[0].Range)
+			slaac := *linodeIface.VPC.IPv6.SLAAC
+			require.Equal(t, defaultNodeIPv6CIDRRange, slaac[0].Range)
 		} else if linodeIface.VPC.IPv6 != nil && linodeIface.VPC.IPv6.Ranges != nil {
-			require.Equal(t, defaultNodeIPv6CIDRRange, linodeIface.VPC.IPv6.Ranges[0].Range)
+			ranges := *linodeIface.VPC.IPv6.Ranges
+			require.Equal(t, defaultNodeIPv6CIDRRange, ranges[0].Range)
 		}
 		require.NotNil(t, linodeIface.VPC.SubnetID)
 		require.Equal(t, expectSubnetID, linodeIface.VPC.SubnetID)
 		require.NotNil(t, linodeIface.VPC.IPv4)
-		require.NotNil(t, linodeIface.VPC.IPv4.Addresses[0].NAT1To1Address)
-		require.Equal(t, "auto", *linodeIface.VPC.IPv4.Addresses[0].NAT1To1Address)
+		require.NotNil(t, linodeIface.VPC.IPv4.Addresses)
+		addresses := *linodeIface.VPC.IPv4.Addresses
+		require.NotNil(t, addresses[0].NAT1To1Address)
+		require.Equal(t, "auto", *addresses[0].NAT1To1Address)
 	} else {
 		require.Nil(t, linodeIface)
 	}

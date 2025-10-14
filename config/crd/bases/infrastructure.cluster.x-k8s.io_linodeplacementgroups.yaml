@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.19.0
   labels:
     clusterctl.cluster.x-k8s.io/move-hierarchy: "true"
   name: linodeplacementgroups.infrastructure.cluster.x-k8s.io
@@ -91,6 +91,7 @@ spec:
               region:
                 description: region is the Linode region to create the PlacementGroup
                   in.
+                minLength: 1
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -204,6 +205,8 @@ spec:
                 description: ready is true when the provider resource is ready.
                 type: boolean
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

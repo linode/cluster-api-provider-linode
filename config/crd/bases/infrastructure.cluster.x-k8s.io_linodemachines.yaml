@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: linodemachines.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -71,6 +71,7 @@ spec:
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: set
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
@@ -80,6 +81,7 @@ spec:
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: set
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
@@ -441,6 +443,7 @@ spec:
                       items:
                         type: string
                       type: array
+                      x-kubernetes-list-type: set
                     ipamAddress:
                       description: ipamAddress is the IP address to assign to the
                         interface.
@@ -473,6 +476,7 @@ spec:
                       type: integer
                   type: object
                 type: array
+                x-kubernetes-list-type: atomic
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
@@ -521,8 +525,8 @@ spec:
                   description: LinodeInterfaceCreateOptions defines the linode network
                     interface config
                   properties:
-                    default_route:
-                      description: default_route is the default route for the interface.
+                    defaultRoute:
+                      description: defaultRoute is the default route for the interface.
                       properties:
                         ipv4:
                           description: ipv4 is the IPv4 default route for the interface.
@@ -531,8 +535,8 @@ spec:
                           description: ipv6 is the IPv6 default route for the interface.
                           type: boolean
                       type: object
-                    firewall_id:
-                      description: firewall_id is the ID of the firewall to use for
+                    firewallID:
+                      description: firewallID is the ID of the firewall to use for
                         the interface.
                       type: integer
                     public:
@@ -554,6 +558,7 @@ spec:
                                   address:
                                     description: address is the IPv4 address for the
                                       public interface.
+                                    minLength: 1
                                     type: string
                                   primary:
                                     description: primary is a boolean indicating whether
@@ -563,6 +568,9 @@ spec:
                                 - address
                                 type: object
                               type: array
+                              x-kubernetes-list-map-keys:
+                              - address
+                              x-kubernetes-list-type: map
                           type: object
                         ipv6:
                           description: ipv6 is the IPv6 configuration for the public
@@ -578,26 +586,31 @@ spec:
                                   range:
                                     description: range is the IPv6 range for the public
                                       interface.
+                                    minLength: 1
                                     type: string
                                 required:
                                 - range
                                 type: object
                               type: array
+                              x-kubernetes-list-map-keys:
+                              - range
+                              x-kubernetes-list-type: map
                           type: object
                       type: object
                     vlan:
                       description: vlan is the VLAN interface configuration for the
                         interface.
                       properties:
-                        ipam_address:
-                          description: ipam_address is the IP address to assign to
+                        ipamAddress:
+                          description: ipamAddress is the IP address to assign to
                             the interface.
                           type: string
-                        vlan_label:
-                          description: vlan_label is the label of the VLAN.
+                        vlanLabel:
+                          description: vlanLabel is the label of the VLAN.
+                          minLength: 1
                           type: string
                       required:
-                      - vlan_label
+                      - vlanLabel
                       type: object
                     vpc:
                       description: vpc is the VPC interface configuration for the
@@ -616,9 +629,10 @@ spec:
                                   address:
                                     description: address is the IPv4 address for the
                                       interface.
+                                    minLength: 1
                                     type: string
-                                  nat_1_1_address:
-                                    description: nat_1_1_address is the NAT 1:1 address
+                                  nat1to1Address:
+                                    description: nat1to1Address is the NAT 1:1 address
                                       for the interface.
                                     type: string
                                   primary:
@@ -629,6 +643,9 @@ spec:
                                 - address
                                 type: object
                               type: array
+                              x-kubernetes-list-map-keys:
+                              - address
+                              x-kubernetes-list-type: map
                             ranges:
                               description: ranges is the IPv4 ranges for the interface.
                               items:
@@ -637,17 +654,21 @@ spec:
                                 properties:
                                   range:
                                     description: range is the IPv4 range for the interface.
+                                    minLength: 1
                                     type: string
                                 required:
                                 - range
                                 type: object
                               type: array
+                              x-kubernetes-list-map-keys:
+                              - range
+                              x-kubernetes-list-type: map
                           type: object
                         ipv6:
                           description: ipv6 is the IPv6 configuration for the interface.
                           properties:
-                            is_public:
-                              description: is_public is a boolean indicating whether
+                            isPublic:
+                              description: isPublic is a boolean indicating whether
                                 the interface is public.
                               type: boolean
                             ranges:
@@ -658,11 +679,15 @@ spec:
                                 properties:
                                   range:
                                     description: range is the IPv6 range for the interface.
+                                    minLength: 1
                                     type: string
                                 required:
                                 - range
                                 type: object
                               type: array
+                              x-kubernetes-list-map-keys:
+                              - range
+                              x-kubernetes-list-type: map
                             slaac:
                               description: slaac is the IPv6 SLAAC configuration for
                                 the interface.
@@ -672,23 +697,26 @@ spec:
                                 properties:
                                   range:
                                     description: range is the IPv6 range for the interface.
+                                    minLength: 1
                                     type: string
                                 required:
                                 - range
                                 type: object
                               type: array
+                              x-kubernetes-list-map-keys:
+                              - range
+                              x-kubernetes-list-type: map
                           required:
-                          - is_public
+                          - isPublic
                           type: object
-                        subnet_id:
-                          description: subnet_id is the ID of the subnet to use for
+                        subnetId:
+                          description: subnetId is the ID of the subnet to use for
                             the interface.
                           type: integer
-                      required:
-                      - subnet_id
                       type: object
                   type: object
                 type: array
+                x-kubernetes-list-type: atomic
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
@@ -794,6 +822,7 @@ spec:
                 type: string
               region:
                 description: region is the Linode region to create the instance in.
+                minLength: 1
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -809,8 +838,10 @@ spec:
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: set
               type:
                 description: type is the Linode instance type to create.
+                minLength: 1
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable
@@ -903,6 +934,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - address
+                x-kubernetes-list-type: map
               cloudinitMetadataSupport:
                 default: true
                 description: |-
@@ -1020,7 +1054,10 @@ spec:
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: set
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

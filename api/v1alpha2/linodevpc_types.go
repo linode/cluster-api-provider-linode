@@ -40,23 +40,28 @@ type LinodeVPCSpec struct {
 
 	// region is the region to create the VPC in.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Region string `json:"region"`
+	Region string `json:"region,omitempty"`
 
 	// ipv6 is a list of IPv6 ranges allocated to the VPC.
 	// Once ranges are allocated based on the IPv6Range field, they will be
 	// added to this field.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
 
 	// ipv6Range is a list of IPv6 ranges to allocate to the VPC.
 	// If not specified, the VPC will not have an IPv6 range allocated.
 	// Once ranges are allocated, they will be added to the IPv6 field.
 	// +optional
+	// +listType=atomic
 	IPv6Range []VPCCreateOptionsIPv6 `json:"ipv6Range,omitempty"`
 
 	// subnets is a list of subnets to create in the VPC.
 	// +optional
+	// +listType=atomic
 	Subnets []VPCSubnetCreateOptions `json:"subnets,omitempty"`
 
 	// retain allows you to keep the VPC after the LinodeVPC object is deleted.
@@ -82,9 +87,9 @@ type VPCCreateOptionsIPv6 struct {
 	// +optional
 	Range *string `json:"range,omitempty"`
 
-	// allocation_class is the IPv6 inventory from which the VPC prefix should be allocated.
+	// allocationClass is the IPv6 inventory from which the VPC prefix should be allocated.
 	// +optional
-	AllocationClass *string `json:"allocation_class,omitempty"`
+	AllocationClass *string `json:"allocationClass,omitempty"`
 }
 
 // VPCSubnetCreateOptions defines subnet options
@@ -103,12 +108,15 @@ type VPCSubnetCreateOptions struct {
 	// Once ranges are allocated based on the IPv6Range field, they will be
 	// added to this field.
 	// +optional
+	// +listType=map
+	// +listMapKey=range
 	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
 
 	// ipv6Range is a list of IPv6 ranges to allocate to the subnet.
 	// If not specified, the subnet will not have an IPv6 range allocated.
 	// Once ranges are allocated, they will be added to the IPv6 field.
 	// +optional
+	// +listType=atomic
 	IPv6Range []VPCSubnetCreateOptionsIPv6 `json:"ipv6Range,omitempty"`
 
 	// subnetID is subnet id for the subnet
@@ -201,8 +209,8 @@ type LinodeVPC struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeVPC.
-	// +optional
-	Spec LinodeVPCSpec `json:"spec,omitempty"`
+	// +required
+	Spec LinodeVPCSpec `json:"spec,omitzero,omitempty"`
 
 	// status is the observed state of the LinodeVPC.
 	// +optional

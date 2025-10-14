@@ -16,10 +16,10 @@ permissions:
 jobs:
   generate-docs:
     runs-on: ubuntu-latest
-    container: docker.io/node:20-bullseye-slim
+    container: docker.io/node:22-bullseye-slim
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup mdBook
         run: |
           apt-get update

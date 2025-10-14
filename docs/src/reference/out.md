@@ -52,7 +52,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[AddressSetSpec](#addresssetspec)_ | spec is the desired state of the AddressSet |  |  |
+| `spec` _[AddressSetSpec](#addresssetspec)_ | spec is the desired state of the AddressSet |  | MinProperties: 1 <br /> |
 | `status` _[AddressSetStatus](#addresssetstatus)_ | status is the observed state of the AddressSet |  |  |
 
 
@@ -82,7 +82,8 @@ AddressSetList contains a list of AddressSet
 
 AddressSetSpec defines the desired state of AddressSet
 
-
+_Validation:_
+- MinProperties: 1
 
 _Appears in:_
 - [AddressSet](#addressset)
@@ -119,9 +120,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `bucketName` _string_ | bucketName is the name of the bucket to grant access to. |  |  |
-| `permissions` _string_ | permissions is the permissions to grant to the bucket. |  |  |
-| `region` _string_ | region is the region of the bucket. |  |  |
+| `bucketName` _string_ | bucketName is the name of the bucket to grant access to. |  | MaxLength: 63 <br />MinLength: 3 <br /> |
+| `permissions` _string_ | permissions is the permissions to grant to the bucket. |  | Enum: [read_only read_write] <br /> |
+| `region` _string_ | region is the region of the bucket. |  | MinLength: 1 <br /> |
 
 
 #### FirewallRule
@@ -180,8 +181,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `action` _string_ | action is the action to take when the rule matches. |  |  |
-| `label` _string_ | label is the label of the rule. |  |  |
+| `action` _string_ | action is the action to take when the rule matches. |  | Enum: [ACCEPT DROP] <br /> |
+| `label` _string_ | label is the label of the rule. |  | MinLength: 3 <br /> |
 | `description` _string_ | description is the description of the rule. |  |  |
 | `ports` _string_ | ports is the ports to apply the rule to. |  |  |
 | `protocol` _[NetworkProtocol](#networkprotocol)_ | protocol is the protocol to apply the rule to. |  | Enum: [TCP UDP ICMP IPENCAP] <br /> |
@@ -412,7 +413,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `region` _string_ | region the LinodeCluster lives in. |  |  |
+| `region` _string_ | region the LinodeCluster lives in. |  | MinLength: 1 <br /> |
 | `controlPlaneEndpoint` _[APIEndpoint](#apiendpoint)_ | controlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane<br />If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used. |  |  |
 | `network` _[NetworkSpec](#networkspec)_ | network encapsulates all things related to Linode network. |  |  |
 | `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a VPC object. This makes the Linodes use the specified VPC. |  |  |
@@ -532,7 +533,7 @@ _Appears in:_
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[LinodeFirewallSpec](#linodefirewallspec)_ | spec is the desired state of the LinodeFirewall. |  |  |
+| `spec` _[LinodeFirewallSpec](#linodefirewallspec)_ | spec is the desired state of the LinodeFirewall. |  | MinProperties: 1 <br /> |
 | `status` _[LinodeFirewallStatus](#linodefirewallstatus)_ | status is the observed state of the LinodeFirewall. |  |  |
 
 
@@ -562,7 +563,8 @@ LinodeFirewallList contains a list of LinodeFirewall
 
 LinodeFirewallSpec defines the desired state of LinodeFirewall
 
-
+_Validation:_
+- MinProperties: 1
 
 _Appears in:_
 - [LinodeFirewall](#linodefirewall)
@@ -595,8 +597,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeFirewall. |  |  |
 | `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
-| `failureReason` _[FirewallStatusError](#firewallstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
-| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
+| `failureReason` _[FirewallStatusError](#firewallstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a succinct value suitable<br />for machine interpretation.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Firewall and will contain a more verbose string suitable<br />for logging and human consumption.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Firewall's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of Firewalls<br />can be added as events to the Firewall object and/or logged in the<br />controller's output. |  |  |
 
 
 #### LinodeInterfaceCreateOptions
@@ -612,8 +614,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `firewall_id` _integer_ | firewall_id is the ID of the firewall to use for the interface. |  |  |
-| `default_route` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | default_route is the default route for the interface. |  |  |
+| `firewallID` _integer_ | firewallID is the ID of the firewall to use for the interface. |  |  |
+| `defaultRoute` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | defaultRoute is the default route for the interface. |  |  |
 | `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  |  |
 | `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  |  |
 | `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  |  |
@@ -677,8 +679,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `providerID` _string_ | providerID is the unique identifier as specified by the cloud provider. |  |  |
 | `instanceID` _integer_ | instanceID is the Linode instance ID for this machine. |  |  |
-| `region` _string_ | region is the Linode region to create the instance in. |  |  |
-| `type` _string_ | type is the Linode instance type to create. |  |  |
+| `region` _string_ | region is the Linode region to create the instance in. |  | MinLength: 1 <br /> |
+| `type` _string_ | type is the Linode instance type to create. |  | MinLength: 1 <br /> |
 | `group` _string_ | group is the Linode group to create the instance in. |  |  |
 | `rootPass` _string_ | rootPass is the root password for the instance. |  |  |
 | `authorizedKeys` _string array_ | authorizedKeys is a list of SSH public keys to add to the instance. |  |  |
@@ -723,8 +725,8 @@ _Appears in:_
 | `addresses` _MachineAddress array_ | addresses contains the Linode instance associated addresses. |  |  |
 | `cloudinitMetadataSupport` _boolean_ | cloudinitMetadataSupport determines whether to use cloud-init or not.<br />Deprecated: Stackscript no longer in use, so this field is not used. | true |  |
 | `instanceState` _[InstanceStatus](#instancestatus)_ | instanceState is the state of the Linode instance for this machine. |  |  |
-| `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
-| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
+| `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a succinct value suitable<br />for machine interpretation.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a more verbose string suitable<br />for logging and human consumption.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
 | `tags` _string array_ | tags are the tags applied to the Linode Machine. |  |  |
 
 
@@ -893,7 +895,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `region` _string_ | region is the ID of the Object Storage region for the bucket. |  |  |
+| `region` _string_ | region is the ID of the Object Storage region for the bucket. |  | MinLength: 1 <br /> |
 | `acl` _[ObjectStorageACL](#objectstorageacl)_ | acl sets the Access Control Level of the bucket using a canned ACL string | private | Enum: [private public-read authenticated-read public-read-write] <br /> |
 | `corsEnabled` _boolean_ | corsEnabled enables for all origins in the bucket .If set to false, CORS is disabled for all origins in the bucket | true |  |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning the bucket.<br />If not supplied then the credentials of the controller will be used. |  |  |
@@ -977,7 +979,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `bucketAccess` _[BucketAccessRef](#bucketaccessref) array_ | bucketAccess is the list of object storage bucket labels which can be accessed using the key |  | MinItems: 1 <br /> |
-| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.<br />If not supplied then the credentials of the controller will be used. |  |  |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.<br />If not supplied, then the credentials of the controller will be used. |  |  |
 | `keyGeneration` _integer_ | keyGeneration may be modified to trigger a rotation of the access key. | 0 |  |
 | `generatedSecret` _[GeneratedSecret](#generatedsecret)_ | generatedSecret configures the Secret to generate containing access key details. |  |  |
 | `secretType` _[SecretType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secrettype-v1-core)_ | secretType instructs the controller what type of secret to generate containing access key details.<br />Deprecated: Use generatedSecret.type. |  | Enum: [Opaque addons.cluster.x-k8s.io/resource-set] <br /> |
@@ -1061,7 +1063,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `pgID` _integer_ | pgID is the ID of the PlacementGroup. |  |  |
-| `region` _string_ | region is the Linode region to create the PlacementGroup in. |  |  |
+| `region` _string_ | region is the Linode region to create the PlacementGroup in. |  | MinLength: 1 <br /> |
 | `placementGroupPolicy` _string_ | placementGroupPolicy defines the policy for the PlacementGroup. | strict | Enum: [strict flexible] <br /> |
 | `placementGroupType` _string_ | placementGroupType defines the type of the PlacementGroup. | anti_affinity:local | Enum: [anti_affinity:local] <br /> |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this PlacementGroup.<br />If not supplied, then the credentials of the controller will be used. |  |  |
@@ -1082,8 +1084,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodePlacementGroup. |  |  |
 | `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
-| `failureReason` _[LinodePlacementGroupStatusError](#linodeplacementgroupstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
-| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
+| `failureReason` _[LinodePlacementGroupStatusError](#linodeplacementgroupstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a succinct value suitable<br />for machine interpretation.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the PlacementGroup and will contain a more verbose string suitable<br />for logging and human consumption.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the PlacementGroup's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of PlacementGroups<br />can be added as events to the PlacementGroup object and/or logged in the<br />controller's output. |  |  |
 
 
 #### LinodePlacementGroupStatusError
@@ -1160,7 +1162,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `vpcID` _integer_ | vpcID is the ID of the VPC. |  |  |
 | `description` _string_ | description is the description of the VPC. |  |  |
-| `region` _string_ | region is the region to create the VPC in. |  |  |
+| `region` _string_ | region is the region to create the VPC in. |  | MinLength: 1 <br /> |
 | `ipv6` _VPCIPv6Range array_ | ipv6 is a list of IPv6 ranges allocated to the VPC.<br />Once ranges are allocated based on the IPv6Range field, they will be<br />added to this field. |  |  |
 | `ipv6Range` _[VPCCreateOptionsIPv6](#vpccreateoptionsipv6) array_ | ipv6Range is a list of IPv6 ranges to allocate to the VPC.<br />If not specified, the VPC will not have an IPv6 range allocated.<br />Once ranges are allocated, they will be added to the IPv6 field. |  |  |
 | `subnets` _[VPCSubnetCreateOptions](#vpcsubnetcreateoptions) array_ | subnets is a list of subnets to create in the VPC. |  |  |
@@ -1183,8 +1185,8 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeVPC. |  |  |
 | `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
-| `failureReason` _[VPCStatusError](#vpcstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a succinct value suitable<br />for machine interpretation.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
-| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a more verbose string suitable<br />for logging and human consumption.<br /><br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br /><br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
+| `failureReason` _[VPCStatusError](#vpcstatuserror)_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a succinct value suitable<br />for machine interpretation.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the VPC and will contain a more verbose string suitable<br />for logging and human consumption.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the VPC's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of VPCs<br />can be added as events to the VPC object and/or logged in the<br />controller's output. |  |  |
 
 
 #### NetworkAddresses
@@ -1269,7 +1271,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `presignedURLDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#duration-v1-meta)_ | presignedURLDuration defines the duration for which presigned URLs are valid.<br /><br />This is used to generate presigned URLs for S3 Bucket objects, which are used by<br />control-plane and worker nodes to fetch bootstrap data. |  |  |
+| `presignedURLDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#duration-v1-meta)_ | presignedURLDuration defines the duration for which presigned URLs are valid.<br />This is used to generate presigned URLs for S3 Bucket objects, which are used by<br />control-plane and worker nodes to fetch bootstrap data. |  |  |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store. |  |  |
 
 
@@ -1303,7 +1305,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `address` _string_ | address is the IPv4 address for the public interface. |  |  |
+| `address` _string_ | address is the IPv4 address for the public interface. |  | MinLength: 1 <br /> |
 | `primary` _boolean_ | primary is a boolean indicating whether the address is primary. |  |  |
 
 
@@ -1352,7 +1354,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ | range is the IPv6 range for the public interface. |  |  |
+| `range` _string_ | range is the IPv6 range for the public interface. |  | MinLength: 1 <br /> |
 
 
 #### VLANInterface
@@ -1368,8 +1370,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `vlan_label` _string_ | vlan_label is the label of the VLAN. |  |  |
-| `ipam_address` _string_ | ipam_address is the IP address to assign to the interface. |  |  |
+| `vlanLabel` _string_ | vlanLabel is the label of the VLAN. |  | MinLength: 1 <br /> |
+| `ipamAddress` _string_ | ipamAddress is the IP address to assign to the interface. |  |  |
 
 
 #### VPCCreateOptionsIPv6
@@ -1389,7 +1391,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `range` _string_ | range is the IPv6 prefix for the VPC. |  |  |
-| `allocation_class` _string_ | allocation_class is the IPv6 inventory from which the VPC prefix should be allocated. |  |  |
+| `allocationClass` _string_ | allocationClass is the IPv6 inventory from which the VPC prefix should be allocated. |  |  |
 
 
 #### VPCIPv4
@@ -1422,7 +1424,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `subnet_id` _integer_ | subnet_id is the ID of the subnet to use for the interface. |  |  |
+| `subnetId` _integer_ | subnetId is the ID of the subnet to use for the interface. |  |  |
 | `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the interface. |  |  |
 | `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  |  |
 
@@ -1440,9 +1442,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `address` _string_ | address is the IPv4 address for the interface. |  |  |
+| `address` _string_ | address is the IPv4 address for the interface. |  | MinLength: 1 <br /> |
 | `primary` _boolean_ | primary is a boolean indicating whether the address is primary. |  |  |
-| `nat_1_1_address` _string_ | nat_1_1_address is the NAT 1:1 address for the interface. |  |  |
+| `nat1to1Address` _string_ | nat1to1Address is the NAT 1:1 address for the interface. |  |  |
 
 
 #### VPCInterfaceIPv4CreateOptions
@@ -1475,7 +1477,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ | range is the IPv4 range for the interface. |  |  |
+| `range` _string_ | range is the IPv4 range for the interface. |  | MinLength: 1 <br /> |
 
 
 #### VPCInterfaceIPv6CreateOptions
@@ -1493,7 +1495,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `slaac` _[VPCInterfaceIPv6SLAACCreateOptions](#vpcinterfaceipv6slaaccreateoptions) array_ | slaac is the IPv6 SLAAC configuration for the interface. |  |  |
 | `ranges` _[VPCInterfaceIPv6RangeCreateOptions](#vpcinterfaceipv6rangecreateoptions) array_ | ranges is the IPv6 ranges for the interface. |  |  |
-| `is_public` _boolean_ | is_public is a boolean indicating whether the interface is public. |  |  |
+| `isPublic` _boolean_ | isPublic is a boolean indicating whether the interface is public. |  |  |
 
 
 #### VPCInterfaceIPv6RangeCreateOptions
@@ -1509,7 +1511,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ | range is the IPv6 range for the interface. |  |  |
+| `range` _string_ | range is the IPv6 range for the interface. |  | MinLength: 1 <br /> |
 
 
 #### VPCInterfaceIPv6SLAACCreateOptions
@@ -1525,7 +1527,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ | range is the IPv6 range for the interface. |  |  |
+| `range` _string_ | range is the IPv6 range for the interface. |  | MinLength: 1 <br /> |
 
 
 #### VPCStatusError

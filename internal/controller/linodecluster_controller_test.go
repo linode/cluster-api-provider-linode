@@ -26,7 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -63,6 +63,9 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 	linodeCluster := infrav1alpha2.LinodeCluster{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeClusterSpec{
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Port: int32(controlPlaneEndpointPort),
+			},
 			Region: "us-ord",
 			VPCRef: &corev1.ObjectReference{Name: "vpctest", Namespace: defaultNamespace},
 		},
@@ -89,6 +92,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		},
 		Spec: infrav1alpha2.LinodeFirewallSpec{
 			FirewallID: util.Pointer(123), // Test firewall ID
+			Enabled:    true,
 		},
 	}
 
@@ -361,6 +365,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 			UID:       "12345",
 		},
 		Spec: infrav1alpha2.LinodeMachineSpec{
+			Region:         "us-ord",
 			Type:           "g6-nanode-1",
 			Image:          rec.DefaultMachineControllerLinodeImage,
 			DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
@@ -371,6 +376,10 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Host: controlPlaneEndpointHost,
+				Port: int32(controlPlaneEndpointPort),
+			},
 			Network: infrav1alpha2.NetworkSpec{
 				LoadBalancerType:          "dns",
 				DNSRootDomain:             "lkedevs.net",
@@ -621,11 +630,21 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 	}
 	cluster := clusterv1.Cluster{
 		ObjectMeta: metadata,
+		Spec: clusterv1.ClusterSpec{
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Host: controlPlaneEndpointHost,
+				Port: int32(controlPlaneEndpointPort),
+			},
+		},
 	}
 	linodeCluster := infrav1alpha2.LinodeCluster{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Host: controlPlaneEndpointHost,
+				Port: int32(controlPlaneEndpointPort),
+			},
 			Network: infrav1alpha2.NetworkSpec{
 				ApiserverLoadBalancerPort: controlPlaneEndpointPort,
 				LoadBalancerType:          "dns",
@@ -640,6 +659,8 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeMachineSpec{
+			Region:     "us-ord",
+			Type:       "g6-standard-1",
 			ProviderID: ptr.To("linode://123"),
 		},
 		Status: infrav1alpha2.LinodeMachineStatus{
@@ -744,7 +765,10 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeClusterSpec{
 			Region: "us-ord",
-			VPCID:  ptr.To(12345),
+			ControlPlaneEndpoint: clusterv1.APIEndpoint{
+				Port: 6443,
+			},
+			VPCID: ptr.To(12345),
 		},
 	}
 

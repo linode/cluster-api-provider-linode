@@ -26,7 +26,7 @@ export CIS_ENABLED=true
 1. Generate cluster yaml
     ```bash
     clusterctl generate cluster test-cluster \
-        --kubernetes-version v1.29.1+rke2r1 \
+        --kubernetes-version v1.33.4+rke2r1 \
         --infrastructure linode-linode \
         --flavor rke2 > test-rke2-cluster.yaml
     ```

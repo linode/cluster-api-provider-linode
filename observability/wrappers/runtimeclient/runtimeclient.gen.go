@@ -13,6 +13,7 @@ import (
 	_sourceWrappers "github.com/linode/cluster-api-provider-linode/observability/wrappers"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,6 +34,31 @@ func NewRuntimeClientWithTracing(base _sourceWrappers.RuntimeClient, spanDecorat
 	}
 
 	return d
+}
+
+// Apply implements _sourceWrappers.RuntimeClient
+func (_d RuntimeClientWithTracing) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) (err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceWrappers.RuntimeClient.Apply")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":  ctx,
+				"obj":  obj,
+				"opts": opts}, map[string]interface{}{
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.RuntimeClient.Apply(ctx, obj, opts...)
 }
 
 // Create implements _sourceWrappers.RuntimeClient

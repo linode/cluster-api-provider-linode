@@ -1,8 +1,8 @@
 ---
-apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: KubeadmControlPlane
 metadata:
-  name: "${CLUSTER_NAME}-control-plane"
+  name: "${CLUSTER_NAME}-cp"
 spec:
   replicas: ${CONTROL_PLANE_MACHINE_COUNT}
   kubeadmConfigSpec:
@@ -10,12 +10,14 @@ spec:
       nodeRegistration:
         name: $${COREOS_AKAMAI_INSTANCE_LABEL}
         kubeletExtraArgs:
-          provider-id: linode://$${COREOS_AKAMAI_INSTANCE_ID}
+          - name: "provider-id"
+            value: "linode://$${COREOS_AKAMAI_INSTANCE_ID}"
     initConfiguration:
       nodeRegistration:
         name: $${COREOS_AKAMAI_INSTANCE_LABEL}
         kubeletExtraArgs:
-          provider-id: linode://$${COREOS_AKAMAI_INSTANCE_ID}
+          - name: "provider-id"
+            value: "linode://$${COREOS_AKAMAI_INSTANCE_ID}"
     format: ignition
     ignition:
       containerLinuxConfig:
@@ -55,10 +57,10 @@ spec:
       - envsubst < /etc/kubeadm.yml > /etc/kubeadm.yml.tmp
       - mv /etc/kubeadm.yml.tmp /etc/kubeadm.yml
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
 kind: KubeadmConfigTemplate
 metadata:
-  name: ${CLUSTER_NAME}-md-0
+  name: ${CLUSTER_NAME}
 spec:
   template:
     spec:
@@ -66,7 +68,8 @@ spec:
         nodeRegistration:
           name: $${COREOS_AKAMAI_INSTANCE_LABEL}
           kubeletExtraArgs:
-            provider-id: linode://$${COREOS_AKAMAI_INSTANCE_ID}
+            - name: "provider-id"
+              value: "linode://$${COREOS_AKAMAI_INSTANCE_ID}"
       preKubeadmCommands:
         - export COREOS_AKAMAI_INSTANCE_LABEL=$${COREOS_AKAMAI_INSTANCE_LABEL}
         - export COREOS_AKAMAI_INSTANCE_ID=$${COREOS_AKAMAI_INSTANCE_ID}
@@ -109,7 +112,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: ${CLUSTER_NAME}-md-0
+  name: ${CLUSTER_NAME}
 spec:
   template:
     spec:
@@ -122,7 +125,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: ${CLUSTER_NAME}-control-plane
+  name: ${CLUSTER_NAME}-cp
 spec:
   template:
     spec:

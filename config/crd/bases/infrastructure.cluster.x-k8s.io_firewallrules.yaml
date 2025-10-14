@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.19.0
   labels:
     clusterctl.cluster.x-k8s.io/move-hierarchy: "true"
   name: firewallrules.infrastructure.cluster.x-k8s.io
@@ -47,6 +47,9 @@ spec:
             properties:
               action:
                 description: action is the action to take when the rule matches.
+                enum:
+                - ACCEPT
+                - DROP
                 type: string
               addressSetRefs:
                 description: |-
@@ -97,6 +100,7 @@ spec:
                   type: object
                   x-kubernetes-map-type: atomic
                 type: array
+                x-kubernetes-list-type: atomic
               addresses:
                 description: addresses is a list of addresses to apply the rule to.
                 properties:
@@ -116,6 +120,7 @@ spec:
                 type: string
               label:
                 description: label is the label of the rule.
+                minLength: 3
                 type: string
               ports:
                 description: ports is the ports to apply the rule to.
@@ -136,6 +141,8 @@ spec:
           status:
             description: status is the observed state of the FirewallRule.
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

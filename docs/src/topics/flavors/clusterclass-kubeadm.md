@@ -10,7 +10,7 @@
 1. Generate the ClusterClass and cluster manifests
     ```bash
     clusterctl generate cluster test-cluster \
-        --kubernetes-version v1.29.1 \
+        --kubernetes-version v1.33.4 \
         --infrastructure linode-linode \
         --flavor clusterclass-kubeadm > test-cluster.yaml
     ```
@@ -22,7 +22,7 @@
 1.  Generate cluster manifests
       ```bash
       clusterctl generate cluster test-cluster-2 \
-          --kubernetes-version v1.29.1 \
+          --kubernetes-version v1.33.4 \
           --flavor clusterclass-kubeadm > test-cluster-2.yaml
       ```
       ```yaml
@@ -51,7 +51,7 @@
             value: g6-standard-2
           - name: workerMachineType
             value: g6-standard-2
-          version: v1.29.1
+          version: v1.33.4
           workers:
             machineDeployments:
             - class: default-worker

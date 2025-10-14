@@ -58,10 +58,10 @@ patches:
         path: /spec/nodeBalancerFirewallRef
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -83,7 +83,7 @@ patches:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KThreesControlPlane
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
         kthreesConfigSpec:
           serverConfig:
@@ -133,22 +133,22 @@ patches:
                   enabled: true
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: MachineDeployment
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: MachineDeployment
       metadata:
-        name: ${CLUSTER_NAME}-md-0
+        name: ${CLUSTER_NAME}
         annotations:
           cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size: ${WORKER_MACHINE_MIN:-"1"}
           cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size: ${WORKER_MACHINE_MAX:-"10"}
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}
@@ -202,12 +202,12 @@ patches:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
       kind: LinodeMachineTemplate
-      name: .*-control-plane
+      name: .*-cp
     patch: |-
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeMachineTemplate
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
         template:
           spec:
@@ -228,4 +228,4 @@ patches:
         objectStore:
           presignedURLDuration: "24h"
           credentialsRef:
-            name: ${CLUSTER_NAME}-object-store-obj-key
+            name: ${CLUSTER_NAME}-obj-key

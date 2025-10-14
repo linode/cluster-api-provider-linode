@@ -12,7 +12,7 @@ import (
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta1"
+	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -168,7 +168,7 @@ func (s *ObjectStorageKeyScope) ShouldInitKey() bool {
 
 func (s *ObjectStorageKeyScope) ShouldRotateKey() bool {
 	return s.Key.Status.LastKeyGeneration != nil &&
-		s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
+		*s.Key.Spec.KeyGeneration != *s.Key.Status.LastKeyGeneration
 }
 
 // Override the controller credentials with ones from the Cluster's Secret reference (if supplied).

@@ -20,11 +20,11 @@ metadata:
 replacements:
   - source:
       kind: KubeadmControlPlane
-      name: ${CLUSTER_NAME}-control-plane
+      name: ${CLUSTER_NAME}-cp
       fieldPath: spec
     targets:
       - select:
           kind: KubeadmControlPlaneTemplate
-          name: kubeadm-control-plane
+          name: kubeadm-cp
         fieldPaths:
           - spec.template.spec

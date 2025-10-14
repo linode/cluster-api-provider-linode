@@ -8,13 +8,13 @@ resources:
 patches:
   - target:
       group: controlplane.cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: KubeadmControlPlane
     patch: |-
-      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta2
       kind: KubeadmControlPlane
       metadata:
-        name: ${CLUSTER_NAME}-control-plane
+        name: ${CLUSTER_NAME}-cp
       spec:
         kubeadmConfigSpec:
           preKubeadmCommands:
@@ -27,7 +27,8 @@ patches:
           clusterConfiguration:
             apiServer:
               extraArgs:
-                egress-selector-config-file: /etc/kubernetes/konnectivity/egress-selector-configuration.yaml
+                - name: "egress-selector-config-file"
+                  value: /etc/kubernetes/konnectivity/egress-selector-configuration.yaml
               extraVolumes:
               - hostPath: /etc/kubernetes/konnectivity-server
                 mountPath: /etc/kubernetes/konnectivity-server
@@ -41,10 +42,10 @@ patches:
                 readOnly: true
   - target:
       group: cluster.x-k8s.io
-      version: v1beta1
+      version: v1beta2
       kind: Cluster
     patch: |-
-      apiVersion: cluster.x-k8s.io/v1beta1
+      apiVersion: cluster.x-k8s.io/v1beta2
       kind: Cluster
       metadata:
         name: ${CLUSTER_NAME}

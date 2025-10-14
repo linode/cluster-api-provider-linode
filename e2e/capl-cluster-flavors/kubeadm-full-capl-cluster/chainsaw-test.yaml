@@ -13,7 +13,7 @@ spec:
   bindings:
     # Identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'kdmf-tst', random('[0-9a-z]{7}')]))
+      value: (join('-', ['e2e', 'full', random('[0-9a-z]{5}')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `29`)), '-'))
@@ -45,7 +45,7 @@ spec:
               - name: ETCD_BACKUP_SCHEDULE
                 value: '* * * * *'
               - name: KUBERNETES_VERSION
-                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
+                value: (env('KUBERNETES_VERSION') || 'v1.33.4')
             content: |
               set -e
               if [ -z "$SSE_KEY" ]; then
@@ -73,20 +73,20 @@ spec:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeMachine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Machine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: MachineDeployment
         - describe:
-            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta2
             kind: KubeadmControlPlane
         - describe:
             apiVersion: addons.cluster.x-k8s.io/v1alpha1
             kind: HelmReleaseProxy
         - describe:
             cluster: ($cluster)
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Cluster
             namespace: ($namespace)
         - describe:
@@ -388,7 +388,7 @@ spec:
               EOL
               
               # delete the objects
-              $LOCAL_BIN/s5cmd --credentials-file .s5cfg --endpoint-url https://$BUCKET_ENDPOINT rm s3://$BUCKET_NAME/etcd-backup/v2/*
+              s5cmd --credentials-file .s5cfg --endpoint-url https://$BUCKET_ENDPOINT rm s3://$BUCKET_NAME/etcd-backup/v2/*
               
               # delete the bucket 
               curl --request DELETE \
@@ -404,7 +404,7 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: cluster.x-k8s.io/v1beta1
+              apiVersion: cluster.x-k8s.io/v1beta2
               kind: Cluster
               name: ($cluster)
         - delete:

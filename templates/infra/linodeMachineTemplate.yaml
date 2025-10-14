@@ -2,7 +2,7 @@
 kind: LinodeMachineTemplate
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 metadata:
-  name: ${CLUSTER_NAME}-control-plane
+  name: ${CLUSTER_NAME}-cp
 spec:
   template:
     spec:
@@ -29,7 +29,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
 kind: LinodeMachineTemplate
 metadata:
-  name: ${CLUSTER_NAME}-md-0
+  name: ${CLUSTER_NAME}
 spec:
   template:
     spec:

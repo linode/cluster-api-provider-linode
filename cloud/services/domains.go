@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"slices"
 	"strings"
 	"sync"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
 	"github.com/linode/linodego"
-	"golang.org/x/exp/slices"
-	"sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 
 	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -70,7 +70,7 @@ func getMachineIPs(cscope *scope.ClusterScope) (ipv4IPs, ipv6IPs []string, err e
 			continue
 		}
 		for _, IPs := range eachMachine.Status.Addresses {
-			if IPs.Type != v1beta1.MachineExternalIP {
+			if IPs.Type != v1beta2.MachineExternalIP {
 				continue
 			}
 			addr, err := netip.ParseAddr(IPs.Address)
@@ -315,7 +315,7 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machi
 	options := []DNSOptions{}
 	for _, IPs := range machine.Status.Addresses {
 		recordType := linodego.RecordTypeA
-		if IPs.Type != v1beta1.MachineExternalIP {
+		if IPs.Type != v1beta2.MachineExternalIP {
 			continue
 		}
 		addr, err := netip.ParseAddr(IPs.Address)

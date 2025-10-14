@@ -137,7 +137,7 @@ data:
           - key: node-role.kubernetes.io/control-plane
             effect: NoSchedule
 ---
-apiVersion: addons.cluster.x-k8s.io/v1beta1
+apiVersion: addons.cluster.x-k8s.io/v1beta2
 kind: ClusterResourceSet
 metadata:
   name: ${CLUSTER_NAME}-etcd-backup-restore

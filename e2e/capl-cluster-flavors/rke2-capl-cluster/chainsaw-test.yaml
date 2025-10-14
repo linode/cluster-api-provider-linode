@@ -5,14 +5,14 @@ metadata:
   name: rke2-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
-    all:
+#    all:
     rke2:
-    flavors:
+#    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'rke2', random('[0-9a-z]{7}')]))
+      value: (join('-', ['e2e', 'rke2', random('[0-9a-z]{5}')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `29`)), '-'))
@@ -33,7 +33,7 @@ spec:
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: KUBERNETES_VERSION
-                value: (env('KUBERNETES_VERSION') || 'v1.29.1')
+                value: (env('KUBERNETES_VERSION') || 'v1.33.4')
             content: |
               set -e
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
@@ -54,13 +54,13 @@ spec:
             apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
             kind: LinodeMachine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: Machine
         - describe:
-            apiVersion: cluster.x-k8s.io/v1beta1
+            apiVersion: cluster.x-k8s.io/v1beta2
             kind: MachineDeployment
         - describe:
-            apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta2
             kind: RKE2ControlPlane
     - name: Check if the linodes are created
       try:
@@ -126,7 +126,7 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: cluster.x-k8s.io/v1beta1
+              apiVersion: cluster.x-k8s.io/v1beta2
               kind: Cluster
               name: ($cluster)
         - error:

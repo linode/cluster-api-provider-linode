@@ -29,16 +29,20 @@ const (
 
 type BucketAccessRef struct {
 	// bucketName is the name of the bucket to grant access to.
+	// +kubebuilder:validation:MinLength=3
+	// +kubebuilder:validation:MaxLength=63
 	// +required
-	BucketName string `json:"bucketName"`
+	BucketName string `json:"bucketName,omitempty"`
 
 	// permissions is the permissions to grant to the bucket.
+	// +kubebuilder:validation:Enum=read_only;read_write
 	// +required
-	Permissions string `json:"permissions"`
+	Permissions string `json:"permissions,omitempty"`
 
 	// region is the region of the bucket.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	Region string `json:"region"`
+	Region string `json:"region,omitempty"`
 }
 
 type GeneratedSecret struct {
@@ -68,17 +72,18 @@ type LinodeObjectStorageKeySpec struct {
 	// bucketAccess is the list of object storage bucket labels which can be accessed using the key
 	// +kubebuilder:validation:MinItems=1
 	// +required
-	BucketAccess []BucketAccessRef `json:"bucketAccess"`
+	// +listType=atomic
+	BucketAccess []BucketAccessRef `json:"bucketAccess,omitempty"`
 
 	// credentialsRef is a reference to a Secret that contains the credentials to use for generating access keys.
-	// If not supplied then the credentials of the controller will be used.
+	// If not supplied, then the credentials of the controller will be used.
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 
 	// keyGeneration may be modified to trigger a rotation of the access key.
 	// +kubebuilder:default=0
-	// +required
-	KeyGeneration int `json:"keyGeneration"`
+	// +optional
+	KeyGeneration *int `json:"keyGeneration,omitempty"`
 
 	// generatedSecret configures the Secret to generate containing access key details.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
@@ -150,8 +155,8 @@ type LinodeObjectStorageKey struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the LinodeObjectStorageKey.
-	// +optional
-	Spec LinodeObjectStorageKeySpec `json:"spec,omitempty"`
+	// +required
+	Spec LinodeObjectStorageKeySpec `json:"spec,omitzero,omitempty"`
 
 	// status is the observed state of the LinodeObjectStorageKey.
 	// +optional
