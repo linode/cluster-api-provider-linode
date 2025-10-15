@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"slices"
+
 	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -631,11 +633,9 @@ func (lm *LinodeMachine) GetCondition(condType string) *metav1.Condition {
 }
 
 func (lm *LinodeMachine) DeleteCondition(condType string) {
-	for i := range lm.Status.Conditions {
-		if lm.Status.Conditions[i].Type == condType {
-			lm.Status.Conditions = append(lm.Status.Conditions[:i], lm.Status.Conditions[i+1:]...)
-		}
-	}
+	lm.Status.Conditions = slices.DeleteFunc(lm.Status.Conditions, func(c metav1.Condition) bool {
+		return c.Type == condType
+	})
 }
 
 func (lm *LinodeMachine) IsPaused() bool {
