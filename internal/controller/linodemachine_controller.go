@@ -827,11 +827,8 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 	if machineScope.LinodeMachine.Spec.FirewallID != 0 {
 		desiredFWIDs = []int{machineScope.LinodeMachine.Spec.FirewallID}
 	} else if machineScope.LinodeMachine.Spec.FirewallRef != nil {
-		fwID, err := getFirewallID(ctx, machineScope, logger)
-		if err == nil {
+		if fwID, err := getFirewallID(ctx, machineScope, logger); err == nil {
 			desiredFWIDs = []int{fwID}
-		} else {
-			logger.Error(err, "Failed to get firewallID from firewallRef")
 		}
 	}
 
