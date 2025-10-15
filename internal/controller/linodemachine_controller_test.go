@@ -1968,6 +1968,58 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				Expect(err).NotTo(HaveOccurred())
 			}),
 		),
+		Path(
+			Call("machine firewall update applied when FirewallID is zero but FirewallRef is set", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2", "test-tag"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+					[]linodego.Firewall{}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
+					FirewallIDs: []int{20}, // Update to firewall ID 20 from firewall ref
+				}).Return(nil, nil)
+			}),
+			Result("machine firewall updates to FirewallID from FirewallRef", func(ctx context.Context, mck Mock) {
+				linodeFirewall := &infrav1alpha2.LinodeFirewall{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-firewall-ref",
+						Namespace: namespace,
+					},
+					Spec: infrav1alpha2.LinodeFirewallSpec{
+						FirewallID: ptr.To(20),
+						Enabled:    true,
+					},
+				}
+				Expect(k8sClient.Create(ctx, linodeFirewall)).To(Succeed())
+				linodeFirewall.Status.Ready = true
+				Expect(k8sClient.Status().Update(ctx, linodeFirewall)).To(Succeed())
+
+				linodeMachine.Spec.FirewallID = 0 // No firewall ID explicitly set
+				linodeMachine.Spec.FirewallRef = &corev1.ObjectReference{
+					Name:      "test-firewall-ref",
+					Namespace: namespace,
+				}
+
+				_, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(k8sClient.Delete(ctx, linodeFirewall)).To(Succeed())
+			}),
+		),
 		OneOf(
 			Path(
 				Call("machine firewall list fails", func(ctx context.Context, mck Mock) {
