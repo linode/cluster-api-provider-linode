@@ -4,17 +4,17 @@
       "version":            "15.2",
       "excluded_platforms": ["x86_64-linux"]
     },
-    "clusterctl":       "1.11.1",
-    "docker":           "28.3.3",
+    "clusterctl":       "1.11.2",
+    "docker":           "28.4.0",
     "go-tools":         "2025.1.1",
-    "go":               "1.25",
+    "go":               "1.25.1",
     "tilt":             "0.35.1",
     "mdbook":           "0.4.52",
     "mdbook-admonish":  "1.20.0",
-    "kyverno-chainsaw": "0.2.12",
+    "kyverno-chainsaw": "0.2.13",
     "kubernetes-helm":  "3.19.0",
-    "kubectl":          "1.33.4",
-    "kubebuilder":      "4.8.0",
+    "kubectl":          "1.34.1",
+    "kubebuilder":      "4.9.0",
     "jq":               "1.8.1"
   },
   "shell": {
