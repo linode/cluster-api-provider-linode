@@ -2020,6 +2020,41 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				Expect(k8sClient.Delete(ctx, linodeFirewall)).To(Succeed())
 			}),
 		),
+		Path(
+			Call("machine firewall fails to get FirewallID from FirewallRef", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2", "test-tag"},
+						Status:  linodego.InstanceRunning,
+						Updated: util.Pointer(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
+					[]linodego.Firewall{}, nil)
+
+			}),
+			Result("machine firewall update error requeues", func(ctx context.Context, mck Mock) {
+				linodeMachine.Spec.FirewallID = 0 // No firewall ID explicitly set
+				linodeMachine.Spec.FirewallRef = &corev1.ObjectReference{
+					Name:      "test-firewall-ref",
+					Namespace: namespace,
+				} // this firewall does not exist
+				_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+				Expect(err).To(HaveOccurred())
+				Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeFirewall"))
+			}),
+		),
 		OneOf(
 			Path(
 				Call("machine firewall list fails", func(ctx context.Context, mck Mock) {
