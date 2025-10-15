@@ -2014,7 +2014,6 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					Name:      "test-firewall-ref",
 					Namespace: namespace,
 				}
-
 				_, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(k8sClient.Delete(ctx, linodeFirewall)).To(Succeed())
@@ -2042,7 +2041,6 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					}, nil)
 				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 					[]linodego.Firewall{}, nil)
-
 			}),
 			Result("machine firewall update error requeues", func(ctx context.Context, mck Mock) {
 				linodeMachine.Spec.FirewallID = 0 // No firewall ID explicitly set
