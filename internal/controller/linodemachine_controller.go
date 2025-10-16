@@ -825,11 +825,16 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 		attachedFWIDs = append(attachedFWIDs, fw.ID)
 	}
 
-	var desiredFWIDs []int
+	desiredFWIDs := []int{}
 	if machineScope.LinodeMachine.Spec.FirewallID != 0 {
 		desiredFWIDs = []int{machineScope.LinodeMachine.Spec.FirewallID}
-	} else {
-		desiredFWIDs = []int{}
+	} else if machineScope.LinodeMachine.Spec.FirewallRef != nil {
+		fwID, err := getFirewallID(ctx, machineScope, logger)
+		if err != nil {
+			logger.Error(err, "Failed to get firewall ID from firewall ref")
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+		}
+		desiredFWIDs = []int{fwID}
 	}
 
 	// update the firewallID if needed.
