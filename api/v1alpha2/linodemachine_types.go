@@ -84,7 +84,6 @@ type LinodeMachineSpec struct {
 
 	// image is the Linode image to use for the instance.
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	Image string `json:"image,omitempty"`
 
 	// interfaces is a list of legacy network interfaces to use for the instance.
