@@ -2048,8 +2048,9 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					Name:      "test-firewall-ref",
 					Namespace: namespace,
 				} // this firewall does not exist
-				_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
-				Expect(err).To(HaveOccurred())
+				res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
 				Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeFirewall"))
 			}),
 		),
