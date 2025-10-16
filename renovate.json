@@ -3,6 +3,10 @@
   "extends": [
     "config:recommended"
   ],
+  {
+    "description": "Every weekend",
+    "schedule": ["* * * * 0,6"]
+  },
   "labels": ["dependencies"],
   "postUpdateOptions": ["gomodTidy"],
   "vulnerabilityAlerts": {
