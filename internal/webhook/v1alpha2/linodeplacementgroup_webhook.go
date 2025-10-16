@@ -146,10 +146,10 @@ func validatePlacementGroupLabel(label string, path *field.Path) *field.Error {
 		regex = regexp.MustCompile(`^[[:alnum:]][-[:alnum:]_.]*[[:alnum:]]$|^[[:alnum:]]$`)
 	)
 	if len(label) < minLen || len(label) > maxLen {
-		return field.Invalid(path, label, errs[0].Error())
+		return field.Invalid(path, label, errs[0].Error()) // #nosec G602: false positive
 	}
 	if !regex.MatchString(label) {
-		return field.Invalid(path, label, errs[1].Error())
+		return field.Invalid(path, label, errs[1].Error()) // #nosec G602: false positive
 	}
 	return nil
 }

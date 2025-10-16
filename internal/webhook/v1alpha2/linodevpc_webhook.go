@@ -241,13 +241,13 @@ func validateVPCLabel(label string, path *field.Path) *field.Error {
 		regex = regexp.MustCompile("^[-[:alnum:]]*$")
 	)
 	if len(label) < minLen || len(label) > maxLen {
-		return field.Invalid(path, label, errs[0].Error())
+		return field.Invalid(path, label, errs[0].Error()) // #nosec G602: false positive
 	}
 	if !regex.MatchString(label) {
-		return field.Invalid(path, label, errs[1].Error())
+		return field.Invalid(path, label, errs[1].Error()) // #nosec G602: false positive
 	}
 	if strings.Contains(label, "--") {
-		return field.Invalid(path, label, errs[2].Error())
+		return field.Invalid(path, label, errs[2].Error()) // #nosec G602: false positive
 	}
 	return nil
 }
@@ -269,20 +269,20 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 
 	prefix, ferr := netip.ParsePrefix(cidr)
 	if ferr != nil || !prefix.Addr().Is4() {
-		return nil, field.Invalid(path, cidr, errs[0].Error())
+		return nil, field.Invalid(path, cidr, errs[0].Error()) // #nosec G602: false positive
 	}
 	if netipx.ComparePrefix(prefix, prefix.Masked()) != 0 {
-		return nil, field.Invalid(path, cidr, errs[0].Error())
+		return nil, field.Invalid(path, cidr, errs[0].Error()) // #nosec G602: false positive
 	}
 	if !privateIPv4.ContainsPrefix(prefix) {
-		return nil, field.Invalid(path, cidr, errs[1].Error())
+		return nil, field.Invalid(path, cidr, errs[1].Error()) // #nosec G602: false positive
 	}
 	size, _ := netipx.PrefixIPNet(prefix).Mask.Size()
 	if size < minPrefix || size > maxPrefix {
-		return nil, field.Invalid(path, cidr, errs[2].Error())
+		return nil, field.Invalid(path, cidr, errs[2].Error()) // #nosec G602: false positive
 	}
 	if LinodeVPCSubnetReserved.OverlapsPrefix(prefix) {
-		return nil, field.Invalid(path, cidr, errs[3].Error())
+		return nil, field.Invalid(path, cidr, errs[3].Error()) // #nosec G602: false positive
 	}
 
 	var (
