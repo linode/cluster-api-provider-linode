@@ -230,16 +230,14 @@ func (r *linodeVPCValidator) validateLinodeVPCSubnets(spec infrav1alpha2.LinodeV
 //
 // [Linode VPC Label]: https://www.linode.com/docs/api/vpcs/#vpc-create__request-body-schema
 func validateVPCLabel(label string, path *field.Path) *field.Error {
-	var (
-		minLen = 1
-		maxLen = 64
-		errs   = []error{
-			fmt.Errorf("%d..%d characters", minLen, maxLen),
-			errors.New("can only contain ASCII letters, numbers, and hyphens (-)"),
-			errors.New("cannot contain two consecutive hyphens (--)"),
-		}
-		regex = regexp.MustCompile("^[-[:alnum:]]*$")
-	)
+	minLen := 1
+	maxLen := 64
+	errs := []error{
+		fmt.Errorf("%d..%d characters", minLen, maxLen),
+		errors.New("can only contain ASCII letters, numbers, and hyphens (-)"),
+		errors.New("cannot contain two consecutive hyphens (--)"),
+	}
+	regex := regexp.MustCompile("^[-[:alnum:]]*$")
 	if len(label) < minLen || len(label) > maxLen {
 		return field.Invalid(path, label, errs[0].Error())
 	}
@@ -256,16 +254,14 @@ func validateVPCLabel(label string, path *field.Path) *field.Error {
 //
 // [Linode VPC Subnet IPv4 Address Range]: https://www.linode.com/docs/api/vpcs/#vpc-create__request-body-schema
 func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *field.Error) {
-	var (
-		minPrefix = 1
-		maxPrefix = 29
-		errs      = []error{
-			errors.New("must be IPv4 range in CIDR canonical form"),
-			errors.New("range must belong to a private address space as defined in RFC1918"),
-			fmt.Errorf("allowed prefix lengths: %d-%d", minPrefix, maxPrefix),
-			fmt.Errorf("%s %s", "range must not overlap with", LinodeVPCSubnetReserved.Prefixes()),
-		}
-	)
+	minPrefix := 1
+	maxPrefix := 29
+	errs := []error{
+		errors.New("must be IPv4 range in CIDR canonical form"),
+		errors.New("range must belong to a private address space as defined in RFC1918"),
+		fmt.Errorf("allowed prefix lengths: %d-%d", minPrefix, maxPrefix),
+		fmt.Errorf("%s %s", "range must not overlap with", LinodeVPCSubnetReserved.Prefixes()),
+	}
 
 	prefix, ferr := netip.ParsePrefix(cidr)
 	if ferr != nil || !prefix.Addr().Is4() {
