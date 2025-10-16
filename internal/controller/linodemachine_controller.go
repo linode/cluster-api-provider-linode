@@ -829,7 +829,7 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 	} else if machineScope.LinodeMachine.Spec.FirewallRef != nil {
 		fwID, err := getFirewallID(ctx, machineScope, logger)
 		if err != nil {
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, err
+			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 		}
 		desiredFWIDs = []int{fwID}
 	}
