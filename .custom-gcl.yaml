@@ -1,6 +1,9 @@
-version: v2.4.0
-name: golangci-lint-kube-api-linter
+version: v2.5.0
+name: golangci-lint-custom
 destination: ./bin
 plugins:
   - module: 'sigs.k8s.io/kube-api-linter'
     version: v0.0.0-20250819121536-a575e84f4ce8
+  - module: "go.uber.org/nilaway"
+    import: "go.uber.org/nilaway/cmd/gclplugin"
+    version: "v0.0.0-20250821055425-361559d802f0"
