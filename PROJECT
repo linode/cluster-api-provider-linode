@@ -137,6 +137,11 @@ resources:
   kind: LinodeCluster
   path: github.com/linode/cluster-api-provider-linode/api/v1beta1
   version: v1beta1
+  webhooks:
+    conversion: true
+    spoke:
+    - v1alpha2
+    webhookVersion: v1
 - api:
     crdVersion: v1
     namespaced: true
@@ -145,4 +150,9 @@ resources:
   kind: LinodeMachine
   path: github.com/linode/cluster-api-provider-linode/api/v1beta1
   version: v1beta1
+  webhooks:
+    conversion: true
+    spoke:
+    - v1alpha2
+    webhookVersion: v1
 version: "3"
