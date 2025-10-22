@@ -424,3 +424,413 @@ spec:
     storage: true
     subresources:
       status: {}
+  - additionalPrinterColumns:
+    - description: Cluster to which this LinodeCluster belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
+      name: Cluster
+      type: string
+    - description: Cluster infrastructure is ready for Linode instances
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: API Endpoint
+      jsonPath: .spec.ControlPlaneEndpoint
+      name: Endpoint
+      priority: 1
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: LinodeCluster is the Schema for the linodeclusters API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec is the desired state of the LinodeCluster.
+            properties:
+              controlPlaneEndpoint:
+                description: |-
+                  controlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane
+                  If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used.
+                minProperties: 1
+                properties:
+                  host:
+                    description: host is the hostname on which the API server is serving.
+                    maxLength: 512
+                    minLength: 1
+                    type: string
+                  port:
+                    description: port is the port on which the API server is serving.
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                type: object
+              credentialsRef:
+                description: |-
+                  credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not
+                   supplied, then the credentials of the controller will be used.
+                properties:
+                  name:
+                    description: name is unique within a namespace to reference a
+                      secret resource.
+                    type: string
+                  namespace:
+                    description: namespace defines the space within which the secret
+                      name must be unique.
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+              network:
+                description: network encapsulates all things related to Linode network.
+                properties:
+                  apiserverLoadBalancerPort:
+                    description: |-
+                      apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).
+                      If omitted, default value is 6443.
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  dnsConfig:
+                    description: DNSConfig contains configuration for DNS-based load
+                      balancing. Ignored if LoadBalancerType is not set to "dns".
+                    properties:
+                      dnsProvider:
+                        default: linode
+                        description: Provider is the provider who manages the domain.
+                        enum:
+                        - linode
+                        - akamai
+                        type: string
+                      dnsRootDomain:
+                        description: dnsRootDomain is the root domain used to create
+                          a DNS entry for the control-plane endpoint.
+                        type: string
+                      dnsSubDomainOverride:
+                        description: |-
+                          dnsSubDomainOverride is used to override CAPL's construction of the controlplane endpoint
+                          If set, this will override the DNS subdomain from <clustername>-<uniqueid>.<rootdomain> to <overridevalue>.<rootdomain>
+                        type: string
+                      dnsTTLsec:
+                        default: 30
+                        description: dnsTTLsec is the TTL for the domain record
+                        type: integer
+                      dnsUniqueIdentifier:
+                        description: |-
+                          dnsUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique
+                          DNS record
+                          If not set, CAPL will create a unique identifier for you
+                        type: string
+                    type: object
+                  loadBalancerType:
+                    default: NodeBalancer
+                    description: loadBalancerType is the type of load balancer to
+                      use, defaults to NodeBalancer if not otherwise set.
+                    enum:
+                    - NodeBalancer
+                    - dns
+                    - external
+                    type: string
+                  nodeBalancerConfig:
+                    description: NodeBalancerConfig contains configuration for NodeBalancer-based
+                      load balancing. Ignored if LoadBalancerType is not set to "NodeBalancer".
+                    properties:
+                      additionalPorts:
+                        description: additionalPorts contains list of ports to be
+                          configured with NodeBalancer.
+                        items:
+                          properties:
+                            nodeBalancerConfigID:
+                              description: nodeBalancerConfigID is the config ID of
+                                port's NodeBalancer config.
+                              type: integer
+                            port:
+                              description: port configured on the NodeBalancer. It
+                                must be valid port range (1-65535).
+                              maximum: 65535
+                              minimum: 1
+                              type: integer
+                          required:
+                          - port
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - port
+                        x-kubernetes-list-type: map
+                      apiserverNodeBalancerConfigID:
+                        description: apiserverNodeBalancerConfigID is the config ID
+                          of api server NodeBalancer config.
+                        type: integer
+                      enableVPCBackends:
+                        default: false
+                        description: |-
+                          enableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.
+                          If set to false (default), the NodeBalancer will not be created in a VPC and
+                          backends will use Linode private IPs. If true, the NodeBalancer will be
+                          created in the configured VPC (when VPCRef or VPCID is set) and backends
+                          will use VPC IPs.
+                        type: boolean
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      nodeBalancerBackendIPv4Range:
+                        description: |-
+                          nodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.
+                          example: 10.10.10.0/30
+                        type: string
+                      nodeBalancerFirewallID:
+                        description: nodeBalancerFirewallID is the id of NodeBalancer
+                          Firewall.
+                        type: integer
+                      nodeBalancerID:
+                        description: nodeBalancerID is the id of NodeBalancer.
+                        type: integer
+                    type: object
+                  subnetName:
+                    description: subnetName is the name/label of the VPC subnet to
+                      be used by the cluster
+                    type: string
+                  useVlan:
+                    description: useVlan provisions a cluster that uses VLANs instead
+                      of VPCs. IPAM is managed internally.
+                    type: boolean
+                    x-kubernetes-validations:
+                    - message: Value is immutable
+                      rule: self == oldSelf
+                type: object
+              nodeBalancerFirewallRef:
+                description: nodeBalancerFirewallRef is a reference to a NodeBalancer
+                  Firewall object. This makes the linode use the specified NodeBalancer
+                  Firewall.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              objectStore:
+                description: |-
+                  objectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
+                  bootstrapping (e.g. Cloud-init).
+                properties:
+                  credentialsRef:
+                    description: credentialsRef is a reference to a Secret that contains
+                      the credentials to use for accessing the Cluster Object Store.
+                    properties:
+                      name:
+                        description: name is unique within a namespace to reference
+                          a secret resource.
+                        type: string
+                      namespace:
+                        description: namespace defines the space within which the
+                          secret name must be unique.
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  presignedURLDuration:
+                    description: |-
+                      presignedURLDuration defines the duration for which presigned URLs are valid.
+
+                      This is used to generate presigned URLs for S3 Bucket objects, which are used by
+                      control-plane and worker nodes to fetch bootstrap data.
+                    type: string
+                type: object
+              region:
+                description: region the LinodeCluster lives in.
+                minLength: 1
+                type: string
+              vpcID:
+                description: vpcID is the ID of an existing VPC in Linode.
+                type: integer
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+              vpcRef:
+                description: vpcRef is a reference to a VPC object. This makes the
+                  Linodes use the specified VPC.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: |-
+                      If referring to a piece of an object instead of an entire object, this string
+                      should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                      For example, if the object reference is to a container within a pod, this would take on a value like:
+                      "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                      the event) or if no container name is specified "spec.containers[2]" (container with
+                      index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                      referencing a part of an object.
+                    type: string
+                  kind:
+                    description: |-
+                      Kind of the referent.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                    type: string
+                  name:
+                    description: |-
+                      Name of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                    type: string
+                  resourceVersion:
+                    description: |-
+                      Specific resourceVersion to which this reference is made, if any.
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                    type: string
+                  uid:
+                    description: |-
+                      UID of the referent.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
+            required:
+            - region
+            type: object
+          status:
+            description: status is the observed state of the LinodeCluster.
+            properties:
+              conditions:
+                description: conditions define the current service state of the LinodeCluster.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              failureMessage:
+                description: |-
+                  failureMessage will be set in the event that there is a terminal problem
+                  reconciling the LinodeCluster and will contain a more verbose string suitable
+                  for logging and human consumption.
+                type: string
+              failureReason:
+                description: |-
+                  failureReason will be set in the event that there is a terminal problem
+                  reconciling the LinodeCluster and will contain a succinct value suitable
+                  for machine interpretation.
+                type: string
+              ready:
+                description: ready denotes that the cluster (infrastructure) is ready.
+                type: boolean
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

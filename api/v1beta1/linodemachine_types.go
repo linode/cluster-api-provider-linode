@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1beta1
 
 import (
 	"slices"
@@ -29,114 +29,33 @@ import (
 const (
 	// MachineFinalizer allows ReconcileLinodeMachine to clean up Linode resources associated
 	// with LinodeMachine before removing it from the apiserver.
-	MachineFinalizer       = "linodemachine.infrastructure.cluster.x-k8s.io"
-	DefaultConditionReason = "None"
+	MachineFinalizer = "linodemachine.infrastructure.cluster.x-k8s.io"
 )
 
 // LinodeMachineSpec defines the desired state of LinodeMachine
 type LinodeMachineSpec struct {
-	// providerID is the unique identifier as specified by the cloud provider.
+	// ProviderID is the unique identifier as specified by the cloud provider.
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
-	// instanceID is the Linode instance ID for this machine.
+	// InstanceID is the Linode instance ID for this machine.
 	// +optional
 	// +kubebuilder:deprecatedversion:warning="ProviderID deprecates InstanceID"
 	InstanceID *int `json:"instanceID,omitempty"`
 
-	// region is the Linode region to create the instance in.
-	// +kubebuilder:validation:MinLength=1
-	// +required
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Region string `json:"region,omitempty"`
-
-	// type is the Linode instance type to create.
-	// +kubebuilder:validation:MinLength=1
-	// +required
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Type string `json:"type,omitempty"`
-
-	// group is the Linode group to create the instance in.
-	// Deprecated: group is a deprecated property denoting a group label for the Linode.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Group string `json:"group,omitempty"`
-
-	// rootPass is the root password for the instance.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	RootPass string `json:"rootPass,omitempty"`
-
-	// authorizedKeys is a list of SSH public keys to add to the instance.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +listType=set
-	AuthorizedKeys []string `json:"authorizedKeys,omitempty"`
-
-	// authorizedUsers is a list of usernames to add to the instance.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +listType=set
-	AuthorizedUsers []string `json:"authorizedUsers,omitempty"`
-
-	// backupID is the ID of the backup to restore the instance from.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	BackupID int `json:"backupID,omitempty"`
-
-	// image is the Linode image to use for the instance.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	Image string `json:"image,omitempty"`
-
-	// interfaces is a list of legacy network interfaces to use for the instance.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +listType=atomic
-	Interfaces []InstanceConfigInterfaceCreateOptions `json:"interfaces,omitempty"`
-
-	// linodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +kubebuilder:object:generate=true
-	// +listType=atomic
-	LinodeInterfaces []LinodeInterfaceCreateOptions `json:"linodeInterfaces,omitempty"`
-
-	// backupsEnabled is a boolean indicating whether backups should be enabled for the instance.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	BackupsEnabled bool `json:"backupsEnabled,omitempty"`
-
-	// privateIP is a boolean indicating whether the instance should have a private IP address.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	PrivateIP *bool `json:"privateIP,omitempty"`
-
-	// tags is a list of tags to apply to the Linode instance.
-	// +optional
-	// +listType=set
-	Tags []string `json:"tags,omitempty"`
-
-	// firewallID is the id of the cloud firewall to apply to the Linode Instance
-	// +optional
-	FirewallID int `json:"firewallID,omitempty"`
-
-	// osDisk is a configuration for the root disk that includes the OS,
+	// OSDisk is a configuration for the root disk that includes the OS,
 	// if not specified, this defaults to whatever space is not taken up by the DataDisks
 	// +optional
 	OSDisk *InstanceDisk `json:"osDisk,omitempty"`
 
-	// dataDisks is a map of any additional disks to add to an instance,
-	// The sum of these disks + the OSDisk must not be more than allowed on a linodes plan
+	// DataDisks is a map of any additional disks to add to an instance,
+	// The sum of these disks + the OSDisk must not be more than allowed on the plan type
 	// +optional
-	DataDisks *InstanceDisks `json:"dataDisks,omitempty"`
+	DataDisks *DataDisks `json:"dataDisks,omitempty"`
 
-	// diskEncryption determines if the disks of the instance should be encrypted. The default is disabled.
+	// kernel is a Kernel ID to boot a Linode with. (e.g linode/latest-64bit).
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +kubebuilder:validation:Enum=enabled;disabled
-	DiskEncryption string `json:"diskEncryption,omitempty"`
-
-	// credentialsRef is a reference to a Secret that contains the credentials
+	Kernel string `json:"kernel,omitempty"`
+	// CredentialsRef is a reference to a Secret that contains the credentials
 	// to use for provisioning this machine. If not supplied then these
 	// credentials will be used in-order:
 	//   1. LinodeMachine
@@ -145,17 +64,12 @@ type LinodeMachineSpec struct {
 	// +optional
 	CredentialsRef *corev1.SecretReference `json:"credentialsRef,omitempty"`
 
-	// configuration is the Akamai instance configuration OS,
-	// if not specified, this defaults to the default configuration associated to the instance.
-	// +optional
-	Configuration *InstanceConfiguration `json:"configuration,omitempty"`
-
-	// placementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group.
+	// PlacementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	PlacementGroupRef *corev1.ObjectReference `json:"placementGroupRef,omitempty"`
 
-	// firewallRef is a reference to a firewall object. This makes the linode use the specified firewall.
+	// FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	FirewallRef *corev1.ObjectReference `json:"firewallRef,omitempty"`
@@ -166,18 +80,67 @@ type LinodeMachineSpec struct {
 	// +optional
 	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
 
-	// vpcID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL.
+	// VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	VPCID *int `json:"vpcID,omitempty"`
 
-	// ipv6Options defines the IPv6 options for the instance.
+	// IPv6Options defines the IPv6 options for the instance.
 	// If not specified, IPv6 ranges won't be allocated to instance.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	IPv6Options *IPv6CreateOptions `json:"ipv6Options,omitempty"`
 
-	// networkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.
+	// Region is the Linode region to create the instance in.
+	// +kubebuilder:validation:MinLength=1
+	// +required
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Region string `json:"region,omitempty"`
+
+	// Type is the Linode instance type to create.
+	// +kubebuilder:validation:MinLength=1
+	// +required
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Type string `json:"type,omitempty"`
+
+	// RootPass is the root password for the instance.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	RootPass string `json:"rootPass,omitempty"`
+
+	// AuthorizedKeys is a list of SSH public keys to add to the instance.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=set
+	AuthorizedKeys []string `json:"authorizedKeys,omitempty"`
+
+	// AuthorizedUsers is a list of usernames to add to the instance.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=set
+	AuthorizedUsers []string `json:"authorizedUsers,omitempty"`
+
+	// BackupID is the ID of the backup to restore the instance from.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	BackupID int `json:"backupID,omitempty"`
+
+	// Image is the Linode image to use for the instance.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	Image string `json:"image,omitempty"`
+
+	// BackupsEnabled is a boolean indicating whether backups should be enabled for the instance.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	BackupsEnabled bool `json:"backupsEnabled,omitempty"`
+
+	// PrivateIP is a boolean indicating whether the instance should have a private IP address.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	PrivateIP *bool `json:"privateIP,omitempty"`
+
+	// NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.
 	// You can use this to enable/disable the network helper for a specific instance.
 	// For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking
 	// Defaults to true.
@@ -185,13 +148,46 @@ type LinodeMachineSpec struct {
 	// +optional
 	NetworkHelper *bool `json:"networkHelper,omitempty"`
 
-	// interfaceGeneration is the generation of the interface to use for the cluster's
+	// Tags is a list of tags to apply to the Linode instance.
+	// +optional
+	// +listType=set
+	Tags []string `json:"tags,omitempty"`
+
+	// TOOD: should we add AdditionalUserData here like rke2 does? See https://github.com/rancher/cluster-api-provider-rke2/blob/0a2c0f84af2a7143ae8ee084d7d5ad8a8a0eda1c/bootstrap/api/v1beta1/rke2config_types.go#L178
+	// this would correspond to Metadata in linodego InstanceCreateOptions
+
+	// FirewallID is the id of the cloud firewall to apply to the Linode Instance
+	// +optional
+	FirewallID int `json:"firewallID,omitempty"`
+
+	// InterfaceGeneration is the generation of the interface to use for the cluster's
 	// nodes in interface / linodeInterface are not specified for a LinodeMachine.
 	// If not set, defaults to "legacy_config".
 	// +optional
 	// +kubebuilder:validation:Enum=legacy_config;linode
 	// +kubebuilder:default=legacy_config
 	InterfaceGeneration linodego.InterfaceGeneration `json:"interfaceGeneration,omitempty"`
+
+	// Interfaces is a list of legacy network interfaces to use for the instance.
+	// Conflicts with LinodeInterfaces.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +listType=atomic
+	Interfaces []InstanceConfigInterfaceCreateOptions `json:"interfaces,omitempty"`
+
+	// LinodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use.
+	// Conflicts with Interfaces.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:object:generate=true
+	// +listType=atomic
+	LinodeInterfaces []LinodeInterfaceCreateOptions `json:"linodeInterfaces,omitempty"`
+
+	// diskEncryption determines if the disks of the instance should be encrypted. The default is disabled.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:validation:Enum=enabled;disabled
+	DiskEncryption linodego.InstanceDiskEncryption `json:"diskEncryption,omitempty"`
 }
 
 // IPv6CreateOptions defines the IPv6 options for the instance.
@@ -220,7 +216,8 @@ type IPv6CreateOptions struct {
 	IsPublicIPv6 *bool `json:"isPublicIPv6,omitempty"`
 }
 
-type InstanceDisks struct {
+// DataDisks defines additional data disks for an instance from sdb to sdh
+type DataDisks struct {
 	// sdb is a disk for the instance.
 	// +optional
 	SDB *InstanceDisk `json:"sdb,omitempty"`
@@ -244,7 +241,7 @@ type InstanceDisks struct {
 	SDH *InstanceDisk `json:"sdh,omitempty"`
 }
 
-// InstanceDisk defines a list of disks to use for an instance
+// InstanceDisk defines a disk for an instance
 type InstanceDisk struct {
 	// diskID is the linode assigned ID of the disk.
 	// +optional
@@ -269,13 +266,6 @@ type InstanceMetadataOptions struct {
 	// userData expects a Base64-encoded string.
 	// +optional
 	UserData string `json:"userData,omitempty"`
-}
-
-// InstanceConfiguration defines the instance configuration
-type InstanceConfiguration struct {
-	// kernel is a Kernel ID to boot a Linode with. (e.g linode/latest-64bit).
-	// +optional
-	Kernel string `json:"kernel,omitempty"`
 }
 
 // InstanceConfigInterfaceCreateOptions defines network interface config

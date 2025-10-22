@@ -408,8 +408,9 @@ spec:
                         - message: Value is immutable
                           rule: self == oldSelf
                       group:
-                        description: group is the Linode group to create the instance
-                          in.
+                        description: |-
+                          group is the Linode group to create the instance in.
+                          Deprecated: group is a deprecated property denoting a group label for the Linode.
                         type: string
                         x-kubernetes-validations:
                         - message: Value is immutable

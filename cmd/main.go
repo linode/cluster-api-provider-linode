@@ -49,6 +49,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 	"github.com/linode/cluster-api-provider-linode/version"
 
+	infrastructurev1beta1 "github.com/linode/cluster-api-provider-linode/api/v1beta1"
 	// +kubebuilder:scaffold:imports
 
 	_ "go.uber.org/automaxprocs"
@@ -95,6 +96,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha2.AddToScheme(scheme))
+	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

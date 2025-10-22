@@ -2,6 +2,7 @@
 
 ## Packages
 - [infrastructure.cluster.x-k8s.io/v1alpha2](#infrastructureclusterx-k8siov1alpha2)
+- [infrastructure.cluster.x-k8s.io/v1beta1](#infrastructureclusterx-k8siov1beta1)
 
 
 ## infrastructure.cluster.x-k8s.io/v1alpha2
@@ -681,7 +682,7 @@ _Appears in:_
 | `instanceID` _integer_ | instanceID is the Linode instance ID for this machine. |  |  |
 | `region` _string_ | region is the Linode region to create the instance in. |  | MinLength: 1 <br /> |
 | `type` _string_ | type is the Linode instance type to create. |  | MinLength: 1 <br /> |
-| `group` _string_ | group is the Linode group to create the instance in. |  |  |
+| `group` _string_ | group is the Linode group to create the instance in.<br />Deprecated: group is a deprecated property denoting a group label for the Linode. |  |  |
 | `rootPass` _string_ | rootPass is the root password for the instance. |  |  |
 | `authorizedKeys` _string array_ | authorizedKeys is a list of SSH public keys to add to the instance. |  |  |
 | `authorizedUsers` _string array_ | authorizedUsers is a list of usernames to add to the instance. |  |  |
@@ -1586,5 +1587,662 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `range` _string_ | range is the IPv6 prefix for the subnet. |  |  |
+
+
+
+## infrastructure.cluster.x-k8s.io/v1beta1
+
+Package v1beta1 contains API Schema definitions for the infrastructure v1beta1 API group
+
+### Resource Types
+- [LinodeCluster](#linodecluster)
+- [LinodeClusterList](#linodeclusterlist)
+- [LinodeMachine](#linodemachine)
+- [LinodeMachineList](#linodemachinelist)
+
+
+
+#### DNSConfig
+
+
+
+
+
+
+
+_Appears in:_
+- [NetworkSpec](#networkspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `dnsProvider` _string_ | Provider is the provider who manages the domain. | linode | Enum: [linode akamai] <br /> |
+| `dnsRootDomain` _string_ | dnsRootDomain is the root domain used to create a DNS entry for the control-plane endpoint. |  |  |
+| `dnsUniqueIdentifier` _string_ | dnsUniqueIdentifier is the unique identifier for the DNS. This let clusters with the same name have unique<br />DNS record<br />If not set, CAPL will create a unique identifier for you |  |  |
+| `dnsTTLsec` _integer_ | dnsTTLsec is the TTL for the domain record | 30 |  |
+| `dnsSubDomainOverride` _string_ | dnsSubDomainOverride is used to override CAPL's construction of the controlplane endpoint<br />If set, this will override the DNS subdomain from <clustername>-<uniqueid>.<rootdomain> to <overridevalue>.<rootdomain> |  |  |
+
+
+#### DataDisks
+
+
+
+DataDisks defines additional data disks for an instance from sdb to sdh
+
+
+
+_Appears in:_
+- [LinodeMachineSpec](#linodemachinespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `sdb` _[InstanceDisk](#instancedisk)_ | sdb is a disk for the instance. |  |  |
+| `sdc` _[InstanceDisk](#instancedisk)_ | sdc is a disk for the instance. |  |  |
+| `sdd` _[InstanceDisk](#instancedisk)_ | sdd is a disk for the instance. |  |  |
+| `sde` _[InstanceDisk](#instancedisk)_ | sde is a disk for the instance. |  |  |
+| `sdf` _[InstanceDisk](#instancedisk)_ | sdf is a disk for the instance. |  |  |
+| `sdg` _[InstanceDisk](#instancedisk)_ | sdg is a disk for the instance. |  |  |
+| `sdh` _[InstanceDisk](#instancedisk)_ | sdh is a disk for the instance. |  |  |
+
+
+#### IPv6CreateOptions
+
+
+
+IPv6CreateOptions defines the IPv6 options for the instance.
+
+
+
+_Appears in:_
+- [LinodeMachineSpec](#linodemachinespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enableSLAAC` _boolean_ | enableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.<br />This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.<br />Defaults to false. |  |  |
+| `enableRanges` _boolean_ | enableRanges is an option to enable IPv6 ranges for the instance.<br />If set to true, the instance will have a range of IPv6 addresses.<br />This is useful for instances that require multiple IPv6 addresses.<br />Defaults to false. |  |  |
+| `isPublicIPv6` _boolean_ | isPublicIPv6 is an option to enable public IPv6 for the instance.<br />If set to true, the instance will have a publicly routable IPv6 range.<br />Defaults to false. |  |  |
+
+
+#### InstanceConfigInterfaceCreateOptions
+
+
+
+InstanceConfigInterfaceCreateOptions defines network interface config
+
+
+
+_Appears in:_
+- [LinodeMachineSpec](#linodemachinespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ipamAddress` _string_ | ipamAddress is the IP address to assign to the interface. |  |  |
+| `label` _string_ | label is the label of the interface. |  | MaxLength: 63 <br />MinLength: 3 <br /> |
+| `purpose` _[ConfigInterfacePurpose](#configinterfacepurpose)_ | purpose is the purpose of the interface. |  |  |
+| `primary` _boolean_ | primary is a boolean indicating whether the interface is primary. |  |  |
+| `subnetId` _integer_ | subnetId is the ID of the subnet to use for the interface. |  |  |
+| `ipv4` _[VPCIPv4](#vpcipv4)_ | ipv4 is the IPv4 configuration for the interface. |  |  |
+| `ipRanges` _string array_ | ipRanges is a list of IPv4 ranges to assign to the interface. |  |  |
+
+
+#### InstanceDisk
+
+
+
+InstanceDisk defines a disk for an instance
+
+
+
+_Appears in:_
+- [DataDisks](#datadisks)
+- [LinodeMachineSpec](#linodemachinespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `diskID` _integer_ | diskID is the linode assigned ID of the disk. |  |  |
+| `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ | size of the disk in resource.Quantity notation. |  |  |
+| `label` _string_ | label for the instance disk, if nothing is provided, it will match the device name. |  |  |
+| `filesystem` _string_ | filesystem of disk to provision, the default disk filesystem is "ext4". |  | Enum: [raw swap ext3 ext4 initrd] <br /> |
+
+
+
+
+#### InterfaceDefaultRoute
+
+
+
+InterfaceDefaultRoute defines the default IPv4 and IPv6 routes for an interface
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ipv4` _boolean_ | ipv4 is the IPv4 default route for the interface. |  |  |
+| `ipv6` _boolean_ | ipv6 is the IPv6 default route for the interface. |  |  |
+
+
+#### LinodeCluster
+
+
+
+LinodeCluster is the Schema for the linodeclusters API
+
+
+
+_Appears in:_
+- [LinodeClusterList](#linodeclusterlist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `infrastructure.cluster.x-k8s.io/v1beta1` | | |
+| `kind` _string_ | `LinodeCluster` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[LinodeClusterSpec](#linodeclusterspec)_ | spec is the desired state of the LinodeCluster. |  |  |
+| `status` _[LinodeClusterStatus](#linodeclusterstatus)_ | status is the observed state of the LinodeCluster. |  |  |
+
+
+#### LinodeClusterList
+
+
+
+LinodeClusterList contains a list of LinodeCluster
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `infrastructure.cluster.x-k8s.io/v1beta1` | | |
+| `kind` _string_ | `LinodeClusterList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[LinodeCluster](#linodecluster) array_ | items is a list of LinodeCluster. |  |  |
+
+
+#### LinodeClusterSpec
+
+
+
+LinodeClusterSpec defines the desired state of LinodeCluster
+
+
+
+_Appears in:_
+- [LinodeCluster](#linodecluster)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `region` _string_ | region the LinodeCluster lives in. |  | MinLength: 1 <br /> |
+| `controlPlaneEndpoint` _[APIEndpoint](#apiendpoint)_ | controlPlaneEndpoint represents the endpoint used to communicate with the LinodeCluster control plane<br />If ControlPlaneEndpoint is unset then the Nodebalancer ip will be used. |  |  |
+| `network` _[NetworkSpec](#networkspec)_ | network encapsulates all things related to Linode network. |  |  |
+| `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a VPC object. This makes the Linodes use the specified VPC. |  |  |
+| `vpcID` _integer_ | vpcID is the ID of an existing VPC in Linode. |  |  |
+| `nodeBalancerFirewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | nodeBalancerFirewallRef is a reference to a NodeBalancer Firewall object. This makes the linode use the specified NodeBalancer Firewall. |  |  |
+| `objectStore` _[ObjectStore](#objectstore)_ | objectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for<br />bootstrapping (e.g. Cloud-init). |  |  |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this cluster. If not<br /> supplied, then the credentials of the controller will be used. |  |  |
+
+
+#### LinodeClusterStatus
+
+
+
+LinodeClusterStatus defines the observed state of LinodeCluster
+
+
+
+_Appears in:_
+- [LinodeCluster](#linodecluster)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeCluster. |  |  |
+| `ready` _boolean_ | ready denotes that the cluster (infrastructure) is ready. |  |  |
+| `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a succinct value suitable<br />for machine interpretation. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a more verbose string suitable<br />for logging and human consumption. |  |  |
+
+
+#### LinodeInterfaceCreateOptions
+
+
+
+LinodeInterfaceCreateOptions defines the linode network interface config
+
+
+
+_Appears in:_
+- [LinodeMachineSpec](#linodemachinespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `firewallID` _integer_ | firewallID is the ID of the firewall to use for the interface. |  |  |
+| `defaultRoute` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | defaultRoute is the default route for the interface. |  |  |
+| `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  |  |
+| `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  |  |
+| `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  |  |
+
+
+#### LinodeMachine
+
+
+
+LinodeMachine is the Schema for the linodemachines API
+
+
+
+_Appears in:_
+- [LinodeMachineList](#linodemachinelist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `infrastructure.cluster.x-k8s.io/v1beta1` | | |
+| `kind` _string_ | `LinodeMachine` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[LinodeMachineSpec](#linodemachinespec)_ | spec defines the specification of desired behavior for the LinodeMachine. |  |  |
+| `status` _[LinodeMachineStatus](#linodemachinestatus)_ | status defines the observed state of LinodeMachine. |  |  |
+
+
+#### LinodeMachineList
+
+
+
+LinodeMachineList contains a list of LinodeMachine
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `infrastructure.cluster.x-k8s.io/v1beta1` | | |
+| `kind` _string_ | `LinodeMachineList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[LinodeMachine](#linodemachine) array_ | items is a list of LinodeMachine. |  |  |
+
+
+#### LinodeMachineSpec
+
+
+
+LinodeMachineSpec defines the desired state of LinodeMachine
+
+
+
+_Appears in:_
+- [LinodeMachine](#linodemachine)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `providerID` _string_ | ProviderID is the unique identifier as specified by the cloud provider. |  |  |
+| `instanceID` _integer_ | InstanceID is the Linode instance ID for this machine. |  |  |
+| `osDisk` _[InstanceDisk](#instancedisk)_ | OSDisk is a configuration for the root disk that includes the OS,<br />if not specified, this defaults to whatever space is not taken up by the DataDisks |  |  |
+| `dataDisks` _[DataDisks](#datadisks)_ | DataDisks is a map of any additional disks to add to an instance,<br />The sum of these disks + the OSDisk must not be more than allowed on the plan type |  |  |
+| `kernel` _string_ | kernel is a Kernel ID to boot a Linode with. (e.g linode/latest-64bit). |  |  |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | CredentialsRef is a reference to a Secret that contains the credentials<br />to use for provisioning this machine. If not supplied then these<br />credentials will be used in-order:<br />  1. LinodeMachine<br />  2. Owner LinodeCluster<br />  3. Controller |  |  |
+| `placementGroupRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | PlacementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group. |  |  |
+| `firewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | FirewallRef is a reference to a firewall object. This makes the linode use the specified firewall. |  |  |
+| `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a LinodeVPC resource. If specified, this takes precedence over<br />the cluster-level VPC configuration for multi-region support. |  |  |
+| `vpcID` _integer_ | VPCID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  |  |
+| `ipv6Options` _[IPv6CreateOptions](#ipv6createoptions)_ | IPv6Options defines the IPv6 options for the instance.<br />If not specified, IPv6 ranges won't be allocated to instance. |  |  |
+| `region` _string_ | Region is the Linode region to create the instance in. |  | MinLength: 1 <br /> |
+| `type` _string_ | Type is the Linode instance type to create. |  | MinLength: 1 <br /> |
+| `rootPass` _string_ | RootPass is the root password for the instance. |  |  |
+| `authorizedKeys` _string array_ | AuthorizedKeys is a list of SSH public keys to add to the instance. |  |  |
+| `authorizedUsers` _string array_ | AuthorizedUsers is a list of usernames to add to the instance. |  |  |
+| `backupID` _integer_ | BackupID is the ID of the backup to restore the instance from. |  |  |
+| `image` _string_ | Image is the Linode image to use for the instance. |  |  |
+| `backupsEnabled` _boolean_ | BackupsEnabled is a boolean indicating whether backups should be enabled for the instance. |  |  |
+| `privateIP` _boolean_ | PrivateIP is a boolean indicating whether the instance should have a private IP address. |  |  |
+| `networkHelper` _boolean_ | NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.<br />You can use this to enable/disable the network helper for a specific instance.<br />For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking<br />Defaults to true. |  |  |
+| `tags` _string array_ | Tags is a list of tags to apply to the Linode instance. |  |  |
+| `firewallID` _integer_ | FirewallID is the id of the cloud firewall to apply to the Linode Instance |  |  |
+| `interfaceGeneration` _[InterfaceGeneration](#interfacegeneration)_ | InterfaceGeneration is the generation of the interface to use for the cluster's<br />nodes in interface / linodeInterface are not specified for a LinodeMachine.<br />If not set, defaults to "legacy_config". | legacy_config | Enum: [legacy_config linode] <br /> |
+| `interfaces` _[InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions) array_ | Interfaces is a list of legacy network interfaces to use for the instance.<br />Conflicts with LinodeInterfaces. |  |  |
+| `linodeInterfaces` _[LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions) array_ | LinodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use.<br />Conflicts with Interfaces. |  |  |
+| `diskEncryption` _[InstanceDiskEncryption](#instancediskencryption)_ | diskEncryption determines if the disks of the instance should be encrypted. The default is disabled. |  | Enum: [enabled disabled] <br /> |
+
+
+#### LinodeMachineStatus
+
+
+
+LinodeMachineStatus defines the observed state of LinodeMachine
+
+
+
+_Appears in:_
+- [LinodeMachine](#linodemachine)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeMachine. |  |  |
+| `ready` _boolean_ | ready is true when the provider resource is ready. | false |  |
+| `addresses` _MachineAddress array_ | addresses contains the Linode instance associated addresses. |  |  |
+| `cloudinitMetadataSupport` _boolean_ | cloudinitMetadataSupport determines whether to use cloud-init or not.<br />Deprecated: Stackscript no longer in use, so this field is not used. | true |  |
+| `instanceState` _[InstanceStatus](#instancestatus)_ | instanceState is the state of the Linode instance for this machine. |  |  |
+| `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a succinct value suitable<br />for machine interpretation.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
+| `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a more verbose string suitable<br />for logging and human consumption.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
+| `tags` _string array_ | tags are the tags applied to the Linode Machine. |  |  |
+
+
+#### LinodeNBPortConfig
+
+
+
+
+
+
+
+_Appears in:_
+- [NodeBalancerConfig](#nodebalancerconfig)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `port` _integer_ | port configured on the NodeBalancer. It must be valid port range (1-65535). |  | Maximum: 65535 <br />Minimum: 1 <br /> |
+| `nodeBalancerConfigID` _integer_ | nodeBalancerConfigID is the config ID of port's NodeBalancer config. |  |  |
+
+
+#### NetworkSpec
+
+
+
+NetworkSpec encapsulates Linode networking resources.
+
+
+
+_Appears in:_
+- [LinodeClusterSpec](#linodeclusterspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `loadBalancerType` _string_ | loadBalancerType is the type of load balancer to use, defaults to NodeBalancer if not otherwise set. | NodeBalancer | Enum: [NodeBalancer dns external] <br /> |
+| `dnsConfig` _[DNSConfig](#dnsconfig)_ | DNSConfig contains configuration for DNS-based load balancing. Ignored if LoadBalancerType is not set to "dns". |  |  |
+| `nodeBalancerConfig` _[NodeBalancerConfig](#nodebalancerconfig)_ | NodeBalancerConfig contains configuration for NodeBalancer-based load balancing. Ignored if LoadBalancerType is not set to "NodeBalancer". |  |  |
+| `apiserverLoadBalancerPort` _integer_ | apiserverLoadBalancerPort used by the api server. It must be valid ports range (1-65535).<br />If omitted, default value is 6443. |  | Maximum: 65535 <br />Minimum: 1 <br /> |
+| `subnetName` _string_ | subnetName is the name/label of the VPC subnet to be used by the cluster |  |  |
+| `useVlan` _boolean_ | useVlan provisions a cluster that uses VLANs instead of VPCs. IPAM is managed internally. |  |  |
+
+
+#### NodeBalancerConfig
+
+
+
+
+
+
+
+_Appears in:_
+- [NetworkSpec](#networkspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `nodeBalancerID` _integer_ | nodeBalancerID is the id of NodeBalancer. |  |  |
+| `nodeBalancerFirewallID` _integer_ | nodeBalancerFirewallID is the id of NodeBalancer Firewall. |  |  |
+| `apiserverNodeBalancerConfigID` _integer_ | apiserverNodeBalancerConfigID is the config ID of api server NodeBalancer config. |  |  |
+| `nodeBalancerBackendIPv4Range` _string_ | nodeBalancerBackendIPv4Range is the subnet range we want to provide for creating nodebalancer in VPC.<br />example: 10.10.10.0/30 |  |  |
+| `additionalPorts` _[LinodeNBPortConfig](#linodenbportconfig) array_ | additionalPorts contains list of ports to be configured with NodeBalancer. |  |  |
+| `enableVPCBackends` _boolean_ | enableVPCBackends toggles VPC-scoped NodeBalancer and VPC backend IP usage.<br />If set to false (default), the NodeBalancer will not be created in a VPC and<br />backends will use Linode private IPs. If true, the NodeBalancer will be<br />created in the configured VPC (when VPCRef or VPCID is set) and backends<br />will use VPC IPs. | false |  |
+
+
+#### ObjectStore
+
+
+
+ObjectStore defines a supporting Object Storage bucket for cluster operations. This is currently used for
+bootstrapping (e.g. Cloud-init).
+
+
+
+_Appears in:_
+- [LinodeClusterSpec](#linodeclusterspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `presignedURLDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#duration-v1-meta)_ | presignedURLDuration defines the duration for which presigned URLs are valid.<br />This is used to generate presigned URLs for S3 Bucket objects, which are used by<br />control-plane and worker nodes to fetch bootstrap data. |  |  |
+| `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store. |  |  |
+
+
+#### PublicInterfaceCreateOptions
+
+
+
+PublicInterfaceCreateOptions defines the IPv4 and IPv6 public interface create options
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ipv4` _[PublicInterfaceIPv4CreateOptions](#publicinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the public interface. |  |  |
+| `ipv6` _[PublicInterfaceIPv6CreateOptions](#publicinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the public interface. |  |  |
+
+
+#### PublicInterfaceIPv4AddressCreateOptions
+
+
+
+PublicInterfaceIPv4AddressCreateOptions defines the public IPv4 address and whether it is primary
+
+
+
+_Appears in:_
+- [PublicInterfaceIPv4CreateOptions](#publicinterfaceipv4createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `address` _string_ | address is the IPv4 address for the public interface. |  | MinLength: 1 <br /> |
+| `primary` _boolean_ | primary is a boolean indicating whether the address is primary. |  |  |
+
+
+#### PublicInterfaceIPv4CreateOptions
+
+
+
+PublicInterfaceIPv4CreateOptions defines the PublicInterfaceIPv4AddressCreateOptions for addresses
+
+
+
+_Appears in:_
+- [PublicInterfaceCreateOptions](#publicinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `addresses` _[PublicInterfaceIPv4AddressCreateOptions](#publicinterfaceipv4addresscreateoptions) array_ | addresses is the IPv4 addresses for the public interface. |  |  |
+
+
+#### PublicInterfaceIPv6CreateOptions
+
+
+
+PublicInterfaceIPv6CreateOptions defines the PublicInterfaceIPv6RangeCreateOptions
+
+
+
+_Appears in:_
+- [PublicInterfaceCreateOptions](#publicinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `ranges` _[PublicInterfaceIPv6RangeCreateOptions](#publicinterfaceipv6rangecreateoptions) array_ | ranges is the IPv6 ranges for the public interface. |  |  |
+
+
+#### PublicInterfaceIPv6RangeCreateOptions
+
+
+
+PublicInterfaceIPv6RangeCreateOptions defines the IPv6 range for a public interface
+
+
+
+_Appears in:_
+- [PublicInterfaceIPv6CreateOptions](#publicinterfaceipv6createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ | range is the IPv6 range for the public interface. |  | MinLength: 1 <br /> |
+
+
+#### VLANInterface
+
+
+
+VLANInterface defines the VLAN interface configuration for an instance
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `vlanLabel` _string_ | vlanLabel is the label of the VLAN. |  | MinLength: 1 <br /> |
+| `ipamAddress` _string_ | ipamAddress is the IP address to assign to the interface. |  |  |
+
+
+#### VPCIPv4
+
+
+
+VPCIPv4 defines VPC IPV4 settings
+
+
+
+_Appears in:_
+- [InstanceConfigInterfaceCreateOptions](#instanceconfiginterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `vpc` _string_ | vpc is the ID of the VPC to use for the interface. |  |  |
+| `nat1to1` _string_ | nat1to1 is the NAT 1:1 address for the interface. |  |  |
+
+
+#### VPCInterfaceCreateOptions
+
+
+
+VPCInterfaceCreateOptions defines the VPC interface configuration for an instance
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `subnetId` _integer_ | subnetId is the ID of the subnet to use for the interface. |  |  |
+| `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the interface. |  |  |
+| `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  |  |
+
+
+#### VPCInterfaceIPv4AddressCreateOptions
+
+
+
+VPCInterfaceIPv4AddressCreateOptions defines the IPv4 configuration for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `address` _string_ | address is the IPv4 address for the interface. |  | MinLength: 1 <br /> |
+| `primary` _boolean_ | primary is a boolean indicating whether the address is primary. |  |  |
+| `nat1to1Address` _string_ | nat1to1Address is the NAT 1:1 address for the interface. |  |  |
+
+
+#### VPCInterfaceIPv4CreateOptions
+
+
+
+VPCInterfaceIPv4CreateOptions defines the IPv4 address and range configuration for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `addresses` _[VPCInterfaceIPv4AddressCreateOptions](#vpcinterfaceipv4addresscreateoptions) array_ | addresses is the IPv4 addresses for the interface. |  |  |
+| `ranges` _[VPCInterfaceIPv4RangeCreateOptions](#vpcinterfaceipv4rangecreateoptions) array_ | ranges is the IPv4 ranges for the interface. |  |  |
+
+
+#### VPCInterfaceIPv4RangeCreateOptions
+
+
+
+VPCInterfaceIPv4RangeCreateOptions defines the IPv4 range for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ | range is the IPv4 range for the interface. |  | MinLength: 1 <br /> |
+
+
+#### VPCInterfaceIPv6CreateOptions
+
+
+
+VPCInterfaceIPv6CreateOptions defines the IPv6 configuration for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `slaac` _[VPCInterfaceIPv6SLAACCreateOptions](#vpcinterfaceipv6slaaccreateoptions) array_ | slaac is the IPv6 SLAAC configuration for the interface. |  |  |
+| `ranges` _[VPCInterfaceIPv6RangeCreateOptions](#vpcinterfaceipv6rangecreateoptions) array_ | ranges is the IPv6 ranges for the interface. |  |  |
+| `isPublic` _boolean_ | isPublic is a boolean indicating whether the interface is public. |  |  |
+
+
+#### VPCInterfaceIPv6RangeCreateOptions
+
+
+
+VPCInterfaceIPv6RangeCreateOptions defines the IPv6 range for a VPC interface
+
+
+
+_Appears in:_
+- [VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ | range is the IPv6 range for the interface. |  | MinLength: 1 <br /> |
+
+
+#### VPCInterfaceIPv6SLAACCreateOptions
+
+
+
+VPCInterfaceIPv6SLAACCreateOptions defines the Range for IPv6 SLAAC
+
+
+
+_Appears in:_
+- [VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ | range is the IPv6 range for the interface. |  | MinLength: 1 <br /> |
 
 
