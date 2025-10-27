@@ -1597,8 +1597,12 @@ Package v1beta1 contains API Schema definitions for the infrastructure v1beta1 A
 ### Resource Types
 - [LinodeCluster](#linodecluster)
 - [LinodeClusterList](#linodeclusterlist)
+- [LinodeClusterTemplate](#linodeclustertemplate)
+- [LinodeClusterTemplateList](#linodeclustertemplatelist)
 - [LinodeMachine](#linodemachine)
 - [LinodeMachineList](#linodemachinelist)
+- [LinodeMachineTemplate](#linodemachinetemplate)
+- [LinodeMachineTemplateList](#linodemachinetemplatelist)
 
 
 
@@ -1775,6 +1779,7 @@ LinodeClusterSpec defines the desired state of LinodeCluster
 
 _Appears in:_
 - [LinodeCluster](#linodecluster)
+- [LinodeClusterTemplateResource](#linodeclustertemplateresource)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -1805,6 +1810,79 @@ _Appears in:_
 | `ready` _boolean_ | ready denotes that the cluster (infrastructure) is ready. |  |  |
 | `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a succinct value suitable<br />for machine interpretation. |  |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a more verbose string suitable<br />for logging and human consumption. |  |  |
+
+
+#### LinodeClusterTemplate
+
+
+
+LinodeClusterTemplate is the Schema for the linodeclustertemplates API
+
+
+
+_Appears in:_
+- [LinodeClusterTemplateList](#linodeclustertemplatelist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `infrastructure.cluster.x-k8s.io/v1beta1` | | |
+| `kind` _string_ | `LinodeClusterTemplate` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[LinodeClusterTemplateSpec](#linodeclustertemplatespec)_ | spec is the desired state of the LinodeClusterTemplate. |  |  |
+
+
+#### LinodeClusterTemplateList
+
+
+
+LinodeClusterTemplateList contains a list of LinodeClusterTemplate
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `infrastructure.cluster.x-k8s.io/v1beta1` | | |
+| `kind` _string_ | `LinodeClusterTemplateList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[LinodeClusterTemplate](#linodeclustertemplate) array_ | items is a list of LinodeClusterTemplate. |  |  |
+
+
+#### LinodeClusterTemplateResource
+
+
+
+LinodeClusterTemplateResource describes the data needed to create a LinodeCluster from a template.
+
+
+
+_Appears in:_
+- [LinodeClusterTemplateSpec](#linodeclustertemplatespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `spec` _[LinodeClusterSpec](#linodeclusterspec)_ | spec is the specification of the LinodeCluster. |  |  |
+
+
+#### LinodeClusterTemplateSpec
+
+
+
+LinodeClusterTemplateSpec defines the desired state of LinodeClusterTemplate
+
+
+
+_Appears in:_
+- [LinodeClusterTemplate](#linodeclustertemplate)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `template` _[LinodeClusterTemplateResource](#linodeclustertemplateresource)_ | template defines the specification for a LinodeCluster. |  |  |
 
 
 #### LinodeInterfaceCreateOptions
@@ -1879,6 +1957,7 @@ LinodeMachineSpec defines the desired state of LinodeMachine
 
 _Appears in:_
 - [LinodeMachine](#linodemachine)
+- [LinodeMachineTemplateResource](#linodemachinetemplateresource)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
@@ -1932,6 +2011,99 @@ _Appears in:_
 | `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a succinct value suitable<br />for machine interpretation.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Machine and will contain a more verbose string suitable<br />for logging and human consumption.<br />This field should not be set for transitive errors that a controller<br />faces that are expected to be fixed automatically over<br />time (like service outages), but instead indicate that something is<br />fundamentally wrong with the Machine's spec or the configuration of<br />the controller, and that manual intervention is required. Examples<br />of terminal errors would be invalid combinations of settings in the<br />spec, values that are unsupported by the controller, or the<br />responsible controller itself being critically misconfigured.<br />Any transient errors that occur during the reconciliation of Machines<br />can be added as events to the Machine object and/or logged in the<br />controller's output. |  |  |
 | `tags` _string array_ | tags are the tags applied to the Linode Machine. |  |  |
+
+
+#### LinodeMachineTemplate
+
+
+
+LinodeMachineTemplate is the Schema for the linodemachinetemplates API
+
+
+
+_Appears in:_
+- [LinodeMachineTemplateList](#linodemachinetemplatelist)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `infrastructure.cluster.x-k8s.io/v1beta1` | | |
+| `kind` _string_ | `LinodeMachineTemplate` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[LinodeMachineTemplateSpec](#linodemachinetemplatespec)_ | spec is the desired state of the LinodeMachineTemplate. |  |  |
+| `status` _[LinodeMachineTemplateStatus](#linodemachinetemplatestatus)_ | status is the observed state of the LinodeMachineTemplate. |  |  |
+
+
+#### LinodeMachineTemplateList
+
+
+
+LinodeMachineTemplateList contains a list of LinodeMachineTemplate
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `infrastructure.cluster.x-k8s.io/v1beta1` | | |
+| `kind` _string_ | `LinodeMachineTemplateList` | | |
+| `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  |  |
+| `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  |  |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `items` _[LinodeMachineTemplate](#linodemachinetemplate) array_ | items is a list of LinodeMachineTemplate. |  |  |
+
+
+#### LinodeMachineTemplateResource
+
+
+
+LinodeMachineTemplateResource describes the data needed to create a LinodeMachine from a template.
+
+
+
+_Appears in:_
+- [LinodeMachineTemplateSpec](#linodemachinetemplatespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `spec` _[LinodeMachineSpec](#linodemachinespec)_ | spec is the specification of the desired behavior of the machine. |  |  |
+
+
+#### LinodeMachineTemplateSpec
+
+
+
+LinodeMachineTemplateSpec defines the desired state of LinodeMachineTemplate
+
+
+
+_Appears in:_
+- [LinodeMachineTemplate](#linodemachinetemplate)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `template` _[LinodeMachineTemplateResource](#linodemachinetemplateresource)_ | template defines the specification for a LinodeMachine. |  |  |
+
+
+#### LinodeMachineTemplateStatus
+
+
+
+LinodeMachineTemplateStatus defines the observed state of LinodeMachineTemplate
+It is used to store the status of the LinodeMachineTemplate, such as tags.
+
+
+
+_Appears in:_
+- [LinodeMachineTemplate](#linodemachinetemplate)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeMachineTemplate |  |  |
+| `tags` _string array_ | tags that are currently applied to the LinodeMachineTemplate. |  |  |
+| `firewallID` _integer_ | firewallID that is currently applied to the LinodeMachineTemplate. |  |  |
 
 
 #### LinodeNBPortConfig

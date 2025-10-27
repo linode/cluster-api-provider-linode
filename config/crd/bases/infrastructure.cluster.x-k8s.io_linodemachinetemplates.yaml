@@ -1011,3 +1011,981 @@ spec:
     storage: true
     subresources:
       status: {}
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: LinodeMachineTemplate is the Schema for the linodemachinetemplates
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec is the desired state of the LinodeMachineTemplate.
+            properties:
+              template:
+                description: template defines the specification for a LinodeMachine.
+                properties:
+                  spec:
+                    description: spec is the specification of the desired behavior
+                      of the machine.
+                    properties:
+                      authorizedKeys:
+                        description: AuthorizedKeys is a list of SSH public keys to
+                          add to the instance.
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      authorizedUsers:
+                        description: AuthorizedUsers is a list of usernames to add
+                          to the instance.
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      backupID:
+                        description: BackupID is the ID of the backup to restore the
+                          instance from.
+                        type: integer
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      backupsEnabled:
+                        description: BackupsEnabled is a boolean indicating whether
+                          backups should be enabled for the instance.
+                        type: boolean
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      credentialsRef:
+                        description: |-
+                          CredentialsRef is a reference to a Secret that contains the credentials
+                          to use for provisioning this machine. If not supplied then these
+                          credentials will be used in-order:
+                            1. LinodeMachine
+                            2. Owner LinodeCluster
+                            3. Controller
+                        properties:
+                          name:
+                            description: name is unique within a namespace to reference
+                              a secret resource.
+                            type: string
+                          namespace:
+                            description: namespace defines the space within which
+                              the secret name must be unique.
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      dataDisks:
+                        description: |-
+                          DataDisks is a map of any additional disks to add to an instance,
+                          The sum of these disks + the OSDisk must not be more than allowed on the plan type
+                        properties:
+                          sdb:
+                            description: sdb is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdc:
+                            description: sdc is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdd:
+                            description: sdd is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sde:
+                            description: sde is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdf:
+                            description: sdf is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdg:
+                            description: sdg is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                          sdh:
+                            description: sdh is a disk for the instance.
+                            properties:
+                              diskID:
+                                description: diskID is the linode assigned ID of the
+                                  disk.
+                                type: integer
+                              filesystem:
+                                description: filesystem of disk to provision, the
+                                  default disk filesystem is "ext4".
+                                enum:
+                                - raw
+                                - swap
+                                - ext3
+                                - ext4
+                                - initrd
+                                type: string
+                              label:
+                                description: label for the instance disk, if nothing
+                                  is provided, it will match the device name.
+                                type: string
+                              size:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: size of the disk in resource.Quantity
+                                  notation.
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            required:
+                            - size
+                            type: object
+                        type: object
+                      diskEncryption:
+                        description: diskEncryption determines if the disks of the
+                          instance should be encrypted. The default is disabled.
+                        enum:
+                        - enabled
+                        - disabled
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      firewallID:
+                        description: FirewallID is the id of the cloud firewall to
+                          apply to the Linode Instance
+                        type: integer
+                      firewallRef:
+                        description: FirewallRef is a reference to a firewall object.
+                          This makes the linode use the specified firewall.
+                        properties:
+                          apiVersion:
+                            description: API version of the referent.
+                            type: string
+                          fieldPath:
+                            description: |-
+                              If referring to a piece of an object instead of an entire object, this string
+                              should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                              For example, if the object reference is to a container within a pod, this would take on a value like:
+                              "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                              the event) or if no container name is specified "spec.containers[2]" (container with
+                              index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                              referencing a part of an object.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind of the referent.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                            type: string
+                          name:
+                            description: |-
+                              Name of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            type: string
+                          resourceVersion:
+                            description: |-
+                              Specific resourceVersion to which this reference is made, if any.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                            type: string
+                          uid:
+                            description: |-
+                              UID of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      image:
+                        description: Image is the Linode image to use for the instance.
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      instanceID:
+                        description: InstanceID is the Linode instance ID for this
+                          machine.
+                        type: integer
+                      interfaceGeneration:
+                        default: legacy_config
+                        description: |-
+                          InterfaceGeneration is the generation of the interface to use for the cluster's
+                          nodes in interface / linodeInterface are not specified for a LinodeMachine.
+                          If not set, defaults to "legacy_config".
+                        enum:
+                        - legacy_config
+                        - linode
+                        type: string
+                      interfaces:
+                        description: |-
+                          Interfaces is a list of legacy network interfaces to use for the instance.
+                          Conflicts with LinodeInterfaces.
+                        items:
+                          description: InstanceConfigInterfaceCreateOptions defines
+                            network interface config
+                          properties:
+                            ipRanges:
+                              description: ipRanges is a list of IPv4 ranges to assign
+                                to the interface.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: set
+                            ipamAddress:
+                              description: ipamAddress is the IP address to assign
+                                to the interface.
+                              type: string
+                            ipv4:
+                              description: ipv4 is the IPv4 configuration for the
+                                interface.
+                              properties:
+                                nat1to1:
+                                  description: nat1to1 is the NAT 1:1 address for
+                                    the interface.
+                                  type: string
+                                vpc:
+                                  description: vpc is the ID of the VPC to use for
+                                    the interface.
+                                  type: string
+                              type: object
+                            label:
+                              description: label is the label of the interface.
+                              maxLength: 63
+                              minLength: 3
+                              type: string
+                            primary:
+                              description: primary is a boolean indicating whether
+                                the interface is primary.
+                              type: boolean
+                            purpose:
+                              description: purpose is the purpose of the interface.
+                              type: string
+                            subnetId:
+                              description: subnetId is the ID of the subnet to use
+                                for the interface.
+                              type: integer
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      ipv6Options:
+                        description: |-
+                          IPv6Options defines the IPv6 options for the instance.
+                          If not specified, IPv6 ranges won't be allocated to instance.
+                        properties:
+                          enableRanges:
+                            description: |-
+                              enableRanges is an option to enable IPv6 ranges for the instance.
+                              If set to true, the instance will have a range of IPv6 addresses.
+                              This is useful for instances that require multiple IPv6 addresses.
+                              Defaults to false.
+                            type: boolean
+                            x-kubernetes-validations:
+                            - message: Value is immutable
+                              rule: self == oldSelf
+                          enableSLAAC:
+                            description: |-
+                              enableSLAAC is an option to enable SLAAC (Stateless Address Autoconfiguration) for the instance.
+                              This is useful for IPv6 addresses, allowing the instance to automatically configure its own IPv6 address.
+                              Defaults to false.
+                            type: boolean
+                            x-kubernetes-validations:
+                            - message: Value is immutable
+                              rule: self == oldSelf
+                          isPublicIPv6:
+                            description: |-
+                              isPublicIPv6 is an option to enable public IPv6 for the instance.
+                              If set to true, the instance will have a publicly routable IPv6 range.
+                              Defaults to false.
+                            type: boolean
+                            x-kubernetes-validations:
+                            - message: Value is immutable
+                              rule: self == oldSelf
+                        type: object
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      kernel:
+                        description: kernel is a Kernel ID to boot a Linode with.
+                          (e.g linode/latest-64bit).
+                        type: string
+                      linodeInterfaces:
+                        description: |-
+                          LinodeInterfaces is a list of Linode network interfaces to use for the instance. Requires Linode Interfaces beta opt-in to use.
+                          Conflicts with Interfaces.
+                        items:
+                          description: LinodeInterfaceCreateOptions defines the linode
+                            network interface config
+                          properties:
+                            defaultRoute:
+                              description: defaultRoute is the default route for the
+                                interface.
+                              properties:
+                                ipv4:
+                                  description: ipv4 is the IPv4 default route for
+                                    the interface.
+                                  type: boolean
+                                ipv6:
+                                  description: ipv6 is the IPv6 default route for
+                                    the interface.
+                                  type: boolean
+                              type: object
+                            firewallID:
+                              description: firewallID is the ID of the firewall to
+                                use for the interface.
+                              type: integer
+                            public:
+                              description: public is the public interface configuration
+                                for the interface.
+                              properties:
+                                ipv4:
+                                  description: ipv4 is the IPv4 configuration for
+                                    the public interface.
+                                  properties:
+                                    addresses:
+                                      description: addresses is the IPv4 addresses
+                                        for the public interface.
+                                      items:
+                                        description: PublicInterfaceIPv4AddressCreateOptions
+                                          defines the public IPv4 address and whether
+                                          it is primary
+                                        properties:
+                                          address:
+                                            description: address is the IPv4 address
+                                              for the public interface.
+                                            minLength: 1
+                                            type: string
+                                          primary:
+                                            description: primary is a boolean indicating
+                                              whether the address is primary.
+                                            type: boolean
+                                        required:
+                                        - address
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-map-keys:
+                                      - address
+                                      x-kubernetes-list-type: map
+                                  type: object
+                                ipv6:
+                                  description: ipv6 is the IPv6 configuration for
+                                    the public interface.
+                                  properties:
+                                    ranges:
+                                      description: ranges is the IPv6 ranges for the
+                                        public interface.
+                                      items:
+                                        description: PublicInterfaceIPv6RangeCreateOptions
+                                          defines the IPv6 range for a public interface
+                                        properties:
+                                          range:
+                                            description: range is the IPv6 range for
+                                              the public interface.
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - range
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-map-keys:
+                                      - range
+                                      x-kubernetes-list-type: map
+                                  type: object
+                              type: object
+                            vlan:
+                              description: vlan is the VLAN interface configuration
+                                for the interface.
+                              properties:
+                                ipamAddress:
+                                  description: ipamAddress is the IP address to assign
+                                    to the interface.
+                                  type: string
+                                vlanLabel:
+                                  description: vlanLabel is the label of the VLAN.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - vlanLabel
+                              type: object
+                            vpc:
+                              description: vpc is the VPC interface configuration
+                                for the interface.
+                              properties:
+                                ipv4:
+                                  description: ipv4 is the IPv4 configuration for
+                                    the interface.
+                                  properties:
+                                    addresses:
+                                      description: addresses is the IPv4 addresses
+                                        for the interface.
+                                      items:
+                                        description: VPCInterfaceIPv4AddressCreateOptions
+                                          defines the IPv4 configuration for a VPC
+                                          interface
+                                        properties:
+                                          address:
+                                            description: address is the IPv4 address
+                                              for the interface.
+                                            minLength: 1
+                                            type: string
+                                          nat1to1Address:
+                                            description: nat1to1Address is the NAT
+                                              1:1 address for the interface.
+                                            type: string
+                                          primary:
+                                            description: primary is a boolean indicating
+                                              whether the address is primary.
+                                            type: boolean
+                                        required:
+                                        - address
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-map-keys:
+                                      - address
+                                      x-kubernetes-list-type: map
+                                    ranges:
+                                      description: ranges is the IPv4 ranges for the
+                                        interface.
+                                      items:
+                                        description: VPCInterfaceIPv4RangeCreateOptions
+                                          defines the IPv4 range for a VPC interface
+                                        properties:
+                                          range:
+                                            description: range is the IPv4 range for
+                                              the interface.
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - range
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-map-keys:
+                                      - range
+                                      x-kubernetes-list-type: map
+                                  type: object
+                                ipv6:
+                                  description: ipv6 is the IPv6 configuration for
+                                    the interface.
+                                  properties:
+                                    isPublic:
+                                      description: isPublic is a boolean indicating
+                                        whether the interface is public.
+                                      type: boolean
+                                    ranges:
+                                      description: ranges is the IPv6 ranges for the
+                                        interface.
+                                      items:
+                                        description: VPCInterfaceIPv6RangeCreateOptions
+                                          defines the IPv6 range for a VPC interface
+                                        properties:
+                                          range:
+                                            description: range is the IPv6 range for
+                                              the interface.
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - range
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-map-keys:
+                                      - range
+                                      x-kubernetes-list-type: map
+                                    slaac:
+                                      description: slaac is the IPv6 SLAAC configuration
+                                        for the interface.
+                                      items:
+                                        description: VPCInterfaceIPv6SLAACCreateOptions
+                                          defines the Range for IPv6 SLAAC
+                                        properties:
+                                          range:
+                                            description: range is the IPv6 range for
+                                              the interface.
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - range
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-map-keys:
+                                      - range
+                                      x-kubernetes-list-type: map
+                                  required:
+                                  - isPublic
+                                  type: object
+                                subnetId:
+                                  description: subnetId is the ID of the subnet to
+                                    use for the interface.
+                                  type: integer
+                              type: object
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      networkHelper:
+                        description: |-
+                          NetworkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.
+                          You can use this to enable/disable the network helper for a specific instance.
+                          For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking
+                          Defaults to true.
+                        type: boolean
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      osDisk:
+                        description: |-
+                          OSDisk is a configuration for the root disk that includes the OS,
+                          if not specified, this defaults to whatever space is not taken up by the DataDisks
+                        properties:
+                          diskID:
+                            description: diskID is the linode assigned ID of the disk.
+                            type: integer
+                          filesystem:
+                            description: filesystem of disk to provision, the default
+                              disk filesystem is "ext4".
+                            enum:
+                            - raw
+                            - swap
+                            - ext3
+                            - ext4
+                            - initrd
+                            type: string
+                          label:
+                            description: label for the instance disk, if nothing is
+                              provided, it will match the device name.
+                            type: string
+                          size:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: size of the disk in resource.Quantity notation.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        required:
+                        - size
+                        type: object
+                      placementGroupRef:
+                        description: PlacementGroupRef is a reference to a placement
+                          group object. This makes the linode to be launched in that
+                          specific group.
+                        properties:
+                          apiVersion:
+                            description: API version of the referent.
+                            type: string
+                          fieldPath:
+                            description: |-
+                              If referring to a piece of an object instead of an entire object, this string
+                              should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                              For example, if the object reference is to a container within a pod, this would take on a value like:
+                              "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                              the event) or if no container name is specified "spec.containers[2]" (container with
+                              index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                              referencing a part of an object.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind of the referent.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                            type: string
+                          name:
+                            description: |-
+                              Name of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            type: string
+                          resourceVersion:
+                            description: |-
+                              Specific resourceVersion to which this reference is made, if any.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                            type: string
+                          uid:
+                            description: |-
+                              UID of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      privateIP:
+                        description: PrivateIP is a boolean indicating whether the
+                          instance should have a private IP address.
+                        type: boolean
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      providerID:
+                        description: ProviderID is the unique identifier as specified
+                          by the cloud provider.
+                        type: string
+                      region:
+                        description: Region is the Linode region to create the instance
+                          in.
+                        minLength: 1
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      rootPass:
+                        description: RootPass is the root password for the instance.
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      tags:
+                        description: Tags is a list of tags to apply to the Linode
+                          instance.
+                        items:
+                          type: string
+                        type: array
+                        x-kubernetes-list-type: set
+                      type:
+                        description: Type is the Linode instance type to create.
+                        minLength: 1
+                        type: string
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      vpcID:
+                        description: VPCID is the ID of an existing VPC in Linode.
+                          This allows using a VPC that is not managed by CAPL.
+                        type: integer
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                      vpcRef:
+                        description: |-
+                          vpcRef is a reference to a LinodeVPC resource. If specified, this takes precedence over
+                          the cluster-level VPC configuration for multi-region support.
+                        properties:
+                          apiVersion:
+                            description: API version of the referent.
+                            type: string
+                          fieldPath:
+                            description: |-
+                              If referring to a piece of an object instead of an entire object, this string
+                              should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                              For example, if the object reference is to a container within a pod, this would take on a value like:
+                              "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                              the event) or if no container name is specified "spec.containers[2]" (container with
+                              index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                              referencing a part of an object.
+                            type: string
+                          kind:
+                            description: |-
+                              Kind of the referent.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                            type: string
+                          name:
+                            description: |-
+                              Name of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                          namespace:
+                            description: |-
+                              Namespace of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                            type: string
+                          resourceVersion:
+                            description: |-
+                              Specific resourceVersion to which this reference is made, if any.
+                              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                            type: string
+                          uid:
+                            description: |-
+                              UID of the referent.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                    required:
+                    - region
+                    - type
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
+            type: object
+          status:
+            description: status is the observed state of the LinodeMachineTemplate.
+            properties:
+              conditions:
+                description: conditions define the current service state of the LinodeMachineTemplate
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              firewallID:
+                description: firewallID that is currently applied to the LinodeMachineTemplate.
+                type: integer
+              tags:
+                description: tags that are currently applied to the LinodeMachineTemplate.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: set
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
