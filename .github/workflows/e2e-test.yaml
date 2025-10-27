@@ -93,6 +93,7 @@ jobs:
             github.com:443
             gcr.io:443
             ghcr.io:443
+            golang.org:443
             proxy.golang.org:443
             sum.golang.org:443
             *.githubusercontent.com:443
