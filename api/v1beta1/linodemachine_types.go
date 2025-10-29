@@ -574,7 +574,7 @@ type LinodeMachineStatus struct {
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:storageversion
+// +kubebuilder:unservedversion
 // +kubebuilder:resource:path=linodemachines,scope=Namespaced,categories=cluster-api,shortName=lm
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this LinodeMachine belongs"

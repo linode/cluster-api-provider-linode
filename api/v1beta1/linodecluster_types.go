@@ -104,7 +104,7 @@ type LinodeClusterStatus struct {
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this LinodeCluster belongs"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Cluster infrastructure is ready for Linode instances"
 // +kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".spec.ControlPlaneEndpoint",description="API Endpoint",priority=1
-// +kubebuilder:storageversion
+// +kubebuilder:unservedversion
 
 // LinodeCluster is the Schema for the linodeclusters API
 type LinodeCluster struct {

@@ -675,5 +675,5 @@ spec:
             - template
             type: object
         type: object
-    served: true
-    storage: true
+    served: false
+    storage: false

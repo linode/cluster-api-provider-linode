@@ -36,7 +36,7 @@ type LinodeClusterTemplateResource struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=linodeclustertemplates,scope=Namespaced,categories=cluster-api,shortName=lct
-// +kubebuilder:storageversion
+// +kubebuilder:unservedversion
 
 // LinodeClusterTemplate is the Schema for the linodeclustertemplates API
 type LinodeClusterTemplate struct {
