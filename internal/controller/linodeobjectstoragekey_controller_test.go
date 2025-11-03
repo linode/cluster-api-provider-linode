@@ -255,9 +255,9 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 				}),
 			),
 		),
-		Once("secret type set to cluster resource set fails", func(ctx context.Context, _ Mock) {
+		Once("secret type set to cluster resource set succeeds", func(ctx context.Context, _ Mock) {
 			key.Spec.Type = clusteraddonsv1.ClusterResourceSetSecretType
-			Expect(k8sClient.Update(ctx, &key)).NotTo(Succeed())
+			Expect(k8sClient.Update(ctx, &key)).To(Succeed())
 		}),
 		Once("resource is deleted", func(ctx context.Context, _ Mock) {
 			// nb: client.Delete does not set DeletionTimestamp on the object, so re-fetch from the apiserver.
