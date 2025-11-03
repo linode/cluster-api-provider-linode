@@ -937,12 +937,6 @@ spec:
                 x-kubernetes-list-map-keys:
                 - address
                 x-kubernetes-list-type: map
-              cloudinitMetadataSupport:
-                default: true
-                description: |-
-                  cloudinitMetadataSupport determines whether to use cloud-init or not.
-                  Deprecated: Stackscript no longer in use, so this field is not used.
-                type: boolean
               conditions:
                 description: conditions define the current service state of the LinodeMachine.
                 items:

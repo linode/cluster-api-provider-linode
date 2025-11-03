@@ -140,21 +140,6 @@ spec:
                 description: keyGeneration may be modified to trigger a rotation of
                   the access key.
                 type: integer
-              secretDataFormat:
-                additionalProperties:
-                  type: string
-                description: |-
-                  secretDataFormat instructs the controller how to format the data stored in the secret containing access key details.
-                  Deprecated: Use generatedSecret.format.
-                type: object
-              secretType:
-                description: |-
-                  secretType instructs the controller what type of secret to generate containing access key details.
-                  Deprecated: Use generatedSecret.type.
-                enum:
-                - Opaque
-                - addons.cluster.x-k8s.io/resource-set
-                type: string
             required:
             - bucketAccess
             - generatedSecret

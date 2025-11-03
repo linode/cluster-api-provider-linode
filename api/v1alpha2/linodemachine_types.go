@@ -527,13 +527,6 @@ type LinodeMachineStatus struct {
 	// +listMapKey=address
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
-	// cloudinitMetadataSupport determines whether to use cloud-init or not.
-	// Deprecated: Stackscript no longer in use, so this field is not used.
-	// +kubebuilder:deprecatedversion:warning="CloudinitMetadataSupport is deprecated"
-	// +optional
-	// +kubebuilder:default=true
-	CloudinitMetadataSupport bool `json:"cloudinitMetadataSupport,omitempty"`
-
 	// instanceState is the state of the Linode instance for this machine.
 	// +optional
 	InstanceState *linodego.InstanceStatus `json:"instanceState,omitempty"`
