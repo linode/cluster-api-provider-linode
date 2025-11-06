@@ -149,13 +149,5 @@ func (d *LinodeObjectStorageKeyDefaulter) Default(ctx context.Context, obj runti
 		key.Spec.Namespace = key.Namespace
 	}
 
-	// Support deprecated fields when specified and updated fields are empty.
-	if key.Spec.SecretType != "" && key.Spec.Type == "" {
-		key.Spec.Type = key.Spec.SecretType
-	}
-	if len(key.Spec.SecretDataFormat) > 0 && len(key.Spec.Format) == 0 {
-		key.Spec.Format = key.Spec.SecretDataFormat
-	}
-
 	return nil
 }

@@ -941,7 +941,8 @@ spec:
                 default: true
                 description: |-
                   cloudinitMetadataSupport determines whether to use cloud-init or not.
-                  Deprecated: Stackscript no longer in use, so this field is not used.
+
+                  Deprecated: stackscript are no longer in use, so this field is not used.
                 type: boolean
               conditions:
                 description: conditions define the current service state of the LinodeMachine.
