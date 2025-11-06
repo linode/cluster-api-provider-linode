@@ -1082,6 +1082,16 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 				SubnetID:    iface.SubnetID,
 				IPRanges:    iface.IPRanges,
 			}
+			if iface.IPv4 != nil {
+				var NAT1to1 *string
+				if iface.IPv4.NAT1To1 != "" {
+					NAT1to1 = &iface.IPv4.NAT1To1
+				}
+				interfaces[idx].IPv4 = &linodego.VPCIPv4{
+					VPC:     iface.IPv4.VPC,
+					NAT1To1: NAT1to1,
+				}
+			}
 		}
 		instCreateOpts.Interfaces = interfaces
 		// If Interfaces are specified, the InterfaceGeneration must be GenerationLegacyConfig

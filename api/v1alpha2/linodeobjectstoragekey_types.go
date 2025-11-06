@@ -91,14 +91,18 @@ type LinodeObjectStorageKeySpec struct {
 	GeneratedSecret `json:"generatedSecret"`
 
 	// secretType instructs the controller what type of secret to generate containing access key details.
-	// Deprecated: Use generatedSecret.type.
+	//
+	// Deprecated: secretType is no longer supported, Use generatedSecret.type.
+	//
 	// +kubebuilder:validation:Enum=Opaque;addons.cluster.x-k8s.io/resource-set
 	// +kubebuilder:deprecatedversion:warning="secretType deprecated by generatedSecret.type"
 	// +optional
 	SecretType corev1.SecretType `json:"secretType,omitempty"`
 
 	// secretDataFormat instructs the controller how to format the data stored in the secret containing access key details.
-	// Deprecated: Use generatedSecret.format.
+	//
+	// Deprecated: secretDataFormat is no longer supported, please use generatedSecret.format.
+	//
 	// +kubebuilder:deprecatedversion:warning="secretDataFormat deprecated by generatedSecret.format"
 	// +optional
 	SecretDataFormat map[string]string `json:"secretDataFormat,omitempty"`
