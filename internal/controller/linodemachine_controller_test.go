@@ -2596,6 +2596,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
 					{
 						Purpose: linodego.InterfacePurposeVPC,
+						IPv4:    &infrav1alpha2.VPCIPv4{NAT1To1: "any"},
 						Primary: false,
 					},
 					{
@@ -2649,6 +2650,9 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Purpose:  linodego.InterfacePurposeVPC,
 				Primary:  false,
 				SubnetID: ptr.To(1),
+				IPv4: &linodego.VPCIPv4{
+					NAT1To1: ptr.To("any"),
+				},
 			},
 			{
 				Purpose: linodego.InterfacePurposePublic,
