@@ -50,6 +50,8 @@ jobs:
             github.com:443
             proxy.golang.org:443
             sum.golang.org:443
+            golang.org:443
+            go.dev:443
             *.githubusercontent.com:443
             auth.docker.io:443
             production.cloudflare.docker.com:443
@@ -70,7 +72,7 @@ jobs:
           check-latest: true
 
       - name: lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
 
       - name: lint-api
         run: make lint-api
