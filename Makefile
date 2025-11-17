@@ -368,6 +368,7 @@ CLUSTERCTL_VERSION       ?= v1.11.2
 CRD_REF_DOCS_VERSION     ?= v0.2.0
 KUBECTL_VERSION          ?= v1.34.0
 KUBEBUILDER_VERSION      ?= v3.15.1
+ENVTEST_VERSION 		 ?= release-0.22
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 TILT_VERSION             ?= 0.35.2
 KIND_VERSION             ?= 0.30.0
@@ -451,7 +452,7 @@ $(CHAINSAW): $(CACHE_BIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(CACHE_BIN)
-	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 
 .phony: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)

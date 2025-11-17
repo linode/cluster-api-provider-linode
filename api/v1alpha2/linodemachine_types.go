@@ -528,7 +528,9 @@ type LinodeMachineStatus struct {
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
 	// cloudinitMetadataSupport determines whether to use cloud-init or not.
-	// Deprecated: Stackscript no longer in use, so this field is not used.
+	//
+	// Deprecated: stackscript are no longer in use, so this field is not used.
+	//
 	// +kubebuilder:deprecatedversion:warning="CloudinitMetadataSupport is deprecated"
 	// +optional
 	// +kubebuilder:default=true
