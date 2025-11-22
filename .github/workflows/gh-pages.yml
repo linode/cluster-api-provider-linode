@@ -19,7 +19,7 @@ jobs:
     container: docker.io/node:24-bullseye-slim
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup mdBook
         run: |
           apt-get update
