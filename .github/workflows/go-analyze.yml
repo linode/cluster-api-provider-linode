@@ -20,7 +20,7 @@ jobs:
       # Expose matched filters as job 'src' output variable
       src: ${{ steps.filter.outputs.src }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
@@ -63,7 +63,7 @@ jobs:
             registry-1.docker.io:443
             auth.docker.io:443
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Set up Go
         uses: actions/setup-go@v6
