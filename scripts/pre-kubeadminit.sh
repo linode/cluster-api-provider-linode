@@ -182,7 +182,7 @@ curl -L "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${VERSI
 
 # install kubeadm,kubelet,kubectl
 cd /usr/local/bin
-curl -L --remote-name-all "https://dl.k8s.io/release/$1/bin/linux/amd64/{kubeadm,kubelet}"
+curl -L --remote-name-all "https://dl.k8s.io/release/v${PATCH_VERSION}/bin/linux/amd64/{kubeadm,kubelet}"
 curl -LO "https://dl.k8s.io/release/v${VERSION}.0/bin/linux/amd64/kubectl"
 chmod +x {kubeadm,kubelet,kubectl}
 
