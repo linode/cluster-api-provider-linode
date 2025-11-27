@@ -49,6 +49,9 @@ import (
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
 	"github.com/linode/cluster-api-provider-linode/version"
 
+	infrastructurev1beta1 "github.com/linode/cluster-api-provider-linode/api/v1beta1"
+	webhookv1beta1 "github.com/linode/cluster-api-provider-linode/internal/webhook/v1beta1"
+
 	// +kubebuilder:scaffold:imports
 
 	_ "go.uber.org/automaxprocs"
@@ -95,6 +98,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha2.AddToScheme(scheme))
+	utilruntime.Must(infrastructurev1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -255,6 +259,20 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 		setupWebhooks(mgr)
 	}
 
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := webhookv1beta1.SetupLinodeClusterWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
+			os.Exit(1)
+		}
+	}
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := webhookv1beta1.SetupLinodeMachineWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachine")
+			os.Exit(1)
+		}
+	}
 	// +kubebuilder:scaffold:builder
 
 	setupHealthChecks(mgr)
