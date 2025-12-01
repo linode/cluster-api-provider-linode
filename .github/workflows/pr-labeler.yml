@@ -5,6 +5,9 @@ on:
   pull_request_target:
     types: [opened, reopened, synchronize]
 
+permissions:
+  contents: read
+
 jobs:
   label-pr:
     name: Update PR labels
