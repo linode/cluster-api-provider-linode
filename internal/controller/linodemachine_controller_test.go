@@ -1151,8 +1151,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(*linodeMachine.Spec.ProviderID).To(Equal("linode://123"))
 			Expect(linodeMachine.Status.Addresses).To(Equal([]clusterv1.MachineAddress{
 				{Type: clusterv1.MachineExternalIP, Address: "172.0.0.2"},
-				{Type: clusterv1.MachineExternalIP, Address: "fd00::"},
 				{Type: clusterv1.MachineInternalIP, Address: "10.0.0.2"},
+				{Type: clusterv1.MachineExternalIP, Address: "fd00::"},
 				{Type: clusterv1.MachineInternalIP, Address: "192.168.0.2"},
 			}))
 		})
