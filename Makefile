@@ -362,24 +362,61 @@ GOLANGCI_LINT_CUSTOM ?= $(CACHE_BIN)/golangci-lint-custom
 S5CMD          ?= $(CACHE_BIN)/s5cmd
 
 ## Tool Versions
+# renovate: datasource=go depName=sigs.k8s.io/kustomize
 KUSTOMIZE_VERSION        ?= v5.7.1
+
+# renovate: datasource=go depName=github.com/tilt-dev/ctlptl
 CTLPTL_VERSION           ?= v0.8.43
+
+# renovate: datasource=github-tags depName=kubernetes-sigs/cluster-api
 CLUSTERCTL_VERSION       ?= v1.11.2
+
+# renovate: datasource=go depName=elastic/crd-ref-docs
 CRD_REF_DOCS_VERSION     ?= v0.2.0
+
+# renovate: datasource=github-tags depName=kubernetes/kubernetes
 KUBECTL_VERSION          ?= v1.34.0
+
+# renovate: datasource=github-tags depName=kubernetes-sigs/kubebuilder
 KUBEBUILDER_VERSION      ?= v3.15.1
-ENVTEST_VERSION 		 ?= release-0.22
+
+# renovate: datasource=go depName=sigs.k8s.io/controller-runtime/tools/setup-envtest
+ENVTEST_VERSION 	 ?= release-0.22
+
+# renovate: datasource=go depName=sigs.k8s.io/controller-tools
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
+
+# renovate: datasource=github-tags depName=tilt-dev/tilt
 TILT_VERSION             ?= 0.35.2
+
+# renovate: datasource=github-tags depName=kubernetes-sigs/kind
 KIND_VERSION             ?= 0.30.0
+
+# renovate: datasource=go depName=kyverno/chainsaw
 CHAINSAW_VERSION         ?= v0.2.13
+
+# renovate: datasource=go depName=go.uber.org/nilaway
 NILAWAY_VERSION          ?= d2274102dc2eab9f77cef849a5470a6ebf983125
+
+# renovate: datasource=go depName=golang.org/x/vuln
 GOVULNC_VERSION          ?= v1.1.4
+
+# renovate: datasource=go depName=go.uber.org/mock/mockgen
 MOCKGEN_VERSION          ?= v0.6.0
+
+# renovate: datasource=go depName=github.com/hexdigest/gowrap
 GOWRAP_VERSION           ?= v1.4.3
+
+# renovate: datasource=go depName=github.com/peak/s5cmd
 S5CMD_VERSION            ?= v2.3.0
+
+# renovate: datasource=go depName=k8s.io/code-generator
 CONVERSION_GEN_VERSION   ?= v0.34.1
+
+# renovate: datasource=github-tags depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION    ?= v2.7.2
+
+# renovate: datasource=github-tags depName=securego/gosec
 GOSEC_VERSION            ?= 2.22.10
 
 .PHONY: tools
