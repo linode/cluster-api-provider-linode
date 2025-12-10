@@ -244,6 +244,7 @@ func addVPCInterfaceFromReference(ctx context.Context, machineScope *scope.Machi
 	return nil
 }
 
+//nolint:cyclop // complexity is acceptable for this function
 func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, instanceID int) ([]clusterv1.MachineAddress, error) {
 	addresses, err := machineScope.LinodeClient.GetInstanceIPAddresses(ctx, instanceID)
 	if err != nil {
@@ -260,18 +261,6 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 		Type:    clusterv1.MachineExternalIP,
 	})
 
-	// check if a node has public ipv6 ip and store it
-	if addresses.IPv6 == nil {
-		return nil, errNoPublicIPv6Addrs
-	}
-	if addresses.IPv6.SLAAC == nil {
-		return nil, errNoPublicIPv6SLAACAddrs
-	}
-	ips = append(ips, clusterv1.MachineAddress{
-		Address: addresses.IPv6.SLAAC.Address,
-		Type:    clusterv1.MachineExternalIP,
-	})
-
 	// check if a node has vpc specific ip and store it
 	for _, vpcIP := range addresses.IPv4.VPC {
 		if vpcIP.Address != nil && *vpcIP.Address != "" {
@@ -280,6 +269,39 @@ func buildInstanceAddrs(ctx context.Context, machineScope *scope.MachineScope, i
 				Type:    clusterv1.MachineInternalIP,
 			})
 		}
+	}
+
+	if addresses.IPv6 == nil {
+		return nil, errNoPublicIPv6Addrs
+	}
+	// if the cluster has a public vpc ipv6 exclude the slaac
+	vpcPublicIPv6 := false
+
+	for _, vpcIP := range addresses.IPv6.VPC {
+		var ipType clusterv1.MachineAddressType
+		if vpcIP.IPv6IsPublic != nil && *vpcIP.IPv6IsPublic {
+			vpcPublicIPv6 = true
+			ipType = clusterv1.MachineExternalIP
+		} else {
+			ipType = clusterv1.MachineInternalIP
+		}
+		for _, ipv6IP := range vpcIP.IPv6Addresses {
+			ips = append(ips, clusterv1.MachineAddress{
+				Address: ipv6IP.SLAACAddress,
+				Type:    ipType,
+			})
+		}
+	}
+
+	if !vpcPublicIPv6 {
+		// check if a node has public ipv6 ip and store it
+		if addresses.IPv6.SLAAC == nil {
+			return nil, errNoPublicIPv6SLAACAddrs
+		}
+		ips = append(ips, clusterv1.MachineAddress{
+			Address: addresses.IPv6.SLAAC.Address,
+			Type:    clusterv1.MachineExternalIP,
+		})
 	}
 
 	if machineScope.LinodeCluster.Spec.Network.UseVlan {
