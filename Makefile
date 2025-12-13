@@ -417,7 +417,7 @@ CONVERSION_GEN_VERSION   ?= v0.34.1
 GOLANGCI_LINT_VERSION    ?= v2.7.2
 
 # renovate: datasource=github-tags depName=securego/gosec
-GOSEC_VERSION            ?= 2.22.10
+GOSEC_VERSION            ?= 2.22.11
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
