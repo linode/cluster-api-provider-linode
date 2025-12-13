@@ -411,7 +411,7 @@ GOWRAP_VERSION           ?= v1.4.3
 S5CMD_VERSION            ?= v2.3.0
 
 # renovate: datasource=go depName=k8s.io/code-generator
-CONVERSION_GEN_VERSION   ?= v0.34.1
+CONVERSION_GEN_VERSION   ?= v0.34.3
 
 # renovate: datasource=github-tags depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION    ?= v2.7.2
