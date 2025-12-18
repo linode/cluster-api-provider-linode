@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"golang.org/x/exp/slices"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	kutil "sigs.k8s.io/cluster-api/util"
 
@@ -301,9 +302,9 @@ func removeElement(stringList []string, elemToRemove string) []string {
 	return stringList
 }
 
-func isCapiMachineReady(capiMachine *v1beta2.Machine) bool {
-	for _, condition := range capiMachine.Status.Conditions {
-		if condition.Type == v1beta2.ReadyCondition && condition.Status == metav1.ConditionTrue {
+func isCapiMachineReady(capiMachine *v1beta1.Machine) bool {
+	for _, condition := range capiMachine.Status.V1Beta2.Conditions {
+		if condition.Type == v1beta1.ReadyV1Beta2Condition && condition.Status == metav1.ConditionTrue {
 			return true
 		}
 	}
