@@ -458,6 +458,33 @@ func TestAddIPToDNS(t *testing.T) {
 								},
 							},
 						},
+						{
+							// This machine's CAPI owner is NOT ready, and should NOT have DNS entries
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test-not-ready-machine",
+								UID:  "test-uid-2",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "cluster.x-k8s.io/v1beta1",
+										Kind:       "Machine",
+										Name:       "test-not-ready-machine",
+										UID:        "test-uid-3",
+									},
+								},
+							},
+							Spec: infrav1alpha2.LinodeMachineSpec{
+								ProviderID: ptr.To("linode://4567"),
+								InstanceID: ptr.To(456),
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{
+									{
+										Type:    "ExternalIP",
+										Address: "10.20.20.22",
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -528,6 +555,18 @@ func TestAddIPToDNS(t *testing.T) {
 								machine.Name = "test-active-machine"
 								machine.Namespace = "default"
 								machine.UID = "test-uid-2"
+								machine.DeletionTimestamp = nil
+								machine.Status.Conditions = []metav1.Condition{
+									{
+										Type:   clusterv1.ReadyCondition,
+										Status: metav1.ConditionTrue,
+									},
+								}
+							case "test-not-ready-machine":
+								// Set up as a not-ready machine (skipping conditions)
+								machine.Name = "test-not-ready-machine"
+								machine.Namespace = "default"
+								machine.UID = "test-uid-3"
 								machine.DeletionTimestamp = nil
 							}
 						}
