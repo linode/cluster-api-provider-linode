@@ -462,7 +462,7 @@ func TestAddIPToDNS(t *testing.T) {
 							// This machine's CAPI owner is NOT ready, and should NOT have DNS entries
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "test-not-ready-machine",
-								UID:  "test-uid-2",
+								UID:  "test-uid-3",
 								OwnerReferences: []metav1.OwnerReference{
 									{
 										APIVersion: "cluster.x-k8s.io/v1beta1",
@@ -556,10 +556,12 @@ func TestAddIPToDNS(t *testing.T) {
 								machine.Namespace = "default"
 								machine.UID = "test-uid-2"
 								machine.DeletionTimestamp = nil
-								machine.Status.V1Beta2.Conditions = []metav1.Condition{
-									{
-										Type:   clusterv1.ReadyV1Beta2Condition,
-										Status: metav1.ConditionTrue,
+								machine.Status.V1Beta2 = &clusterv1.MachineV1Beta2Status{
+									Conditions: []metav1.Condition{
+										{
+											Type:   clusterv1.ReadyV1Beta2Condition,
+											Status: metav1.ConditionTrue,
+										},
 									},
 								}
 							case "test-not-ready-machine":
