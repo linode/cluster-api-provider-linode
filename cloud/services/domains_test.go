@@ -556,9 +556,9 @@ func TestAddIPToDNS(t *testing.T) {
 								machine.Namespace = "default"
 								machine.UID = "test-uid-2"
 								machine.DeletionTimestamp = nil
-								machine.Status.Conditions = []metav1.Condition{
+								machine.Status.V1Beta2.Conditions = []metav1.Condition{
 									{
-										Type:   clusterv1.ReadyCondition,
+										Type:   clusterv1.ReadyV1Beta2Condition,
 										Status: metav1.ConditionTrue,
 									},
 								}
