@@ -2279,3 +2279,451 @@ func TestGetTags(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildInstanceAddrs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		machineScope  *scope.MachineScope
+		instanceID    int
+		expectedAddrs []v1beta2.MachineAddress
+		expectedError error
+		expects       func(client *mock.MockLinodeClient)
+	}{
+		{
+			name: "Success - basic public IPv4 and IPv6 SLAAC",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "fd00::", Type: v1beta2.MachineExternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Success - with private IPv4",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "fd00::", Type: v1beta2.MachineExternalIP},
+				{Address: "192.168.0.2", Type: v1beta2.MachineInternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Success - with VPC IPv4",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "10.0.0.5", Type: v1beta2.MachineInternalIP},
+				{Address: "fd00::", Type: v1beta2.MachineExternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				vpcAddress := "10.0.0.5"
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						VPC:    []*linodego.VPCIP{{Address: &vpcAddress}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Success - with VPC IPv6 public (skips SLAAC)",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "2001:db8::1", Type: v1beta2.MachineExternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				isPublic := true
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+						VPC: []linodego.VPCIP{
+							{
+								IPv6IsPublic:  &isPublic,
+								IPv6Addresses: []linodego.VPCIPIPv6Address{{SLAACAddress: "2001:db8::1"}},
+							},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Success - with VPC IPv6 private (includes SLAAC)",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "fd00:1::1", Type: v1beta2.MachineInternalIP},
+				{Address: "fd00::", Type: v1beta2.MachineExternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				isPublic := false
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+						VPC: []linodego.VPCIP{
+							{
+								IPv6IsPublic:  &isPublic,
+								IPv6Addresses: []linodego.VPCIPIPv6Address{{SLAACAddress: "fd00:1::1"}},
+							},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Error - GetInstanceIPAddresses fails",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID:    123,
+			expectedError: fmt.Errorf("get instance ips"),
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(nil, fmt.Errorf("API error"))
+			},
+		},
+		{
+			name: "Error - no public IPv4 addresses",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID:    123,
+			expectedError: errNoPublicIPv4Addrs,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Error - no IPv6 address",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID:    123,
+			expectedError: errNoPublicIPv6Addrs,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: nil,
+				}, nil)
+			},
+		},
+		{
+			name: "Error - no IPv6 SLAAC address",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID:    123,
+			expectedError: errNoPublicIPv6SLAACAddrs,
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: nil,
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Success - with VLAN using LinodeInterfaces",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{
+							{VLAN: &infrav1alpha2.VLANInterface{VLANLabel: "test-vlan"}},
+						},
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							UseVlan: true,
+						},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "fd00::", Type: v1beta2.MachineExternalIP},
+				{Address: "10.0.0.1", Type: v1beta2.MachineInternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+				vlanIPAM := "10.0.0.1/11"
+				mockClient.EXPECT().ListInterfaces(gomock.Any(), 123, gomock.Any()).Return([]linodego.LinodeInterface{
+					{VLAN: &linodego.VLANInterface{IPAMAddress: &vlanIPAM}},
+				}, nil)
+			},
+		},
+		{
+			name: "Success - with VLAN using legacy Interfaces",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							UseVlan: true,
+						},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "fd00::", Type: v1beta2.MachineExternalIP},
+				{Address: "10.0.0.2", Type: v1beta2.MachineInternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+				mockClient.EXPECT().ListInstanceConfigs(gomock.Any(), 123, gomock.Any()).Return([]linodego.InstanceConfig{
+					{
+						Interfaces: []linodego.InstanceConfigInterface{
+							{Purpose: linodego.InterfacePurposeVLAN, IPAMAddress: "10.0.0.2/11"},
+						},
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Error - VLAN ListInterfaces fails",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{
+					Spec: infrav1alpha2.LinodeMachineSpec{
+						LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{
+							{VLAN: &infrav1alpha2.VLANInterface{VLANLabel: "test-vlan"}},
+						},
+					},
+				},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							UseVlan: true,
+						},
+					},
+				},
+			},
+			instanceID:    123,
+			expectedError: fmt.Errorf("handle vlan ips"),
+			expects: func(mockClient *mock.MockLinodeClient) {
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+				mockClient.EXPECT().ListInterfaces(gomock.Any(), 123, gomock.Any()).Return(nil, fmt.Errorf("list interfaces error"))
+			},
+		},
+		{
+			name: "Success - complete scenario with all IP types",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "10.0.0.5", Type: v1beta2.MachineInternalIP},
+				{Address: "10.0.0.6", Type: v1beta2.MachineInternalIP},
+				{Address: "fd00::", Type: v1beta2.MachineExternalIP},
+				{Address: "192.168.0.2", Type: v1beta2.MachineInternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				vpcAddr1 := "10.0.0.5"
+				vpcAddr2 := "10.0.0.6"
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+						VPC: []*linodego.VPCIP{
+							{Address: &vpcAddr1},
+							{Address: &vpcAddr2},
+						},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+			},
+		},
+		{
+			name: "Success - VPC IPv4 with empty address is skipped",
+			machineScope: &scope.MachineScope{
+				LinodeMachine: &infrav1alpha2.LinodeMachine{},
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{},
+					},
+				},
+			},
+			instanceID: 123,
+			expectedAddrs: []v1beta2.MachineAddress{
+				{Address: "172.0.0.2", Type: v1beta2.MachineExternalIP},
+				{Address: "10.0.0.5", Type: v1beta2.MachineInternalIP},
+				{Address: "fd00::", Type: v1beta2.MachineExternalIP},
+			},
+			expects: func(mockClient *mock.MockLinodeClient) {
+				vpcAddr1 := "10.0.0.5"
+				emptyAddr := ""
+				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
+					IPv4: &linodego.InstanceIPv4Response{
+						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						VPC: []*linodego.VPCIP{
+							{Address: &vpcAddr1},
+							{Address: &emptyAddr},
+							{Address: nil},
+						},
+					},
+					IPv6: &linodego.InstanceIPv6Response{
+						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
+					},
+				}, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockClient := mock.NewMockLinodeClient(ctrl)
+			testcase.machineScope.LinodeClient = mockClient
+			testcase.expects(mockClient)
+
+			addrs, err := buildInstanceAddrs(t.Context(), testcase.machineScope, testcase.instanceID)
+			if testcase.expectedError != nil {
+				assert.ErrorContains(t, err, testcase.expectedError.Error())
+			} else {
+				require.NoError(t, err, "expected no error but got one")
+				assert.Equal(t, testcase.expectedAddrs, addrs)
+			}
+		})
+	}
+}
