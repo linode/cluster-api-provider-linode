@@ -390,7 +390,7 @@ CONTROLLER_TOOLS_VERSION ?= v0.19.0
 TILT_VERSION             ?= 0.36.0
 
 # renovate: datasource=github-tags depName=kubernetes-sigs/kind
-KIND_VERSION             ?= 0.30.0
+KIND_VERSION             ?= 0.31.0
 
 # renovate: datasource=go depName=kyverno/chainsaw
 CHAINSAW_VERSION         ?= v0.2.13
