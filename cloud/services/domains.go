@@ -11,7 +11,9 @@ import (
 	"sync"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 
@@ -300,7 +302,16 @@ func removeElement(stringList []string, elemToRemove string) []string {
 	return stringList
 }
 
-func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string) ([]DNSOptions, error) {
+func isCapiMachineReady(capiMachine *v1beta2.Machine) bool {
+	for _, condition := range capiMachine.Status.Conditions {
+		if condition.Type == v1beta2.ReadyCondition {
+			return condition.Status == metav1.ConditionTrue
+		}
+	}
+	return false
+}
+
+func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string, firstMachine bool) ([]DNSOptions, error) {
 	// Look up the corresponding CAPI machine, see if it is marked for deletion
 	capiMachine, err := kutil.GetOwnerMachine(ctx, cscope.Client, machine.ObjectMeta)
 	if err != nil {
@@ -309,6 +320,14 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machi
 
 	if capiMachine == nil || capiMachine.DeletionTimestamp != nil {
 		// If the CAPI machine is deleted, we don't need to create DNS entries for it.
+		return nil, nil
+	}
+
+	if !firstMachine && !isCapiMachineReady(capiMachine) {
+		// always process the first linodeMachine, and add its IP to the DNS entries.
+		// For other linodeMachine, only process them if the CAPI machine is ready
+		logger := logr.FromContextOrDiscard(ctx)
+		logger.Info("skipping DNS entry creation for LinodeMachine as the CAPI machine is not ready", "LinodeMachine", machine.Name)
 		return nil, nil
 	}
 
@@ -340,8 +359,10 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 	}
 
 	subDomain := getSubDomain(cscope)
+	firstMachine := true
 	for _, eachMachine := range cscope.LinodeMachines.Items {
-		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec, subDomain)
+		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec, subDomain, firstMachine)
+		firstMachine = false
 		if err != nil {
 			return nil, fmt.Errorf("failed to process LinodeMachine %s: %w", eachMachine.Name, err)
 		}
