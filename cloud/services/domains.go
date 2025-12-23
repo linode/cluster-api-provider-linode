@@ -304,8 +304,8 @@ func removeElement(stringList []string, elemToRemove string) []string {
 
 func isCapiMachineReady(capiMachine *v1beta2.Machine) bool {
 	for _, condition := range capiMachine.Status.Conditions {
-		if condition.Type == v1beta2.ReadyCondition && condition.Status == metav1.ConditionTrue {
-			return true
+		if condition.Type == v1beta2.ReadyCondition {
+			return condition.Status == metav1.ConditionTrue
 		}
 	}
 	return false
