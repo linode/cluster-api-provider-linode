@@ -1,7 +1,7 @@
 {
   "packages": {
     "clusterctl":       "1.11.3",
-    "ctlptl":           "0.8.43",
+    "ctlptl":           "0.8.44",
     "docker":           "28.5.1",
     "go-tools":         "2025.1.1",
     "go":               "1.25.4",

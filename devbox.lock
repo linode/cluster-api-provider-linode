@@ -77,51 +77,51 @@
         }
       }
     },
-    "ctlptl@0.8.43": {
-      "last_modified": "2025-10-07T08:41:47Z",
-      "resolved": "github:NixOS/nixpkgs/bce5fe2bb998488d8e7e7856315f90496723793c#ctlptl",
+    "ctlptl@0.8.44": {
+      "last_modified": "2025-12-19T06:18:24Z",
+      "resolved": "github:NixOS/nixpkgs/7d853e518814cca2a657b72eeba67ae20ebf7059#ctlptl",
       "source": "devbox-search",
-      "version": "0.8.43",
+      "version": "0.8.44",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/n6pw5nirh72n2lzhhgr77zmrjwm5j7bz-ctlptl-0.8.43",
+              "path": "/nix/store/h46jzhkac7ni9alk6j0cygk3npazn8yw-ctlptl-0.8.44",
               "default": true
             }
           ],
-          "store_path": "/nix/store/n6pw5nirh72n2lzhhgr77zmrjwm5j7bz-ctlptl-0.8.43"
+          "store_path": "/nix/store/h46jzhkac7ni9alk6j0cygk3npazn8yw-ctlptl-0.8.44"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/hb3y7q03rr254hmx26ga5ff2ddfcgymi-ctlptl-0.8.43",
+              "path": "/nix/store/0jzxbxqmdc4kh9kg00laj0rwmg9s1w2p-ctlptl-0.8.44",
               "default": true
             }
           ],
-          "store_path": "/nix/store/hb3y7q03rr254hmx26ga5ff2ddfcgymi-ctlptl-0.8.43"
+          "store_path": "/nix/store/0jzxbxqmdc4kh9kg00laj0rwmg9s1w2p-ctlptl-0.8.44"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/ab458idbz9g76wql9sh8bzqd698gyjd3-ctlptl-0.8.43",
+              "path": "/nix/store/kz0d5zw18gsxzawiwlhjdjgh932afjp4-ctlptl-0.8.44",
               "default": true
             }
           ],
-          "store_path": "/nix/store/ab458idbz9g76wql9sh8bzqd698gyjd3-ctlptl-0.8.43"
+          "store_path": "/nix/store/kz0d5zw18gsxzawiwlhjdjgh932afjp4-ctlptl-0.8.44"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/vmcjri2rzvb7a8fiw6iffbj7bzpc4saj-ctlptl-0.8.43",
+              "path": "/nix/store/bcdf8jif7gcg6wr5p68hni1krh95z52b-ctlptl-0.8.44",
               "default": true
             }
           ],
-          "store_path": "/nix/store/vmcjri2rzvb7a8fiw6iffbj7bzpc4saj-ctlptl-0.8.43"
+          "store_path": "/nix/store/bcdf8jif7gcg6wr5p68hni1krh95z52b-ctlptl-0.8.44"
         }
       }
     },
