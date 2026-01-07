@@ -5,7 +5,6 @@ go 1.25.0
 toolchain go1.25.5
 
 require (
-	github.com/akamai/AkamaiOPEN-edgegrid-golang/v12 v12.2.0
 	github.com/akamai/AkamaiOPEN-edgegrid-golang/v8 v8.4.0
 	github.com/aws/aws-sdk-go-v2 v1.41.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.6
@@ -84,7 +83,6 @@ require (
 )
 
 require (
-	github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129 // indirect
 	github.com/apex/log v1.9.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
