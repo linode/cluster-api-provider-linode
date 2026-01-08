@@ -33,5 +33,5 @@ var (
 	DeleteError     = "DeleteError"
 	UpdateError     = "UpdateError"
 	UnknownError    = "UnknownError"
-	CredentialError = "CredentialError"
+	CredentialError = "CredentialError" // #nosec G101 -- false positive
 )
