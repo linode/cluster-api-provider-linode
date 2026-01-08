@@ -29,8 +29,9 @@ var (
 
 // List of failure reasons to use in the status fields of our resources
 var (
-	CreateError  = "CreateError"
-	DeleteError  = "DeleteError"
-	UpdateError  = "UpdateError"
-	UnknownError = "UnknownError"
+	CreateError     = "CreateError"
+	DeleteError     = "DeleteError"
+	UpdateError     = "UpdateError"
+	UnknownError    = "UnknownError"
+	CredentialError = "CredentialError"
 )

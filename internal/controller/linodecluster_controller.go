@@ -207,7 +207,7 @@ func (r *LinodeClusterReconciler) reconcile(
 
 	if err := addMachineToLB(ctx, clusterScope); err != nil {
 		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
-		return retryIfTransient(err, logger)
+		return retryIfTransient(err)
 	}
 
 	return res, nil
