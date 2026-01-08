@@ -452,7 +452,7 @@ $(CHAINSAW): $(CACHE_BIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(CACHE_BIN)
-	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230216140739-c98506dc3b8e
 
 .phony: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)
