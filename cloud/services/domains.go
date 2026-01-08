@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/netip"
 	"slices"
+	"sort"
 	"strings"
 	"sync"
 
@@ -359,6 +360,12 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 	}
 
 	subDomain := getSubDomain(cscope)
+
+	// sort the slice of linodemachines by CreationTimestamp in ascending order (oldest first).
+	sort.SliceStable(cscope.LinodeMachines.Items, func(i, j int) bool {
+		return cscope.LinodeMachines.Items[i].CreationTimestamp.Before(&cscope.LinodeMachines.Items[j].CreationTimestamp)
+	})
+
 	firstMachine := true
 	for _, eachMachine := range cscope.LinodeMachines.Items {
 		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec, subDomain, firstMachine)
