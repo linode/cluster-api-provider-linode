@@ -21,6 +21,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
@@ -329,7 +330,8 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machi
 		// For other linodeMachine, only process them if the CAPI machine is ready
 		logger := logr.FromContextOrDiscard(ctx)
 		logger.Info("skipping DNS entry creation for LinodeMachine as the CAPI machine is not ready", "LinodeMachine", machine.Name)
-		return nil, nil
+		// If not ready, return an error so we can requeue and try again later.
+		return nil, util.ErrReconcileAgain
 	}
 
 	options := []DNSOptions{}
