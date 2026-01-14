@@ -69,14 +69,16 @@ var (
 )
 
 func retryIfTransient(err error) (ctrl.Result, error) {
+	// For known retryable errors (429, 5xx), use application-managed requeue
+	// to avoid log pollution and control retry timing
 	if util.IsRetryableError(err) {
 		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
 			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
-	// Return the error for terminal errors (400, 401, 403, 404) so that
-	// the reconciler can set appropriate conditions and events
+	// For all other errors (terminal or unknown), return the error
+	// and let controller-runtime handle requeue with exponential backoff
 	return ctrl.Result{}, err
 }
 

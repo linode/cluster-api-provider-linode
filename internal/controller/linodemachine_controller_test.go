@@ -670,8 +670,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			reconciler.ReconcileTimeout = time.Nanosecond
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
-			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
-			Expect(err).NotTo(HaveOccurred())
+			// Error is returned so controller-runtime handles requeue with exponential backoff
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("time is up"))
+			Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 
 			Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
 			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionFalse))
