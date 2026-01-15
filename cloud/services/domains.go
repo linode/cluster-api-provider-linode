@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -369,17 +370,18 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 	})
 
 	firstMachine := true
+	var encounteredErrors []error
 	for _, eachMachine := range cscope.LinodeMachines.Items {
 		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec, subDomain, firstMachine)
 		firstMachine = false
 		if err != nil {
-			return nil, fmt.Errorf("failed to process LinodeMachine %s: %w", eachMachine.Name, err)
+			encounteredErrors = append(encounteredErrors, fmt.Errorf("failed to process LinodeMachine %s: %w", eachMachine.Name, err))
 		}
 		d.options = append(d.options, options...)
 	}
 	d.options = append(d.options, DNSOptions{subDomain, cscope.LinodeCluster.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
-	return d.options, nil
+	return d.options, errors.Join(encounteredErrors...)
 }
 
 // GetDomainID gets the domains linode id
