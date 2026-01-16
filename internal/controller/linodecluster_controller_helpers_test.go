@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/linode/linodego"
@@ -332,7 +334,7 @@ func TestAddMachineToLB(t *testing.T) {
 	tests := []struct {
 		name                string
 		clusterScope        *scope.ClusterScope
-		setupMocks          func(*mock.MockLinodeClient, *mock.MockK8sClient)
+		setupMocks          func(*mock.MockLinodeClient, *mock.MockAkamClient, *mock.MockK8sClient)
 		expectedError       bool
 		expectedErrorString string
 	}{
@@ -347,7 +349,8 @@ func TestAddMachineToLB(t *testing.T) {
 					},
 				},
 			},
-			setupMocks:    func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {},
+			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockDNSClient *mock.MockAkamClient, mockK8sClient *mock.MockK8sClient) {
+			},
 			expectedError: false,
 		},
 		{
@@ -362,7 +365,8 @@ func TestAddMachineToLB(t *testing.T) {
 					},
 				},
 			},
-			setupMocks:    func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {},
+			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockDNSClient *mock.MockAkamClient, mockK8sClient *mock.MockK8sClient) {
+			},
 			expectedError: false,
 		},
 		{
@@ -381,7 +385,7 @@ func TestAddMachineToLB(t *testing.T) {
 					Items: []infrav1alpha2.LinodeMachine{},
 				},
 			},
-			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockDNSClient *mock.MockAkamClient, mockK8sClient *mock.MockK8sClient) {
 				mockLinodeClient.EXPECT().
 					ListNodeBalancerNodes(
 						gomock.Any(),
@@ -406,7 +410,7 @@ func TestAddMachineToLB(t *testing.T) {
 					},
 				},
 			},
-			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockDNSClient *mock.MockAkamClient, mockK8sClient *mock.MockK8sClient) {
 				mockLinodeClient.EXPECT().
 					ListNodeBalancerNodes(
 						gomock.Any(),
@@ -419,6 +423,149 @@ func TestAddMachineToLB(t *testing.T) {
 			expectedError:       true,
 			expectedErrorString: "API error",
 		},
+		{
+			name: "machines ready for DNS load balancer type",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType: lbTypeDNS,
+							DNSProvider:      "akamai",
+						},
+					},
+				},
+				LinodeMachines: infrav1alpha2.LinodeMachineList{
+					Items: []infrav1alpha2.LinodeMachine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "test-machine-1",
+								CreationTimestamp: metav1.Time{Time: time.Now()},
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{},
+								Ready:     true,
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "test-machine-2",
+								CreationTimestamp: metav1.Time{Time: time.Now()},
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{},
+								Ready:     true,
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockDNSClient *mock.MockAkamClient, mockK8sClient *mock.MockK8sClient) {
+				mockDNSClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&dns.RecordBody{}, nil).AnyTimes()
+				mockDNSClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockDNSClient.EXPECT().UpdateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			},
+			expectedError: false,
+		},
+		{
+			name: "machine not ready yet for DNS load balancer type",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cluster",
+						Namespace: defaultNamespace,
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType: lbTypeDNS,
+							DNSProvider:      "akamai",
+						},
+					},
+				},
+				LinodeMachines: infrav1alpha2.LinodeMachineList{
+					Items: []infrav1alpha2.LinodeMachine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "test-machine-1",
+								Namespace:         defaultNamespace,
+								CreationTimestamp: metav1.Time{Time: time.Now()},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: clusterv1.GroupVersion.String(),
+										Kind:       "Machine",
+										Name:       "test-machine-1",
+									},
+								},
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{},
+								Ready:     true,
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:              "test-machine-2",
+								Namespace:         defaultNamespace,
+								CreationTimestamp: metav1.Time{Time: time.Now()},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: clusterv1.GroupVersion.String(),
+										Kind:       "Machine",
+										Name:       "test-machine-2",
+									},
+								},
+							},
+							Status: infrav1alpha2.LinodeMachineStatus{
+								Addresses: []clusterv1.MachineAddress{},
+								Ready:     false,
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockDNSClient *mock.MockAkamClient, mockK8sClient *mock.MockK8sClient) {
+				mockK8sClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				machine1 := &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-machine-1",
+						Namespace: defaultNamespace,
+					},
+					Status: clusterv1.MachineStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   clusterv1.ReadyCondition,
+								Status: metav1.ConditionTrue,
+							},
+						},
+					},
+				}
+				err := mockK8sClient.Create(context.Background(), machine1)
+				if err != nil {
+					return
+				}
+				machine2 := &clusterv1.Machine{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-machine-2",
+						Namespace: defaultNamespace,
+					},
+					Status: clusterv1.MachineStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:   clusterv1.ReadyCondition,
+								Status: metav1.ConditionFalse,
+							},
+						},
+					},
+				}
+				err = mockK8sClient.Create(context.Background(), machine2)
+				if err != nil {
+					return
+				}
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: "test-machine-1", Namespace: defaultNamespace}, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: "test-machine-2", Namespace: defaultNamespace}, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+			},
+			expectedError:       true,
+			expectedErrorString: util.ErrReconcileAgain.Error(),
+		},
 	}
 
 	for _, tt := range tests {
@@ -429,13 +576,15 @@ func TestAddMachineToLB(t *testing.T) {
 			// Create mock clients
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			mockK8sClient := mock.NewMockK8sClient(mockCtrl)
+			mockAkamClient := mock.NewMockAkamClient(mockCtrl)
 
 			// Set up the mocks
-			testcase.setupMocks(mockLinodeClient, mockK8sClient)
+			testcase.setupMocks(mockLinodeClient, mockAkamClient, mockK8sClient)
 
 			// Set the mock clients in the scope
 			testcase.clusterScope.LinodeClient = mockLinodeClient
 			testcase.clusterScope.Client = mockK8sClient
+			testcase.clusterScope.AkamaiDomainsClient = mockAkamClient
 
 			// Create a context with logger
 			ctx := t.Context()
