@@ -530,10 +530,10 @@ func TestAddMachineToLB(t *testing.T) {
 						Namespace: defaultNamespace,
 					},
 					Status: clusterv1.MachineStatus{
-						Conditions: []metav1.Condition{
+						Conditions: []clusterv1.Condition{
 							{
 								Type:   clusterv1.ReadyCondition,
-								Status: metav1.ConditionTrue,
+								Status: corev1.ConditionTrue,
 							},
 						},
 					},
@@ -548,10 +548,10 @@ func TestAddMachineToLB(t *testing.T) {
 						Namespace: defaultNamespace,
 					},
 					Status: clusterv1.MachineStatus{
-						Conditions: []metav1.Condition{
+						Conditions: []clusterv1.Condition{
 							{
 								Type:   clusterv1.ReadyCondition,
-								Status: metav1.ConditionFalse,
+								Status: corev1.ConditionTrue,
 							},
 						},
 					},
