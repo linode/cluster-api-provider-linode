@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -21,6 +22,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/util"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
 
@@ -329,7 +331,8 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machi
 		// For other linodeMachine, only process them if the CAPI machine is ready
 		logger := logr.FromContextOrDiscard(ctx)
 		logger.Info("skipping DNS entry creation for LinodeMachine as the CAPI machine is not ready", "LinodeMachine", machine.Name)
-		return nil, nil
+		// If not ready, return an error so we can requeue and try again later.
+		return nil, util.ErrReconcileAgain
 	}
 
 	options := []DNSOptions{}
@@ -367,17 +370,18 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 	})
 
 	firstMachine := true
+	var encounteredErrors []error
 	for _, eachMachine := range cscope.LinodeMachines.Items {
 		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec, subDomain, firstMachine)
 		firstMachine = false
 		if err != nil {
-			return nil, fmt.Errorf("failed to process LinodeMachine %s: %w", eachMachine.Name, err)
+			encounteredErrors = append(encounteredErrors, fmt.Errorf("failed to process LinodeMachine %s: %w", eachMachine.Name, err))
 		}
 		d.options = append(d.options, options...)
 	}
 	d.options = append(d.options, DNSOptions{subDomain, cscope.LinodeCluster.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
-	return d.options, nil
+	return d.options, errors.Join(encounteredErrors...)
 }
 
 // GetDomainID gets the domains linode id
