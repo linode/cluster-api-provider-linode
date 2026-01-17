@@ -366,7 +366,7 @@ S5CMD          ?= $(CACHE_BIN)/s5cmd
 KUSTOMIZE_VERSION        ?= v5.7.1
 
 # renovate: datasource=go depName=github.com/tilt-dev/ctlptl
-CTLPTL_VERSION           ?= v0.8.44
+CTLPTL_VERSION           ?= v0.9.0
 
 # renovate: datasource=github-tags depName=kubernetes-sigs/cluster-api
 CLUSTERCTL_VERSION       ?= v1.12.1
