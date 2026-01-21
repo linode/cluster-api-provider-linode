@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,20 +92,33 @@ func getMachineIPs(cscope *scope.ClusterScope) (ipv4IPs, ipv6IPs []string, err e
 	return ipv4IPs, ipv6IPs, nil
 }
 
-func resetAkamaiRecord(ctx context.Context, cscope *scope.ClusterScope, recordBody *dns.RecordBody, machineIPList []string, rootDomain string) error {
+func resetAkamaiRecord(ctx context.Context, cscope *scope.ClusterScope, recordResponse *dns.GetRecordResponse, machineIPList []string, rootDomain string) error {
 	freshEntries := make([]string, 0)
-	for _, ip := range recordBody.Target {
+	for _, ip := range recordResponse.Target {
 		ip = strings.Replace(ip, ":0:0:", "::", 8) //nolint:mnd // 8 for 8 octet
 		if slices.Contains(machineIPList, ip) {
 			freshEntries = append(freshEntries, ip)
 		}
 	}
 	if len(freshEntries) == 0 {
-		return cscope.AkamaiDomainsClient.DeleteRecord(ctx, recordBody, rootDomain)
-	} else {
-		recordBody.Target = freshEntries
-		return cscope.AkamaiDomainsClient.UpdateRecord(ctx, recordBody, rootDomain)
+		return cscope.AkamaiDomainsClient.DeleteRecord(ctx, dns.DeleteRecordRequest{
+			Zone:       rootDomain,
+			Name:       recordResponse.Name,
+			RecordType: recordResponse.RecordType,
+		})
 	}
+
+	recordResponse.Target = freshEntries
+	return cscope.AkamaiDomainsClient.UpdateRecord(ctx, dns.UpdateRecordRequest{
+		Record: &dns.RecordBody{
+			Name:       recordResponse.Name,
+			RecordType: recordResponse.RecordType,
+			TTL:        recordResponse.TTL,
+			Active:     recordResponse.Active,
+			Target:     recordResponse.Target,
+		},
+		Zone: rootDomain,
+	})
 }
 
 func deleteStaleAkamaiEntries(ctx context.Context, cscope *scope.ClusterScope) error {
@@ -118,27 +131,33 @@ func deleteStaleAkamaiEntries(ctx context.Context, cscope *scope.ClusterScope) e
 	fqdn := getSubDomain(cscope) + "." + rootDomain
 
 	// A record
-	aRecordBody, err := cscope.AkamaiDomainsClient.GetRecord(ctx, rootDomain, fqdn, "A")
+	aRecord, err := cscope.AkamaiDomainsClient.GetRecord(ctx, dns.GetRecordRequest{
+		Zone:       rootDomain,
+		Name:       fqdn,
+		RecordType: string(linodego.RecordTypeA)})
 	if err != nil {
 		if !strings.Contains(err.Error(), "Not Found") {
 			return err
 		}
 	}
-	if aRecordBody != nil {
-		if err := resetAkamaiRecord(ctx, cscope, aRecordBody, ipv4IPs, rootDomain); err != nil {
+	if aRecord != nil {
+		if err := resetAkamaiRecord(ctx, cscope, aRecord, ipv4IPs, rootDomain); err != nil {
 			return err
 		}
 	}
 
 	// AAAA record
-	aaaaRecordBody, err := cscope.AkamaiDomainsClient.GetRecord(ctx, rootDomain, fqdn, "AAAA")
+	aaaaRecord, err := cscope.AkamaiDomainsClient.GetRecord(ctx, dns.GetRecordRequest{
+		Zone:       rootDomain,
+		Name:       fqdn,
+		RecordType: string(linodego.RecordTypeAAAA)})
 	if err != nil {
 		if !strings.Contains(err.Error(), "Not Found") {
 			return err
 		}
 	}
-	if aaaaRecordBody != nil {
-		if err := resetAkamaiRecord(ctx, cscope, aaaaRecordBody, ipv6IPs, rootDomain); err != nil {
+	if aaaaRecord != nil {
+		if err := resetAkamaiRecord(ctx, cscope, aaaaRecord, ipv6IPs, rootDomain); err != nil {
 			return err
 		}
 	}
@@ -215,7 +234,10 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	fqdn := getSubDomain(cscope) + "." + rootDomain
 
 	// Get the record for the root domain and fqdn
-	recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(dnsEntry.DNSRecordType))
+	record, err := akaDNSClient.GetRecord(ctx, dns.GetRecordRequest{
+		Zone:       rootDomain,
+		Name:       fqdn,
+		RecordType: string(dnsEntry.DNSRecordType)})
 
 	if err != nil {
 		if !strings.Contains(err.Error(), "Not Found") {
@@ -228,10 +250,17 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 		// Create record
 		return createAkamaiEntry(ctx, akaDNSClient, dnsEntry, fqdn, rootDomain)
 	}
-	if recordBody == nil {
+
+	if record == nil {
 		return fmt.Errorf("akamai dns returned empty dns record")
 	}
-
+	recordBody := &dns.RecordBody{
+		Name:       record.Name,
+		RecordType: record.RecordType,
+		TTL:        record.TTL,
+		Active:     record.Active,
+		Target:     record.Target,
+	}
 	// if operation is delete and we got the record, delete it
 	if operation == "delete" {
 		return deleteAkamaiEntry(ctx, cscope, recordBody, dnsEntry)
@@ -251,19 +280,24 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	}
 	// Target doesn't exist so lets append it to the existing list and update it
 	recordBody.Target = append(recordBody.Target, dnsEntry.Target)
-	return akaDNSClient.UpdateRecord(ctx, recordBody, rootDomain)
+	return akaDNSClient.UpdateRecord(ctx, dns.UpdateRecordRequest{
+		Record: recordBody,
+		Zone:   rootDomain,
+	})
 }
 
 func createAkamaiEntry(ctx context.Context, client clients.AkamClient, dnsEntry DNSOptions, fqdn, rootDomain string) error {
 	return client.CreateRecord(
 		ctx,
-		&dns.RecordBody{
-			Name:       fqdn,
-			RecordType: string(dnsEntry.DNSRecordType),
-			TTL:        dnsEntry.DNSTTLSec,
-			Target:     []string{dnsEntry.Target},
+		dns.CreateRecordRequest{
+			Record: &dns.RecordBody{
+				Name:       fqdn,
+				RecordType: string(dnsEntry.DNSRecordType),
+				TTL:        dnsEntry.DNSTTLSec,
+				Target:     []string{dnsEntry.Target},
+			},
+			Zone: rootDomain,
 		},
-		rootDomain,
 	)
 }
 
@@ -289,9 +323,16 @@ func deleteAkamaiEntry(ctx context.Context, cscope *scope.ClusterScope, recordBo
 			// So we need to match that
 			strings.Replace(dnsEntry.Target, "::", ":0:0:", 8), //nolint:mnd // 8 for 8 octest
 		)
-		return cscope.AkamaiDomainsClient.UpdateRecord(ctx, recordBody, rootDomain)
+		return cscope.AkamaiDomainsClient.UpdateRecord(ctx, dns.UpdateRecordRequest{
+			Record: recordBody,
+			Zone:   rootDomain,
+		})
 	default:
-		return cscope.AkamaiDomainsClient.DeleteRecord(ctx, recordBody, rootDomain)
+		return cscope.AkamaiDomainsClient.DeleteRecord(ctx, dns.DeleteRecordRequest{
+			Zone:       rootDomain,
+			Name:       recordBody.Name,
+			RecordType: recordBody.RecordType,
+		})
 	}
 }
 
@@ -490,7 +531,12 @@ func IsAkamaiDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope) 
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
 	akaDNSClient := cscope.AkamaiDomainsClient
 	fqdn := getSubDomain(cscope) + "." + rootDomain
-	recordBody, err := akaDNSClient.GetRecord(ctx, rootDomain, fqdn, string(linodego.RecordTypeTXT))
+
+	recordBody, err := akaDNSClient.GetRecord(ctx, dns.GetRecordRequest{
+		Zone:       rootDomain,
+		Name:       fqdn,
+		RecordType: string(linodego.RecordTypeTXT),
+	})
 	if err != nil || recordBody == nil {
 		return false, fmt.Errorf("no txt record %s found", fqdn)
 	}

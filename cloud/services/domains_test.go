@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/linode/linodego"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,8 +88,8 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockAkamClient) {
-				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
-				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
+				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: nil,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
@@ -155,8 +155,8 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockAkamClient) {
-				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
-				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("create record failed")).AnyTimes()
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
+				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any()).Return(fmt.Errorf("create record failed")).AnyTimes()
 			},
 			expectedError: fmt.Errorf("create record failed"),
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
@@ -261,14 +261,14 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			},
 			listOfIPS: []string{"10.10.10.10", "10.10.10.11", "10.10.10.12"},
 			expects: func(mockClient *mock.MockAkamClient) {
-				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&dns.RecordBody{
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any()).Return(&dns.GetRecordResponse{
 					Name:       "test-machine",
 					RecordType: "A",
 					TTL:        30,
 					Target:     []string{"10.10.10.10"},
 				}, nil).AnyTimes()
-				mockClient.EXPECT().UpdateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockClient.EXPECT().UpdateRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: nil,
 			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
@@ -336,8 +336,8 @@ func TestRemoveIPFromEdgeDNS(t *testing.T) {
 			},
 			listOfIPS: []string{"10.10.10.10", "10.10.10.11", "10.10.10.12"},
 			expects: func(mockClient *mock.MockAkamClient) {
-				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("API Down")).AnyTimes()
-				mockClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("API Down")).AnyTimes()
+				mockClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: fmt.Errorf("API Down"),
 			expectedList:  []string{"10.10.10.10", "10.10.10.12"},
