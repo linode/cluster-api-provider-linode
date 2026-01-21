@@ -3,7 +3,7 @@ package clients
 import (
 	"context"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	awssigner "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-resty/resty/v2"
@@ -33,10 +33,10 @@ type AkamClient interface {
 }
 
 type AkamEdgeDNSClient interface {
-	GetRecord(context.Context, string, string, string) (*dns.RecordBody, error)
-	CreateRecord(context.Context, *dns.RecordBody, string, ...bool) error
-	UpdateRecord(context.Context, *dns.RecordBody, string, ...bool) error
-	DeleteRecord(context.Context, *dns.RecordBody, string, ...bool) error
+	GetRecord(context.Context, dns.GetRecordRequest) (*dns.GetRecordResponse, error)
+	CreateRecord(context.Context, dns.CreateRecordRequest) error
+	UpdateRecord(context.Context, dns.UpdateRecordRequest) error
+	DeleteRecord(context.Context, dns.DeleteRecordRequest) error
 }
 
 // LinodeInstanceClient defines the methods that interact with Linode's Instance service.

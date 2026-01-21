@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/linode/linodego"
@@ -460,9 +460,9 @@ func TestAddMachineToLB(t *testing.T) {
 				},
 			},
 			setupMocks: func(mockLinodeClient *mock.MockLinodeClient, mockDNSClient *mock.MockAkamClient, mockK8sClient *mock.MockK8sClient) {
-				mockDNSClient.EXPECT().GetRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&dns.RecordBody{}, nil).AnyTimes()
-				mockDNSClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockDNSClient.EXPECT().UpdateRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockDNSClient.EXPECT().GetRecord(gomock.Any(), gomock.Any()).Return(&dns.GetRecordResponse{}, nil).AnyTimes()
+				mockDNSClient.EXPECT().DeleteRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockDNSClient.EXPECT().UpdateRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: false,
 		},

@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/edgegrid"
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/session"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/edgegrid"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/session"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"

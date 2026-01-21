@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	dns "github.com/akamai/AkamaiOPEN-edgegrid-golang/v8/pkg/dns"
+	dns "github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	resty "github.com/go-resty/resty/v2"
@@ -1001,75 +1001,60 @@ func (m *MockAkamClient) EXPECT() *MockAkamClientMockRecorder {
 }
 
 // CreateRecord mocks base method.
-func (m *MockAkamClient) CreateRecord(arg0 context.Context, arg1 *dns.RecordBody, arg2 string, arg3 ...bool) error {
+func (m *MockAkamClient) CreateRecord(arg0 context.Context, arg1 dns.CreateRecordRequest) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "CreateRecord", varargs...)
+	ret := m.ctrl.Call(m, "CreateRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateRecord indicates an expected call of CreateRecord.
-func (mr *MockAkamClientMockRecorder) CreateRecord(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockAkamClientMockRecorder) CreateRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecord", reflect.TypeOf((*MockAkamClient)(nil).CreateRecord), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecord", reflect.TypeOf((*MockAkamClient)(nil).CreateRecord), arg0, arg1)
 }
 
 // DeleteRecord mocks base method.
-func (m *MockAkamClient) DeleteRecord(arg0 context.Context, arg1 *dns.RecordBody, arg2 string, arg3 ...bool) error {
+func (m *MockAkamClient) DeleteRecord(arg0 context.Context, arg1 dns.DeleteRecordRequest) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DeleteRecord", varargs...)
+	ret := m.ctrl.Call(m, "DeleteRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteRecord indicates an expected call of DeleteRecord.
-func (mr *MockAkamClientMockRecorder) DeleteRecord(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockAkamClientMockRecorder) DeleteRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRecord", reflect.TypeOf((*MockAkamClient)(nil).DeleteRecord), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRecord", reflect.TypeOf((*MockAkamClient)(nil).DeleteRecord), arg0, arg1)
 }
 
 // GetRecord mocks base method.
-func (m *MockAkamClient) GetRecord(arg0 context.Context, arg1, arg2, arg3 string) (*dns.RecordBody, error) {
+func (m *MockAkamClient) GetRecord(arg0 context.Context, arg1 dns.GetRecordRequest) (*dns.GetRecordResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRecord", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*dns.RecordBody)
+	ret := m.ctrl.Call(m, "GetRecord", arg0, arg1)
+	ret0, _ := ret[0].(*dns.GetRecordResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetRecord indicates an expected call of GetRecord.
-func (mr *MockAkamClientMockRecorder) GetRecord(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockAkamClientMockRecorder) GetRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecord", reflect.TypeOf((*MockAkamClient)(nil).GetRecord), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecord", reflect.TypeOf((*MockAkamClient)(nil).GetRecord), arg0, arg1)
 }
 
 // UpdateRecord mocks base method.
-func (m *MockAkamClient) UpdateRecord(arg0 context.Context, arg1 *dns.RecordBody, arg2 string, arg3 ...bool) error {
+func (m *MockAkamClient) UpdateRecord(arg0 context.Context, arg1 dns.UpdateRecordRequest) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateRecord", varargs...)
+	ret := m.ctrl.Call(m, "UpdateRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateRecord indicates an expected call of UpdateRecord.
-func (mr *MockAkamClientMockRecorder) UpdateRecord(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockAkamClientMockRecorder) UpdateRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRecord", reflect.TypeOf((*MockAkamClient)(nil).UpdateRecord), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRecord", reflect.TypeOf((*MockAkamClient)(nil).UpdateRecord), arg0, arg1)
 }
 
 // MockAkamEdgeDNSClient is a mock of AkamEdgeDNSClient interface.
@@ -1097,75 +1082,60 @@ func (m *MockAkamEdgeDNSClient) EXPECT() *MockAkamEdgeDNSClientMockRecorder {
 }
 
 // CreateRecord mocks base method.
-func (m *MockAkamEdgeDNSClient) CreateRecord(arg0 context.Context, arg1 *dns.RecordBody, arg2 string, arg3 ...bool) error {
+func (m *MockAkamEdgeDNSClient) CreateRecord(arg0 context.Context, arg1 dns.CreateRecordRequest) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "CreateRecord", varargs...)
+	ret := m.ctrl.Call(m, "CreateRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateRecord indicates an expected call of CreateRecord.
-func (mr *MockAkamEdgeDNSClientMockRecorder) CreateRecord(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockAkamEdgeDNSClientMockRecorder) CreateRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecord", reflect.TypeOf((*MockAkamEdgeDNSClient)(nil).CreateRecord), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecord", reflect.TypeOf((*MockAkamEdgeDNSClient)(nil).CreateRecord), arg0, arg1)
 }
 
 // DeleteRecord mocks base method.
-func (m *MockAkamEdgeDNSClient) DeleteRecord(arg0 context.Context, arg1 *dns.RecordBody, arg2 string, arg3 ...bool) error {
+func (m *MockAkamEdgeDNSClient) DeleteRecord(arg0 context.Context, arg1 dns.DeleteRecordRequest) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DeleteRecord", varargs...)
+	ret := m.ctrl.Call(m, "DeleteRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteRecord indicates an expected call of DeleteRecord.
-func (mr *MockAkamEdgeDNSClientMockRecorder) DeleteRecord(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockAkamEdgeDNSClientMockRecorder) DeleteRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRecord", reflect.TypeOf((*MockAkamEdgeDNSClient)(nil).DeleteRecord), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRecord", reflect.TypeOf((*MockAkamEdgeDNSClient)(nil).DeleteRecord), arg0, arg1)
 }
 
 // GetRecord mocks base method.
-func (m *MockAkamEdgeDNSClient) GetRecord(arg0 context.Context, arg1, arg2, arg3 string) (*dns.RecordBody, error) {
+func (m *MockAkamEdgeDNSClient) GetRecord(arg0 context.Context, arg1 dns.GetRecordRequest) (*dns.GetRecordResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRecord", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*dns.RecordBody)
+	ret := m.ctrl.Call(m, "GetRecord", arg0, arg1)
+	ret0, _ := ret[0].(*dns.GetRecordResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetRecord indicates an expected call of GetRecord.
-func (mr *MockAkamEdgeDNSClientMockRecorder) GetRecord(arg0, arg1, arg2, arg3 any) *gomock.Call {
+func (mr *MockAkamEdgeDNSClientMockRecorder) GetRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecord", reflect.TypeOf((*MockAkamEdgeDNSClient)(nil).GetRecord), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecord", reflect.TypeOf((*MockAkamEdgeDNSClient)(nil).GetRecord), arg0, arg1)
 }
 
 // UpdateRecord mocks base method.
-func (m *MockAkamEdgeDNSClient) UpdateRecord(arg0 context.Context, arg1 *dns.RecordBody, arg2 string, arg3 ...bool) error {
+func (m *MockAkamEdgeDNSClient) UpdateRecord(arg0 context.Context, arg1 dns.UpdateRecordRequest) error {
 	m.ctrl.T.Helper()
-	varargs := []any{arg0, arg1, arg2}
-	for _, a := range arg3 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateRecord", varargs...)
+	ret := m.ctrl.Call(m, "UpdateRecord", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateRecord indicates an expected call of UpdateRecord.
-func (mr *MockAkamEdgeDNSClientMockRecorder) UpdateRecord(arg0, arg1, arg2 any, arg3 ...any) *gomock.Call {
+func (mr *MockAkamEdgeDNSClientMockRecorder) UpdateRecord(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{arg0, arg1, arg2}, arg3...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRecord", reflect.TypeOf((*MockAkamEdgeDNSClient)(nil).UpdateRecord), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRecord", reflect.TypeOf((*MockAkamEdgeDNSClient)(nil).UpdateRecord), arg0, arg1)
 }
 
 // MockLinodeInstanceClient is a mock of LinodeInstanceClient interface.
