@@ -59,6 +59,18 @@
       ]
     },
     {
+      "groupName": "akamai-major",
+      "groupSlug": "akamai-go",
+      "matchDatasources": [
+        "go"
+      ],
+      matchUpdateTypes: "major",
+      "matchPackageNames": [
+        "github.com/akamai/AkamaiOPEN-edgegrid-golang/**"
+      ],
+      enabled: false,
+    },
+    {
       "groupName": "devbox",
       "groupSlug": "devbox",
       "matchDatasources": [
