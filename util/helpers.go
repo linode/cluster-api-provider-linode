@@ -61,6 +61,24 @@ func IsRetryableError(err error) bool {
 		linodego.ErrorFromError) || errors.Is(err, http.ErrHandlerTimeout) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF)
 }
 
+// IsAuthenticationError determines if the error is an authentication or authorization error (401/403)
+// These errors are terminal and should not be retried without user intervention
+func IsAuthenticationError(err error) bool {
+	return linodego.ErrHasStatus(err, http.StatusUnauthorized, http.StatusForbidden)
+}
+
+// IsTerminalError determines if the error is terminal and should not be retried.
+// Terminal errors include bad requests (400), authentication errors (401/403), and not found (404)
+func IsTerminalError(err error) bool {
+	return linodego.ErrHasStatus(
+		err,
+		http.StatusBadRequest,
+		http.StatusUnauthorized,
+		http.StatusForbidden,
+		http.StatusNotFound,
+	)
+}
+
 // GetInstanceID determines the instance ID from the ProviderID
 func GetInstanceID(providerID *string) (int, error) {
 	if providerID == nil {

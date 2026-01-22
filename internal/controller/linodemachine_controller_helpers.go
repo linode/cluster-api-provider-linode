@@ -68,15 +68,18 @@ var (
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
 )
 
-func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
+func retryIfTransient(err error) (ctrl.Result, error) {
+	// For known retryable errors (429, 5xx), use application-managed requeue
+	// to avoid log pollution and control retry timing
 	if util.IsRetryableError(err) {
 		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
 			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 		}
 		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 	}
-	logger.Error(err, "unknown Linode API error")
-	return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+	// For all other errors (terminal or unknown), return the error
+	// and let controller-runtime handle requeue with exponential backoff
+	return ctrl.Result{}, err
 }
 
 func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
