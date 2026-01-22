@@ -441,7 +441,10 @@ func DeleteNodesFromNB(ctx context.Context, logger logr.Logger, clusterScope *sc
 	for _, eachMachine := range clusterScope.LinodeMachines.Items {
 		instanceID, errorInstanceID := util.GetInstanceID(eachMachine.Spec.ProviderID)
 		if errorInstanceID != nil {
-			return errorInstanceID
+			// Skip machines without a ProviderID - they never had an instance
+			// created, so there's no corresponding node in the NodeBalancer
+			logger.Info("Skipping machine without ProviderID", "machine", eachMachine.Name)
+			continue
 		}
 
 		err := clusterScope.LinodeClient.DeleteNodeBalancerNode(

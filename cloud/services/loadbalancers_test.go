@@ -2155,7 +2155,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 			expectedError: errors.New("failed to delete node"),
 		},
 		{
-			name: "Error - GetInstanceID fails",
+			name: "Success - Skips machine with invalid ProviderID",
 			clusterScope: &scope.ClusterScope{
 				LinodeCluster: &infrav1alpha2.LinodeCluster{
 					ObjectMeta: metav1.ObjectMeta{
@@ -2176,19 +2176,58 @@ func TestDeleteNodeFromNB(t *testing.T) {
 					Items: []infrav1alpha2.LinodeMachine{
 						{
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("invalid-provider-id"), // Invalid provider ID
+								ProviderID: ptr.To("invalid-provider-id"), // Invalid provider ID - should be skipped
 							},
 						},
 					},
 				},
 			},
 			expects: func(mockLinodeClient *mock.MockLinodeClient) {
-				// No LinodeClient calls expected
+				// No LinodeClient calls expected - machine is skipped
 			},
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
 				// No K8s client calls expected
 			},
-			expectedError: errors.New("strconv.Atoi: parsing \"invalid-provider-id\": invalid syntax"),
+			expectedError: nil, // No error - machines without valid ProviderID are skipped
+		},
+		{
+			name: "Success - Skips machine with nil ProviderID",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						ControlPlaneEndpoint: clusterv1.APIEndpoint{
+							Host: "192.0.2.1",
+							Port: 6443,
+						},
+						Network: infrav1alpha2.NetworkSpec{
+							NodeBalancerID:                ptr.To(1234),
+							ApiserverNodeBalancerConfigID: ptr.To(5678),
+						},
+					},
+				},
+				LinodeMachines: infrav1alpha2.LinodeMachineList{
+					Items: []infrav1alpha2.LinodeMachine{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test-machine-no-provider",
+							},
+							Spec: infrav1alpha2.LinodeMachineSpec{
+								ProviderID: nil, // nil ProviderID - should be skipped
+							},
+						},
+					},
+				},
+			},
+			expects: func(mockLinodeClient *mock.MockLinodeClient) {
+				// No LinodeClient calls expected - machine is skipped
+			},
+			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
+				// No K8s client calls expected
+			},
+			expectedError: nil, // No error - machines without ProviderID are skipped
 		},
 	}
 	for _, tt := range tests {
