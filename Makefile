@@ -369,7 +369,7 @@ KUSTOMIZE_VERSION        ?= v5.7.1
 CTLPTL_VERSION           ?= v0.9.0
 
 # renovate: datasource=github-tags depName=kubernetes-sigs/cluster-api
-CLUSTERCTL_VERSION       ?= v1.12.1
+CLUSTERCTL_VERSION       ?= v1.12.2
 
 # renovate: datasource=go depName=elastic/crd-ref-docs
 CRD_REF_DOCS_VERSION     ?= v0.2.0
