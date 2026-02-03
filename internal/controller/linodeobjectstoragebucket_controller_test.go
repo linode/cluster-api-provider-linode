@@ -266,8 +266,8 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 				OneOf(
 					Path(Result("cannot purge bucket", func(ctx context.Context, mck Mock) {
 						_, err := reconciler.reconcile(ctx, &bScope)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(mck.Logs()).To(ContainSubstring("failed to purge all objects"))
+						Expect(err).To(HaveOccurred())
+						Expect(err.Error()).To(ContainSubstring("failed to purge all objects"))
 					})),
 				),
 			),

@@ -178,8 +178,13 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
-			// Only set failure reason if the error is not retryable.
-			if linodego.ErrHasStatus(err, http.StatusBadRequest) {
+			// Set specific failure reason for authentication errors
+			if util.IsAuthenticationError(err) {
+				failureReason = util.CredentialError
+			}
+
+			// Set failure status for terminal errors (400, 401, 403, 404)
+			if util.IsTerminalError(err) {
 				machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
 				machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
 				machineScope.LinodeMachine.SetCondition(metav1.Condition{
@@ -535,7 +540,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 	_, err := machineScope.LinodeClient.GetRegion(ctx, machineScope.LinodeMachine.Spec.Region)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to fetch region %s", machineScope.LinodeMachine.Spec.Region))
-		return retryIfTransient(err, logger)
+		return retryIfTransient(err)
 	}
 	imageName := reconciler.DefaultMachineControllerLinodeImage
 	if machineScope.LinodeMachine.Spec.Image != "" {
@@ -544,7 +549,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 	_, err = machineScope.LinodeClient.GetImage(ctx, imageName)
 	if err != nil {
 		logger.Error(err, fmt.Sprintf("Failed to fetch image %s", imageName))
-		return retryIfTransient(err, logger)
+		return retryIfTransient(err)
 	}
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightMetadataSupportConfigured,
@@ -559,7 +564,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 	createOpts, err := newCreateConfig(ctx, machineScope, r.GzipCompressionEnabled, logger)
 	if err != nil {
 		logger.Error(err, "Failed to create Linode machine InstanceCreateOptions")
-		return retryIfTransient(err, logger)
+		return retryIfTransient(err)
 	}
 
 	linodeInstance, retryAfter, err := createInstance(ctx, logger, machineScope, createOpts)
@@ -585,7 +590,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
-		return retryIfTransient(err, logger)
+		return retryIfTransient(err)
 	}
 
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
@@ -643,11 +648,11 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 		instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, instanceID)
 		if err != nil {
 			logger.Error(err, "Failed to get default instance configuration")
-			return retryIfTransient(err, logger)
+			return retryIfTransient(err)
 		}
 		if _, err := machineScope.LinodeClient.UpdateInstanceConfig(ctx, instanceID, instanceConfig.ID, configData); err != nil {
 			logger.Error(err, "Failed to update default instance configuration", "configuration", configData)
-			return retryIfTransient(err, logger)
+			return retryIfTransient(err)
 		}
 	}
 
@@ -729,7 +734,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 
 	var linodeInstance *linodego.Instance
 	if linodeInstance, err = machineScope.LinodeClient.GetInstance(ctx, instanceID); err != nil {
-		return retryIfTransient(err, logger)
+		return retryIfTransient(err)
 	}
 	// update the status
 	machineScope.LinodeMachine.Status.InstanceState = &linodeInstance.Status

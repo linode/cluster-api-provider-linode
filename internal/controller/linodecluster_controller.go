@@ -211,7 +211,7 @@ func (r *LinodeClusterReconciler) reconcile(
 			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
 		}
 		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
-		return retryIfTransient(err, logger)
+		return retryIfTransient(err)
 	}
 
 	return res, nil

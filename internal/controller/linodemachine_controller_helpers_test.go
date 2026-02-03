@@ -6,7 +6,9 @@ import (
 	"context"
 	"crypto/rand"
 	b64 "encoding/base64"
+	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"testing"
 
@@ -2723,6 +2725,111 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			} else {
 				require.NoError(t, err, "expected no error but got one")
 				assert.Equal(t, testcase.expectedAddrs, addrs)
+			}
+		})
+	}
+}
+
+func TestRetryIfTransient(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		err            error
+		expectRequeue  bool
+		expectError    bool
+		expectErrorMsg string
+	}{
+		{
+			name: "rate limit error (429) - should requeue without error",
+			err: &linodego.Error{
+				Code:    http.StatusTooManyRequests,
+				Message: "rate limited",
+			},
+			expectRequeue: true,
+			expectError:   false,
+		},
+		{
+			name: "internal server error (500) - should requeue without error",
+			err: &linodego.Error{
+				Code:    http.StatusInternalServerError,
+				Message: "internal error",
+			},
+			expectRequeue: true,
+			expectError:   false,
+		},
+		{
+			name: "bad gateway error (502) - should requeue without error",
+			err: &linodego.Error{
+				Code:    http.StatusBadGateway,
+				Message: "bad gateway",
+			},
+			expectRequeue: true,
+			expectError:   false,
+		},
+		{
+			name: "unauthorized error (401) - should return error",
+			err: &linodego.Error{
+				Code:    http.StatusUnauthorized,
+				Message: "Invalid Token",
+			},
+			expectRequeue:  false,
+			expectError:    true,
+			expectErrorMsg: "Invalid Token",
+		},
+		{
+			name: "forbidden error (403) - should return error",
+			err: &linodego.Error{
+				Code:    http.StatusForbidden,
+				Message: "Forbidden",
+			},
+			expectRequeue:  false,
+			expectError:    true,
+			expectErrorMsg: "Forbidden",
+		},
+		{
+			name: "bad request error (400) - should return error",
+			err: &linodego.Error{
+				Code:    http.StatusBadRequest,
+				Message: "bad request",
+			},
+			expectRequeue:  false,
+			expectError:    true,
+			expectErrorMsg: "bad request",
+		},
+		{
+			name: "not found error (404) - should return error",
+			err: &linodego.Error{
+				Code:    http.StatusNotFound,
+				Message: "not found",
+			},
+			expectRequeue:  false,
+			expectError:    true,
+			expectErrorMsg: "not found",
+		},
+		{
+			name:           "generic error - should return error",
+			err:            errors.New("some generic error"),
+			expectRequeue:  false,
+			expectError:    true,
+			expectErrorMsg: "some generic error",
+		},
+	}
+
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := retryIfTransient(testcase.err)
+
+			if testcase.expectError {
+				require.Error(t, err, "expected error but got nil")
+				assert.Contains(t, err.Error(), testcase.expectErrorMsg)
+				assert.True(t, result.IsZero(), "expected zero result for terminal errors")
+			} else {
+				require.NoError(t, err, "expected no error but got one")
+				assert.Positive(t, result.RequeueAfter, "expected requeue delay for retryable errors")
 			}
 		})
 	}
