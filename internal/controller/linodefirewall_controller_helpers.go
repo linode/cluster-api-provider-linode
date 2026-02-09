@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"net"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -38,7 +39,8 @@ const (
 )
 
 var (
-	errTooManyIPs = errors.New("too many IPs in this ACL, will exceed rules per firewall limit")
+	errTooManyIPs  = errors.New("too many IPs in this ACL, will exceed rules per firewall limit")
+	errNilFirewall = errors.New("nil error and nil firewall")
 )
 
 func findObjectsForObject(logger logr.Logger, tracedClient client.Client) handler.MapFunc {
@@ -120,47 +122,19 @@ func reconcileFirewall(
 
 		return err
 	}
-	var linodeFW *linodego.Firewall
 
-	switch fwScope.LinodeFirewall.Spec.FirewallID {
-	case nil:
-		logger.Info(fmt.Sprintf("Creating firewall %s", fwScope.LinodeFirewall.Name))
-		linodeFW, err = fwScope.LinodeClient.CreateFirewall(ctx, *fwConfig)
-		if err != nil {
-			logger.Info("Failed to create firewall", "error", err.Error())
-
-			return err
-		}
-		if linodeFW == nil {
-			err = errors.New("nil firewall")
-			logger.Error(err, "Created firewall is nil")
-
-			return err
-		}
-		fwScope.LinodeFirewall.Spec.FirewallID = util.Pointer(linodeFW.ID)
-	default:
-		logger.Info(fmt.Sprintf("Updating firewall %s", fwScope.LinodeFirewall.Name))
-		linodeFW, err = fwScope.LinodeClient.GetFirewall(ctx, *fwScope.LinodeFirewall.Spec.FirewallID)
-		if err != nil {
-			logger.Info("Failed to get firewall", "error", err.Error())
-
-			return err
-		}
-		if err = updateFirewall(ctx, fwScope.LinodeClient, linodeFW, fwConfig); err != nil {
-			logger.Info("Failed to update firewall", "error", err.Error())
-
-			return err
-		}
+	linodeFW, err := createOrUpdateFirewall(ctx, fwScope, fwConfig, logger)
+	if err != nil {
+		return err
 	}
 
 	// Need to make sure the firewall is appropriately enabled or disabled after
 	// create or update and the tags are properly set
-	var status linodego.FirewallStatus
-	if fwScope.LinodeFirewall.Spec.Enabled {
-		status = linodego.FirewallEnabled
-	} else {
+	status := linodego.FirewallEnabled
+	if !fwScope.LinodeFirewall.Spec.Enabled {
 		status = linodego.FirewallDisabled
 	}
+
 	if _, err = fwScope.LinodeClient.UpdateFirewall(
 		ctx,
 		linodeFW.ID,
@@ -176,17 +150,58 @@ func reconcileFirewall(
 	return nil
 }
 
-func updateFirewall(
-	ctx context.Context,
-	linodeClient clients.LinodeClient,
-	linodeFW *linodego.Firewall,
-	fwConfig *linodego.FirewallCreateOptions,
-) error {
-	if _, err := linodeClient.UpdateFirewallRules(ctx, linodeFW.ID, fwConfig.Rules); err != nil {
-		return err
-	}
+func createOrUpdateFirewall(ctx context.Context, fwScope *scope.FirewallScope, fwConfig *linodego.FirewallCreateOptions, logger logr.Logger) (*linodego.Firewall, error) {
+	var linodeFW *linodego.Firewall
+	var err error
+	switch fwScope.LinodeFirewall.Spec.FirewallID {
+	case nil:
+		logger.Info(fmt.Sprintf("Creating firewall %s", fwScope.LinodeFirewall.Name))
+		linodeFW, err = fwScope.LinodeClient.CreateFirewall(ctx, *fwConfig)
+		// Handle the edge case where API did create the firewall eventually after timing out on the client side
+		if linodego.ErrHasStatus(err, http.StatusBadRequest) && strings.Contains(err.Error(), "Label must be unique") {
+			logger.Error(err, "Failed to create firewall, received [400 BadRequest] response.")
 
-	return nil
+			// check if instance already exists
+			listFilter := util.Filter{Label: fwScope.LinodeFirewall.Name}
+			filter, errFilter := listFilter.String()
+			if errFilter != nil {
+				logger.Error(err, "Failed to create filter to list firewall")
+				return nil, err
+			}
+			firewalls, listErr := fwScope.LinodeClient.ListFirewalls(ctx, linodego.NewListOptions(1, filter))
+			if listErr != nil {
+				return nil, listErr
+			}
+			if len(firewalls) > 0 {
+				linodeFW = &firewalls[0]
+			}
+		} else if err != nil {
+			logger.Info("Failed to create firewall", "error", err.Error())
+
+			return nil, err
+		}
+		if linodeFW == nil {
+			return nil, errNilFirewall
+		}
+		fwScope.LinodeFirewall.Spec.FirewallID = util.Pointer(linodeFW.ID)
+	default:
+		logger.Info(fmt.Sprintf("Updating firewall %s", fwScope.LinodeFirewall.Name))
+		linodeFW, err = fwScope.LinodeClient.GetFirewall(ctx, *fwScope.LinodeFirewall.Spec.FirewallID)
+		if err != nil {
+			logger.Info("Failed to get firewall", "error", err.Error())
+
+			return nil, err
+		}
+		if linodeFW == nil {
+			return nil, errNilFirewall
+		}
+		if _, err = fwScope.LinodeClient.UpdateFirewallRules(ctx, linodeFW.ID, fwConfig.Rules); err != nil {
+			logger.Info("Failed to update firewall", "error", err.Error())
+
+			return nil, err
+		}
+	}
+	return linodeFW, nil
 }
 
 // chunkIPs takes a list of strings representing IPs and breaks them up into
