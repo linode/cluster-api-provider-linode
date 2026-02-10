@@ -387,7 +387,7 @@ ENVTEST_VERSION 	 ?= release-0.22
 CONTROLLER_TOOLS_VERSION ?= v0.19.0
 
 # renovate: datasource=github-tags depName=tilt-dev/tilt
-TILT_VERSION             ?= 0.36.0
+TILT_VERSION             ?= 0.36.3
 
 # renovate: datasource=github-tags depName=kubernetes-sigs/kind
 KIND_VERSION             ?= 0.31.0
