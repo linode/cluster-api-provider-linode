@@ -200,6 +200,27 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				}),
 			),
 			Path(
+				Call("able to continue on create conflict", func(ctx context.Context, mck Mock) {
+					linodeFW.Spec.InboundRules = inboundRules
+					linodeFW.Spec.FirewallID = nil
+					mck.LinodeClient.EXPECT().CreateFirewall(ctx, gomock.Any()).Return(nil, &linodego.Error{
+						Code:    http.StatusBadRequest,
+						Message: "Label must be unique",
+					})
+					mck.LinodeClient.EXPECT().ListFirewalls(ctx, gomock.Any()).Return([]linodego.Firewall{{
+						ID: 1,
+					}}, nil)
+					mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, nil)
+				}),
+				Result("success", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
+					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
+					Expect(mck.Logs()).NotTo(ContainSubstring("failed to create Firewall"))
+				}),
+			),
+			Path(
 				Call("unable to update", func(ctx context.Context, mck Mock) {
 					linodeFW.Spec.FirewallID = util.Pointer(1)
 					mck.LinodeClient.EXPECT().GetFirewall(ctx, 1).Return(&linodego.Firewall{

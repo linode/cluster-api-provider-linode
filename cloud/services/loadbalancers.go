@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -175,7 +176,31 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 		createConfig.FirewallID = firewallID
 	}
 
-	return clusterScope.LinodeClient.CreateNodeBalancer(ctx, createConfig)
+	nb, err := clusterScope.LinodeClient.CreateNodeBalancer(ctx, createConfig)
+	// Handle the edge case where API did create the NB eventually after timing out on the client side
+	if linodego.ErrHasStatus(err, http.StatusBadRequest) && strings.Contains(err.Error(), "Label must be unique") {
+		logger.Error(err, "Failed to create NodeBalancer, received [400 BadRequest] response.")
+
+		return getNBFromLabel(ctx, clusterScope, logger)
+	}
+	return nb, err
+}
+
+func getNBFromLabel(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) (*linodego.NodeBalancer, error) {
+	listFilter := util.Filter{Label: clusterScope.LinodeCluster.Name}
+	filter, errFilter := listFilter.String()
+	if errFilter != nil {
+		logger.Error(errFilter, "Failed to create filter to list NodeBalancers")
+		return nil, errFilter
+	}
+	nbs, listErr := clusterScope.LinodeClient.ListNodeBalancers(ctx, linodego.NewListOptions(1, filter))
+	if listErr != nil {
+		return nil, listErr
+	}
+	if len(nbs) > 0 {
+		return &nbs[0], nil
+	}
+	return nil, fmt.Errorf("no NodeBalancer found with label %s", clusterScope.LinodeCluster.Name)
 }
 
 // getSubnetID returns the subnetID of the first subnet in the LinodeVPC.

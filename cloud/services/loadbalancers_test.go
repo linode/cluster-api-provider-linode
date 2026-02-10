@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -109,6 +110,34 @@ func TestEnsureNodeBalancer(t *testing.T) {
 				mockClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Unable to get NodeBalancer"))
 			},
 			expectedError: fmt.Errorf("Unable to get NodeBalancer"),
+		},
+		{
+			name: "Success - Create NodeBalancer returns a conflict error",
+			clusterScope: &scope.ClusterScope{
+				LinodeCluster: &infrav1alpha2.LinodeCluster{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-cluster",
+						UID:  "test-uid",
+					},
+					Spec: infrav1alpha2.LinodeClusterSpec{},
+				},
+			},
+			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
+				mockClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).Return(nil, &linodego.Error{
+					Code:    http.StatusBadRequest,
+					Message: "Label must be unique",
+				})
+				mockClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{{
+					ID:    1234,
+					Label: ptr.To("test"),
+					Tags:  []string{"test-uid"},
+				}}, nil)
+			},
+			expectedNodeBalancer: &linodego.NodeBalancer{
+				ID:    1234,
+				Label: ptr.To("test"),
+				Tags:  []string{"test-uid"},
+			},
 		},
 		{
 			name: "Error - Create NodeBalancer returns an error",

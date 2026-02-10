@@ -74,6 +74,7 @@ type LinodeVPCClient interface {
 type LinodeNodeBalancerClient interface {
 	CreateNodeBalancer(ctx context.Context, opts linodego.NodeBalancerCreateOptions) (*linodego.NodeBalancer, error)
 	GetNodeBalancer(ctx context.Context, nodebalancerID int) (*linodego.NodeBalancer, error)
+	ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) ([]linodego.NodeBalancer, error)
 	ListNodeBalancerNodes(ctx context.Context, nodebalancerID int, configID int, opts *linodego.ListOptions) ([]linodego.NodeBalancerNode, error)
 	GetNodeBalancerConfig(ctx context.Context, nodebalancerID int, configID int) (*linodego.NodeBalancerConfig, error)
 	CreateNodeBalancerConfig(ctx context.Context, nodebalancerID int, opts linodego.NodeBalancerConfigCreateOptions) (*linodego.NodeBalancerConfig, error)
@@ -118,6 +119,7 @@ type LinodePlacementGroupClient interface {
 type LinodeFirewallClient interface {
 	CreateFirewall(ctx context.Context, opts linodego.FirewallCreateOptions) (*linodego.Firewall, error)
 	GetFirewall(ctx context.Context, firewallID int) (*linodego.Firewall, error)
+	ListFirewalls(ctx context.Context, options *linodego.ListOptions) ([]linodego.Firewall, error)
 	GetFirewallDevice(ctx context.Context, firewallID, deviceID int) (*linodego.FirewallDevice, error)
 	GetFirewallRules(ctx context.Context, firewallID int) (*linodego.FirewallRuleSet, error)
 	UpdateFirewall(ctx context.Context, firewallID int, opts linodego.FirewallUpdateOptions) (*linodego.Firewall, error)
