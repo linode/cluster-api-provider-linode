@@ -682,6 +682,21 @@ func (mr *MockLinodeClientMockRecorder) ListDomains(ctx, opts any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDomains", reflect.TypeOf((*MockLinodeClient)(nil).ListDomains), ctx, opts)
 }
 
+// ListFirewalls mocks base method.
+func (m *MockLinodeClient) ListFirewalls(ctx context.Context, options *linodego.ListOptions) ([]linodego.Firewall, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFirewalls", ctx, options)
+	ret0, _ := ret[0].([]linodego.Firewall)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFirewalls indicates an expected call of ListFirewalls.
+func (mr *MockLinodeClientMockRecorder) ListFirewalls(ctx, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFirewalls", reflect.TypeOf((*MockLinodeClient)(nil).ListFirewalls), ctx, options)
+}
+
 // ListInstanceConfigs mocks base method.
 func (m *MockLinodeClient) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.InstanceConfig, error) {
 	m.ctrl.T.Helper()
@@ -770,6 +785,21 @@ func (m *MockLinodeClient) ListNodeBalancerNodes(ctx context.Context, nodebalanc
 func (mr *MockLinodeClientMockRecorder) ListNodeBalancerNodes(ctx, nodebalancerID, configID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodeBalancerNodes", reflect.TypeOf((*MockLinodeClient)(nil).ListNodeBalancerNodes), ctx, nodebalancerID, configID, opts)
+}
+
+// ListNodeBalancers mocks base method.
+func (m *MockLinodeClient) ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) ([]linodego.NodeBalancer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNodeBalancers", ctx, opts)
+	ret0, _ := ret[0].([]linodego.NodeBalancer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListNodeBalancers indicates an expected call of ListNodeBalancers.
+func (mr *MockLinodeClientMockRecorder) ListNodeBalancers(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodeBalancers", reflect.TypeOf((*MockLinodeClient)(nil).ListNodeBalancers), ctx, opts)
 }
 
 // ListPlacementGroups mocks base method.
@@ -1668,6 +1698,21 @@ func (mr *MockLinodeNodeBalancerClientMockRecorder) ListNodeBalancerNodes(ctx, n
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodeBalancerNodes", reflect.TypeOf((*MockLinodeNodeBalancerClient)(nil).ListNodeBalancerNodes), ctx, nodebalancerID, configID, opts)
 }
 
+// ListNodeBalancers mocks base method.
+func (m *MockLinodeNodeBalancerClient) ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) ([]linodego.NodeBalancer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNodeBalancers", ctx, opts)
+	ret0, _ := ret[0].([]linodego.NodeBalancer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListNodeBalancers indicates an expected call of ListNodeBalancers.
+func (mr *MockLinodeNodeBalancerClientMockRecorder) ListNodeBalancers(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodeBalancers", reflect.TypeOf((*MockLinodeNodeBalancerClient)(nil).ListNodeBalancers), ctx, opts)
+}
+
 // MockLinodeObjectStorageClient is a mock of LinodeObjectStorageClient interface.
 type MockLinodeObjectStorageClient struct {
 	ctrl     *gomock.Controller
@@ -2145,6 +2190,21 @@ func (m *MockLinodeFirewallClient) GetFirewallRules(ctx context.Context, firewal
 func (mr *MockLinodeFirewallClientMockRecorder) GetFirewallRules(ctx, firewallID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFirewallRules", reflect.TypeOf((*MockLinodeFirewallClient)(nil).GetFirewallRules), ctx, firewallID)
+}
+
+// ListFirewalls mocks base method.
+func (m *MockLinodeFirewallClient) ListFirewalls(ctx context.Context, options *linodego.ListOptions) ([]linodego.Firewall, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFirewalls", ctx, options)
+	ret0, _ := ret[0].([]linodego.Firewall)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFirewalls indicates an expected call of ListFirewalls.
+func (mr *MockLinodeFirewallClientMockRecorder) ListFirewalls(ctx, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFirewalls", reflect.TypeOf((*MockLinodeFirewallClient)(nil).ListFirewalls), ctx, options)
 }
 
 // UpdateFirewall mocks base method.

@@ -1118,6 +1118,31 @@ func (_d LinodeClientWithTracing) ListDomains(ctx context.Context, opts *linodeg
 	return _d.LinodeClient.ListDomains(ctx, opts)
 }
 
+// ListFirewalls implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) ListFirewalls(ctx context.Context, options *linodego.ListOptions) (fa1 []linodego.Firewall, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListFirewalls")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":     ctx,
+				"options": options}, map[string]interface{}{
+				"fa1": fa1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListFirewalls(ctx, options)
+}
+
 // ListInstanceConfigs implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListInstanceConfigs(ctx context.Context, linodeID int, opts *linodego.ListOptions) (ia1 []linodego.InstanceConfig, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListInstanceConfigs")
@@ -1273,6 +1298,31 @@ func (_d LinodeClientWithTracing) ListNodeBalancerNodes(ctx context.Context, nod
 		_span.End()
 	}()
 	return _d.LinodeClient.ListNodeBalancerNodes(ctx, nodebalancerID, configID, opts)
+}
+
+// ListNodeBalancers implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) ListNodeBalancers(ctx context.Context, opts *linodego.ListOptions) (na1 []linodego.NodeBalancer, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListNodeBalancers")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":  ctx,
+				"opts": opts}, map[string]interface{}{
+				"na1": na1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListNodeBalancers(ctx, opts)
 }
 
 // ListPlacementGroups implements _sourceClients.LinodeClient
