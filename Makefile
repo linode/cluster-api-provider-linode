@@ -371,7 +371,7 @@ CTLPTL_VERSION           ?= v0.9.0
 # renovate: datasource=github-tags depName=kubernetes-sigs/cluster-api
 CLUSTERCTL_VERSION       ?= v1.12.2
 
-# renovate: datasource=go depName=elastic/crd-ref-docs
+# renovate: datasource=go depName=github.com/elastic/crd-ref-docs
 CRD_REF_DOCS_VERSION     ?= v0.2.0
 
 # renovate: datasource=github-tags depName=kubernetes/kubernetes
@@ -392,7 +392,7 @@ TILT_VERSION             ?= 0.36.3
 # renovate: datasource=github-tags depName=kubernetes-sigs/kind
 KIND_VERSION             ?= 0.31.0
 
-# renovate: datasource=go depName=kyverno/chainsaw
+# renovate: datasource=go depName=github.com/kyverno/chainsaw
 CHAINSAW_VERSION         ?= v0.2.13
 
 # renovate: datasource=go depName=go.uber.org/nilaway
