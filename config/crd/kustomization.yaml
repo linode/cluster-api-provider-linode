@@ -42,6 +42,8 @@ patches:
 #- path: patches/webhook_in_linodefirewalls.yaml
 #- path: patches/webhook_in_addresssets.yaml
 #- path: patches/webhook_in_firewallrules.yaml
+#- patches/webhook_in_linodeclusters.yaml
+#- patches/webhook_in_linodemachines.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 - path: patches/capicontract_in_linodeclusters.yaml
@@ -66,6 +68,8 @@ patches:
 #- path: patches/cainjection_in_linodefirewalls.yaml
 #- path: patches/cainjection_in_addresssets.yaml
 #- path: patches/cainjection_in_firewallrules.yaml
+#- patches/cainjection_in_linodeclusters.yaml
+#- patches/cainjection_in_linodemachines.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [VALIDATION]

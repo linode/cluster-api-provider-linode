@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: LinodeCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: linodecluster
+    app.kubernetes.io/instance: linodecluster-sample
+    app.kubernetes.io/part-of: cluster-api-provider-linode
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-provider-linode
+  name: linodecluster-sample
+spec:
+  # TODO(user): Add fields here

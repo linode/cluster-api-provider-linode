@@ -9,4 +9,6 @@ resources:
 - infrastructure_v1alpha2_linodefirewall.yaml
 - infrastructure_v1alpha2_addressset.yaml
 - infrastructure_v1alpha2_firewallrule.yaml
+- infrastructure_v1beta1_linodecluster.yaml
+- infrastructure_v1beta1_linodemachine.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
