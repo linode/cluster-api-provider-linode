@@ -30,7 +30,6 @@ import (
 	"github.com/linode/linodego"
 	"go4.org/netipx"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -79,8 +78,7 @@ type linodeVPCValidator struct {
 
 // SetupLinodeVPCWebhookWithManager will setup the manager to manage the webhooks
 func SetupLinodeVPCWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&infrav1alpha2.LinodeVPC{}).
+	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeVPC{}).
 		WithValidator(&linodeVPCValidator{Client: mgr.GetClient()}).
 		Complete()
 }
@@ -88,11 +86,7 @@ func SetupLinodeVPCWebhookWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodevpc,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodevpcs,verbs=create,versions=v1alpha2,name=validation.linodevpc.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
-	}
+func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, vpc *infrav1alpha2.LinodeVPC) (admission.Warnings, error) {
 	spec := vpc.Spec
 	linodevpclog.Info("validate create", "name", vpc.Name)
 
@@ -117,24 +111,16 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeVPCValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	old, ok := oldObj.(*infrav1alpha2.LinodeVPC)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
-	}
-	linodevpclog.Info("validate update", "name", old.Name)
+func (r *linodeVPCValidator) ValidateUpdate(_ context.Context, _, newVPC *infrav1alpha2.LinodeVPC) (admission.Warnings, error) {
+	linodevpclog.Info("validate update", "name", newVPC.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeVPCValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	c, ok := obj.(*infrav1alpha2.LinodeVPC)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeVPC Resource")
-	}
-	linodevpclog.Info("validate delete", "name", c.Name)
+func (r *linodeVPCValidator) ValidateDelete(_ context.Context, vpc *infrav1alpha2.LinodeVPC) (admission.Warnings, error) {
+	linodevpclog.Info("validate delete", "name", vpc.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil

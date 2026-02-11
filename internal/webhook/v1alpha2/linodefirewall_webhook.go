@@ -18,15 +18,12 @@ package v1alpha2
 
 import (
 	"context"
-	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -36,7 +33,7 @@ var linodefirewalllog = logf.Log.WithName("linodefirewall-resource")
 
 // SetupLinodeFirewallWebhookWithManager registers the webhook for LinodeFirewall in the manager.
 func SetupLinodeFirewallWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(&infrav1alpha2.LinodeFirewall{}).
+	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeFirewall{}).
 		WithValidator(&LinodeFirewallCustomValidator{}).
 		Complete()
 }
@@ -54,14 +51,8 @@ type LinodeFirewallCustomValidator struct {
 	// TODO (user):  Add more fields as needed for validation
 }
 
-var _ webhook.CustomValidator = &LinodeFirewallCustomValidator{}
-
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type LinodeFirewall.
-func (v *LinodeFirewallCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	linodefirewall, ok := obj.(*infrav1alpha2.LinodeFirewall)
-	if !ok {
-		return nil, fmt.Errorf("expected a LinodeFirewall object but got %T", obj)
-	}
+func (v *LinodeFirewallCustomValidator) ValidateCreate(_ context.Context, linodefirewall *infrav1alpha2.LinodeFirewall) (admission.Warnings, error) {
 	linodefirewalllog.Info("Validation for LinodeFirewall upon creation", "name", linodefirewall.GetName())
 
 	var errs field.ErrorList
@@ -78,23 +69,15 @@ func (v *LinodeFirewallCustomValidator) ValidateCreate(ctx context.Context, obj 
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type LinodeFirewall.
-func (v *LinodeFirewallCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	linodefirewall, ok := newObj.(*infrav1alpha2.LinodeFirewall)
-	if !ok {
-		return nil, fmt.Errorf("expected a LinodeFirewall object for the newObj but got %T", newObj)
-	}
-	linodefirewalllog.Info("Validation for LinodeFirewall upon update", "name", linodefirewall.GetName())
+func (v *LinodeFirewallCustomValidator) ValidateUpdate(_ context.Context, _, newFW *infrav1alpha2.LinodeFirewall) (admission.Warnings, error) {
+	linodefirewalllog.Info("Validation for LinodeFirewall upon update", "name", newFW.GetName())
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type LinodeFirewall.
-func (v *LinodeFirewallCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	linodefirewall, ok := obj.(*infrav1alpha2.LinodeFirewall)
-	if !ok {
-		return nil, fmt.Errorf("expected a LinodeFirewall object but got %T", obj)
-	}
+func (v *LinodeFirewallCustomValidator) ValidateDelete(_ context.Context, linodefirewall *infrav1alpha2.LinodeFirewall) (admission.Warnings, error) {
 	linodefirewalllog.Info("Validation for LinodeFirewall upon deletion", "name", linodefirewall.GetName())
 
 	// TODO(user): fill in your validation logic upon object deletion.

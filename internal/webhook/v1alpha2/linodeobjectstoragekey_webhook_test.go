@@ -244,7 +244,7 @@ func TestLinodeObjectStorageKeyDefault(t *testing.T) {
 		{"no namespace", infrav1alpha2.GeneratedSecret{Name: "secret"}, "secret", "keyns"},
 	}
 
-	defaulter := LinodeObjectStorageKeyDefaulter{}
+	defaulter := LinodeObjectStorageKeyCustomDefaulter{}
 
 	for _, tt := range tests {
 		testcase := tt

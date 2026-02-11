@@ -21,7 +21,6 @@ import (
 	"slices"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -41,8 +40,7 @@ type linodeClusterValidator struct {
 
 // SetupLinodeClusterWebhookWithManager registers the webhook for LinodeCluster in the manager.
 func SetupLinodeClusterWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&infrav1alpha2.LinodeCluster{}).
+	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeCluster{}).
 		WithValidator(&linodeClusterValidator{Client: mgr.GetClient()}).
 		Complete()
 }
@@ -50,11 +48,7 @@ func SetupLinodeClusterWebhookWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=create,versions=v1alpha2,name=validation.linodecluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	cluster, ok := obj.(*infrav1alpha2.LinodeCluster)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
-	}
+func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
 	spec := cluster.Spec
 	linodeclusterlog.Info("validate create", "name", cluster.Name)
 
@@ -79,24 +73,16 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, obj runtime
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeClusterValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	old, ok := oldObj.(*infrav1alpha2.LinodeCluster)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
-	}
-	linodeclusterlog.Info("validate update", "name", old.Name)
+func (r *linodeClusterValidator) ValidateUpdate(_ context.Context, _, newCluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
+	linodeclusterlog.Info("validate update", "name", newCluster.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeClusterValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	c, ok := obj.(*infrav1alpha2.LinodeCluster)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
-	}
-	linodeclusterlog.Info("validate delete", "name", c.Name)
+func (r *linodeClusterValidator) ValidateDelete(_ context.Context, cluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
+	linodeclusterlog.Info("validate delete", "name", cluster.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil

@@ -384,7 +384,7 @@ KUBEBUILDER_VERSION      ?= v4.11.1
 ENVTEST_VERSION 	 ?= release-0.22
 
 # renovate: datasource=go depName=sigs.k8s.io/controller-tools
-CONTROLLER_TOOLS_VERSION ?= v0.19.0
+CONTROLLER_TOOLS_VERSION ?= v0.20.0
 
 # renovate: datasource=github-tags depName=tilt-dev/tilt
 TILT_VERSION             ?= 0.36.3
@@ -411,7 +411,7 @@ GOWRAP_VERSION           ?= v1.4.3
 S5CMD_VERSION            ?= v2.3.0
 
 # renovate: datasource=go depName=k8s.io/code-generator
-CONVERSION_GEN_VERSION   ?= v0.34.3
+CONVERSION_GEN_VERSION   ?= v0.35.1
 
 # renovate: datasource=github-tags depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION    ?= v2.8.0
