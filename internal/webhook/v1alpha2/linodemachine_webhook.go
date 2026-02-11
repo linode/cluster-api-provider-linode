@@ -24,7 +24,6 @@ import (
 	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -44,8 +43,7 @@ type linodeMachineValidator struct {
 
 // SetupLinodeMachineWebhookWithManager registers the webhook for LinodeMachine in the manager.
 func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&infrav1alpha2.LinodeMachine{}).
+	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeMachine{}).
 		WithValidator(&linodeMachineValidator{Client: mgr.GetClient()}).
 		Complete()
 }
@@ -53,11 +51,7 @@ func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodemachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodemachines,verbs=create,versions=v1alpha2,name=validation.linodemachine.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	machine, ok := obj.(*infrav1alpha2.LinodeMachine)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
-	}
+func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, machine *infrav1alpha2.LinodeMachine) (admission.Warnings, error) {
 	spec := machine.Spec
 	linodemachinelog.Info("validate create", "name", machine.Name)
 
@@ -81,24 +75,16 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, obj runtime
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeMachineValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	old, ok := oldObj.(*infrav1alpha2.LinodeMachine)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeMachine Resource")
-	}
-	linodemachinelog.Info("validate update", "name", old.Name)
+func (r *linodeMachineValidator) ValidateUpdate(_ context.Context, _, newMachine *infrav1alpha2.LinodeMachine) (admission.Warnings, error) {
+	linodemachinelog.Info("validate update", "name", newMachine.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeMachineValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	c, ok := obj.(*infrav1alpha2.LinodeMachine)
-	if !ok {
-		return nil, apierrors.NewBadRequest("expected a LinodeCluster Resource")
-	}
-	linodemachinelog.Info("validate delete", "name", c.Name)
+func (r *linodeMachineValidator) ValidateDelete(_ context.Context, machine *infrav1alpha2.LinodeMachine) (admission.Warnings, error) {
+	linodemachinelog.Info("validate delete", "name", machine.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil

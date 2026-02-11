@@ -25,13 +25,11 @@ import (
 
 	"github.com/linode/linodego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -43,8 +41,7 @@ var linodeplacementgrouplog = logf.Log.WithName("linodeplacementgroup-resource")
 
 // SetupLinodePlacementGroupWebhookWithManager registers the webhook for LinodePlacementGroup in the manager.
 func SetupLinodePlacementGroupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&infrav1alpha2.LinodePlacementGroup{}).
+	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodePlacementGroup{}).
 		WithValidator(&LinodePlacementGroupCustomValidator{
 			Client: mgr.GetClient(),
 		}).
@@ -58,14 +55,8 @@ type LinodePlacementGroupCustomValidator struct {
 	Client client.Client
 }
 
-var _ webhook.CustomValidator = &LinodePlacementGroupCustomValidator{}
-
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type LinodePlacementGroup.
-func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	pg, ok := obj.(*infrav1alpha2.LinodePlacementGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected a LinodePlacementGroup object but got %T", obj)
-	}
+func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context, pg *infrav1alpha2.LinodePlacementGroup) (admission.Warnings, error) {
 	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon creation", "name", pg.GetName())
 
 	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, v.Client, pg.Spec.CredentialsRef,
@@ -88,12 +79,8 @@ func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type LinodePlacementGroup.
-func (v *LinodePlacementGroupCustomValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	linodeplacementgroup, ok := newObj.(*infrav1alpha2.LinodePlacementGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected a LinodePlacementGroup object for the newObj but got %T", newObj)
-	}
-	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon update", "name", linodeplacementgroup.GetName())
+func (v *LinodePlacementGroupCustomValidator) ValidateUpdate(_ context.Context, _, newPG *infrav1alpha2.LinodePlacementGroup) (admission.Warnings, error) {
+	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon update", "name", newPG.GetName())
 
 	// TODO(user): fill in your validation logic upon object update.
 
@@ -101,11 +88,7 @@ func (v *LinodePlacementGroupCustomValidator) ValidateUpdate(ctx context.Context
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type LinodePlacementGroup.
-func (v *LinodePlacementGroupCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	linodeplacementgroup, ok := obj.(*infrav1alpha2.LinodePlacementGroup)
-	if !ok {
-		return nil, fmt.Errorf("expected a LinodePlacementGroup object but got %T", obj)
-	}
+func (v *LinodePlacementGroupCustomValidator) ValidateDelete(_ context.Context, linodeplacementgroup *infrav1alpha2.LinodePlacementGroup) (admission.Warnings, error) {
 	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon deletion", "name", linodeplacementgroup.GetName())
 
 	// TODO(user): fill in your validation logic upon object deletion.

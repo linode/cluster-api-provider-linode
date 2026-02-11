@@ -30,7 +30,7 @@ var linodemachinetemplatelog = logf.Log.WithName("linodemachinetemplate-resource
 
 // SetupLinodeMachineTemplateWebhookWithManager registers the webhook for LinodeMachineTemplate in the manager.
 func SetupLinodeMachineTemplateWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(&infrav1alpha2.LinodeMachineTemplate{}).
+	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeMachineTemplate{}).
 		Complete()
 }
 

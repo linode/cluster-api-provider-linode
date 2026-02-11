@@ -30,6 +30,6 @@ var linodeclustertemplatelog = logf.Log.WithName("linodeclustertemplate-resource
 
 // SetupLinodeClusterTemplateWebhookWithManager registers the webhook for LinodeClusterTemplate in the manager.
 func SetupLinodeClusterTemplateWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).For(&infrav1alpha2.LinodeClusterTemplate{}).
+	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeClusterTemplate{}).
 		Complete()
 }
