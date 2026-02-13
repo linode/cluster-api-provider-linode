@@ -1325,6 +1325,11 @@ func (in *LinodeObjectStorageBucketStatus) DeepCopyInto(out *LinodeObjectStorage
 		*out = new(string)
 		**out = **in
 	}
+	if in.FailureReason != nil {
+		in, out := &in.FailureReason, &out.FailureReason
+		*out = new(string)
+		**out = **in
+	}
 	if in.Hostname != nil {
 		in, out := &in.Hostname, &out.Hostname
 		*out = new(string)
@@ -1455,6 +1460,11 @@ func (in *LinodeObjectStorageKeyStatus) DeepCopyInto(out *LinodeObjectStorageKey
 	}
 	if in.FailureMessage != nil {
 		in, out := &in.FailureMessage, &out.FailureMessage
+		*out = new(string)
+		**out = **in
+	}
+	if in.FailureReason != nil {
+		in, out := &in.FailureReason, &out.FailureReason
 		*out = new(string)
 		**out = **in
 	}

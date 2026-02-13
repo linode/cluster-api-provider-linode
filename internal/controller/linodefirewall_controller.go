@@ -28,7 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -52,7 +52,7 @@ import (
 // LinodeFirewallReconciler reconciles a LinodeFirewall object
 type LinodeFirewallReconciler struct {
 	client.Client
-	Recorder           record.EventRecorder
+	Recorder           events.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
 	ReconcileTimeout   time.Duration
@@ -140,12 +140,22 @@ func (r *LinodeFirewallReconciler) reconcile(
 			fwScope.LinodeFirewall.Status.FailureReason = util.Pointer(failureReason)
 			fwScope.LinodeFirewall.Status.FailureMessage = util.Pointer(err.Error())
 			fwScope.LinodeFirewall.SetCondition(metav1.Condition{
-				Type:    string(clusterv1.ReadyCondition),
+				Type:    clusterv1.ReadyCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  string(failureReason),
 				Message: err.Error(),
 			})
-			r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
+			r.Recorder.Eventf(
+				fwScope.LinodeFirewall,
+				nil,
+				corev1.EventTypeWarning,
+				string(failureReason),
+				"Reconcile",
+				"%s/%s reconciliation failed: %s",
+				fwScope.LinodeFirewall.Namespace,
+				fwScope.LinodeFirewall.Name,
+				err.Error(),
+			)
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodeFirewall changes.
@@ -177,43 +187,61 @@ func (r *LinodeFirewallReconciler) reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	action := "update"
+	action := "UpdateFirewall"
 	if fwScope.LinodeFirewall.Spec.FirewallID != nil {
 		failureReason = infrav1alpha2.UpdateFirewallError
 		logger = logger.WithValues("fwID", *fwScope.LinodeFirewall.Spec.FirewallID)
 	} else {
-		action = "create"
+		action = "CreateFirewall"
 		failureReason = infrav1alpha2.CreateFirewallError
 		if err = fwScope.AddCredentialsRefFinalizer(ctx); err != nil {
 			logger.Error(err, "failed to update credentials secret")
 			fwScope.LinodeFirewall.SetCondition(metav1.Condition{
-				Type:    string(clusterv1.ReadyCondition),
+				Type:    clusterv1.ReadyCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  string(failureReason),
 				Message: err.Error(),
 			})
-			r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
-
+			r.Recorder.Eventf(
+				fwScope.LinodeFirewall,
+				nil,
+				corev1.EventTypeWarning,
+				string(failureReason),
+				action,
+				"%s/%s reconciliation failed: %s",
+				fwScope.LinodeFirewall.Namespace,
+				fwScope.LinodeFirewall.Name,
+				err.Error(),
+			)
 			return ctrl.Result{}, nil
 		}
 	}
 	if err = reconcileFirewall(ctx, r.Client, fwScope, logger); err != nil {
-		logger.Error(err, fmt.Sprintf("failed to %s Firewall", action))
+		logger.Error(err, fmt.Sprintf("%s failed", action))
 		fwScope.LinodeFirewall.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  string(failureReason),
 			Message: err.Error(),
 		})
-		r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeWarning, string(failureReason), err.Error())
-
+		r.Recorder.Eventf(
+			fwScope.LinodeFirewall,
+			nil,
+			corev1.EventTypeWarning,
+			string(failureReason),
+			action,
+			"%s/%s reconciliation failed: %s",
+			fwScope.LinodeFirewall.Namespace,
+			fwScope.LinodeFirewall.Name,
+			err.Error(),
+		)
 		switch {
 		case errors.Is(err, errTooManyIPs):
 			// Cannot reconcile firewall with too many ips, wait for an update to the spec
 			return ctrl.Result{}, nil
-		case util.IsRetryableError(err) && !reconciler.HasStaleCondition(fwScope.LinodeFirewall.GetCondition(string(clusterv1.ReadyCondition)),
+		case util.IsRetryableError(err) && !reconciler.HasStaleCondition(fwScope.LinodeFirewall.GetCondition(clusterv1.ReadyCondition),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultFWControllerReconcileTimeout)):
-			logger.Info(fmt.Sprintf("re-queuing Firewall %s", action))
+			logger.Info(fmt.Sprintf("%s failed, requeuing", action))
 
 			return ctrl.Result{RequeueAfter: reconciler.DefaultFWControllerReconcilerDelay}, nil
 		}
@@ -221,11 +249,6 @@ func (r *LinodeFirewallReconciler) reconcile(
 		return ctrl.Result{}, err
 	}
 
-	if action == "create" && fwScope.LinodeFirewall.Spec.FirewallID != nil {
-		r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeNormal, "Created", fmt.Sprintf("Created Firewall %d", *fwScope.LinodeFirewall.Spec.FirewallID))
-	} else {
-		r.Recorder.Event(fwScope.LinodeFirewall, corev1.EventTypeNormal, "Updated", fmt.Sprintf("Updated Firewall %d", *fwScope.LinodeFirewall.Spec.FirewallID))
-	}
 	fwScope.LinodeFirewall.Status.Ready = true
 
 	return ctrl.Result{}, nil
@@ -255,7 +278,7 @@ func (r *LinodeFirewallReconciler) reconcileDelete(
 		logger.Error(err, "failed to delete Firewall")
 
 		if fwScope.LinodeFirewall.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultFWControllerReconcileTimeout)).After(time.Now()) {
-			logger.Info("re-queuing Firewall deletion")
+			logger.Info("DeleteFirewall failed, requeuing")
 
 			return ctrl.Result{RequeueAfter: reconciler.DefaultFWControllerReconcilerDelay}, nil
 		}

@@ -104,7 +104,7 @@ var _ = Describe("controller suite", Label("suite"), func() {
 			mck.K8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).Return(nil)
 		}),
 		Result("result", func(ctx context.Context, mck Mock) {
-			mck.recorder.Event(nil, "", "", "event")
+			mck.recorder.Eventf(nil, nil, "event", "reason", "action", "message")
 			err := mck.K8sClient.Get(ctx, client.ObjectKey{Namespace: "default", Name: "myobj"}, nil)
 			Expect(err).NotTo(HaveOccurred())
 		}),
@@ -117,16 +117,16 @@ var _ = Describe("controller suite with events/logs", Label("suite"), func() {
 	suite.Run(
 		OneOf(
 			Path(Call("call1", func(_ context.Context, mck Mock) {
-				mck.Recorder().Event(nil, "", "", "+")
+				mck.Recorder().Eventf(nil, nil, "", "", "", "+")
 				mck.Logger().Info("+")
 			})),
 			Path(Call("call2", func(_ context.Context, mck Mock) {
-				mck.Recorder().Event(nil, "", "", "+")
+				mck.Recorder().Eventf(nil, nil, "", "", "", "+")
 				mck.Logger().Info("+")
 			})),
 		),
 		Result("result", func(_ context.Context, mck Mock) {
-			mck.Recorder().Event(nil, "", "", "+")
+			mck.Recorder().Eventf(nil, nil, "", "", "", "+")
 			mck.Logger().Info("+")
 
 			Expect(strings.Count(mck.Events(), "+")).To(Equal(2))

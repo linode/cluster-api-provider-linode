@@ -88,6 +88,12 @@ type LinodeObjectStorageBucketStatus struct {
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
+	// failureReason will be set in the event that there is a terminal problem
+	// reconciling the Object Storage Bucket and will contain a succinct value suitable
+	// for machine interpretation.
+	// +optional
+	FailureReason *string `json:"failureReason,omitempty"`
+
 	// hostname is the address assigned to the bucket.
 	// +optional
 	Hostname *string `json:"hostname,omitempty"`

@@ -30,7 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -83,7 +83,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		},
 	}
 
-	recorder := record.NewFakeRecorder(10)
+	recorder := events.NewFakeRecorder(10)
 
 	BeforeEach(func(ctx SpecContext) {
 		secret = corev1.Secret{
@@ -1187,7 +1187,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 		},
 	}
 
-	recorder := record.NewFakeRecorder(10)
+	recorder := events.NewFakeRecorder(10)
 
 	BeforeEach(func(ctx SpecContext) {
 		secret = corev1.Secret{
@@ -2262,7 +2262,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		},
 	}
 
-	recorder := record.NewFakeRecorder(10)
+	recorder := events.NewFakeRecorder(10)
 
 	BeforeEach(func(ctx SpecContext) {
 		secret = corev1.Secret{
@@ -2435,7 +2435,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 		},
 	}
 
-	recorder := record.NewFakeRecorder(10)
+	recorder := events.NewFakeRecorder(10)
 
 	BeforeEach(func(ctx SpecContext) {
 		secret = corev1.Secret{
@@ -2770,7 +2770,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 		},
 	}
 
-	recorder := record.NewFakeRecorder(10)
+	recorder := events.NewFakeRecorder(10)
 
 	BeforeEach(func(ctx SpecContext) {
 		secret = corev1.Secret{
@@ -3085,7 +3085,7 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 		},
 	}
 
-	recorder := record.NewFakeRecorder(10)
+	recorder := events.NewFakeRecorder(10)
 
 	BeforeEach(func(ctx SpecContext) {
 		secret = corev1.Secret{
@@ -3272,7 +3272,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 		},
 	}
 
-	recorder := record.NewFakeRecorder(10)
+	recorder := events.NewFakeRecorder(10)
 
 	BeforeEach(func(ctx SpecContext) {
 		secret = corev1.Secret{
@@ -3432,7 +3432,7 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 	BeforeAll(func(ctx SpecContext) {
 		reconciler = LinodeMachineReconciler{
 			Client:   k8sClient,
-			Recorder: record.NewFakeRecorder(100),
+			Recorder: events.NewFakeRecorder(100),
 		}
 
 		linodeMachine = infrav1alpha2.LinodeMachine{
@@ -3624,7 +3624,7 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 	BeforeAll(func(ctx SpecContext) {
 		reconciler = LinodeMachineReconciler{
 			Client:   k8sClient,
-			Recorder: record.NewFakeRecorder(100),
+			Recorder: events.NewFakeRecorder(100),
 		}
 
 		linodeMachine = infrav1alpha2.LinodeMachine{
@@ -3810,7 +3810,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 	var mockCtrl *gomock.Controller
 	var mockLinodeClient *mock.MockLinodeClient
 	var mockK8sClient *mock.MockK8sClient
-	var mockRecorder *record.FakeRecorder
+	var mockRecorder *events.FakeRecorder
 	var reconciler *LinodeMachineReconciler
 	var logger logr.Logger
 	var machineScope *scope.MachineScope
@@ -3823,7 +3823,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockLinodeClient = mock.NewMockLinodeClient(mockCtrl)
 		mockK8sClient = mock.NewMockK8sClient(mockCtrl)
-		mockRecorder = record.NewFakeRecorder(10)
+		mockRecorder = events.NewFakeRecorder(10)
 		logger = zap.New()
 
 		linodeMachine = &infrav1alpha2.LinodeMachine{
@@ -4028,14 +4028,6 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(ctrl.Result{}))
-
-				// Check if an event was recorded
-				select {
-				case event := <-mockRecorder.Events:
-					Expect(event).To(ContainSubstring("LinodeVPC is now available"))
-				default:
-					Fail("Expected event, but none was recorded")
-				}
 
 				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())

@@ -28,7 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -52,7 +52,7 @@ import (
 // LinodePlacementGroupReconciler reconciles a LinodePlacementGroup object
 type LinodePlacementGroupReconciler struct {
 	client.Client
-	Recorder           record.EventRecorder
+	Recorder           events.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
 	ReconcileTimeout   time.Duration
@@ -147,13 +147,20 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 			pgScope.LinodePlacementGroup.Status.FailureMessage = util.Pointer(err.Error())
 
 			pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
-				Type:    string(clusterv1.ReadyCondition),
+				Type:    clusterv1.ReadyCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  string(failureReason),
 				Message: err.Error(),
 			})
 
-			r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(failureReason), err.Error())
+			r.Recorder.Eventf(
+				pgScope.LinodePlacementGroup,
+				nil,
+				corev1.EventTypeWarning,
+				string(failureReason),
+				"Reconcile",
+				err.Error(),
+			)
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodePlacement Group changes.
@@ -222,12 +229,11 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 	if err := pgScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
 		pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.CreatePlacementGroupError),
 			Message: err.Error(),
 		})
-		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha2.CreatePlacementGroupError), err.Error())
 
 		return err
 	}
@@ -235,20 +241,23 @@ func (r *LinodePlacementGroupReconciler) reconcileCreate(ctx context.Context, lo
 	if err := r.reconcilePlacementGroup(ctx, pgScope, logger); err != nil {
 		logger.Error(err, "Failed to create Placement Group")
 		pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.CreatePlacementGroupError),
 			Message: err.Error(),
 		})
-		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, string(infrav1alpha2.CreatePlacementGroupError), err.Error())
+		r.Recorder.Eventf(
+			pgScope.LinodePlacementGroup,
+			nil,
+			corev1.EventTypeWarning,
+			string(infrav1alpha2.CreatePlacementGroupError),
+			"CreatePlacementGroup",
+			err.Error(),
+		)
 
 		return err
 	}
 	pgScope.LinodePlacementGroup.Status.Ready = true
-
-	if pgScope.LinodePlacementGroup.Spec.PGID != nil {
-		r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, "Created", fmt.Sprintf("Created Placement Group %d", *pgScope.LinodePlacementGroup.Spec.PGID))
-	}
 
 	return nil
 }
@@ -294,7 +303,17 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 					Reason:  clusterv1.NotDeletingReason,
 					Message: fmt.Sprintf("skipped due to %d node(s) still attached after %s timeout", len(pg.Members), waitTimeout),
 				})
-				r.Recorder.Eventf(pgScope.LinodePlacementGroup, corev1.EventTypeWarning, clusterv1.NotDeletingReason, "Will not delete Placement Group %d with %d node(s) attached after %s timeout", pg.ID, len(pg.Members), waitTimeout)
+				r.Recorder.Eventf(
+					pgScope.LinodePlacementGroup,
+					nil,
+					corev1.EventTypeWarning,
+					clusterv1.NotDeletingReason,
+					"DeletePlacementGroup",
+					"Will not delete Placement Group %d with %d node(s) attached after %s timeout",
+					pg.ID,
+					len(pg.Members),
+					waitTimeout,
+				)
 				return ctrl.Result{}, errors.New("will not delete Placement Group with node(s) attached")
 			}
 
@@ -330,8 +349,6 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 		Reason:  clusterv1.DeletionCompletedReason,
 		Message: "Placement Group deleted",
 	})
-
-	r.Recorder.Event(pgScope.LinodePlacementGroup, corev1.EventTypeNormal, clusterv1.DeletionCompletedReason, "Placement Group has been cleaned up")
 
 	pgScope.LinodePlacementGroup.Spec.PGID = nil
 

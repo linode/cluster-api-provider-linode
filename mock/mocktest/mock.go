@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.uber.org/mock/gomock"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
 )
@@ -16,7 +16,7 @@ type Mock struct {
 	gomock.TestReporter
 	mock.MockClients
 
-	recorder *record.FakeRecorder
+	recorder *events.FakeRecorder
 	events   string
 	logger   logr.Logger
 	logs     *bytes.Buffer
@@ -24,7 +24,7 @@ type Mock struct {
 
 // Recorder returns a *FakeRecorder for recording events published in a reconcile loop.
 // Events can be consumed as a single string by calling Events().
-func (m *Mock) Recorder() *record.FakeRecorder {
+func (m *Mock) Recorder() *events.FakeRecorder {
 	return m.recorder
 }
 

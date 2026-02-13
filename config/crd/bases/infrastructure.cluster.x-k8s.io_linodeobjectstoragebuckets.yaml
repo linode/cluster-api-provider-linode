@@ -222,6 +222,12 @@ spec:
                   reconciling the Object Storage Bucket and will contain a verbose string
                   suitable for logging and human consumption.
                 type: string
+              failureReason:
+                description: |-
+                  failureReason will be set in the event that there is a terminal problem
+                  reconciling the Object Storage Bucket and will contain a succinct value suitable
+                  for machine interpretation.
+                type: string
               hostname:
                 description: hostname is the address assigned to the bucket.
                 type: string

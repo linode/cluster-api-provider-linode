@@ -29,7 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -53,7 +53,7 @@ import (
 // LinodeVPCReconciler reconciles a LinodeVPC object
 type LinodeVPCReconciler struct {
 	client.Client
-	Recorder           record.EventRecorder
+	Recorder           events.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
 	ReconcileTimeout   time.Duration
@@ -151,13 +151,20 @@ func (r *LinodeVPCReconciler) reconcile(
 			vpcScope.LinodeVPC.Status.FailureReason = util.Pointer(failureReason)
 			vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer(err.Error())
 			vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-				Type:    string(clusterv1.ReadyCondition),
+				Type:    clusterv1.ReadyCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  string(failureReason),
 				Message: err.Error(),
 			})
 
-			r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(failureReason), err.Error())
+			r.Recorder.Eventf(
+				vpcScope.LinodeVPC,
+				nil,
+				corev1.EventTypeWarning,
+				string(failureReason),
+				"Reconcile",
+				err.Error(),
+			)
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodeVPC changes.
@@ -233,12 +240,11 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 	if err := vpcScope.AddCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")
 		vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.CreateVPCError),
 			Message: err.Error(),
 		})
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.CreateVPCError), err.Error())
 
 		return err
 	}
@@ -246,20 +252,23 @@ func (r *LinodeVPCReconciler) reconcileCreate(ctx context.Context, logger logr.L
 	if err := reconcileVPC(ctx, vpcScope, logger); err != nil {
 		logger.Error(err, "Failed to create VPC")
 		vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  string(infrav1alpha2.CreateVPCError),
 			Message: err.Error(),
 		})
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.CreateVPCError), err.Error())
+		r.Recorder.Eventf(
+			vpcScope.LinodeVPC,
+			nil,
+			corev1.EventTypeWarning,
+			string(infrav1alpha2.CreateVPCError),
+			"CreateVPC",
+			err.Error(),
+		)
 
 		return err
 	}
 	vpcScope.LinodeVPC.Status.Ready = true
-
-	if vpcScope.LinodeVPC.Spec.VPCID != nil {
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, "Created", fmt.Sprintf("Created VPC %d", *vpcScope.LinodeVPC.Spec.VPCID))
-	}
 
 	return nil
 }
@@ -275,7 +284,14 @@ func (r *LinodeVPCReconciler) reconcileUpdate(ctx context.Context, logger logr.L
 			Reason:  string(infrav1alpha2.UpdateVPCError),
 			Message: err.Error(),
 		})
-		r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeWarning, string(infrav1alpha2.UpdateVPCError), err.Error())
+		r.Recorder.Eventf(
+			vpcScope.LinodeVPC,
+			nil,
+			corev1.EventTypeWarning,
+			string(infrav1alpha2.UpdateVPCError),
+			"UpdateVPC",
+			err.Error(),
+		)
 
 		return err
 	}
@@ -304,7 +320,6 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		Reason:  clusterv1.DeletionCompletedReason,
 		Message: "VPC deleted",
 	})
-	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, clusterv1.DeletionCompletedReason, "VPC is cleaning up")
 
 	vpcScope.LinodeVPC.Spec.VPCID = nil
 
@@ -342,8 +357,6 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 		Reason:  clusterv1.NotDeletingReason,
 		Message: "VPC retained as requested, associated cloud resource was not deleted.",
 	})
-
-	r.Recorder.Event(vpcScope.LinodeVPC, corev1.EventTypeNormal, "VPCResourceRetained", "VPC retained as requested, associated cloud resource was not deleted.")
 
 	if err := vpcScope.RemoveCredentialsRefFinalizer(ctx); err != nil {
 		logger.Error(err, "Failed to update credentials secret")

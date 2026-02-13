@@ -157,7 +157,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall create"))
+						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
@@ -196,7 +196,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
-					Expect(mck.Logs()).NotTo(ContainSubstring("failed to create Firewall"))
+					Expect(mck.Logs()).NotTo(ContainSubstring("failed, requeuing"))
 				}),
 			),
 			Path(
@@ -217,7 +217,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
-					Expect(mck.Logs()).NotTo(ContainSubstring("failed to create Firewall"))
+					Expect(mck.Logs()).NotTo(ContainSubstring("failed, requeuing"))
 				}),
 			),
 			Path(
@@ -230,7 +230,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				OneOf(
 					Path(Result("update requeues for update rules error", func(ctx context.Context, mck Mock) {
 						fwScope.LinodeFirewall.SetCondition(metav1.Condition{
-							Type:    string(clusterv1.ReadyCondition),
+							Type:    clusterv1.ReadyCondition,
 							Status:  metav1.ConditionFalse,
 							Reason:  "test",
 							Message: "test",
@@ -239,7 +239,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall update"))
+						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
 					})),
 					Path(Result("update requeues for update error", func(ctx context.Context, mck Mock) {
 						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
@@ -247,7 +247,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing Firewall update"))
+						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
@@ -287,7 +287,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 
 					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
-					Expect(mck.Logs()).NotTo(ContainSubstring("failed to update Firewall"))
+					Expect(mck.Logs()).NotTo(ContainSubstring("failed, requeuing"))
 				}),
 			),
 		),
@@ -303,7 +303,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
-						Expect(mck.Logs()).To(ContainSubstring("failed to delete Firewall"))
+						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
@@ -322,7 +322,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Logs()).NotTo(ContainSubstring("failed to delete Firewall"))
+						Expect(mck.Logs()).NotTo(ContainSubstring("failed, requeuing"))
 					})),
 				),
 			),

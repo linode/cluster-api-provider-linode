@@ -1627,7 +1627,7 @@ func getTags(machineScope *scope.MachineScope, instanceTags []string) []string {
 		}
 	}
 
-	outTags := []string{}
+	outTags := make([]string, 0, len(machineTagSet))
 	for tag := range machineTagSet {
 		outTags = append(outTags, tag)
 	}

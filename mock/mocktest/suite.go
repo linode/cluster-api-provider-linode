@@ -8,7 +8,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"go.uber.org/mock/gomock"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/linode/cluster-api-provider-linode/mock"
@@ -134,7 +134,7 @@ func (cs *ctlrSuite) Run(nodes ...node) {
 		ginkgo.It(pth.describe(), func(ctx ginkgo.SpecContext) {
 			cs.run(cs.ginkgoT, ctx, pth, func(mck *Mock) {
 				// Create a recorder with a buffered channel for consuming event strings.
-				mck.recorder = record.NewFakeRecorder(recorderBufferSize)
+				mck.recorder = events.NewFakeRecorder(recorderBufferSize)
 				// Create a logger that writes to both GinkgoWriter and the local logs buffer
 				mck.logs = &bytes.Buffer{}
 				mck.logger = zap.New(zap.WriteTo(ginkgo.GinkgoWriter), zap.WriteTo(mck.logs))

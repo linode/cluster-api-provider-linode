@@ -31,7 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/predicates"
@@ -88,7 +88,7 @@ var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
 // LinodeMachineReconciler reconciles a LinodeMachine object
 type LinodeMachineReconciler struct {
 	client.Client
-	Recorder           record.EventRecorder
+	Recorder           events.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
 	ReconcileTimeout   time.Duration
@@ -183,7 +183,7 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 				machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
 				machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
 				machineScope.LinodeMachine.SetCondition(metav1.Condition{
-					Type:    string(clusterv1.ReadyCondition),
+					Type:    clusterv1.ReadyCondition,
 					Status:  metav1.ConditionFalse,
 					Reason:  failureReason,
 					Message: err.Error(),
@@ -191,7 +191,14 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 			}
 
 			// Record the event regardless of whether the error is retryable or not for visibility.
-			r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeWarning, failureReason, err.Error())
+			r.Recorder.Eventf(
+				machineScope.LinodeMachine,
+				nil,
+				corev1.EventTypeWarning,
+				failureReason,
+				"Reconcile",
+				err.Error(),
+			)
 		}
 
 		// Always close the scope when exiting this function so we can persist any LinodeMachine changes.
@@ -366,8 +373,6 @@ func (r *LinodeMachineReconciler) validateVPC(ctx context.Context, vpcID int, ma
 	}
 
 	// VPC exists and has subnets
-	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, string(clusterv1.ReadyCondition),
-		fmt.Sprintf("%s VPC with ID %d is available", source, vpcID))
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeVPCReady,
 		Status: metav1.ConditionTrue,
@@ -430,7 +435,6 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 		})
 		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
 	}
-	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, string(clusterv1.ReadyCondition), "LinodeVPC is now available")
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeVPCReady,
 		Status: metav1.ConditionTrue,
@@ -741,7 +745,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		} else {
 			logger.Info("Instance not ready in time, skipping reconciliation", "status", linodeInstance.Status)
 			machineScope.LinodeMachine.SetCondition(metav1.Condition{
-				Type:    string(clusterv1.ReadyCondition),
+				Type:    clusterv1.ReadyCondition,
 				Status:  metav1.ConditionFalse,
 				Reason:  string(linodeInstance.Status),
 				Message: "skipped due to long running operation",
@@ -750,7 +754,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	} else if linodeInstance.Status != linodego.InstanceRunning {
 		logger.Info("Instance has incompatible status, skipping reconciliation", "status", linodeInstance.Status)
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:    string(clusterv1.ReadyCondition),
+			Type:    clusterv1.ReadyCondition,
 			Status:  metav1.ConditionFalse,
 			Reason:  string(linodeInstance.Status),
 			Message: "incompatible status",
@@ -758,7 +762,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	} else {
 		machineScope.LinodeMachine.Status.Ready = true
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:   string(clusterv1.ReadyCondition),
+			Type:   clusterv1.ReadyCondition,
 			Status: metav1.ConditionTrue,
 			Reason: "LinodeMachineReady", // We have to set the reason to not fail object patching
 		})
@@ -899,8 +903,6 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		Reason:  clusterv1.DeletionCompletedReason,
 		Message: "instance deleted",
 	})
-
-	r.Recorder.Event(machineScope.LinodeMachine, corev1.EventTypeNormal, clusterv1.DeletionCompletedReason, "instance has cleaned up")
 
 	machineScope.LinodeMachine.Spec.ProviderID = nil
 	machineScope.LinodeMachine.Status.InstanceState = nil

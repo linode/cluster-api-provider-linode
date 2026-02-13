@@ -129,6 +129,12 @@ type LinodeObjectStorageKeyStatus struct {
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
+	// failureReason will be set in the event that there is a terminal problem
+	// reconciling the Object Storage Key and will contain a succinct value suitable
+	// for machine interpretation.
+	// +optional
+	FailureReason *string `json:"failureReason,omitempty"`
+
 	// creationTime specifies the creation timestamp for the secret.
 	// +optional
 	CreationTime *metav1.Time `json:"creationTime,omitempty"`
