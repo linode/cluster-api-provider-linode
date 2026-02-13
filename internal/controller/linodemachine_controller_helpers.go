@@ -1627,9 +1627,11 @@ func getTags(machineScope *scope.MachineScope, instanceTags []string) []string {
 		}
 	}
 
-	outTags := []string{}
+	outTags := make([]string, len(machineTagSet))
+	i := 0
 	for tag := range machineTagSet {
-		outTags = append(outTags, tag)
+		outTags[i] = tag
+		i++
 	}
 
 	machineScope.LinodeMachine.Status.Tags = slices.Clone(machineScope.LinodeMachine.Spec.Tags)

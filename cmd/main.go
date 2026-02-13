@@ -281,7 +281,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	// LinodeCluster Controller
 	if err := (&controller.LinodeClusterReconciler{
 		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeClusterReconciler"),
+		Recorder:           mgr.GetEventRecorder("LinodeClusterReconciler"),
 		WatchFilterValue:   flags.clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
 		DnsClientConfig:    dnsConfig,
@@ -298,7 +298,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	// LinodeMachine Controller
 	if err := (&controller.LinodeMachineReconciler{
 		Client:                 mgr.GetClient(),
-		Recorder:               mgr.GetEventRecorderFor("LinodeMachineReconciler"),
+		Recorder:               mgr.GetEventRecorder("LinodeMachineReconciler"),
 		WatchFilterValue:       flags.machineWatchFilter,
 		LinodeClientConfig:     linodeClientConfig,
 		GzipCompressionEnabled: useGzip,
@@ -310,7 +310,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	// LinodeVPC Controller
 	if err := (&controller.LinodeVPCReconciler{
 		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeVPCReconciler"),
+		Recorder:           mgr.GetEventRecorder("LinodeVPCReconciler"),
 		LinodeClientConfig: linodeClientConfig,
 		WatchFilterValue:   flags.clusterWatchFilter,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeVPCConcurrency}); err != nil {
@@ -322,7 +322,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	if err := (&controller.LinodeObjectStorageBucketReconciler{
 		Client:             mgr.GetClient(),
 		Logger:             ctrl.Log.WithName("LinodeObjectStorageBucketReconciler"),
-		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageBucketReconciler"),
+		Recorder:           mgr.GetEventRecorder("LinodeObjectStorageBucketReconciler"),
 		WatchFilterValue:   flags.objectStorageBucketWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeObjectStorageBucketConcurrency}); err != nil {
@@ -333,7 +333,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	// LinodePlacementGroup Controller
 	if err := (&controller.LinodePlacementGroupReconciler{
 		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodePlacementGroupReconciler"),
+		Recorder:           mgr.GetEventRecorder("LinodePlacementGroupReconciler"),
 		WatchFilterValue:   flags.clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodePlacementGroupConcurrency}); err != nil {
@@ -345,7 +345,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	if err := (&controller.LinodeObjectStorageKeyReconciler{
 		Client:             mgr.GetClient(),
 		Logger:             ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
-		Recorder:           mgr.GetEventRecorderFor("LinodeObjectStorageKeyReconciler"),
+		Recorder:           mgr.GetEventRecorder("LinodeObjectStorageKeyReconciler"),
 		WatchFilterValue:   flags.objectStorageKeyWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeObjectStorageBucketConcurrency}); err != nil {
@@ -356,7 +356,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	// LinodeFirewall Controller
 	if err := (&controller.LinodeFirewallReconciler{
 		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorderFor("LinodeFirewallReconciler"),
+		Recorder:           mgr.GetEventRecorder("LinodeFirewallReconciler"),
 		WatchFilterValue:   flags.clusterWatchFilter,
 		LinodeClientConfig: linodeClientConfig,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeFirewallConcurrency}); err != nil {

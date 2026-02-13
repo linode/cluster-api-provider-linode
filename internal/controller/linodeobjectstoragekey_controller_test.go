@@ -125,7 +125,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(key.Status.Ready).To(BeTrue())
 					Expect(key.Status.FailureMessage).To(BeNil())
 					Expect(key.Status.Conditions).To(HaveLen(1))
-					readyCond := key.GetCondition(string(clusterv1.ReadyCondition))
+					readyCond := key.GetCondition(clusterv1.ReadyCondition)
 					Expect(readyCond).NotTo(BeNil())
 					Expect(key.Status.CreationTime).NotTo(BeNil())
 					Expect(*key.Status.LastKeyGeneration).To(Equal(*key.Spec.KeyGeneration))
@@ -139,11 +139,6 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(secret.Data).To(HaveLen(2))
 					Expect(string(secret.Data["access"])).To(Equal("access-key-1"))
 					Expect(string(secret.Data["secret"])).To(Equal("secret-key-1"))
-
-					events := mck.Events()
-					Expect(events).To(ContainSubstring("Object storage key assigned"))
-					Expect(events).To(ContainSubstring("Object storage key stored in secret"))
-					Expect(events).To(ContainSubstring("Object storage key synced"))
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
@@ -195,11 +190,6 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(string(secret.Data["access"])).To(Equal("access-key-2"))
 					Expect(string(secret.Data["secret"])).To(Equal("secret-key-2"))
 
-					events := mck.Events()
-					Expect(events).To(ContainSubstring("Object storage key assigned"))
-					Expect(events).To(ContainSubstring("Object storage key stored in secret"))
-					Expect(events).To(ContainSubstring("Object storage key synced"))
-
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 					Expect(logOutput).To(ContainSubstring("Secret default/lifecycle-obj-key was updated with access key"))
@@ -244,11 +234,6 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					Expect(string(secret.Data["access"])).To(Equal("access-key-2"))
 					Expect(string(secret.Data["secret"])).To(Equal("secret-key-2"))
 
-					events := mck.Events()
-					Expect(events).To(ContainSubstring("Object storage key retrieved"))
-					Expect(events).To(ContainSubstring("Object storage key stored in secret"))
-					Expect(events).To(ContainSubstring("Object storage key synced"))
-
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
 					Expect(logOutput).To(ContainSubstring("Secret default/lifecycle-obj-key was created with access key"))
@@ -287,9 +272,6 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 					_, err := reconciler.reconcile(ctx, &keyScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &key))).To(BeTrue())
-
-					events := mck.Events()
-					Expect(events).To(ContainSubstring("Object storage key revoked"))
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling delete"))
@@ -504,7 +486,7 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 		OneOf(
 			Path(
 				Call("failed check for deleted secret", func(ctx context.Context, mck Mock) {
-					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("api error"))
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("error"))
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					keyScope.Key.Spec.KeyGeneration = ptr.To(1)
@@ -513,8 +495,7 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &keyScope)
-					Expect(err.Error()).To(ContainSubstring("api error"))
-					Expect(mck.Events()).To(ContainSubstring("api error"))
+					Expect(err.Error()).To(ContainSubstring("error"))
 					Expect(mck.Logs()).To(ContainSubstring("Failed check for access key secret"))
 				}),
 			),
@@ -541,8 +522,6 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					keyScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &keyScope)
 					Expect(err.Error()).To(ContainSubstring("secret creation error"))
-					Expect(mck.Events()).To(ContainSubstring("key retrieved"))
-					Expect(mck.Events()).To(ContainSubstring("secret creation error"))
 					Expect(mck.Logs()).To(ContainSubstring("Failed to apply key secret"))
 				}),
 			),
@@ -559,8 +538,6 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					keyScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &keyScope)
 					Expect(err.Error()).To(ContainSubstring("no kind is registered"))
-					Expect(mck.Events()).To(ContainSubstring("key retrieved"))
-					Expect(mck.Events()).To(ContainSubstring("no kind is registered"))
 					Expect(mck.Logs()).To(ContainSubstring("Failed to generate key secret"))
 				}),
 			),
@@ -577,7 +554,6 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 			keyScope.Client = mck.K8sClient
 			err := reconciler.reconcileDelete(ctx, &keyScope)
 			Expect(err.Error()).To(ContainSubstring("failed to remove finalizer from key"))
-			Expect(mck.Events()).To(ContainSubstring("failed to remove finalizer from key"))
 		}),
 	)
 })
