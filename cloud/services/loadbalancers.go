@@ -364,13 +364,13 @@ func processAndCreateNodeBalancerNodes(ctx context.Context, ipAddress string, cl
 	apiserverLBPort := DetermineAPIServerLBPort(clusterScope)
 
 	// Set the port number and NB config ID for standard ports
-	portsToBeAdded := make([]map[string]int, 1+len(clusterScope.LinodeCluster.Spec.Network.AdditionalPorts))
+	portsToBeAdded := make([]map[string]int, 0, 1+len(clusterScope.LinodeCluster.Spec.Network.AdditionalPorts))
 	standardPort := map[string]int{"configID": *clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID, "port": apiserverLBPort}
-	portsToBeAdded[0] = standardPort
+	portsToBeAdded = append(portsToBeAdded, standardPort)
 
 	// Set the port number and NB config ID for any additional ports
-	for i, portConfig := range clusterScope.LinodeCluster.Spec.Network.AdditionalPorts {
-		portsToBeAdded[i+1] = map[string]int{"configID": *portConfig.NodeBalancerConfigID, "port": portConfig.Port}
+	for _, portConfig := range clusterScope.LinodeCluster.Spec.Network.AdditionalPorts {
+		portsToBeAdded = append(portsToBeAdded, map[string]int{"configID": *portConfig.NodeBalancerConfigID, "port": portConfig.Port})
 	}
 
 	// Cycle through all ports to be added
