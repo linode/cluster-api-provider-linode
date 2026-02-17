@@ -26,7 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/retry"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
@@ -52,7 +52,7 @@ import (
 type LinodeObjectStorageBucketReconciler struct {
 	client.Client
 	Logger             logr.Logger
-	Recorder           record.EventRecorder
+	Recorder           events.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
 	ReconcileTimeout   time.Duration
@@ -148,14 +148,14 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 	return r.reconcileApply(ctx, bScope)
 }
 
-func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectStorageBucketScope, err error) {
-	bScope.Bucket.Status.FailureMessage = util.Pointer(err.Error())
-	r.Recorder.Event(bScope.Bucket, corev1.EventTypeWarning, "Failed", err.Error())
+func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectStorageBucketScope, failureReason, failureMessage string) {
+	bScope.Bucket.Status.FailureMessage = util.Pointer(failureMessage)
+	bScope.Bucket.Status.FailureReason = util.Pointer(failureReason)
 	bScope.Bucket.SetCondition(metav1.Condition{
-		Type:    string(clusterv1.ReadyCondition),
+		Type:    clusterv1.ReadyCondition,
 		Status:  metav1.ConditionFalse,
-		Reason:  "Failed",
-		Message: err.Error(),
+		Reason:  failureReason,
+		Message: failureMessage,
 	})
 }
 
@@ -181,18 +181,24 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 	bucket, err := services.EnsureAndUpdateObjectStorageBucket(ctx, bScope)
 	if err != nil {
 		bScope.Logger.Error(err, "Failed to ensure bucket or update bucket")
-		r.setFailure(bScope, err)
-
+		r.setFailure(bScope, "EnsureAndUpdateFailed", err.Error())
+		r.Recorder.Eventf(
+			bScope.Bucket,
+			nil,
+			corev1.EventTypeWarning,
+			"EnsureAndUpdateFailed",
+			"EnsureAndUpdate",
+			err.Error(),
+		)
 		return ctrl.Result{}, err
 	}
 
 	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
 	bScope.Bucket.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
-	r.Recorder.Event(bScope.Bucket, corev1.EventTypeNormal, "Synced", "Object storage bucket synced")
 
 	bScope.Bucket.Status.Ready = true
 	bScope.Bucket.SetCondition(metav1.Condition{
-		Type:   string(clusterv1.ReadyCondition),
+		Type:   clusterv1.ReadyCondition,
 		Status: metav1.ConditionTrue,
 		Reason: "ObjectStorageBucketReady", // We have to set the reason to not fail object patching
 	})
@@ -205,7 +211,15 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 	if bScope.Bucket.Spec.ForceDeleteBucket {
 		if err := services.DeleteBucket(ctx, bScope); err != nil {
 			bScope.Logger.Error(err, "failed to delete bucket")
-			r.setFailure(bScope, err)
+			r.setFailure(bScope, util.DeleteError, err.Error())
+			r.Recorder.Eventf(
+				bScope.Bucket,
+				nil,
+				corev1.EventTypeWarning,
+				util.DeleteError,
+				"DeleteBucket",
+				err.Error(),
+			)
 			return err
 		}
 	}
@@ -217,7 +231,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileDelete(ctx context.Contex
 			return bScope.RemoveAccessKeyRefFinalizer(ctx, bScope.Bucket.Name)
 		}); err != nil {
 			bScope.Logger.Error(err, "failed to remove access key finalizer")
-			r.setFailure(bScope, err)
+			r.setFailure(bScope, util.DeleteError, err.Error())
 			return err
 		}
 

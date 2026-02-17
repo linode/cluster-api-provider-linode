@@ -238,6 +238,12 @@ spec:
                   reconciling the Object Storage Key and will contain a verbose string
                   suitable for logging and human consumption.
                 type: string
+              failureReason:
+                description: |-
+                  failureReason will be set in the event that there is a terminal problem
+                  reconciling the Object Storage Key and will contain a succinct value suitable
+                  for machine interpretation.
+                type: string
               lastKeyGeneration:
                 description: lastKeyGeneration tracks the last known value of .spec.keyGeneration.
                 type: integer

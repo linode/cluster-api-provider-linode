@@ -919,6 +919,7 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeObjectStorageBucket. |  |  |
 | `ready` _boolean_ | ready denotes that the bucket has been provisioned along with access keys. | false |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Object Storage Bucket and will contain a verbose string<br />suitable for logging and human consumption. |  |  |
+| `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Object Storage Bucket and will contain a succinct value suitable<br />for machine interpretation. |  |  |
 | `hostname` _string_ | hostname is the address assigned to the bucket. |  |  |
 | `creationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#time-v1-meta)_ | creationTime specifies the creation timestamp for the bucket. |  |  |
 
@@ -1002,6 +1003,7 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeObjectStorageKey. |  |  |
 | `ready` _boolean_ | ready denotes that the key has been provisioned. | false |  |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the Object Storage Key and will contain a verbose string<br />suitable for logging and human consumption. |  |  |
+| `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the Object Storage Key and will contain a succinct value suitable<br />for machine interpretation. |  |  |
 | `creationTime` _[Time](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#time-v1-meta)_ | creationTime specifies the creation timestamp for the secret. |  |  |
 | `lastKeyGeneration` _integer_ | lastKeyGeneration tracks the last known value of .spec.keyGeneration. |  |  |
 | `accessKeyRef` _integer_ | accessKeyRef stores the ID for Object Storage key provisioned. |  |  |

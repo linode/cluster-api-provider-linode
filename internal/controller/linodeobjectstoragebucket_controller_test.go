@@ -148,13 +148,10 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					Expect(obj.Status.Ready).To(BeTrue())
 					Expect(obj.Status.FailureMessage).To(BeNil())
 					Expect(obj.Status.Conditions).To(HaveLen(1))
-					readyCond := obj.GetCondition(string(clusterv1.ReadyCondition))
+					readyCond := obj.GetCondition(clusterv1.ReadyCondition)
 					Expect(readyCond).NotTo(BeNil())
 					Expect(*obj.Status.Hostname).To(Equal("hostname"))
 					Expect(obj.Status.CreationTime).NotTo(BeNil())
-
-					events := mck.Events()
-					Expect(events).To(ContainSubstring("Object storage bucket synced"))
 
 					logOutput := mck.Logs()
 					Expect(logOutput).To(ContainSubstring("Reconciling apply"))
