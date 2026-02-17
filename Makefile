@@ -414,7 +414,7 @@ S5CMD_VERSION            ?= v2.3.0
 CONVERSION_GEN_VERSION   ?= v0.35.1
 
 # renovate: datasource=github-tags depName=golangci/golangci-lint
-GOLANGCI_LINT_VERSION    ?= v2.8.0
+GOLANGCI_LINT_VERSION    ?= v2.10.1
 
 # renovate: datasource=github-tags depName=securego/gosec
 GOSEC_VERSION            ?= 2.22.11
