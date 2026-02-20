@@ -384,7 +384,7 @@ KUBEBUILDER_VERSION      ?= v4.11.1
 ENVTEST_VERSION 	 ?= release-0.22
 
 # renovate: datasource=go depName=sigs.k8s.io/controller-tools
-CONTROLLER_TOOLS_VERSION ?= v0.20.0
+CONTROLLER_TOOLS_VERSION ?= v0.20.1
 
 # renovate: datasource=github-tags depName=tilt-dev/tilt
 TILT_VERSION             ?= 0.36.3
