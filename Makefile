@@ -372,7 +372,7 @@ CTLPTL_VERSION           ?= v0.9.0
 CLUSTERCTL_VERSION       ?= v1.12.2
 
 # renovate: datasource=go depName=github.com/elastic/crd-ref-docs
-CRD_REF_DOCS_VERSION     ?= v0.2.0
+CRD_REF_DOCS_VERSION     ?= v0.3.0
 
 # renovate: datasource=github-tags depName=kubernetes/kubernetes
 KUBECTL_VERSION          ?= v1.35.1
