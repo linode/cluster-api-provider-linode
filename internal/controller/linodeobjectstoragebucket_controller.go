@@ -140,7 +140,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 	// Handle deleted buckets
 	if !bScope.Bucket.DeletionTimestamp.IsZero() {
 		if err := r.reconcileDelete(ctx, bScope); err != nil {
-			return retryIfTransient(err, bScope.Logger)
+			return retryIfTransient(err)
 		}
 		return res, nil
 	}
