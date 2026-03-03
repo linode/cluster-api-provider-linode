@@ -184,8 +184,7 @@ for resource in manager_yaml:
     if resource["metadata"]["name"] == "capl-manager-credentials":
         resource["stringData"]["apiToken"] = os.getenv("LINODE_TOKEN")
         resource["stringData"]["dnsToken"] = os.getenv("LINODE_DNS_TOKEN")
-        if os.getenv("LINODE_URL"):
-            resource["stringData"]["LINODE_URL"] = os.getenv("LINODE_URL")
+        resource["stringData"]["LINODE_URL"] = os.getenv("LINODE_URL", "https://api.linode.com")
     if resource["metadata"]["name"] == "capl-ca":
         resource["data"]["cacert.pem"] = os.getenv("LINODE_CA_BASE64")
     if resource["metadata"]["name"] == "capl-akamai-edgerc-secret":
