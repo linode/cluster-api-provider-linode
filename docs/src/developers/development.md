@@ -35,7 +35,7 @@ Ensure you have your `LINODE_TOKEN` set as outlined in the
 
 There are no requirements since development dependencies are fetched as
 needed via the make targets, but a recommendation is to
-[install Devbox](https://jetpack.io/devbox/docs/installing_devbox/)
+[install Devbox](https://www.jetify.com/docs/devbox/installing-devbox)
 
 #### Optional Environment Variables
 ```bash

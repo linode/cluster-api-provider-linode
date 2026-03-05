@@ -51,7 +51,6 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
             api.github.com:443
@@ -76,8 +75,14 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0.14.0
+        with:
+          enable-cache: 'true'
+          refresh-cli: 'false'
+
       - name: Build
-        run: make build
+        run: devbox run make build
 
       - name: Check for generated diff
         run: make check-gen-diff
