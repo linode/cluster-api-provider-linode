@@ -84,7 +84,6 @@ jobs:
       - name: Harden Runner
         uses: step-security/harden-runner@v2
         with:
-          disable-sudo: true
           egress-policy: audit
           allowed-endpoints: >
             *:6443
@@ -132,6 +131,12 @@ jobs:
         with:
           key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
 
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0.14.0
+        with:
+          enable-cache: 'true'
+          refresh-cli: 'false'
+
       - name: Run E2E Test
         env:
           E2E_FLAGS: ${{ inputs.e2e-flags }}
@@ -143,7 +148,7 @@ jobs:
           LINODE_MACHINE_TYPE: g6-standard-2
           CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/gha-clusterctl-config.yaml
           LINODE_CLIENT_TIMEOUT: 30
-        run: make e2etest
+        run: devbox run make e2etest
 
       - name: cleanup stale clusters
         if: ${{ always() }}
