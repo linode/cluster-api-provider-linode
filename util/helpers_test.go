@@ -121,6 +121,138 @@ func TestIsRetryableError(t *testing.T) {
 	}
 }
 
+func TestIsAuthenticationError(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{{
+		name: "unauthorized error (401)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusUnauthorized,
+			Message:  "Invalid Token",
+		},
+		want: true,
+	}, {
+		name: "forbidden error (403)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusForbidden,
+			Message:  "Forbidden",
+		},
+		want: true,
+	}, {
+		name: "bad request error (400)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusBadRequest,
+			Message:  "bad request",
+		},
+		want: false,
+	}, {
+		name: "not found error (404)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusNotFound,
+			Message:  "not found",
+		},
+		want: false,
+	}, {
+		name: "internal server error (500)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusInternalServerError,
+			Message:  "internal error",
+		},
+		want: false,
+	}, {
+		name: "non-Linode error",
+		err:  errors.New("random error"),
+		want: false,
+	}}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			if testcase.want != IsAuthenticationError(testcase.err) {
+				t.Errorf("IsAuthenticationError() = %v, want %v", IsAuthenticationError(testcase.err), testcase.want)
+			}
+		})
+	}
+}
+
+func TestIsTerminalError(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{{
+		name: "bad request error (400)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusBadRequest,
+			Message:  "bad request",
+		},
+		want: true,
+	}, {
+		name: "unauthorized error (401)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusUnauthorized,
+			Message:  "Invalid Token",
+		},
+		want: true,
+	}, {
+		name: "forbidden error (403)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusForbidden,
+			Message:  "Forbidden",
+		},
+		want: true,
+	}, {
+		name: "not found error (404)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusNotFound,
+			Message:  "not found",
+		},
+		want: true,
+	}, {
+		name: "internal server error (500)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusInternalServerError,
+			Message:  "internal error",
+		},
+		want: false,
+	}, {
+		name: "too many requests (429)",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusTooManyRequests,
+			Message:  "rate limited",
+		},
+		want: false,
+	}, {
+		name: "non-Linode error",
+		err:  errors.New("random error"),
+		want: false,
+	}}
+	for _, tt := range tests {
+		testcase := tt
+		t.Run(testcase.name, func(t *testing.T) {
+			t.Parallel()
+			if testcase.want != IsTerminalError(testcase.err) {
+				t.Errorf("IsTerminalError() = %v, want %v", IsTerminalError(testcase.err), testcase.want)
+			}
+		})
+	}
+}
+
 func TestGetInstanceID(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
