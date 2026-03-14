@@ -125,51 +125,51 @@
         }
       }
     },
-    "docker@28.5.1": {
-      "last_modified": "2025-12-04T04:58:45Z",
-      "resolved": "github:NixOS/nixpkgs/821f1a2ebab0f13d6d65170d6bd7d2b3a182efdb#docker",
+    "docker@29.3.0": {
+      "last_modified": "2026-03-10T02:35:18Z",
+      "resolved": "github:NixOS/nixpkgs/e607cb5360ff1234862ac9f8839522becb853bb9#docker",
       "source": "devbox-search",
-      "version": "28.5.1",
+      "version": "29.3.0",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/hin3prdkyyljd263lnpk63m7km0mpijy-docker-28.5.1",
+              "path": "/nix/store/ziqs1bi5h1h4n1n4x0rzfb4jl49xla69-docker-29.3.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/hin3prdkyyljd263lnpk63m7km0mpijy-docker-28.5.1"
+          "store_path": "/nix/store/ziqs1bi5h1h4n1n4x0rzfb4jl49xla69-docker-29.3.0"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/dlbg46jkvcr59i95mwsnz28baffxr1kj-docker-28.5.1",
+              "path": "/nix/store/j37ik7895mzbrk7kyb9lkg272lrb0ckx-docker-29.3.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/dlbg46jkvcr59i95mwsnz28baffxr1kj-docker-28.5.1"
+          "store_path": "/nix/store/j37ik7895mzbrk7kyb9lkg272lrb0ckx-docker-29.3.0"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/767n224knp1sqrikx0x58g4552gfzz2a-docker-28.5.1",
+              "path": "/nix/store/ab9n087vx2zf1ja8cb7qcfh6v2kj8sz0-docker-29.3.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/767n224knp1sqrikx0x58g4552gfzz2a-docker-28.5.1"
+          "store_path": "/nix/store/ab9n087vx2zf1ja8cb7qcfh6v2kj8sz0-docker-29.3.0"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/xib93n12k7r8cs4p41rszbr2bx3ca5ay-docker-28.5.1",
+              "path": "/nix/store/qjklv480x5nsgbqz83517s4p1krdgp12-docker-29.3.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/xib93n12k7r8cs4p41rszbr2bx3ca5ay-docker-28.5.1"
+          "store_path": "/nix/store/qjklv480x5nsgbqz83517s4p1krdgp12-docker-29.3.0"
         }
       }
     },
@@ -905,51 +905,51 @@
         }
       }
     },
-    "mockgen@0.6.0": {
-      "last_modified": "2026-02-23T15:40:43Z",
-      "resolved": "github:NixOS/nixpkgs/80d901ec0377e19ac3f7bb8c035201e2e098cc97#mockgen",
+    "mockgen@1.6.0": {
+      "last_modified": "2023-12-13T22:54:10Z",
+      "resolved": "github:NixOS/nixpkgs/fd04bea4cbf76f86f244b9e2549fca066db8ddff#mockgen",
       "source": "devbox-search",
-      "version": "0.6.0",
+      "version": "1.6.0",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/cigm052bx8ffgfrbgr91ib8kxv7z4sbp-mockgen-0.6.0",
+              "path": "/nix/store/8jsr1j1h8g3k3j5rg8vv79aviffxrfny-mockgen-1.6.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/cigm052bx8ffgfrbgr91ib8kxv7z4sbp-mockgen-0.6.0"
+          "store_path": "/nix/store/8jsr1j1h8g3k3j5rg8vv79aviffxrfny-mockgen-1.6.0"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/2lm5b039ik04w0rzzkaq35c1gnx3vzsm-mockgen-0.6.0",
+              "path": "/nix/store/34rrlc5lz43mibljdd7ai0qyi7zcq4ic-mockgen-1.6.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/2lm5b039ik04w0rzzkaq35c1gnx3vzsm-mockgen-0.6.0"
+          "store_path": "/nix/store/34rrlc5lz43mibljdd7ai0qyi7zcq4ic-mockgen-1.6.0"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/ax5hdfjny3byyncrd0lw79s6iawiyik2-mockgen-0.6.0",
+              "path": "/nix/store/cj1r5vllmiq7fh4izsmlacjrdkw2h4b5-mockgen-1.6.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/ax5hdfjny3byyncrd0lw79s6iawiyik2-mockgen-0.6.0"
+          "store_path": "/nix/store/cj1r5vllmiq7fh4izsmlacjrdkw2h4b5-mockgen-1.6.0"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/dpyhd33jmq2awqz7511l9chbfjivfg48-mockgen-0.6.0",
+              "path": "/nix/store/hs49h3p9ss5f5bqv6phgsx93s4cawif2-mockgen-1.6.0",
               "default": true
             }
           ],
-          "store_path": "/nix/store/dpyhd33jmq2awqz7511l9chbfjivfg48-mockgen-0.6.0"
+          "store_path": "/nix/store/hs49h3p9ss5f5bqv6phgsx93s4cawif2-mockgen-1.6.0"
         }
       }
     },
