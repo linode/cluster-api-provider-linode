@@ -95,6 +95,14 @@ patches:
           bgpControlPlane:
             enabled: true
           routingMode: native
+          devices:
+            - eth0
+            - eth1
+          nodePort:
+            addresses:
+              - 0.0.0.0/0
+              - ::/0
+            directRoutingDevice: eth0
           kubeProxyReplacement: true
           ipv4NativeRoutingCIDR: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
           ipv6NativeRoutingCIDR: ::/0
@@ -108,8 +116,6 @@ patches:
             allow-localhost: policy
           k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
           k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
-          extraArgs:
-          - --nodeport-addresses=0.0.0.0/0
           ipam:
             mode: kubernetes
           ipv4:
