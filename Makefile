@@ -375,7 +375,7 @@ CLUSTERCTL_VERSION       ?= v1.12.3
 CRD_REF_DOCS_VERSION     ?= v0.3.0
 
 # renovate: datasource=github-tags depName=kubernetes/kubernetes
-KUBECTL_VERSION          ?= v1.35.1
+KUBECTL_VERSION          ?= v1.35.3
 
 # renovate: datasource=github-tags depName=kubernetes-sigs/kubebuilder
 KUBEBUILDER_VERSION      ?= v4.13.0
