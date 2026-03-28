@@ -342,5 +342,5 @@ func (r *LinodeFirewallReconciler) SetupWithManager(mgr ctrl.Manager, options cr
 }
 
 func (r *LinodeFirewallReconciler) TracedClient() client.Client {
-	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimereconciler.DefaultDecorator())
+	return wrappedruntimeclient.NewRuntimeClientWithTracing(r.Client, wrappedruntimeclient.DefaultDecorator())
 }
