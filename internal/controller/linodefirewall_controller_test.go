@@ -26,9 +26,13 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -328,4 +332,85 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			),
 		),
 	)
+})
+
+var _ = Describe("pause handling", Label("firewalls", "pause"), func() {
+	It("sets paused condition for LinodeFirewall when owner Cluster is paused", func(ctx SpecContext) {
+		cluster := &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-firewall-cluster",
+				Namespace: defaultNamespace,
+			},
+			Spec: clusterv1.ClusterSpec{
+				Paused: ptr.To(true),
+			},
+		}
+		firewall := &infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-firewall-object",
+				Namespace: defaultNamespace,
+				Labels: map[string]string{
+					clusterv1.ClusterNameLabel: cluster.Name,
+				},
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{
+				Enabled: true,
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+		Expect(k8sClient.Create(ctx, firewall)).To(Succeed())
+
+		reconciler := &LinodeFirewallReconciler{
+			Client:             k8sClient,
+			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
+		}
+
+		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(firewall)})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(firewall), firewall)).To(Succeed())
+		pausedCondition := firewall.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+		Expect(controllerutil.ContainsFinalizer(firewall, infrav1alpha2.FirewallFinalizer)).To(BeFalse())
+	})
+
+	It("sets and clears paused condition from the upstream pause annotation path", func(ctx SpecContext) {
+		firewall := &infrav1alpha2.LinodeFirewall{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-firewall-annotation",
+				Namespace: defaultNamespace,
+				Annotations: map[string]string{
+					clusterv1.PausedAnnotation: "",
+				},
+			},
+			Spec: infrav1alpha2.LinodeFirewallSpec{
+				Enabled: true,
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, firewall)).To(Succeed())
+
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, k8sClient, nil, firewall)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeTrue())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(firewall), firewall)).To(Succeed())
+		pausedCondition := firewall.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+
+		delete(firewall.Annotations, clusterv1.PausedAnnotation)
+		Expect(k8sClient.Update(ctx, firewall)).To(Succeed())
+
+		isPaused, _, err = paused.EnsurePausedCondition(ctx, k8sClient, nil, firewall)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeFalse())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(firewall), firewall)).To(Succeed())
+		pausedCondition = firewall.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionFalse))
+	})
 })

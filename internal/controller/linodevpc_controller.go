@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -122,9 +123,13 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("failed to create VPC scope: %w", err)
 	}
 
-	// Only check pause if not deleting or if cluster still exists
+	// Only check pause if not deleting or if cluster still exists.
 	if linodeVPC.DeletionTimestamp.IsZero() || cluster != nil {
-		if vpcScope.LinodeVPC.IsPaused() {
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if isPaused {
 			log.Info("linodeVPC or linked cluster is paused, skipping reconciliation")
 			return ctrl.Result{}, nil
 		}
@@ -503,7 +508,7 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 		For(&infrav1alpha2.LinodeVPC{}).
 		WithOptions(options).
 		WithEventFilter(predicate.And(
-			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.GenerationChangedPredicate{},
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeVPC)
