@@ -81,6 +81,26 @@
       ]
     },
     {
+      "groupName": "github actions core",
+      "groupSlug": "github-actions-core",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "actions/checkout",
+        "actions/setup-go",
+        "step-security/harden-runner",
+      ]
+    },
+    {
+      "groupName": "github actions tooling",
+      "groupSlug": "github-actions-tooling",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "ScribeMD/docker-cache",
+        "gaurav-nelson/github-action-markdown-link-check",
+        "golangci/golangci-lint-action",
+      ]
+    },
+    {
       "groupName": "github actions docker",
       "groupSlug": "github-actions-docker",
       "matchManagers": ["github-actions"],
