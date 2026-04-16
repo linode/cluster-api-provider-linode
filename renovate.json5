@@ -10,6 +10,7 @@
   "postUpdateOptions": ["gomodTidy"],
   "vulnerabilityAlerts": {
     "enabled": true,
+    "groupName": "security updates",
   },
   "osvVulnerabilityAlerts": true,
   "platformAutomerge": true,
