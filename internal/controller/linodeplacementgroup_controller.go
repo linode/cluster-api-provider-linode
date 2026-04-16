@@ -44,7 +44,6 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
-	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -68,20 +67,12 @@ type LinodePlacementGroupReconciler struct {
 // move the current state of the Placement Group closer to the desired state.
 //
 
-func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, linodeplacementgroup *infrav1alpha2.LinodePlacementGroup) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	log := ctrl.LoggerFrom(ctx).WithName("LinodePlacementGroupReconciler").WithValues("name", req.String())
+	log := ctrl.LoggerFrom(ctx).WithName("LinodePlacementGroupReconciler").WithValues("name", linodeplacementgroup.Name, "namespace", linodeplacementgroup.Namespace)
 
-	linodeplacementgroup := &infrav1alpha2.LinodePlacementGroup{}
-	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeplacementgroup); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			log.Error(err, "Failed to fetch LinodePlacementGroup")
-		}
-
-		return ctrl.Result{}, err
-	}
 	var cluster *clusterv1.Cluster
 	var err error
 	if _, ok := linodeplacementgroup.Labels[clusterv1.ClusterNameLabel]; ok {
@@ -404,7 +395,7 @@ func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, opti
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodePlacementGroupMapper),
 			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), mgr.GetLogger())),
-		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
+		).Complete(reconciler.AsReconcilerWithTracing(r.TracedClient(), r))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}

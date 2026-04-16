@@ -72,17 +72,11 @@ type LinodeClusterReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 
-func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, linodeCluster *infrav1alpha2.LinodeCluster) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", req.String())
-	linodeCluster := &infrav1alpha2.LinodeCluster{}
-	if err := r.TracedClient().Get(ctx, req.NamespacedName, linodeCluster); err != nil {
-		logger.Info("Failed to fetch Linode cluster", "error", err.Error())
-
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+	logger := ctrl.LoggerFrom(ctx).WithName("LinodeClusterReconciler").WithValues("name", linodeCluster.Name, "namespace", linodeCluster.Namespace)
 
 	cluster, err := kutil.GetOwnerCluster(ctx, r.TracedClient(), linodeCluster.ObjectMeta)
 	if err != nil {
@@ -531,7 +525,7 @@ func (r *LinodeClusterReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 		Watches(
 			&infrav1alpha2.LinodeMachine{},
 			handler.EnqueueRequestsFromMapFunc(linodeMachineToLinodeCluster(r.TracedClient(), mgr.GetLogger())),
-		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
+		).Complete(reconciler.AsReconcilerWithTracing(r.TracedClient(), r))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}
