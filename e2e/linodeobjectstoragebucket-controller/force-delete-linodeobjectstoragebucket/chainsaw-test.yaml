@@ -80,7 +80,7 @@ spec:
               - name: URI
                 value: object-storage/keys
               - name: OBJ_KEY
-                value: ($access_secret)
+                value: ($bucket)
             content: |
               set -e
 
