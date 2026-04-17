@@ -30,13 +30,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/paused"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -1156,6 +1160,126 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				{Type: clusterv1.MachineInternalIP, Address: "192.168.0.2"},
 			}))
 		})
+	})
+})
+
+var _ = Describe("pause handling", Label("machine", "pause"), func() {
+	It("sets paused condition for LinodeMachine when owner Cluster is paused", func(ctx SpecContext) {
+		cluster := &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-machine-cluster",
+				Namespace: defaultNamespace,
+			},
+			Spec: clusterv1.ClusterSpec{
+				Paused: ptr.To(true),
+				InfrastructureRef: clusterv1.ContractVersionedObjectReference{
+					Kind:     "LinodeCluster",
+					Name:     "pause-machine-linodecluster",
+					APIGroup: infrav1alpha2.GroupVersion.Group,
+				},
+			},
+		}
+		linodeCluster := &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-machine-linodecluster",
+				Namespace: defaultNamespace,
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				ControlPlaneEndpoint: clusterv1.APIEndpoint{
+					Port: 6443,
+				},
+			},
+		}
+		machine := &clusterv1.Machine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-machine-owner",
+				Namespace: defaultNamespace,
+				Labels: map[string]string{
+					clusterv1.ClusterNameLabel: cluster.Name,
+				},
+			},
+			Spec: clusterv1.MachineSpec{
+				ClusterName: cluster.Name,
+				Bootstrap: clusterv1.Bootstrap{
+					DataSecretName: ptr.To("pause-machine-bootstrap"),
+				},
+				InfrastructureRef: clusterv1.ContractVersionedObjectReference{
+					Kind:     "LinodeMachine",
+					Name:     "pause-machine-infra",
+					APIGroup: infrav1alpha2.GroupVersion.Group,
+				},
+			},
+		}
+		linodeMachine := &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-machine-infra",
+				Namespace: defaultNamespace,
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+		Expect(k8sClient.Create(ctx, linodeCluster)).To(Succeed())
+		Expect(k8sClient.Create(ctx, machine)).To(Succeed())
+		Expect(controllerutil.SetControllerReference(machine, linodeMachine, scheme.Scheme)).To(Succeed())
+		Expect(k8sClient.Create(ctx, linodeMachine)).To(Succeed())
+
+		reconciler := &LinodeMachineReconciler{
+			Client:             k8sClient,
+			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
+		}
+
+		_, err := reconciler.Reconcile(ctrl.LoggerInto(ctx, ctrl.Log), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(linodeMachine)})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(linodeMachine), linodeMachine)).To(Succeed())
+		pausedCondition := linodeMachine.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+		Expect(controllerutil.ContainsFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)).To(BeFalse())
+	})
+
+	It("sets and clears paused condition from the upstream pause annotation path", func(ctx SpecContext) {
+		linodeMachine := &infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-machine-annotation",
+				Namespace: defaultNamespace,
+				Annotations: map[string]string{
+					clusterv1.PausedAnnotation: "",
+				},
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				Region: "us-ord",
+				Type:   "g6-standard-1",
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, linodeMachine)).To(Succeed())
+
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, k8sClient, nil, linodeMachine)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeTrue())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(linodeMachine), linodeMachine)).To(Succeed())
+		pausedCondition := linodeMachine.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+
+		delete(linodeMachine.Annotations, clusterv1.PausedAnnotation)
+		Expect(k8sClient.Update(ctx, linodeMachine)).To(Succeed())
+
+		isPaused, _, err = paused.EnsurePausedCondition(ctx, k8sClient, nil, linodeMachine)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeFalse())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(linodeMachine), linodeMachine)).To(Succeed())
+		pausedCondition = linodeMachine.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionFalse))
 	})
 })
 

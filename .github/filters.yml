@@ -29,6 +29,9 @@ kubeadm-flatcar:
  - templates/flavors/kubeadm/flatcar/*
  - e2e/capl-cluster-flavors/kubeadm-flatcar-vpcless-capl-cluster/*
 
+cluster-pause:
+  - e2e/cluster-pause/*
+
 #k3s:
 #  - templates/flavors/k3s/default/*
 #  - e2e/capl-cluster-flavors/k3s-capl-cluster/*

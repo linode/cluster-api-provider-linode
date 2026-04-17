@@ -217,6 +217,20 @@ type LinodeVPC struct {
 	Status LinodeVPCStatus `json:"status,omitempty"`
 }
 
+func (lv *LinodeVPC) GetConditions() []metav1.Condition {
+	for i := range lv.Status.Conditions {
+		if lv.Status.Conditions[i].Reason == "" {
+			lv.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
+
+	return lv.Status.Conditions
+}
+
+func (lv *LinodeVPC) SetConditions(conditions []metav1.Condition) {
+	lv.Status.Conditions = conditions
+}
+
 func (lv *LinodeVPC) SetCondition(cond metav1.Condition) {
 	if cond.LastTransitionTime.IsZero() {
 		cond.LastTransitionTime = metav1.Now()
