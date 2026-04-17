@@ -378,7 +378,7 @@ CRD_REF_DOCS_VERSION     ?= v0.3.0
 KUBECTL_VERSION          ?= v1.35.3
 
 # renovate: datasource=github-tags depName=kubernetes-sigs/kubebuilder
-KUBEBUILDER_VERSION      ?= v4.13.0
+KUBEBUILDER_VERSION      ?= v4.13.1
 
 # renovate: datasource=go depName=sigs.k8s.io/controller-runtime/tools/setup-envtest
 ENVTEST_VERSION 	 ?= release-0.22
