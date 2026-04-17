@@ -45,15 +45,31 @@ spec:
                 value: (to_string({"label":($firewall)}))
             content: |
               set -e
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
-                -H "Content-Type: application/json" \
-                "https://api.linode.com/v4/networking/firewalls"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "X-Filter: $FILTER" \
+                  -H "Content-Type: application/json" \
+                  "https://api.linode.com/v4beta/networking/firewalls")
+
+                if echo "$RESPONSE" | jq -e '.results == 1' >/dev/null; then
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$RESPONSE"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               ($error): ~
-              (json_parse($stdout)):
-                results: 1
     - name: Create Cluster resource
       try:
         - apply:
@@ -88,35 +104,40 @@ spec:
                 value: (to_string({"label":($firewall)}))
             content: |
               set -e
-              
-              # Check if nodebalancer exists and get its ID
-              NB_RESPONSE=$(curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI")
-              
-              NB_COUNT=$(echo $NB_RESPONSE | jq '.results | length')
-              if [ "$NB_COUNT" -ne 1 ]; then
-                echo "Nodebalancer not found or multiple found"
-                exit 1
-              fi
-              
-              NB_ID=$(echo $NB_RESPONSE | jq -r '.data[0].id')
-              
-              # Check if firewall is configured for the nodebalancer
-              FW_RESPONSE=$(curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FIREWALL_LABEL" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI/$NB_ID/firewalls")
-              
-              FW_COUNT=$(echo $FW_RESPONSE | jq '.results')
-              if [ "$FW_COUNT" -eq 0 ]; then
-                echo "No firewall found for the nodebalancer"
-                exit 1
-              fi
-              
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                NB_RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "X-Filter: $FILTER" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI")
+
+                if echo "$NB_RESPONSE" | jq -e '.results == 1' >/dev/null; then
+                  NB_ID=$(echo "$NB_RESPONSE" | jq -r '.data[0].id')
+                  FW_RESPONSE=$(curl -s \
+                    -H "Authorization: Bearer $LINODE_TOKEN" \
+                    -H "X-Filter: $FIREWALL_LABEL" \
+                    -H "Content-Type: application/json" \
+                    "https://$TARGET_API/$TARGET_API_VERSION/$URI/$NB_ID/firewalls")
+
+                  if echo "$FW_RESPONSE" | jq -e '.results > 0' >/dev/null; then
+                    break
+                  fi
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$NB_RESPONSE"
+                  echo "${FW_RESPONSE:-}"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
+
               echo "Nodebalancer exists and has the correct firewall configuration"
               exit 0
             check:
@@ -144,15 +165,31 @@ spec:
                 value: (to_string({"label":($firewall)}))
             content: |
               set -e
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
-                -H "Content-Type: application/json" \
-                "https://api.linode.com/v4/networking/firewalls"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "X-Filter: $FILTER" \
+                  -H "Content-Type: application/json" \
+                  "https://api.linode.com/v4beta/networking/firewalls")
+
+                if echo "$RESPONSE" | jq -e '.results == 0' >/dev/null; then
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$RESPONSE"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               ($error): ~
-              (json_parse($stdout)):
-                results: 0
     - name: Check if the nodebalancer is deleted
       try:
         - script:
@@ -167,13 +204,29 @@ spec:
                 value: (to_string({"label":($nodebalancer)}))
             content: |
               set -e
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "X-Filter: $FILTER" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI")
+
+                if echo "$RESPONSE" | jq -e '.results == 0' >/dev/null; then
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$RESPONSE"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               ($error): ~
-              (json_parse($stdout)):
-                results: 0
     

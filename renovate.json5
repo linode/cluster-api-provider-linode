@@ -10,6 +10,7 @@
   "postUpdateOptions": ["gomodTidy"],
   "vulnerabilityAlerts": {
     "enabled": true,
+    "groupName": "security updates",
   },
   "osvVulnerabilityAlerts": true,
   "platformAutomerge": true,
@@ -28,6 +29,11 @@
     }
   ],
   "packageRules": [
+    {
+      "matchCategories": ["security"],
+      "schedule": ["at any time"],
+      "prPriority": 10,
+    },
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true,
@@ -61,6 +67,68 @@
       ],
       "matchPackageNames": [
         "github.com/aws/**",
+      ]
+    },
+    {
+      "groupName": "github actions ci",
+      "groupSlug": "github-actions-ci",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "dorny/paths-filter",
+        "jetify-com/devbox-install-action",
+        "codecov/codecov-action",
+        "actions/upload-artifact",
+      ]
+    },
+    {
+      "groupName": "github actions core",
+      "groupSlug": "github-actions-core",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "actions/checkout",
+        "actions/setup-go",
+        "step-security/harden-runner",
+      ]
+    },
+    {
+      "groupName": "github actions tooling",
+      "groupSlug": "github-actions-tooling",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "ScribeMD/docker-cache",
+        "gaurav-nelson/github-action-markdown-link-check",
+        "golangci/golangci-lint-action",
+      ]
+    },
+    {
+      "groupName": "github actions docker",
+      "groupSlug": "github-actions-docker",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "docker/setup-qemu-action",
+        "docker/setup-buildx-action",
+        "docker/metadata-action",
+        "docker/login-action",
+        "docker/build-push-action",
+      ]
+    },
+    {
+      "groupName": "github actions pages",
+      "groupSlug": "github-actions-pages",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "actions/configure-pages",
+        "actions/upload-pages-artifact",
+        "actions/deploy-pages",
+      ]
+    },
+    {
+      "groupName": "github actions release",
+      "groupSlug": "github-actions-release",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "release-drafter/release-drafter",
+        "softprops/action-gh-release",
       ]
     },
     {
