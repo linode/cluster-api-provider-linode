@@ -66,15 +66,31 @@ spec:
                 value: (to_string({"tags":($cluster)}))
             content: |
               set -e
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "X-Filter: $FILTER" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI")
+
+                if echo "$RESPONSE" | jq -e '.results == 1' >/dev/null; then
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$RESPONSE"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               ($error): ~
-              (json_parse($stdout)):
-                results: 1
     - name: Delete Cluster resource
       try:
         - delete:
@@ -98,12 +114,28 @@ spec:
                 value: (to_string({"tags":($cluster)}))
             content: |
               set -e
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "X-Filter: $FILTER" \
+                  -H "Content-Type: application/json" \
+                  "https://$TARGET_API/$TARGET_API_VERSION/$URI")
+
+                if echo "$RESPONSE" | jq -e '.results == 0' >/dev/null; then
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$RESPONSE"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               ($error): ~
-              (json_parse($stdout)):
-                results: 0
