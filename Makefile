@@ -355,7 +355,7 @@ CHAINSAW       ?= $(LOCALBIN)/chainsaw
 ENVTEST        ?= $(CACHE_BIN)/setup-envtest
 NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
-MOCKGEN        ?= $(LOCALBIN)/mockgen
+MOCKGEN        ?= $(CACHE_BIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
 GOLANGCI_LINT  ?= $(LOCALBIN)/golangci-lint
 GOLANGCI_LINT_CUSTOM ?= $(CACHE_BIN)/golangci-lint-custom
@@ -513,8 +513,8 @@ $(GOVULNC): $(LOCALBIN)
 
 .PHONY: mockgen
 mockgen: $(MOCKGEN) ## Download mockgen locally if necessary.
-$(MOCKGEN): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
+$(MOCKGEN): $(CACHE_BIN)
+	GOBIN=$(CACHE_BIN) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
 
 .PHONY: gowrap
 gowrap: $(GOWRAP) ## Download gowrap locally if necessary.
