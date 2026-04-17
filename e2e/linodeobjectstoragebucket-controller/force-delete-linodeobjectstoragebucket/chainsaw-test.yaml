@@ -19,6 +19,8 @@ spec:
       value: (trim((truncate(($run), `52`)), '-'))
     - name: access_secret
       value: (join('-', [($bucket), 'obj-key']))
+    - name: region
+      value: us-sea
   template: true
   steps:
     - name: Check if CAPI provider resources exist
@@ -47,16 +49,34 @@ spec:
             env:
               - name: BUCKET
                 value: ($bucket)
+              - name: REGION
+                value: ($region)
             content: |
               set -e
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "Content-Type: application/json" \
-                "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://api.linode.com/v4beta/object-storage/buckets/$REGION/$BUCKET")
+
+                if echo "$RESPONSE" | jq -e --arg bucket "$BUCKET" '.label == $bucket' >/dev/null; then
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$RESPONSE"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               ($error): ~
-              (json_parse($stdout)):
-                label: ($bucket)
     - name: Ensure the access key was created
       try:
         - script:
@@ -64,16 +84,33 @@ spec:
               - name: URI
                 value: object-storage/keys
               - name: OBJ_KEY
-                value: ($access_secret)
+                value: ($bucket)
             content: |
               set -e
 
               export KEY_ID=$(kubectl -n $NAMESPACE get lobjkey $OBJ_KEY -ojson | jq '.status.accessKeyRef')
-              
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "Content-Type: application/json" \
-                "https://api.linode.com/v4/$URI/$KEY_ID"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://api.linode.com/v4beta/$URI/$KEY_ID")
+
+                if echo "$RESPONSE" | jq -e '.id' >/dev/null; then
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$RESPONSE"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               ($error): ~
     - name: Delete LinodeObjectStorageBucket
@@ -91,12 +128,32 @@ spec:
             env:
               - name: BUCKET
                 value: ($bucket)
+              - name: REGION
+                value: ($region)
             content: |
               set -e
-              STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "Content-Type: application/json" \
-                "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET")
-              echo "$STATUS"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://api.linode.com/v4beta/object-storage/buckets/$REGION/$BUCKET")
+
+                if [ "$STATUS" = "404" ]; then
+                  echo "$STATUS"
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$STATUS"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               (contains($stdout, '404')): true
