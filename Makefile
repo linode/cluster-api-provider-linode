@@ -381,6 +381,7 @@ GOWRAP_VERSION           ?= v1.4.0
 S5CMD_VERSION            ?= v2.2.2
 CONVERSION_GEN_VERSION   ?= v0.32.2
 GOLANGCI_LINT_VERSION    ?= v2.1.5
+ENVTEST_VERSION          ?= release-0.22
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
@@ -452,7 +453,7 @@ $(CHAINSAW): $(CACHE_BIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(CACHE_BIN)
-	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230216140739-c98506dc3b8e
+	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 
 .phony: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)

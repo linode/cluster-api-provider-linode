@@ -24,6 +24,7 @@ on:
         required: true
         options:
           - quick
+          - cluster-pause
           - flavors
           - k3s
           - rke2

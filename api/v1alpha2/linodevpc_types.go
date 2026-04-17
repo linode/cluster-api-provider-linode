@@ -215,11 +215,35 @@ func (lv *LinodeVPC) GetConditions() []metav1.Condition {
 			lv.Status.Conditions[i].Reason = DefaultConditionReason
 		}
 	}
+
 	return lv.Status.Conditions
 }
 
 func (lv *LinodeVPC) SetConditions(conditions []metav1.Condition) {
 	lv.Status.Conditions = conditions
+}
+
+func (lv *LinodeVPC) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
+	for i := range lv.Status.Conditions {
+		if lv.Status.Conditions[i].Type == cond.Type {
+			lv.Status.Conditions[i] = cond
+			return
+		}
+	}
+	lv.Status.Conditions = append(lv.Status.Conditions, cond)
+}
+
+func (lv *LinodeVPC) GetCondition(condType string) *metav1.Condition {
+	for i := range lv.Status.Conditions {
+		if lv.Status.Conditions[i].Type == condType {
+			return &lv.Status.Conditions[i]
+		}
+	}
+
+	return nil
 }
 
 func (lv *LinodeVPC) GetV1Beta2Conditions() []metav1.Condition {

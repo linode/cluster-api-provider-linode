@@ -119,7 +119,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, fmt.Errorf("failed to create Placement Group scope: %w", err)
 	}
 
-	// Only check pause if not deleting or if cluster still exists
+	// Only check pause if not deleting or if cluster still exists.
 	if linodeplacementgroup.DeletionTimestamp.IsZero() || cluster != nil {
 		isPaused, _, err := paused.EnsurePausedCondition(ctx, pgScope.Client, pgScope.Cluster, pgScope.LinodePlacementGroup)
 		if err != nil {
@@ -376,8 +376,11 @@ func (r *LinodePlacementGroupReconciler) SetupWithManager(mgr ctrl.Manager, opti
 		For(&infrav1alpha2.LinodePlacementGroup{}).
 		WithOptions(options).
 		WithEventFilter(predicate.And(
-			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
-			predicate.GenerationChangedPredicate{},
+			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
+			),
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodePlacementGroup)
 				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodePlacementGroup)

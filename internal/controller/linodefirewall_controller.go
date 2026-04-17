@@ -114,7 +114,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
 	}
 
-	// Only check pause if not deleting or if cluster still exists
+	// Only check pause if not deleting or if cluster still exists.
 	if linodeFirewall.DeletionTimestamp.IsZero() || cluster != nil {
 		isPaused, _, err := paused.EnsurePausedCondition(ctx, fwScope.Client, fwScope.Cluster, fwScope.LinodeFirewall)
 		if err != nil {
@@ -289,8 +289,11 @@ func (r *LinodeFirewallReconciler) SetupWithManager(mgr ctrl.Manager, options cr
 		WithOptions(options).
 		WithEventFilter(
 			predicate.And(
-				predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
-				predicate.GenerationChangedPredicate{},
+				predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
+				predicate.Or(
+					predicate.GenerationChangedPredicate{},
+					predicate.AnnotationChangedPredicate{},
+				),
 				predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 					oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeFirewall)
 					newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodeFirewall)
