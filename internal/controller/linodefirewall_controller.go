@@ -248,7 +248,7 @@ func (r *LinodeFirewallReconciler) reconcile(
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultFWControllerReconcileTimeout)):
 			logger.Info(fmt.Sprintf("%s failed, requeuing", action))
 
-			return ctrl.Result{RequeueAfter: reconciler.DefaultFWControllerReconcilerDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultFWControllerReconcilerDelay)}, nil
 		}
 
 		return ctrl.Result{}, err
@@ -285,7 +285,7 @@ func (r *LinodeFirewallReconciler) reconcileDelete(
 		if fwScope.LinodeFirewall.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultFWControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("DeleteFirewall failed, requeuing")
 
-			return ctrl.Result{RequeueAfter: reconciler.DefaultFWControllerReconcilerDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultFWControllerReconcilerDelay)}, nil
 		}
 
 		return ctrl.Result{}, err

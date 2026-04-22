@@ -160,7 +160,8 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultFWControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultFWControllerReconcilerDelay+time.Duration(float64(rec.DefaultFWControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -242,7 +243,8 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultFWControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultFWControllerReconcilerDelay+time.Duration(float64(rec.DefaultFWControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
 					})),
 					Path(Result("update requeues for update error", func(ctx context.Context, mck Mock) {
@@ -250,7 +252,8 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultFWControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultFWControllerReconcilerDelay+time.Duration(float64(rec.DefaultFWControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -306,7 +309,8 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultFWControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultFWControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultFWControllerReconcilerDelay+time.Duration(float64(rec.DefaultFWControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {

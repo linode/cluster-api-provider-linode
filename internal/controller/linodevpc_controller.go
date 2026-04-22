@@ -215,7 +215,7 @@ func (r *LinodeVPCReconciler) reconcile(
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 			logger.Info("re-queuing VPC update")
 
-			res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
+			res = ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}
 			err = nil
 		}
 
@@ -231,7 +231,7 @@ func (r *LinodeVPCReconciler) reconcile(
 		reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 		logger.Info("re-queuing VPC creation")
 
-		res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
+		res = ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}
 		err = nil
 	}
 
@@ -314,7 +314,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 
 	if err := r.deleteVPCResources(ctx, logger, vpcScope); err != nil {
 		if errors.Is(err, util.ErrReconcileAgain) {
-			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -332,7 +332,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		logger.Error(err, "Failed to update credentials secret")
 		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("re-queuing VPC deletion")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -351,7 +351,7 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 
 	if err := r.handleRetainedSubnets(ctx, logger, vpcScope); err != nil {
 		if errors.Is(err, util.ErrReconcileAgain) {
-			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -367,7 +367,7 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 		logger.Error(err, "Failed to update credentials secret")
 		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("re-queuing VPC deletion")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}, nil
 		}
 		return ctrl.Result{}, err
 	}
