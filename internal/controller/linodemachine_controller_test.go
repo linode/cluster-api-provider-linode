@@ -344,7 +344,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			result, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(result.RequeueAfter).To(Equal(rutil.DefaultClusterControllerReconcileDelay))
+			Expect(result.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+			Expect(result.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 			Expect(linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady).Status).To(Equal(metav1.ConditionFalse))
 
 			Expect(k8sClient.Delete(ctx, linodeVPC)).To(Succeed())
@@ -674,7 +675,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			reconciler.ReconcileTimeout = time.Nanosecond
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
-			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+			Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+			Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
@@ -721,7 +723,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+			Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+			Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 		})
 	})
 
@@ -759,7 +762,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+			Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+			Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 		})
 	})
 
@@ -1047,7 +1051,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mScope.PatchHelper = patchHelper
 
 			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
-			Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
+			Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerWaitForRunningDelay))
+			Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerWaitForRunningDelay+time.Duration(float64(rutil.DefaultMachineControllerWaitForRunningDelay)*rutil.RetryJitterFraction)))
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(linodeMachine.GetCondition(ConditionPreflightMetadataSupportConfigured).Status).To(Equal(metav1.ConditionTrue))
@@ -1611,7 +1616,8 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							Return()
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to create Linode machine instance"))
 					})),
 				),
@@ -1915,7 +1921,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 					})),
 				),
 			),
@@ -1939,7 +1946,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					res, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceProvisioning))
-					Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerWaitForRunningDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerWaitForRunningDelay+time.Duration(float64(rutil.DefaultMachineControllerWaitForRunningDelay)*rutil.RetryJitterFraction)))
 
 					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 						&linodego.Instance{
@@ -2174,7 +2182,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				} // this firewall does not exist
 				res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+				Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+				Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 				Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeFirewall"))
 			}),
 		),
@@ -2206,7 +2215,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					linodeMachine.Spec.FirewallID = 10
 					res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerWaitForRunningDelay))
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerWaitForRunningDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerWaitForRunningDelay+time.Duration(float64(rutil.DefaultMachineControllerWaitForRunningDelay)*rutil.RetryJitterFraction)))
 					Expect(mck.Logs()).To(ContainSubstring("Failed to list firewalls for Linode instance"))
 				}),
 			),
@@ -2337,7 +2347,8 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 							Return(&linodego.Error{Code: http.StatusBadGateway})
 						res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rutil.DefaultMachineControllerRetryDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Linode instance deletion"))
 					})),
 				),
@@ -4201,7 +4212,8 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				}
 				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{RequeueAfter: rutil.DefaultClusterControllerReconcileDelay}))
+				Expect(result.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+				Expect(result.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 			})
 		})
 
@@ -4217,7 +4229,8 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				}
 				result, err := reconciler.reconcilePreflightVPC(ctx, logger, machineScope, vpcRef)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{RequeueAfter: rutil.DefaultClusterControllerReconcileDelay}))
+				Expect(result.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+				Expect(result.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 				condition := linodeMachine.GetCondition(ConditionPreflightLinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
 				Expect(condition.Status).To(Equal(metav1.ConditionFalse))

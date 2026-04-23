@@ -220,7 +220,7 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 		reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)) {
 		logger.Info("re-queuing Placement Group creation")
 
-		res = ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}
+		res = ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultPGControllerReconcilerDelay)}
 		err = nil
 	}
 
@@ -285,7 +285,7 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 				logger.Error(err, "Failed to fetch Placement Group from API")
 				if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
 					logger.Info("Re-queuing Placement Group deletion due to fetch error")
-					return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
+					return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultPGControllerReconcilerDelay)}, nil
 				}
 				return ctrl.Result{}, fmt.Errorf("failed to fetch placement group %d after timeout: %w", pgID, err)
 			}
@@ -296,8 +296,8 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 				logger.Info("Placement Group still has node(s) attached", "count", len(pg.Members))
 				waitTimeout := reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerWaitForHasNodesTimeout)
 				if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(waitTimeout).After(time.Now()) {
-					logger.Info("Placement Group has node(s) attached, re-queuing deletion to wait for detachment", "requeueAfter", reconciler.DefaultPGControllerReconcilerDelay)
-					return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
+					logger.Info("Placement Group has node(s) attached, re-queuing deletion to wait for detachment")
+					return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultPGControllerReconcilerDelay)}, nil
 				}
 
 				// Wait timeout exceeded, fail the deletion
@@ -336,7 +336,7 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 						// Need this requeue incase for some reason pg is not empty even though all the nodes are deleted.
 						// This should give enough time for PG to get updated on the backend and we can delete it next time.
 						logger.Info("Re-queuing Placement Group deletion due to API delete error")
-						return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
+						return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultPGControllerReconcilerDelay)}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to delete placement group %d after timeout: %w", pgID, err)
 				}
@@ -361,7 +361,7 @@ func (r *LinodePlacementGroupReconciler) reconcileDelete(ctx context.Context, lo
 		logger.Error(err, "Failed to remove credentials secret finalizer")
 		if pgScope.LinodePlacementGroup.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultPGControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("Re-queuing Placement Group deletion due to credential finalizer removal error")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultPGControllerReconcilerDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultPGControllerReconcilerDelay)}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to remove credential finalizer after timeout: %w", err)
 	}

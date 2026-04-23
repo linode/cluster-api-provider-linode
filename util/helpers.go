@@ -58,6 +58,7 @@ func IsRetryableError(err error) bool {
 		http.StatusBadGateway,
 		http.StatusGatewayTimeout,
 		http.StatusServiceUnavailable,
+		http.StatusRequestTimeout,
 		linodego.ErrorFromError) || errors.Is(err, http.ErrHandlerTimeout) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF)
 }
 

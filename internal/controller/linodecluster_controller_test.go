@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
@@ -216,7 +217,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						reconciler.Client = k8sClient
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(Or(
 							ContainSubstring("re-queuing cluster/load-balancer creation"),
 							ContainSubstring("failed to ensure nodebalancer"),
@@ -237,7 +239,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						reconciler.Client = k8sClient
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 				),
@@ -260,7 +263,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						reconciler.Client = k8sClient
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 				),
@@ -283,7 +287,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						reconciler.Client = k8sClient
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 				),

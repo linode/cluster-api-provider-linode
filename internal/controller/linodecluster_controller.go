@@ -167,7 +167,7 @@ func (r *LinodeClusterReconciler) reconcile(
 			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster.GetCondition(string(clusterv1.ReadyCondition)),
 				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 				logger.Info("re-queuing cluster/nb deletion")
-				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+				return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 			}
 			return res, err
 		}
@@ -190,7 +190,7 @@ func (r *LinodeClusterReconciler) reconcile(
 			if !reconciler.HasStaleCondition(clusterScope.LinodeCluster.GetCondition(clusterv1.ReadyCondition),
 				reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 				logger.Info("re-queuing cluster/load-balancer creation")
-				return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+				return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 			}
 			return res, err
 		}
@@ -212,7 +212,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	if err := addMachineToLB(ctx, clusterScope); err != nil {
 		if errors.Is(err, util.ErrReconcileAgain) {
 			logger.Info("re-queuing adding machine to loadbalancer")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 		}
 		logger.Error(err, "Failed to add Linode machine to loadbalancer option")
 		return retryIfTransient(err, logger)
@@ -259,7 +259,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 		}
 		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeNBFirewallReady,
@@ -302,7 +302,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 			Reason: "LinodeFirewallNotYetAvailable", // We have to set the reason to not fail object patching
 		})
 
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 	}
 	if linodeFirewall.Spec.FirewallID == nil {
 		logger.Info("Linode firewall not yet available")
@@ -312,7 +312,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 			Reason: "LinodeFirewallNotYetAvailable", // We have to set the reason to not fail object patching
 		})
 
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 	}
 
 	// Only set to true if there was no error
@@ -338,7 +338,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 				Reason:  util.CreateError,
 				Message: fmt.Sprintf("VPC with ID %d not found: %v", vpcID, err),
 			})
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 		}
 		// VPC exists, verify it has at least one subnet
 		if len(vpc.Subnets) == 0 {
@@ -350,7 +350,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 		}
 
 		// Only set to true if there was no error
@@ -392,7 +392,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 			Status: metav1.ConditionFalse,
 			Reason: "LinodeVPCNotYetAvailable", // We have to set the reason to not fail object patching
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 	} else if !linodeVPC.Status.Ready {
 		logger.Info("LinodeVPC is not yet available")
 		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
@@ -400,7 +400,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 			Status: metav1.ConditionFalse,
 			Reason: "LinodeVPCNotYetAvailable", // We have to set the reason to not fail object patching
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 	}
 
 	// Only set to true if there was no error

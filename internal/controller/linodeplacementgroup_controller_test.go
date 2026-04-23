@@ -97,7 +97,8 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Placement Group creation"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -140,7 +141,8 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to fetch Placement Group from API"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -165,7 +167,8 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to delete Placement Group via API"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -199,7 +202,8 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Placement Group has node(s) attached, re-queuing deletion to wait for detachment"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
