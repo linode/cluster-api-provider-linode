@@ -123,8 +123,8 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: gosec
-gosec: ## Run gosec against code.
-	docker run --rm -w /workdir -v $(PWD):/workdir securego/gosec:$(GOSEC_VERSION) -exclude-dir=bin -exclude-generated ./...
+gosec: $(GOSEC) ## Run gosec against code.
+	$(GOSEC) -exclude-dir=bin -exclude-generated ./...
 
 .PHONY: lint
 lint: ## Run lint against code.
@@ -355,6 +355,7 @@ CHAINSAW       ?= $(LOCALBIN)/chainsaw
 ENVTEST        ?= $(CACHE_BIN)/setup-envtest
 NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
+GOSEC          ?= $(CACHE_BIN)/gosec
 MOCKGEN        ?= $(CACHE_BIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
 GOLANGCI_LINT  ?= $(LOCALBIN)/golangci-lint
@@ -420,7 +421,7 @@ GOLANGCI_LINT_VERSION    ?= v2.10.1
 GOSEC_VERSION            ?= 2.22.11
 
 .PHONY: tools
-tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
+tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(NILAWAY) $(GOVULNC) $(GOSEC) $(MOCKGEN) $(GOWRAP)
 
 
 .PHONY: kustomize
@@ -510,6 +511,11 @@ $(NILAWAY): $(LOCALBIN)
 govulncheck: $(GOVULNC) ## Download govulncheck locally if necessary.
 $(GOVULNC): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNC_VERSION)
+
+.PHONY: gosec-bin
+gosec-bin: $(GOSEC) ## Download gosec locally if necessary.
+$(GOSEC): $(CACHE_BIN)
+	GOBIN=$(CACHE_BIN) go install github.com/securego/gosec/v2/cmd/gosec@v$(GOSEC_VERSION)
 
 .PHONY: mockgen
 mockgen: $(MOCKGEN) ## Download mockgen locally if necessary.
