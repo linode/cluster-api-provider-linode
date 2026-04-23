@@ -233,10 +233,14 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 		}
 	}
 
-	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
+	// Check firewall configuration - either direct ID or reference
 		if !reconciler.ConditionTrue(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady)) {
-			res, err := r.reconcilePreflightLinodeFirewallCheck(ctx, logger, clusterScope)
-			if err != nil || !res.IsZero() {
+		if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
+			if res, err := r.reconcilePreflightFirewallID(ctx, logger, clusterScope); err != nil || !res.IsZero() {
+				return res, err
+			}
+		} else if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
+			if res, err := r.reconcilePreflightFirewallRef(ctx, logger, clusterScope); err != nil || !res.IsZero() {
 				return res, err
 			}
 		}
@@ -245,9 +249,7 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 	return ctrl.Result{}, nil
 }
 
-func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
-	// If NodeBalancerFirewallID is directly specified, check if it exists
-	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
+func (r *LinodeClusterReconciler) reconcilePreflightFirewallID(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
 		firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
 		logger.Info("Verifying direct NodeBalancerFirewallID", "firewallID", firewallID)
 		_, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
@@ -269,6 +271,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 		return ctrl.Result{}, nil
 	}
 
+func (r *LinodeClusterReconciler) reconcilePreflightFirewallRef(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
 	name := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Name
 	namespace := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Namespace
 	if namespace == "" {
