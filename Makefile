@@ -123,7 +123,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: gosec
-gosec: $(GOSEC) ## Run gosec against code.
+gosec: gosec-bin ## Run gosec against code.
 	$(GOSEC) -exclude-dir=bin -exclude-generated ./...
 
 .PHONY: lint
