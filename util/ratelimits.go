@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -46,15 +47,40 @@ func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) e
 		return nil
 	}
 
-	var err error
-	c.ReqRemaining, err = strconv.Atoi(resp.Header().Get("X-Ratelimit-Remaining"))
-	if err != nil {
-		return err
-	}
+	var (
+		err       error
+		logger    = logr.FromContextOrDiscard(resp.Request.Context())
+		now       = time.Now().Add(15 * time.Second).Unix()
+		epochTime int64
+		// Linode creation limits ref: https://techdocs.akamai.com/linode-api/reference/rate-limits#specific-operation-rate-limits
+		// Creating Linodes has a dedicated rate limit of 20 requests per 15 seconds.
+		instancesPostDefaultLimit = 20
+		reqRemaining              int
+		rateLimitRemainingHeader  = resp.Header().Get("X-Ratelimit-Remaining")
+		rateLimitResetHeader      = resp.Header().Get("X-Ratelimit-Reset")
+	)
 
-	epochTime, err := strconv.ParseInt(resp.Header().Get("X-Ratelimit-Reset"), 10, 64)
-	if err != nil {
-		return err
+	if rateLimitRemainingHeader == "" {
+		logger.Info("missing X-Ratelimit-Remaining header, using default value")
+		reqRemaining = instancesPostDefaultLimit - 1
+	} else {
+		reqRemaining, err = strconv.Atoi(rateLimitRemainingHeader)
+		if err != nil {
+			logger.Error(err, "Failed to parse X-Ratelimit-Remaining header, using default value")
+			reqRemaining = instancesPostDefaultLimit - 1
+		}
+	}
+	c.ReqRemaining = reqRemaining
+
+	if rateLimitResetHeader == "" {
+		logger.Info("missing X-Ratelimit-Reset header, using default value", "X-Ratelimit-Reset", now)
+		epochTime = now
+	} else {
+		epochTime, err = strconv.ParseInt(rateLimitResetHeader, 10, 64)
+		if err != nil {
+			logger.Error(err, "Failed to parse X-Ratelimit-Reset header, using default value")
+			epochTime = now
+		}
 	}
 	c.RefreshTime = time.Unix(epochTime, 0)
 	return nil
