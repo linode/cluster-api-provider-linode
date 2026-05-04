@@ -176,7 +176,8 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						Protocol: "TCP",
 						Addresses: &infrav1alpha2.NetworkAddresses{
 							IPv4: &[]string{fmt.Sprintf("192.168.%d.%d", idx, 0)},
-						}})
+						},
+					})
 				}
 				res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
 				Expect(err).ToNot(HaveOccurred())
@@ -273,7 +274,8 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						Protocol: "TCP",
 						Addresses: &infrav1alpha2.NetworkAddresses{
 							IPv4: &ipv4s,
-						}})
+						},
+					})
 
 					mck.LinodeClient.EXPECT().GetFirewall(ctx, 1).Return(&linodego.Firewall{
 						ID: 1,

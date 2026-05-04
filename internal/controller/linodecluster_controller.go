@@ -107,7 +107,6 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			LinodeMachineList: infrav1alpha2.LinodeMachineList{},
 		},
 	)
-
 	if err != nil {
 		logger.Info("Failed to create cluster scope", "error", err.Error())
 		return ctrl.Result{}, fmt.Errorf("failed to create cluster scope: %w", err)
