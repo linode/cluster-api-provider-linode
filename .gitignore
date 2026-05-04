@@ -13,3 +13,4 @@ infrastructure-*-linode/*
 vendor/
 .vscode/
 .tool-versions
+.opencode/
