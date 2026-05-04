@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -165,7 +166,11 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to create machine scope: %w", err)
 	}
 
-	if machineScope.LinodeMachine.IsPaused() {
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, machineScope.Client, machineScope.Cluster, machineScope.LinodeMachine)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if isPaused {
 		log.Info("LinodeMachine or linked cluster is marked as paused, won't reconcile.")
 		return ctrl.Result{}, nil
 	}
@@ -425,7 +430,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 	} else if !linodeVPC.Status.Ready {
 		logger.Info("LinodeVPC is not yet available")
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
@@ -433,7 +438,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightVPC(ctx context.Context, log
 			Status: metav1.ConditionFalse,
 			Reason: "LinodeVPCCreating", // We have to set the reason to not fail object patching
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 	}
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeVPCReady,
@@ -456,7 +461,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 		}
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeFirewallReady,
@@ -478,7 +483,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 				Reason:  util.CreateError,
 				Message: err.Error(),
 			})
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 		}
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeFirewallReady,
@@ -517,7 +522,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 	} else if !linodeFirewall.Status.Ready {
 		logger.Info("Linode firewall not yet ready")
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
@@ -525,7 +530,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 			Status: metav1.ConditionFalse,
 			Reason: "LinodeFirewallCreating", // We have to set the reason to not fail object patching
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 	}
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeFirewallReady,
@@ -620,7 +625,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 	}
 
 	configData := linodego.InstanceConfigUpdateOptions{}
@@ -682,7 +687,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, in
 			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 	}
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightBootTriggered,
@@ -712,7 +717,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightReady(ctx context.Context, i
 			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 	}
 	machineScope.LinodeMachine.Status.Addresses = addrs
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
@@ -741,7 +746,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	if _, ok := requeueInstanceStatuses[linodeInstance.Status]; ok {
 		if linodeInstance.Updated.Add(reconciler.DefaultMachineControllerWaitForRunningTimeout).After(time.Now()) {
 			logger.Info("Instance not yet ready", "status", linodeInstance.Status)
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 		} else {
 			logger.Info("Instance not ready in time, skipping reconciliation", "status", linodeInstance.Status)
 			machineScope.LinodeMachine.SetCondition(metav1.Condition{
@@ -774,7 +779,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: &machineTags})
 		if err != nil {
 			logger.Error(err, "Failed to update tags for Linode instance")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 		}
 	}
 
@@ -804,13 +809,13 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 		interfaces, err := machineScope.LinodeClient.ListInterfaces(ctx, instanceID, nil)
 		if err != nil {
 			logger.Error(err, "Failed to list interfaces for Linode instance")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 		}
 		for _, iface := range interfaces {
 			ifaceFWs, err := machineScope.LinodeClient.ListInterfaceFirewalls(ctx, instanceID, iface.ID, nil)
 			if err != nil {
 				logger.Error(err, "Failed to list firewalls for Linode instance interface", "interfaceID", iface.ID)
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+				return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 			}
 			firewalls = append(firewalls, ifaceFWs...)
 		}
@@ -818,7 +823,7 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 		firewalls, err = machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
 		if err != nil {
 			logger.Error(err, "Failed to list firewalls for Linode instance")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerWaitForRunningDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 		}
 	}
 
@@ -834,7 +839,7 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 		fwID, err := getFirewallID(ctx, machineScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get firewall ID from firewall ref")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 		}
 		desiredFWIDs = []int{fwID}
 	}
@@ -890,7 +895,7 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 			if machineScope.LinodeMachine.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerRetryDelay)).After(time.Now()) {
 				logger.Info("re-queuing Linode instance deletion")
 
-				return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+				return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 			}
 
 			return ctrl.Result{}, err
@@ -945,7 +950,7 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 		).
 		// we care about reconciling on metadata updates for LinodeMachines because the OwnerRef for the Machine is needed
 		WithEventFilter(predicate.And(
-			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeMachine)
 				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodeMachine)

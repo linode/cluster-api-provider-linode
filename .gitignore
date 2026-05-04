@@ -11,3 +11,5 @@ templates/cluster-template*.yaml
 infrastructure-*-linode/*
 .envrc
 vendor/
+.vscode/
+.tool-versions

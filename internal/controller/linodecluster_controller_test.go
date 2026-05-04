@@ -19,16 +19,20 @@ package controller
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -213,7 +217,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						reconciler.Client = k8sClient
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(Or(
 							ContainSubstring("re-queuing cluster/load-balancer creation"),
 							ContainSubstring("failed to ensure nodebalancer"),
@@ -234,7 +239,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						reconciler.Client = k8sClient
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 				),
@@ -257,7 +263,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						reconciler.Client = k8sClient
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 				),
@@ -280,7 +287,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 						reconciler.Client = k8sClient
 						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing cluster/load-balancer creation"))
 					})),
 				),
@@ -339,6 +347,92 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			),
 		),
 	)
+})
+
+var _ = Describe("pause handling", Label("cluster", "pause"), func() {
+	It("sets paused condition for LinodeCluster when owner Cluster is paused", func(ctx SpecContext) {
+		cluster := &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-cluster-owner",
+				Namespace: defaultNamespace,
+			},
+			Spec: clusterv1.ClusterSpec{
+				Paused: ptr.To(true),
+			},
+		}
+		linodeCluster := &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-cluster-infra",
+				Namespace: defaultNamespace,
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				ControlPlaneEndpoint: clusterv1.APIEndpoint{
+					Port: 6443,
+				},
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+		Expect(controllerutil.SetControllerReference(cluster, linodeCluster, scheme.Scheme)).To(Succeed())
+		Expect(k8sClient.Create(ctx, linodeCluster)).To(Succeed())
+
+		reconciler := &LinodeClusterReconciler{
+			Client:             k8sClient,
+			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
+			DnsClientConfig:    scope.ClientConfig{Token: "test-token"},
+		}
+
+		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(linodeCluster)})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(linodeCluster), linodeCluster)).To(Succeed())
+		pausedCondition := linodeCluster.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+		Expect(controllerutil.ContainsFinalizer(linodeCluster, infrav1alpha2.ClusterFinalizer)).To(BeFalse())
+	})
+
+	It("sets and clears paused condition from the upstream pause annotation path", func(ctx SpecContext) {
+		linodeCluster := &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-cluster-annotation",
+				Namespace: defaultNamespace,
+				Annotations: map[string]string{
+					clusterv1.PausedAnnotation: "",
+				},
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Region: "us-ord",
+				ControlPlaneEndpoint: clusterv1.APIEndpoint{
+					Port: 6443,
+				},
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, linodeCluster)).To(Succeed())
+
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, k8sClient, nil, linodeCluster)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeTrue())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(linodeCluster), linodeCluster)).To(Succeed())
+		pausedCondition := linodeCluster.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+
+		delete(linodeCluster.Annotations, clusterv1.PausedAnnotation)
+		Expect(k8sClient.Update(ctx, linodeCluster)).To(Succeed())
+
+		isPaused, _, err = paused.EnsurePausedCondition(ctx, k8sClient, nil, linodeCluster)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeFalse())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(linodeCluster), linodeCluster)).To(Succeed())
+		pausedCondition = linodeCluster.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionFalse))
+	})
 })
 
 var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lifecycle-dns"), func() {

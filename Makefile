@@ -355,7 +355,7 @@ CHAINSAW       ?= $(LOCALBIN)/chainsaw
 ENVTEST        ?= $(CACHE_BIN)/setup-envtest
 NILAWAY        ?= $(LOCALBIN)/nilaway
 GOVULNC        ?= $(LOCALBIN)/govulncheck
-MOCKGEN        ?= $(LOCALBIN)/mockgen
+MOCKGEN        ?= $(CACHE_BIN)/mockgen
 GOWRAP         ?= $(CACHE_BIN)/gowrap
 GOLANGCI_LINT  ?= $(LOCALBIN)/golangci-lint
 GOLANGCI_LINT_CUSTOM ?= $(CACHE_BIN)/golangci-lint-custom
@@ -369,7 +369,7 @@ KUSTOMIZE_VERSION        ?= v5.7.1
 CTLPTL_VERSION           ?= v0.9.0
 
 # renovate: datasource=github-tags depName=kubernetes-sigs/cluster-api
-CLUSTERCTL_VERSION       ?= v1.12.3
+CLUSTERCTL_VERSION       ?= v1.12.5
 
 # renovate: datasource=go depName=github.com/elastic/crd-ref-docs
 CRD_REF_DOCS_VERSION     ?= v0.3.0
@@ -378,7 +378,7 @@ CRD_REF_DOCS_VERSION     ?= v0.3.0
 KUBECTL_VERSION          ?= v1.35.3
 
 # renovate: datasource=github-tags depName=kubernetes-sigs/kubebuilder
-KUBEBUILDER_VERSION      ?= v4.13.0
+KUBEBUILDER_VERSION      ?= v4.13.1
 
 # renovate: datasource=go depName=sigs.k8s.io/controller-runtime/tools/setup-envtest
 ENVTEST_VERSION 	 ?= release-0.22
@@ -513,8 +513,8 @@ $(GOVULNC): $(LOCALBIN)
 
 .PHONY: mockgen
 mockgen: $(MOCKGEN) ## Download mockgen locally if necessary.
-$(MOCKGEN): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
+$(MOCKGEN): $(CACHE_BIN)
+	GOBIN=$(CACHE_BIN) go install go.uber.org/mock/mockgen@$(MOCKGEN_VERSION)
 
 .PHONY: gowrap
 gowrap: $(GOWRAP) ## Download gowrap locally if necessary.

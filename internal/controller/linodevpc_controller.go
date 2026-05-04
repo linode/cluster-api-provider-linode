@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -122,9 +123,13 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("failed to create VPC scope: %w", err)
 	}
 
-	// Only check pause if not deleting or if cluster still exists
+	// Only check pause if not deleting or if cluster still exists.
 	if linodeVPC.DeletionTimestamp.IsZero() || cluster != nil {
-		if vpcScope.LinodeVPC.IsPaused() {
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, vpcScope.Client, vpcScope.Cluster, vpcScope.LinodeVPC)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if isPaused {
 			log.Info("linodeVPC or linked cluster is paused, skipping reconciliation")
 			return ctrl.Result{}, nil
 		}
@@ -210,7 +215,7 @@ func (r *LinodeVPCReconciler) reconcile(
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 			logger.Info("re-queuing VPC update")
 
-			res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
+			res = ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}
 			err = nil
 		}
 
@@ -226,7 +231,7 @@ func (r *LinodeVPCReconciler) reconcile(
 		reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)) {
 		logger.Info("re-queuing VPC creation")
 
-		res = ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}
+		res = ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}
 		err = nil
 	}
 
@@ -309,7 +314,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 
 	if err := r.deleteVPCResources(ctx, logger, vpcScope); err != nil {
 		if errors.Is(err, util.ErrReconcileAgain) {
-			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -327,7 +332,7 @@ func (r *LinodeVPCReconciler) reconcileDelete(ctx context.Context, logger logr.L
 		logger.Error(err, "Failed to update credentials secret")
 		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("re-queuing VPC deletion")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -346,7 +351,7 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 
 	if err := r.handleRetainedSubnets(ctx, logger, vpcScope); err != nil {
 		if errors.Is(err, util.ErrReconcileAgain) {
-			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -362,7 +367,7 @@ func (r *LinodeVPCReconciler) handleRetainedVPC(ctx context.Context, logger logr
 		logger.Error(err, "Failed to update credentials secret")
 		if vpcScope.LinodeVPC.ObjectMeta.DeletionTimestamp.Add(reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultVPCControllerReconcileTimeout)).After(time.Now()) {
 			logger.Info("re-queuing VPC deletion")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultVPCControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultVPCControllerReconcileDelay)}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -503,8 +508,11 @@ func (r *LinodeVPCReconciler) SetupWithManager(mgr ctrl.Manager, options crcontr
 		For(&infrav1alpha2.LinodeVPC{}).
 		WithOptions(options).
 		WithEventFilter(predicate.And(
-			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
-			predicate.GenerationChangedPredicate{},
+			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
+			),
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeVPC)
 				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodeVPC)

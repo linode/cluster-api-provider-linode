@@ -25,8 +25,13 @@ import (
 	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -92,7 +97,8 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing Placement Group creation"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -135,7 +141,8 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to fetch Placement Group from API"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -160,7 +167,8 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to delete Placement Group via API"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -194,7 +202,8 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Placement Group has node(s) attached, re-queuing deletion to wait for detachment"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -225,4 +234,89 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 			),
 		),
 	)
+})
+
+var _ = Describe("pause handling", Label("placementgroup", "pause"), func() {
+	It("sets paused condition for LinodePlacementGroup when owner Cluster is paused", func(ctx SpecContext) {
+		cluster := &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-pg-cluster",
+				Namespace: defaultNamespace,
+			},
+			Spec: clusterv1.ClusterSpec{
+				Paused: ptr.To(true),
+			},
+		}
+		placementGroup := &infrav1alpha2.LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-pg-object",
+				Namespace: defaultNamespace,
+				Labels: map[string]string{
+					clusterv1.ClusterNameLabel: cluster.Name,
+				},
+			},
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
+				Region:               "us-ord",
+				PlacementGroupType:   "anti_affinity:local",
+				PlacementGroupPolicy: "strict",
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+		Expect(k8sClient.Create(ctx, placementGroup)).To(Succeed())
+
+		reconciler := &LinodePlacementGroupReconciler{
+			Client:             k8sClient,
+			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
+		}
+
+		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(placementGroup)})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(placementGroup), placementGroup)).To(Succeed())
+		pausedCondition := placementGroup.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+		Expect(controllerutil.ContainsFinalizer(placementGroup, infrav1alpha2.PlacementGroupFinalizer)).To(BeFalse())
+	})
+
+	It("sets and clears paused condition from the upstream pause annotation path", func(ctx SpecContext) {
+		placementGroup := &infrav1alpha2.LinodePlacementGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-pg-annotation",
+				Namespace: defaultNamespace,
+				Annotations: map[string]string{
+					clusterv1.PausedAnnotation: "",
+				},
+			},
+			Spec: infrav1alpha2.LinodePlacementGroupSpec{
+				Region:               "us-ord",
+				PlacementGroupType:   "anti_affinity:local",
+				PlacementGroupPolicy: "strict",
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, placementGroup)).To(Succeed())
+
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, k8sClient, nil, placementGroup)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeTrue())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(placementGroup), placementGroup)).To(Succeed())
+		pausedCondition := placementGroup.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+
+		delete(placementGroup.Annotations, clusterv1.PausedAnnotation)
+		Expect(k8sClient.Update(ctx, placementGroup)).To(Succeed())
+
+		isPaused, _, err = paused.EnsurePausedCondition(ctx, k8sClient, nil, placementGroup)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeFalse())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(placementGroup), placementGroup)).To(Succeed())
+		pausedCondition = placementGroup.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionFalse))
+	})
 })

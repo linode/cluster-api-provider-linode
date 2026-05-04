@@ -1,0 +1,466 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  creationTimestamp: null
+  name: cluster-pause
+  labels:
+    all:
+    cluster-pause:
+spec:
+  bindings:
+    - name: run
+      value: (join('-', ['e2e', 'pause', random('[0-9a-z]{5}')]))
+    - name: cluster
+      value: (trim((truncate(($run), `29`)), '-'))
+  template: true
+  steps:
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Generate cluster using clusterctl
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+              - name: KUBERNETES_VERSION
+                value: (env('KUBERNETES_VERSION') || 'v1.33.4')
+            content: |
+              set -e
+              clusterctl generate cluster "$CLUSTER" -n "$NAMESPACE" \
+                --kubernetes-version "${KUBERNETES_VERSION}" \
+                --infrastructure local-linode:v0.0.0 \
+                --control-plane-machine-count 1 --worker-machine-count 1 \
+                --config "${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml}" > cluster-pause.yaml
+            check:
+              ($error == null): true
+    - name: Apply generated cluster yaml
+      try:
+        - apply:
+            file: cluster-pause.yaml
+        - assert:
+            file: assert-child-cluster-resources.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta2
+            kind: Machine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta2
+            kind: MachineDeployment
+        - describe:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+            kind: KubeadmControlPlane
+        - describe:
+            apiVersion: addons.cluster.x-k8s.io/v1alpha1
+            kind: HelmReleaseProxy
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set +e
+              kubectl describe cluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodecluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodevpc -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodefirewall -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              clusterctl describe cluster "$CLUSTER" -n "$NAMESPACE" --show-conditions all || true
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 100
+    - name: Check if the Linodes are created
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+            content: |
+              set -e
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 2
+    - name: Get child cluster kubeconfig
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -e
+              clusterctl get kubeconfig "$CLUSTER" -n "$NAMESPACE" > cluster-pause-kubeconfig.yaml
+            check:
+              ($error == null): true
+    - clusters:
+        cluster-pause:
+          kubeconfig: ./cluster-pause-kubeconfig.yaml
+      name: Check child cluster resources
+      try:
+        - assert:
+            cluster: cluster-pause
+            file: assert-child-cluster-deployments.yaml
+        - assert:
+            cluster: cluster-pause
+            file: assert-child-cluster-daemonsets.yaml
+      catch:
+        - describe:
+            cluster: cluster-pause
+            apiVersion: apps/v1
+            kind: Deployment
+            namespace: kube-system
+        - describe:
+            cluster: cluster-pause
+            apiVersion: apps/v1
+            kind: DaemonSet
+            namespace: kube-system
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set +e
+              clusterctl describe cluster "$CLUSTER" -n "$NAMESPACE" --show-conditions all || true
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 100
+    - name: Pause owner cluster
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -e
+              kubectl patch cluster "$CLUSTER" -n "$NAMESPACE" --type=merge -p '{"spec":{"paused":true}}'
+            check:
+              ($error == null): true
+      catch:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set +e
+              kubectl describe cluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodecluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodevpc -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodefirewall -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              clusterctl describe cluster "$CLUSTER" -n "$NAMESPACE" --show-conditions all || true
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 100
+    - name: Verify CAPL resources are paused
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+
+              wait_for_count() {
+                local resource=$1
+                local selector=$2
+                local expected=$3
+                local count=""
+
+                for _ in $(seq 1 30); do
+                  count=$(kubectl get "$resource" -n "$NAMESPACE" -l "$selector" --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                  if [[ "$count" == "$expected" ]]; then
+                    return 0
+                  fi
+                  sleep 10
+                done
+
+                echo "expected $expected $resource resources for selector $selector, got ${count:-0}"
+                kubectl get "$resource" -n "$NAMESPACE" -l "$selector" -o wide || true
+                return 1
+              }
+
+              wait_for_pause_named() {
+                local resource=$1
+                local name=$2
+                local expected=$3
+                kubectl wait -n "$NAMESPACE" --for="jsonpath={.status.conditions[?(@.type==\"Paused\")].status}=${expected}" --timeout=10m "$resource/$name"
+              }
+
+              wait_for_pause_selector() {
+                local resource=$1
+                local selector=$2
+                local expected=$3
+                kubectl wait -n "$NAMESPACE" --for="jsonpath={.status.conditions[?(@.type==\"Paused\")].status}=${expected}" --timeout=10m "$resource" -l "$selector"
+              }
+
+              selector="cluster.x-k8s.io/cluster-name=$CLUSTER"
+
+              wait_for_count linodevpc "$selector" 1
+              wait_for_count linodefirewall "$selector" 2
+              wait_for_count linodemachine "$selector" 2
+
+              wait_for_pause_named cluster "$CLUSTER" True
+              wait_for_pause_named linodecluster "$CLUSTER" True
+              wait_for_pause_named linodevpc "$CLUSTER" True
+              wait_for_pause_named linodefirewall "$CLUSTER" True
+              wait_for_pause_named linodefirewall "${CLUSTER}-nb" True
+              wait_for_pause_selector linodemachine "$selector" True
+            check:
+              ($error == null): true
+      catch:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set +e
+              kubectl describe cluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodecluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodevpc -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodefirewall -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              clusterctl describe cluster "$CLUSTER" -n "$NAMESPACE" --show-conditions all || true
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 100
+    - name: Unpause owner cluster
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -e
+              kubectl patch cluster "$CLUSTER" -n "$NAMESPACE" --type=merge -p '{"spec":{"paused":false}}'
+            check:
+              ($error == null): true
+      catch:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set +e
+              kubectl describe cluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodecluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodevpc -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodefirewall -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              clusterctl describe cluster "$CLUSTER" -n "$NAMESPACE" --show-conditions all || true
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 100
+    - name: Verify CAPL resources are unpaused
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+
+              wait_for_count() {
+                local resource=$1
+                local selector=$2
+                local expected=$3
+                local count=""
+
+                for _ in $(seq 1 30); do
+                  count=$(kubectl get "$resource" -n "$NAMESPACE" -l "$selector" --no-headers 2>/dev/null | wc -l | tr -d ' ')
+                  if [[ "$count" == "$expected" ]]; then
+                    return 0
+                  fi
+                  sleep 10
+                done
+
+                echo "expected $expected $resource resources for selector $selector, got ${count:-0}"
+                kubectl get "$resource" -n "$NAMESPACE" -l "$selector" -o wide || true
+                return 1
+              }
+
+              wait_for_pause_named() {
+                local resource=$1
+                local name=$2
+                local expected=$3
+                kubectl wait -n "$NAMESPACE" --for="jsonpath={.status.conditions[?(@.type==\"Paused\")].status}=${expected}" --timeout=10m "$resource/$name"
+              }
+
+              wait_for_pause_selector() {
+                local resource=$1
+                local selector=$2
+                local expected=$3
+                kubectl wait -n "$NAMESPACE" --for="jsonpath={.status.conditions[?(@.type==\"Paused\")].status}=${expected}" --timeout=10m "$resource" -l "$selector"
+              }
+
+              selector="cluster.x-k8s.io/cluster-name=$CLUSTER"
+
+              wait_for_count linodevpc "$selector" 1
+              wait_for_count linodefirewall "$selector" 2
+              wait_for_count linodemachine "$selector" 2
+
+              wait_for_pause_named cluster "$CLUSTER" False
+              wait_for_pause_named linodecluster "$CLUSTER" False
+              wait_for_pause_named linodevpc "$CLUSTER" False
+              wait_for_pause_named linodefirewall "$CLUSTER" False
+              wait_for_pause_named linodefirewall "${CLUSTER}-nb" False
+              wait_for_pause_selector linodemachine "$selector" False
+            check:
+              ($error == null): true
+      catch:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set +e
+              kubectl describe cluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodecluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodevpc -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodefirewall -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              clusterctl describe cluster "$CLUSTER" -n "$NAMESPACE" --show-conditions all || true
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 100
+    - name: Delete child cluster
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: SKIP_DELETE
+                value: (env('SKIP_CUSTOM_DELETE'))
+            content: |
+              set -e
+              if [[ -n "$SKIP_DELETE" ]]; then
+                echo "Skipping deletion of child cluster"
+                exit 0
+              fi
+              kubectl delete cluster "$CLUSTER" -n "$NAMESPACE" --timeout=120s || { echo "deletion failed!"; exit 1; }
+            check:
+              ($error == null): true
+              (contains($stdout, 'deletion failed')): false
+      catch:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set +e
+              kubectl describe cluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodecluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodevpc -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodefirewall -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              clusterctl describe cluster "$CLUSTER" -n "$NAMESPACE" --show-conditions all || true
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 100
+    - name: Check if the Linodes are deleted
+      try:
+        - script:
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+              - name: SKIP_DELETE
+                value: (env('SKIP_CUSTOM_DELETE'))
+            content: |
+              set -e
+              if [[ -n "$SKIP_DELETE" ]]; then
+                echo '{"results":0}'
+                exit 0
+              fi
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
+      catch:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set +e
+              kubectl describe cluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodecluster "$CLUSTER" -n "$NAMESPACE"
+              kubectl describe linodevpc -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodefirewall -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              kubectl describe linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER"
+              clusterctl describe cluster "$CLUSTER" -n "$NAMESPACE" --show-conditions all || true
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 100
+    - name: Delete generated child cluster manifest yaml
+      try:
+        - script:
+            content: |
+              rm -f cluster-pause.yaml
+              rm -f cluster-pause-kubeconfig.yaml
+            check:
+              ($error == null): true

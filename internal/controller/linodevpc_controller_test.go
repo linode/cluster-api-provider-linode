@@ -28,7 +28,10 @@ import (
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -95,7 +98,8 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC creation"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -177,7 +181,8 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 						})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC update"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -203,7 +208,8 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to fetch VPC"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -230,7 +236,8 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("Failed to delete VPC"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -260,7 +267,8 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
 						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(rec.DefaultVPCControllerWaitForHasNodesDelay))
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("VPC has node(s) attached, re-queuing VPC deletion"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
@@ -293,6 +301,93 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 			),
 		),
 	)
+})
+
+var _ = Describe("pause handling", Label("vpc", "pause"), func() {
+	It("sets paused condition for LinodeVPC when owner Cluster is paused", func(ctx SpecContext) {
+		cluster := &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-vpc-cluster",
+				Namespace: defaultNamespace,
+			},
+			Spec: clusterv1.ClusterSpec{
+				Paused: ptr.To(true),
+			},
+		}
+		vpc := &infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-vpc-object",
+				Namespace: defaultNamespace,
+				Labels: map[string]string{
+					clusterv1.ClusterNameLabel: cluster.Name,
+				},
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "us-ord",
+				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+					{Label: "subnet1", IPv4: "10.2.0.0/24"},
+				},
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
+		Expect(k8sClient.Create(ctx, vpc)).To(Succeed())
+
+		reconciler := &LinodeVPCReconciler{
+			Client:             k8sClient,
+			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
+		}
+
+		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(vpc)})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(vpc), vpc)).To(Succeed())
+		pausedCondition := vpc.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+		Expect(controllerutil.ContainsFinalizer(vpc, infrav1alpha2.VPCFinalizer)).To(BeFalse())
+	})
+
+	It("sets and clears paused condition from the upstream pause annotation path", func(ctx SpecContext) {
+		vpc := &infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pause-vpc-annotation",
+				Namespace: defaultNamespace,
+				Annotations: map[string]string{
+					clusterv1.PausedAnnotation: "",
+				},
+			},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region: "us-ord",
+				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+					{Label: "subnet1", IPv4: "10.2.0.0/24"},
+				},
+			},
+		}
+
+		Expect(k8sClient.Create(ctx, vpc)).To(Succeed())
+
+		isPaused, _, err := paused.EnsurePausedCondition(ctx, k8sClient, nil, vpc)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeTrue())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(vpc), vpc)).To(Succeed())
+		pausedCondition := vpc.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionTrue))
+
+		delete(vpc.Annotations, clusterv1.PausedAnnotation)
+		Expect(k8sClient.Update(ctx, vpc)).To(Succeed())
+
+		isPaused, _, err = paused.EnsurePausedCondition(ctx, k8sClient, nil, vpc)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(isPaused).To(BeFalse())
+
+		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(vpc), vpc)).To(Succeed())
+		pausedCondition = vpc.GetCondition(clusterv1.PausedCondition)
+		Expect(pausedCondition).NotTo(BeNil())
+		Expect(pausedCondition.Status).To(Equal(metav1.ConditionFalse))
+	})
 })
 
 var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
