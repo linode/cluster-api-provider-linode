@@ -27,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +37,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
+	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -355,5 +357,56 @@ var _ = Describe("errors", Label("bucket", "errors"), func() {
 			Expect(err.Error()).To(ContainSubstring("failed to create object storage bucket scope"))
 			Expect(mck.Logs()).To(ContainSubstring("Failed to create object storage bucket scope"))
 		}),
+	)
+
+	// Reconciler retry: when a finalizer operation fails transiently the reconciler
+	// should requeue with jitter rather than surface an error.
+	suite.Run(
+		OneOf(
+			// AddFinalizer patches the bucket; if the patch fails it should requeue.
+			Path(
+				Call("bucket finalizer patch fails", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme).AnyTimes()
+					firstPatch := mck.K8sClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("patch error"))
+					mck.K8sClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).After(firstPatch).Return(nil)
+				}),
+				Result("requeues with jitter", func(ctx context.Context, mck Mock) {
+					// Base bucket has no BucketFinalizer, so AddFinalizer is triggered.
+					bScope.Bucket.Spec.AccessKeyRef = &corev1.ObjectReference{Name: "some-key"}
+					bScope.Client = mck.K8sClient
+					helper, err := patch.NewHelper(bScope.Bucket, mck.K8sClient)
+					Expect(err).NotTo(HaveOccurred())
+					bScope.PatchHelper = helper
+
+					res, err := reconciler.reconcile(ctx, &bScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultObjectStorageBucketControllerReconcileDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultObjectStorageBucketControllerReconcileDelay+time.Duration(float64(rec.DefaultObjectStorageBucketControllerReconcileDelay)*rec.RetryJitterFraction)))
+					Expect(mck.Logs()).To(ContainSubstring("failed to update bucket finalizer"))
+				}),
+			),
+			// AddAccessKeyRefFinalizer fetches the key ref; if the Get fails it should requeue.
+			Path(
+				Call("access key finalizer Get fails", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().Scheme().Return(scheme.Scheme).AnyTimes()
+					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("get error"))
+				}),
+				Result("requeues with jitter", func(ctx context.Context, mck Mock) {
+					// BucketFinalizer already present so AddFinalizer is a no-op.
+					bScope.Bucket.Finalizers = []string{infrav1alpha2.BucketFinalizer}
+					bScope.Bucket.Spec.AccessKeyRef = &corev1.ObjectReference{Name: "some-key"}
+					bScope.Client = mck.K8sClient
+					helper, err := patch.NewHelper(bScope.Bucket, mck.K8sClient)
+					Expect(err).NotTo(HaveOccurred())
+					bScope.PatchHelper = helper
+
+					res, err := reconciler.reconcile(ctx, &bScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultObjectStorageBucketControllerReconcileDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultObjectStorageBucketControllerReconcileDelay+time.Duration(float64(rec.DefaultObjectStorageBucketControllerReconcileDelay)*rec.RetryJitterFraction)))
+					Expect(mck.Logs()).To(ContainSubstring("failed to update access key finalizer"))
+				}),
+			),
+		),
 	)
 })

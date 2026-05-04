@@ -169,12 +169,12 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		// Only add finalizers if the access key reference is set, without one the bucket can immediately be deleted.
 		if err := bScope.AddFinalizer(ctx); err != nil {
 			bScope.Logger.Error(err, "failed to update bucket finalizer, requeuing")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultObjectStorageBucketControllerReconcileDelay)}, nil
 		}
 		// It's critical to add the access key finalizer, or else the access key could be deleted before the associated bucket with its contents deleted.
 		if err := bScope.AddAccessKeyRefFinalizer(ctx, bScope.Bucket.Name); err != nil {
 			bScope.Logger.Error(err, "failed to update access key finalizer, requeuing")
-			return ctrl.Result{RequeueAfter: reconciler.DefaultClusterControllerReconcileDelay}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultObjectStorageBucketControllerReconcileDelay)}, nil
 		}
 	}
 
