@@ -23,8 +23,6 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
       - name: Label PR
-        uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
-        with:
-          disable-releaser: github.ref != 'refs/heads/main'
+        uses: release-drafter/release-drafter/autolabeler@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
