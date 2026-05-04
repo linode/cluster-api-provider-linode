@@ -233,7 +233,7 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 	}
 
 	// Check firewall configuration - either direct ID or reference
-		if !reconciler.ConditionTrue(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady)) {
+	if !reconciler.ConditionTrue(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady)) {
 		if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
 			if res, err := r.reconcilePreflightFirewallID(ctx, logger, clusterScope); err != nil || !res.IsZero() {
 				return res, err
@@ -249,26 +249,26 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 }
 
 func (r *LinodeClusterReconciler) reconcilePreflightFirewallID(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
-		firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
-		logger.Info("Verifying direct NodeBalancerFirewallID", "firewallID", firewallID)
-		_, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
-		if err != nil {
-			logger.Error(err, "Failed to get NodeBalancer firewall with provided ID", "firewallID", firewallID)
-			clusterScope.LinodeCluster.SetCondition(metav1.Condition{
-				Type:    ConditionPreflightLinodeNBFirewallReady,
-				Status:  metav1.ConditionFalse,
-				Reason:  util.CreateError,
-				Message: err.Error(),
-			})
-			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
-		}
+	firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
+	logger.Info("Verifying direct NodeBalancerFirewallID", "firewallID", firewallID)
+	_, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
+	if err != nil {
+		logger.Error(err, "Failed to get NodeBalancer firewall with provided ID", "firewallID", firewallID)
 		clusterScope.LinodeCluster.SetCondition(metav1.Condition{
-			Type:   ConditionPreflightLinodeNBFirewallReady,
-			Status: metav1.ConditionTrue,
-			Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+			Type:    ConditionPreflightLinodeNBFirewallReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  util.CreateError,
+			Message: err.Error(),
 		})
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
 	}
+	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
+		Type:   ConditionPreflightLinodeNBFirewallReady,
+		Status: metav1.ConditionTrue,
+		Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+	})
+	return ctrl.Result{}, nil
+}
 
 func (r *LinodeClusterReconciler) reconcilePreflightFirewallRef(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
 	name := clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef.Name
