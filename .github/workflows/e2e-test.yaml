@@ -117,6 +117,12 @@ jobs:
             linode.github.io:443
             dl.k8s.io:443
             cdn.dl.k8s.io:443
+            get.jetify.com:443
+            get.jetpack.io:443
+            releases.jetify.com:443
+            releases.jetpack.io:443
+            artifacts.nixos.org:443
+            cache.nixos.org:443
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
