@@ -115,6 +115,7 @@ jobs:
             charts.jetstack.io:443
             helm.cilium.io:443
             linode.github.io:443
+            *.linodeobjects.com:443
             dl.k8s.io:443
             cdn.dl.k8s.io:443
             get.jetify.com:443
