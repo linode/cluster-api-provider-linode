@@ -79,6 +79,7 @@ jobs:
             charts.jetstack.io:443
             helm.cilium.io:443
             linode.github.io:443
+            *.linodeobjects.com:443
             dl.k8s.io:443
             cdn.dl.k8s.io:443
 
@@ -92,6 +93,14 @@ jobs:
         with:
           go-version-file: 'go.mod'
           check-latest: true
+
+      - name: Create IPv4-only kind network
+        run: |
+          docker network inspect kind >/dev/null 2>&1 || \
+          docker network create -d=bridge \
+            -o com.docker.network.bridge.enable_ip_masquerade=true \
+            -o com.docker.network.driver.mtu=1500 \
+            kind
 
       - name: Run Upgrade Test
         env:

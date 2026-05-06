@@ -115,8 +115,15 @@ jobs:
             charts.jetstack.io:443
             helm.cilium.io:443
             linode.github.io:443
+            *.linodeobjects.com:443
             dl.k8s.io:443
             cdn.dl.k8s.io:443
+            get.jetify.com:443
+            get.jetpack.io:443
+            releases.jetify.com:443
+            releases.jetpack.io:443
+            artifacts.nixos.org:443
+            cache.nixos.org:443
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -139,6 +146,14 @@ jobs:
         with:
           enable-cache: 'true'
           refresh-cli: 'false'
+
+      - name: Create IPv4-only kind network
+        run: |
+          docker network inspect kind >/dev/null 2>&1 || \
+          docker network create -d=bridge \
+            -o com.docker.network.bridge.enable_ip_masquerade=true \
+            -o com.docker.network.driver.mtu=1500 \
+            kind
 
       - name: Run E2E Test
         env:
