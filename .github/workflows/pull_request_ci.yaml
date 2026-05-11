@@ -73,6 +73,12 @@ jobs:
             sum.golang.org:443
             *.githubusercontent.com:443
             storage.googleapis.com:443
+            get.jetify.com:443
+            get.jetpack.io:443
+            releases.jetify.com:443
+            releases.jetpack.io:443
+            artifacts.nixos.org:443
+            cache.nixos.org:443
             dl.k8s.io:443
             cdn.dl.k8s.io:443
 
@@ -111,6 +117,7 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
             github.com:443
+            index.docker.io:443
             proxy.golang.org:443
             sum.golang.org:443
             go.dev:443
