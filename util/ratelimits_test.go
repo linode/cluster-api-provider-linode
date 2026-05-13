@@ -149,7 +149,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "no headers in response",
+			name: "no headers in response, expect default values",
 			fields: &PostRequestCounter{
 				ReqRemaining: 4,
 				RefreshTime:  now,
@@ -159,8 +159,11 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 					Method: http.MethodPost,
 					URL:    "/v4/linode/instances",
 				},
+				RawResponse: &http.Response{
+					Header: http.Header{"X-Ratelimit-Remaining": []string{"19"}, "X-Ratelimit-Reset": []string{strconv.Itoa(int(time.Now().Add(15 * time.Second).Unix()))}},
+				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "missing one value in response header",
@@ -174,10 +177,10 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 					URL:    "/v4/linode/instances",
 				},
 				RawResponse: &http.Response{
-					Header: http.Header{"X-Ratelimit-Remaining": []string{"5"}},
+					Header: http.Header{"X-Ratelimit-Remaining": []string{"5"}, "X-Ratelimit-Reset": []string{strconv.Itoa(int(time.Now().Add(15 * time.Second).Unix()))}},
 				},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "correct headers in response",
