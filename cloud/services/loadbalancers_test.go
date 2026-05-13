@@ -228,9 +228,6 @@ func TestEnsureNodeBalancer(t *testing.T) {
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
-				mockClient.EXPECT().GetFirewall(gomock.Any(), 5678).Return(&linodego.Firewall{
-					ID: 5678,
-				}, nil)
 				mockClient.EXPECT().CreateNodeBalancer(gomock.Any(), linodego.NodeBalancerCreateOptions{
 					Label:      util.Pointer("test-cluster"),
 					Region:     "us-east",
@@ -268,26 +265,6 @@ func TestEnsureNodeBalancer(t *testing.T) {
 				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("Failed to fetch LinodeFirewall"))
 			},
 			expectedError: fmt.Errorf("Failed to fetch LinodeFirewall"),
-		},
-		{
-			name: "Error - Direct FirewallID not found",
-			clusterScope: &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha2.LinodeCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-cluster",
-						UID:  "test-uid",
-					},
-					Spec: infrav1alpha2.LinodeClusterSpec{
-						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerFirewallID: util.Pointer(9999),
-						},
-					},
-				},
-			},
-			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
-				mockClient.EXPECT().GetFirewall(gomock.Any(), 9999).Return(nil, fmt.Errorf("Firewall not found"))
-			},
-			expectedError: fmt.Errorf("Firewall not found"),
 		},
 		{
 			name: "Success - Create NodeBalancer in VPC",

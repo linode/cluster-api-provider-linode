@@ -189,6 +189,21 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				}),
 			),
 			Path(
+				Call("direct firewall ID not found", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+					cScope.LinodeCluster.Spec.NodeBalancerFirewallRef = nil
+					cScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID = util.Pointer(9999)
+					mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), 9999).Return(nil, errors.New("firewall not found"))
+				}),
+				Result("preflight sets condition false", func(ctx context.Context, mck Mock) {
+					reconciler.Client = k8sClient
+					res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady).Status).To(Equal(metav1.ConditionFalse))
+				}),
+			),
+			Path(
 				Call("cluster is not created because there was an error creating nb", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					// Set VPC as ready
