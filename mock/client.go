@@ -772,6 +772,21 @@ func (mr *MockLinodeClientMockRecorder) ListInterfaces(ctx, linodeID, opts any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInterfaces", reflect.TypeOf((*MockLinodeClient)(nil).ListInterfaces), ctx, linodeID, opts)
 }
 
+// ListMaintenances mocks base method.
+func (m *MockLinodeClient) ListMaintenances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.AccountMaintenance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMaintenances", ctx, opts)
+	ret0, _ := ret[0].([]linodego.AccountMaintenance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListMaintenances indicates an expected call of ListMaintenances.
+func (mr *MockLinodeClientMockRecorder) ListMaintenances(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMaintenances", reflect.TypeOf((*MockLinodeClient)(nil).ListMaintenances), ctx, opts)
+}
+
 // ListNodeBalancerNodes mocks base method.
 func (m *MockLinodeClient) ListNodeBalancerNodes(ctx context.Context, nodebalancerID, configID int, opts *linodego.ListOptions) ([]linodego.NodeBalancerNode, error) {
 	m.ctrl.T.Helper()
@@ -2289,6 +2304,45 @@ func (m *MockLinodeInterfacesClient) ListInterfaces(ctx context.Context, linodeI
 func (mr *MockLinodeInterfacesClientMockRecorder) ListInterfaces(ctx, linodeID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInterfaces", reflect.TypeOf((*MockLinodeInterfacesClient)(nil).ListInterfaces), ctx, linodeID, opts)
+}
+
+// MockLinodeMaintenanceClient is a mock of LinodeMaintenanceClient interface.
+type MockLinodeMaintenanceClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockLinodeMaintenanceClientMockRecorder
+	isgomock struct{}
+}
+
+// MockLinodeMaintenanceClientMockRecorder is the mock recorder for MockLinodeMaintenanceClient.
+type MockLinodeMaintenanceClientMockRecorder struct {
+	mock *MockLinodeMaintenanceClient
+}
+
+// NewMockLinodeMaintenanceClient creates a new mock instance.
+func NewMockLinodeMaintenanceClient(ctrl *gomock.Controller) *MockLinodeMaintenanceClient {
+	mock := &MockLinodeMaintenanceClient{ctrl: ctrl}
+	mock.recorder = &MockLinodeMaintenanceClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLinodeMaintenanceClient) EXPECT() *MockLinodeMaintenanceClientMockRecorder {
+	return m.recorder
+}
+
+// ListMaintenances mocks base method.
+func (m *MockLinodeMaintenanceClient) ListMaintenances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.AccountMaintenance, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMaintenances", ctx, opts)
+	ret0, _ := ret[0].([]linodego.AccountMaintenance)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListMaintenances indicates an expected call of ListMaintenances.
+func (mr *MockLinodeMaintenanceClientMockRecorder) ListMaintenances(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMaintenances", reflect.TypeOf((*MockLinodeMaintenanceClient)(nil).ListMaintenances), ctx, opts)
 }
 
 // MockK8sClient is a mock of K8sClient interface.

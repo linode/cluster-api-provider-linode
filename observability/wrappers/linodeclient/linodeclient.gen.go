@@ -1273,6 +1273,31 @@ func (_d LinodeClientWithTracing) ListInterfaces(ctx context.Context, linodeID i
 	return _d.LinodeClient.ListInterfaces(ctx, linodeID, opts)
 }
 
+// ListMaintenances implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) ListMaintenances(ctx context.Context, opts *linodego.ListOptions) (aa1 []linodego.AccountMaintenance, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListMaintenances")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":  ctx,
+				"opts": opts}, map[string]interface{}{
+				"aa1": aa1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListMaintenances(ctx, opts)
+}
+
 // ListNodeBalancerNodes implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListNodeBalancerNodes(ctx context.Context, nodebalancerID int, configID int, opts *linodego.ListOptions) (na1 []linodego.NodeBalancerNode, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListNodeBalancerNodes")

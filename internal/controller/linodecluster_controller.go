@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,8 @@ import (
 	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,6 +57,7 @@ const (
 	lbTypeNB                                string = "NodeBalancer"
 	ConditionPreflightLinodeVPCReady        string = "PreflightLinodeVPCReady"
 	ConditionPreflightLinodeNBFirewallReady string = "PreflightLinodeNBFirewallReady"
+	ConditionMaintenanceScheduled           string = "MaintenanceScheduled"
 )
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
@@ -218,7 +222,80 @@ func (r *LinodeClusterReconciler) reconcile(
 		return retryIfTransient(err, logger)
 	}
 
+	if err := r.setMaintenanceConditions(ctx, clusterScope, logger); err != nil {
+		return retryIfTransient(err, logger)
+	}
+
 	return res, nil
+}
+
+func (r *LinodeClusterReconciler) setMaintenanceConditions(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) error {
+	linodeMachines, err := r.collectMaintenanceInfo(ctx, clusterScope, logger)
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for i := range linodeMachines {
+		capiMachine, err := kutil.GetOwnerMachine(ctx, clusterScope.Client, linodeMachines[i].ObjectMeta)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to get owner Machine for LinodeMachine %s: %w", linodeMachines[i].Name, err))
+			continue
+		}
+		if capiMachine == nil {
+			logger.Info("no owner Machine found for LinodeMachine, skipping", "LinodeMachine", linodeMachines[i].Name)
+			continue
+		}
+		patchHelper, err := patch.NewHelper(capiMachine, clusterScope.Client)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to create patch helper for Machine %s: %w", capiMachine.Name, err))
+			continue
+		}
+		conditions.Set(capiMachine, metav1.Condition{
+			Type:               ConditionMaintenanceScheduled,
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: metav1.Now(),
+			Reason:             ConditionMaintenanceScheduled,
+		})
+		if err := patchHelper.Patch(ctx, capiMachine); err != nil {
+			errs = append(errs, fmt.Errorf("failed to patch Machine %s: %w", capiMachine.Name, err))
+			continue
+		}
+	}
+	return utilerrors.NewAggregate(errs)
+}
+
+func (r *LinodeClusterReconciler) collectMaintenanceInfo(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) ([]infrav1alpha2.LinodeMachine, error) {
+	// Fetch all maintenance information
+	threeDaysLater := time.Now().Add(72 * time.Hour).UTC().Format("2006-01-02T15:04:05") // API doesn't like RFC3339
+	f := linodego.Filter{}
+	f.AddField(linodego.Eq, "status", "scheduled")
+	f.AddField(linodego.Lte, "when", threeDaysLater)
+	filter, err := f.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("could not marshal filter: %w", err)
+	}
+	maintenances, err := clusterScope.LinodeClient.ListMaintenances(ctx, &linodego.ListOptions{Filter: string(filter)})
+	if err != nil {
+		logger.Error(err, "Failed to fetch maintenance information from Linode API")
+		return nil, err
+	}
+
+	maintenanceLabels := make(map[string]struct{}, len(maintenances))
+	for _, maint := range maintenances {
+		if maint.Entity.Type != "linode" {
+			continue
+		}
+		maintenanceLabels[maint.Entity.Label] = struct{}{}
+	}
+
+	var machinesForMaintenance []infrav1alpha2.LinodeMachine
+	for _, lm := range clusterScope.LinodeMachines.Items {
+		if _, ok := maintenanceLabels[lm.Name]; ok {
+			logger.Info("Found maintenance information for", "LinodeMachine", lm.Name)
+			machinesForMaintenance = append(machinesForMaintenance, lm)
+		}
+	}
+	return machinesForMaintenance, nil
 }
 
 func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
