@@ -73,7 +73,8 @@ type LinodeClusterReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
-
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines/status,verbs=get;update;patch
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 
@@ -251,10 +252,9 @@ func (r *LinodeClusterReconciler) setMaintenanceConditions(ctx context.Context, 
 			continue
 		}
 		conditions.Set(capiMachine, metav1.Condition{
-			Type:               ConditionMaintenanceScheduled,
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-			Reason:             ConditionMaintenanceScheduled,
+			Type:   ConditionMaintenanceScheduled,
+			Status: metav1.ConditionTrue,
+			Reason: ConditionMaintenanceScheduled,
 		})
 		if err := patchHelper.Patch(ctx, capiMachine); err != nil {
 			errs = append(errs, fmt.Errorf("failed to patch Machine %s: %w", capiMachine.Name, err))
@@ -280,18 +280,29 @@ func (r *LinodeClusterReconciler) collectMaintenanceInfo(ctx context.Context, cl
 		return nil, err
 	}
 
-	maintenanceLabels := make(map[string]struct{}, len(maintenances))
+	maintenanceLabels := make(map[int]struct{}, len(maintenances))
 	for _, maint := range maintenances {
+		if maint.Entity == nil {
+			continue
+		}
 		if maint.Entity.Type != "linode" {
 			continue
 		}
-		maintenanceLabels[maint.Entity.Label] = struct{}{}
+		maintenanceLabels[maint.Entity.ID] = struct{}{}
 	}
 
 	var machinesForMaintenance []infrav1alpha2.LinodeMachine
-	for _, lm := range clusterScope.LinodeMachines.Items {
-		if _, ok := maintenanceLabels[lm.Name]; ok {
-			logger.Info("Found maintenance information for", "LinodeMachine", lm.Name)
+	linodeMachines, err := util.GetLinodeMachinesForCluster(ctx, clusterScope.Client, clusterScope.Cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, lm := range linodeMachines.Items {
+		if lm.Spec.InstanceID == nil {
+			continue
+		}
+		if _, ok := maintenanceLabels[*lm.Spec.InstanceID]; ok {
+			logger.Info("Found maintenance information for", "LinodeMachine", lm.Name, "id", *lm.Spec.InstanceID)
 			machinesForMaintenance = append(machinesForMaintenance, lm)
 		}
 	}

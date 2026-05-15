@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr/testr"
@@ -37,7 +38,69 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
+
+const clusterLabelKey = "cluster.x-k8s.io/cluster-name"
+
+func testSchemeForMaintenance(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	s := runtime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(s))
+	require.NoError(t, clusterv1.AddToScheme(s))
+	require.NoError(t, infrav1alpha2.AddToScheme(s))
+	return s
+}
+
+func newLinodeMachineWithID(name, ns, clusterName string, instanceID int) infrav1alpha2.LinodeMachine {
+	return infrav1alpha2.LinodeMachine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+			Labels: map[string]string{
+				clusterLabelKey: clusterName,
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: clusterv1.GroupVersion.String(),
+					Kind:       "Machine",
+					Name:       name,
+					UID:        types.UID("uid-" + name),
+				},
+			},
+		},
+		Spec: infrav1alpha2.LinodeMachineSpec{
+			InstanceID: util.Pointer(instanceID),
+		},
+	}
+}
+
+func maintenanceForID(id int) linodego.AccountMaintenance {
+	return linodego.AccountMaintenance{
+		Entity: &linodego.Entity{
+			Type: "linode",
+			ID:   id,
+		},
+		Status: "scheduled",
+	}
+}
+
+func newCapiCluster(name, ns string) *clusterv1.Cluster {
+	return &clusterv1.Cluster{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
+	}
+}
+
+// newCapiMachine UID must match the OwnerReference UID set by newLinodeMachineWithID.
+func newCapiMachine(name, ns string) *clusterv1.Machine {
+	return &clusterv1.Machine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+			UID:       types.UID("uid-" + name),
+		},
+	}
+}
 
 func TestCollectMaintenanceInfo(t *testing.T) {
 	t.Parallel()
@@ -45,112 +108,69 @@ func TestCollectMaintenanceInfo(t *testing.T) {
 	const clusterName = "test-cluster"
 	const ns = defaultNamespace
 
-	linodeMachine := func(name string) infrav1alpha2.LinodeMachine {
-		return infrav1alpha2.LinodeMachine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: ns,
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: clusterv1.GroupVersion.String(),
-						Kind:       "Machine",
-						Name:       name,
-						UID:        types.UID("uid-" + name),
-					},
-				},
-			},
-		}
-	}
-
-	maintenanceFor := func(label string) linodego.AccountMaintenance {
-		return linodego.AccountMaintenance{
-			Entity: &linodego.Entity{
-				Type:  "linode",
-				Label: label,
-			},
-			Status: "scheduled",
-		}
-	}
+	scheme := testSchemeForMaintenance(t)
 
 	tests := []struct {
-		name             string
-		linodeMachines   []infrav1alpha2.LinodeMachine
-		apiMaintenances  []linodego.AccountMaintenance
-		apiError         error
-		expectedNames    []string
-		expectError      bool
+		name            string
+		instanceIDs     []int
+		apiMaintenances []linodego.AccountMaintenance
+		apiError        error
+		expectedNames   []string
+		expectError     bool
 	}{
 		{
-			name: "no maintenance scheduled",
-			linodeMachines: []infrav1alpha2.LinodeMachine{
-				linodeMachine("machine-1"),
-				linodeMachine("machine-2"),
-			},
+			name:            "no maintenance scheduled",
+			instanceIDs:     []int{101, 102},
 			apiMaintenances: []linodego.AccountMaintenance{},
 			expectedNames:   nil,
 		},
 		{
-			name: "one machine has maintenance",
-			linodeMachines: []infrav1alpha2.LinodeMachine{
-				linodeMachine("machine-1"),
-				linodeMachine("machine-2"),
-			},
-			apiMaintenances: []linodego.AccountMaintenance{
-				maintenanceFor("machine-1"),
-			},
-			expectedNames: []string{"machine-1"},
+			name:            "one machine has maintenance",
+			instanceIDs:     []int{101, 102},
+			apiMaintenances: []linodego.AccountMaintenance{maintenanceForID(101)},
+			expectedNames:   []string{"machine-0"},
 		},
 		{
-			name: "multiple machines have maintenance",
-			linodeMachines: []infrav1alpha2.LinodeMachine{
-				linodeMachine("machine-1"),
-				linodeMachine("machine-2"),
-				linodeMachine("machine-3"),
-			},
+			name:        "multiple machines have maintenance",
+			instanceIDs: []int{101, 102, 103},
 			apiMaintenances: []linodego.AccountMaintenance{
-				maintenanceFor("machine-1"),
-				maintenanceFor("machine-3"),
+				maintenanceForID(101),
+				maintenanceForID(103),
 			},
-			expectedNames: []string{"machine-1", "machine-3"},
+			expectedNames: []string{"machine-0", "machine-2"},
 		},
 		{
-			name: "maintenance label from different cluster is ignored (exact match)",
-			linodeMachines: []infrav1alpha2.LinodeMachine{
-				linodeMachine("machine-1"),
-			},
+			name:            "maintenance entity ID not matching any machine is ignored",
+			instanceIDs:     []int{101},
+			apiMaintenances: []linodego.AccountMaintenance{maintenanceForID(999)},
+			expectedNames:   nil,
+		},
+		{
+			name:        "non-linode entity type is ignored",
+			instanceIDs: []int{101},
 			apiMaintenances: []linodego.AccountMaintenance{
-				maintenanceFor("other-cluster-machine-1"),
+				{Entity: &linodego.Entity{Type: "volume", ID: 101}, Status: "scheduled"},
 			},
 			expectedNames: nil,
 		},
 		{
-			name: "non-linode entity type is ignored",
-			linodeMachines: []infrav1alpha2.LinodeMachine{
-				linodeMachine("machine-1"),
-			},
+			name:        "nil entity is ignored",
+			instanceIDs: []int{101},
 			apiMaintenances: []linodego.AccountMaintenance{
-				{
-					Entity: &linodego.Entity{
-						Type:  "volume",
-						Label: "machine-1",
-					},
-					Status: "scheduled",
-				},
+				{Entity: nil, Status: "scheduled"},
 			},
 			expectedNames: nil,
 		},
 		{
-			name: "maintenance API call fails",
-			linodeMachines: []infrav1alpha2.LinodeMachine{
-				linodeMachine("machine-1"),
-			},
+			name:        "maintenance API call fails",
+			instanceIDs: []int{101},
 			apiError:    errors.New("linode API unavailable"),
 			expectError: true,
 		},
 		{
 			name:            "no LinodeMachines in cluster",
-			linodeMachines:  []infrav1alpha2.LinodeMachine{},
-			apiMaintenances: []linodego.AccountMaintenance{maintenanceFor("orphan-machine")},
+			instanceIDs:     []int{},
+			apiMaintenances: []linodego.AccountMaintenance{maintenanceForID(101)},
 			expectedNames:   nil,
 		},
 	}
@@ -168,23 +188,22 @@ func TestCollectMaintenanceInfo(t *testing.T) {
 				ListMaintenances(gomock.Any(), gomock.Any()).
 				Return(tc.apiMaintenances, tc.apiError)
 
+			cluster := newCapiCluster(clusterName, ns)
+			objs := []client.Object{cluster}
+			for i, id := range tc.instanceIDs {
+				lm := newLinodeMachineWithID(fmt.Sprintf("machine-%d", i), ns, clusterName, id)
+				objs = append(objs, &lm)
+			}
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
+
 			clusterScope := &scope.ClusterScope{
-				LinodeCluster: &infrav1alpha2.LinodeCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      clusterName,
-						Namespace: ns,
-					},
-				},
-				LinodeMachines: infrav1alpha2.LinodeMachineList{
-					Items: tc.linodeMachines,
-				},
-				LinodeClient: mockLinodeClient,
+				Cluster:       cluster,
+				LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
+				LinodeClient:  mockLinodeClient,
+				Client:        fakeClient,
 			}
 
-			reconciler := LinodeClusterReconciler{}
-			logger := testr.New(t)
-
-			result, err := reconciler.collectMaintenanceInfo(context.Background(), clusterScope, logger)
+			result, err := (&LinodeClusterReconciler{}).collectMaintenanceInfo(context.Background(), clusterScope, testr.New(t))
 
 			if tc.expectError {
 				require.Error(t, err)
@@ -207,46 +226,7 @@ func TestSetMaintenanceConditions(t *testing.T) {
 	const clusterName = "test-cluster"
 	const ns = defaultNamespace
 
-	testScheme := runtime.NewScheme()
-	require.NoError(t, clientgoscheme.AddToScheme(testScheme))
-	require.NoError(t, clusterv1.AddToScheme(testScheme))
-	require.NoError(t, infrav1alpha2.AddToScheme(testScheme))
-
-	linodeMachineWithOwner := func(name string) infrav1alpha2.LinodeMachine {
-		return infrav1alpha2.LinodeMachine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: ns,
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: clusterv1.GroupVersion.String(),
-						Kind:       "Machine",
-						Name:       name,
-						UID:        types.UID("uid-" + name),
-					},
-				},
-			},
-		}
-	}
-
-	linodeMachineNoOwner := func(name string) infrav1alpha2.LinodeMachine {
-		return infrav1alpha2.LinodeMachine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: ns,
-			},
-		}
-	}
-
-	capMachine := func(name string) *clusterv1.Machine {
-		return &clusterv1.Machine{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: ns,
-				UID:       types.UID("uid-" + name),
-			},
-		}
-	}
+	scheme := testSchemeForMaintenance(t)
 
 	t.Run("no maintenance — no conditions set", func(t *testing.T) {
 		t.Parallel()
@@ -254,15 +234,16 @@ func TestSetMaintenanceConditions(t *testing.T) {
 		ml := mock.NewMockLinodeClient(mockCtrl)
 		ml.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{}, nil)
 
-		fakeClient := fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
+		cluster := newCapiCluster(clusterName, ns)
+		lm := newLinodeMachineWithID("machine-1", ns, clusterName, 101)
+		fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(cluster, &lm).Build()
 		cs := &scope.ClusterScope{
-			LinodeCluster:  &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
-			LinodeMachines: infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{linodeMachineWithOwner("machine-1")}},
-			LinodeClient:   ml,
-			Client:         fakeClient,
+			Cluster:       cluster,
+			LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
+			LinodeClient:  ml,
+			Client:        fakeClient,
 		}
-		err := (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t))
-		require.NoError(t, err)
+		require.NoError(t, (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t)))
 	})
 
 	t.Run("one machine in maintenance — MaintenanceScheduled condition set", func(t *testing.T) {
@@ -270,19 +251,24 @@ func TestSetMaintenanceConditions(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		ml := mock.NewMockLinodeClient(mockCtrl)
 		ml.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{
-			{Entity: &linodego.Entity{Type: "linode", Label: "machine-1"}, Status: "scheduled"},
+			maintenanceForID(101),
 		}, nil)
 
-		machine := capMachine("machine-1")
-		fakeClient := fakeclient.NewClientBuilder().WithScheme(testScheme).WithObjects(machine).WithStatusSubresource(machine).Build()
+		cluster := newCapiCluster(clusterName, ns)
+		lm := newLinodeMachineWithID("machine-1", ns, clusterName, 101)
+		machine := newCapiMachine("machine-1", ns)
+		fakeClient := fakeclient.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, &lm, machine).
+			WithStatusSubresource(machine).
+			Build()
 		cs := &scope.ClusterScope{
-			LinodeCluster:  &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
-			LinodeMachines: infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{linodeMachineWithOwner("machine-1")}},
-			LinodeClient:   ml,
-			Client:         fakeClient,
+			Cluster:       cluster,
+			LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
+			LinodeClient:  ml,
+			Client:        fakeClient,
 		}
-		err := (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t))
-		require.NoError(t, err)
+		require.NoError(t, (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t)))
 
 		updated := &clusterv1.Machine{}
 		require.NoError(t, fakeClient.Get(context.Background(), client.ObjectKey{Name: "machine-1", Namespace: ns}, updated))
@@ -301,20 +287,24 @@ func TestSetMaintenanceConditions(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		ml := mock.NewMockLinodeClient(mockCtrl)
 		ml.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{
-			{Entity: &linodego.Entity{Type: "linode", Label: "machine-1"}, Status: "scheduled"},
-			{Entity: &linodego.Entity{Type: "linode", Label: "machine-2"}, Status: "scheduled"},
+			maintenanceForID(101),
+			maintenanceForID(102),
 		}, nil)
 
-		m1, m2 := capMachine("machine-1"), capMachine("machine-2")
-		fakeClient := fakeclient.NewClientBuilder().WithScheme(testScheme).WithObjects(m1, m2).WithStatusSubresource(m1, m2).Build()
+		cluster := newCapiCluster(clusterName, ns)
+		lm1 := newLinodeMachineWithID("machine-1", ns, clusterName, 101)
+		lm2 := newLinodeMachineWithID("machine-2", ns, clusterName, 102)
+		m1, m2 := newCapiMachine("machine-1", ns), newCapiMachine("machine-2", ns)
+		fakeClient := fakeclient.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, &lm1, &lm2, m1, m2).
+			WithStatusSubresource(m1, m2).
+			Build()
 		cs := &scope.ClusterScope{
+			Cluster:       cluster,
 			LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
-			LinodeMachines: infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{
-				linodeMachineWithOwner("machine-1"),
-				linodeMachineWithOwner("machine-2"),
-			}},
-			LinodeClient: ml,
-			Client:       fakeClient,
+			LinodeClient:  ml,
+			Client:        fakeClient,
 		}
 		require.NoError(t, (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t)))
 
@@ -336,19 +326,23 @@ func TestSetMaintenanceConditions(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		ml := mock.NewMockLinodeClient(mockCtrl)
 		ml.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{
-			{Entity: &linodego.Entity{Type: "linode", Label: "machine-1"}, Status: "scheduled"},
+			maintenanceForID(101),
 		}, nil)
 
-		m1, m2 := capMachine("machine-1"), capMachine("machine-2")
-		fakeClient := fakeclient.NewClientBuilder().WithScheme(testScheme).WithObjects(m1, m2).WithStatusSubresource(m1, m2).Build()
+		cluster := newCapiCluster(clusterName, ns)
+		lm1 := newLinodeMachineWithID("machine-1", ns, clusterName, 101)
+		lm2 := newLinodeMachineWithID("machine-2", ns, clusterName, 102)
+		m1, m2 := newCapiMachine("machine-1", ns), newCapiMachine("machine-2", ns)
+		fakeClient := fakeclient.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, &lm1, &lm2, m1, m2).
+			WithStatusSubresource(m1, m2).
+			Build()
 		cs := &scope.ClusterScope{
+			Cluster:       cluster,
 			LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
-			LinodeMachines: infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{
-				linodeMachineWithOwner("machine-1"),
-				linodeMachineWithOwner("machine-2"),
-			}},
-			LinodeClient: ml,
-			Client:       fakeClient,
+			LinodeClient:  ml,
+			Client:        fakeClient,
 		}
 		require.NoError(t, (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t)))
 
@@ -369,23 +363,59 @@ func TestSetMaintenanceConditions(t *testing.T) {
 		}
 	})
 
+	t.Run("LinodeMachine has no InstanceID — skipped without error", func(t *testing.T) {
+		t.Parallel()
+		mockCtrl := gomock.NewController(t)
+		ml := mock.NewMockLinodeClient(mockCtrl)
+		ml.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{
+			maintenanceForID(101),
+		}, nil)
+
+		cluster := newCapiCluster(clusterName, ns)
+		lmNoID := infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-noid",
+				Namespace: ns,
+				Labels:    map[string]string{clusterLabelKey: clusterName},
+			},
+		}
+		fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(cluster, &lmNoID).Build()
+		cs := &scope.ClusterScope{
+			Cluster:       cluster,
+			LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
+			LinodeClient:  ml,
+			Client:        fakeClient,
+		}
+		require.NoError(t, (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t)))
+	})
+
 	t.Run("LinodeMachine has no owner reference — skipped without error", func(t *testing.T) {
 		t.Parallel()
 		mockCtrl := gomock.NewController(t)
 		ml := mock.NewMockLinodeClient(mockCtrl)
 		ml.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{
-			{Entity: &linodego.Entity{Type: "linode", Label: "machine-orphan"}, Status: "scheduled"},
+			maintenanceForID(101),
 		}, nil)
 
-		fakeClient := fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
-		cs := &scope.ClusterScope{
-			LinodeCluster:  &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
-			LinodeMachines: infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{linodeMachineNoOwner("machine-orphan")}},
-			LinodeClient:   ml,
-			Client:         fakeClient,
+		cluster := newCapiCluster(clusterName, ns)
+		lmNoOwner := infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "machine-orphan",
+				Namespace: ns,
+				Labels:    map[string]string{clusterLabelKey: clusterName},
+			},
+			Spec: infrav1alpha2.LinodeMachineSpec{
+				InstanceID: util.Pointer(101),
+			},
 		}
-		err := (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t))
-		require.NoError(t, err)
+		fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(cluster, &lmNoOwner).Build()
+		cs := &scope.ClusterScope{
+			Cluster:       cluster,
+			LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
+			LinodeClient:  ml,
+			Client:        fakeClient,
+		}
+		require.NoError(t, (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t)))
 	})
 
 	t.Run("GetOwnerMachine fails — error aggregated", func(t *testing.T) {
@@ -393,18 +423,28 @@ func TestSetMaintenanceConditions(t *testing.T) {
 		mockCtrl := gomock.NewController(t)
 		ml := mock.NewMockLinodeClient(mockCtrl)
 		mk := mock.NewMockK8sClient(mockCtrl)
+
+		lm := newLinodeMachineWithID("machine-1", ns, clusterName, 101)
+		lmList := infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{lm}}
+
 		ml.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{
-			{Entity: &linodego.Entity{Type: "linode", Label: "machine-1"}, Status: "scheduled"},
+			maintenanceForID(101),
 		}, nil)
+		mk.EXPECT().
+			List(gomock.Any(), gomock.AssignableToTypeOf(&infrav1alpha2.LinodeMachineList{}), gomock.Any()).
+			DoAndReturn(func(_ context.Context, list *infrav1alpha2.LinodeMachineList, _ ...client.ListOption) error {
+				*list = lmList
+				return nil
+			})
 		mk.EXPECT().
 			Get(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(&clusterv1.Machine{}), gomock.Any()).
 			Return(errors.New("API server unavailable"))
 
 		cs := &scope.ClusterScope{
-			LinodeCluster:  &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
-			LinodeMachines: infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{linodeMachineWithOwner("machine-1")}},
-			LinodeClient:   ml,
-			Client:         mk,
+			Cluster:       newCapiCluster(clusterName, ns),
+			LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
+			LinodeClient:  ml,
+			Client:        mk,
 		}
 		err := (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t))
 		require.Error(t, err)
@@ -417,15 +457,18 @@ func TestSetMaintenanceConditions(t *testing.T) {
 		ml := mock.NewMockLinodeClient(mockCtrl)
 		ml.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return(nil, errors.New("API down"))
 
-		fakeClient := fakeclient.NewClientBuilder().WithScheme(testScheme).Build()
+		cluster := newCapiCluster(clusterName, ns)
+		lm := newLinodeMachineWithID("machine-1", ns, clusterName, 101)
+		fakeClient := fakeclient.NewClientBuilder().WithScheme(scheme).WithObjects(cluster, &lm).Build()
 		cs := &scope.ClusterScope{
-			LinodeCluster:  &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
-			LinodeMachines: infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{linodeMachineWithOwner("machine-1")}},
-			LinodeClient:   ml,
-			Client:         fakeClient,
+			Cluster:       cluster,
+			LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: ns}},
+			LinodeClient:  ml,
+			Client:        fakeClient,
 		}
 		err := (&LinodeClusterReconciler{}).setMaintenanceConditions(context.Background(), cs, testr.New(t))
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "API down")
 	})
 }
+
