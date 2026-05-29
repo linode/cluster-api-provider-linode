@@ -156,6 +156,20 @@ type LinodeFirewall struct {
 	Status LinodeFirewallStatus `json:"status,omitempty"`
 }
 
+func (lfw *LinodeFirewall) GetConditions() []metav1.Condition {
+	for i := range lfw.Status.Conditions {
+		if lfw.Status.Conditions[i].Reason == "" {
+			lfw.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
+
+	return lfw.Status.Conditions
+}
+
+func (lfw *LinodeFirewall) SetConditions(conditions []metav1.Condition) {
+	lfw.Status.Conditions = conditions
+}
+
 func (lfw *LinodeFirewall) SetCondition(cond metav1.Condition) {
 	if cond.LastTransitionTime.IsZero() {
 		cond.LastTransitionTime = metav1.Now()

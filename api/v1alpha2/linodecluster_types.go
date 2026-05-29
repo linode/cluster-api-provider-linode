@@ -123,6 +123,20 @@ type LinodeCluster struct {
 	Status LinodeClusterStatus `json:"status,omitempty"`
 }
 
+func (lc *LinodeCluster) GetConditions() []metav1.Condition {
+	for i := range lc.Status.Conditions {
+		if lc.Status.Conditions[i].Reason == "" {
+			lc.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
+
+	return lc.Status.Conditions
+}
+
+func (lc *LinodeCluster) SetConditions(conditions []metav1.Condition) {
+	lc.Status.Conditions = conditions
+}
+
 func (lc *LinodeCluster) SetCondition(cond metav1.Condition) {
 	if cond.LastTransitionTime.IsZero() {
 		cond.LastTransitionTime = metav1.Now()

@@ -42,7 +42,7 @@ spec:
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "Content-Type: application/json" \
                 -d "{\"label\":\"$BUCKET_LABEL\",\"region\":\"us-sea\"}" \
-                "https://api.linode.com/v4/$URI"
+                "https://api.linode.com/v4beta/$URI"
             check:
               ($error): ~
     - name: Create LinodeObjectStorageKey
@@ -71,11 +71,28 @@ spec:
               set -e
 
               export KEY_ID=$(kubectl -n $NAMESPACE get lobjkey $OBJ_KEY -ojson | jq '.status.accessKeyRef')
-              
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "Content-Type: application/json" \
-                "https://api.linode.com/v4/$URI/$KEY_ID"
+              MAX_RETRIES=12
+              RETRY_DELAY=5
+              ATTEMPT=1
+
+              while true; do
+                RESPONSE=$(curl -s \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://api.linode.com/v4beta/$URI/$KEY_ID")
+
+                if echo "$RESPONSE" | jq -e '.id' >/dev/null; then
+                  break
+                fi
+
+                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
+                  echo "$RESPONSE"
+                  exit 1
+                fi
+
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep "$RETRY_DELAY"
+              done
             check:
               ($error): ~
     - name: Delete LinodeObjectStorageKey
@@ -103,6 +120,6 @@ spec:
               curl -s \
                 -X DELETE \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
-                "https://api.linode.com/v4/$URI/$BUCKET_LABEL"
+                "https://api.linode.com/v4beta/$URI/$BUCKET_LABEL"
             check:
               ($error): ~

@@ -109,6 +109,14 @@ func TestIsRetryableError(t *testing.T) {
 			Message:  "rate limited",
 		},
 		want: true,
+	}, {
+		name: "request timeout Linode API error",
+		err: &linodego.Error{
+			Response: nil,
+			Code:     http.StatusRequestTimeout,
+			Message:  "request timeout",
+		},
+		want: true,
 	}}
 	for _, tt := range tests {
 		testcase := tt

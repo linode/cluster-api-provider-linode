@@ -16,14 +16,18 @@ permissions:
 jobs:
   generate-docs:
     runs-on: ubuntu-latest
-    container: docker.io/node:24-bullseye-slim
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v6
+      - name: Harden Runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        with:
+          disable-sudo: true
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Setup mdBook
         run: |
-          apt-get update
-          apt-get install curl -y
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdbook/releases/download/v0.4.37/mdbook-v0.4.37-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
           curl -sSL  https://github.com/tommilligan/mdbook-admonish/releases/download/v1.15.0/mdbook-admonish-v1.15.0-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
@@ -33,9 +37,9 @@ jobs:
           cd docs
           mdbook build
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: 'docs/book'
 
@@ -47,6 +51,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        with:
+          disable-sudo: true
+          egress-policy: audit
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

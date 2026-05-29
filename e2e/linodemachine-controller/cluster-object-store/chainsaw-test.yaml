@@ -43,7 +43,7 @@ spec:
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "Content-Type: application/json" \
                 -d "{\"label\":\"$BUCKET_LABEL\",\"region\":\"us-sea\"}" \
-                "https://api.linode.com/v4/$URI"
+                "https://api.linode.com/v4beta/$URI"
             check:
               ($error): ~
     - name: Create LinodeObjectStorageKey
@@ -119,7 +119,7 @@ spec:
               curl -s \
                 -X DELETE \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
-                "https://api.linode.com/v4/$URI/$KEY_ID"
+                "https://api.linode.com/v4beta/$URI/$KEY_ID"
             check:
               ($error): ~
     - name: Delete bucket
@@ -136,6 +136,6 @@ spec:
               curl -s \
                 -X DELETE \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
-                "https://api.linode.com/v4/$URI/$BUCKET_LABEL"
+                "https://api.linode.com/v4beta/$URI/$BUCKET_LABEL"
             check:
               ($error): ~

@@ -73,10 +73,10 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 		if linodego.ErrHasStatus(err, http.StatusTooManyRequests) {
 			return ctrl.Result{RequeueAfter: reconciler.DefaultLinodeTooManyRequestsErrorRetryDelay}, nil
 		}
-		return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 	}
 	logger.Error(err, "unknown Linode API error")
-	return ctrl.Result{RequeueAfter: reconciler.DefaultMachineControllerRetryDelay}, nil
+	return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 }
 
 func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
@@ -85,7 +85,7 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 	switch createConfig.InterfaceGeneration {
 	case linodego.GenerationLinode:
 		// networkHelper is only applicable for Linode interfaces.
-		// legacy interfaces have nework helper configured in reconcilePreflightConfigure at the instance level.
+		// legacy interfaces have network helper configured in reconcilePreflightConfigure at the instance level.
 		if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
 			createConfig.NetworkHelper = machineScope.LinodeMachine.Spec.NetworkHelper
 		} else {

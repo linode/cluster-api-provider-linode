@@ -610,6 +610,20 @@ type LinodeMachine struct {
 	Status LinodeMachineStatus `json:"status,omitempty"`
 }
 
+func (lm *LinodeMachine) GetConditions() []metav1.Condition {
+	for i := range lm.Status.Conditions {
+		if lm.Status.Conditions[i].Reason == "" {
+			lm.Status.Conditions[i].Reason = DefaultConditionReason
+		}
+	}
+
+	return lm.Status.Conditions
+}
+
+func (lm *LinodeMachine) SetConditions(conditions []metav1.Condition) {
+	lm.Status.Conditions = conditions
+}
+
 func (lm *LinodeMachine) SetCondition(cond metav1.Condition) {
 	if cond.LastTransitionTime.IsZero() {
 		cond.LastTransitionTime = metav1.Now()
