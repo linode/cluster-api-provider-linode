@@ -3,10 +3,11 @@ package reconciler
 import (
 	"context"
 
-	o11yreconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	clusterctlv1 "sigs.k8s.io/cluster-api/cmd/clusterctl/api/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	o11yreconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 )
 
 func AsReconcilerWithTracing[object client.Object](k8sClient client.Client, rec reconcile.ObjectReconciler[object]) reconcile.Reconciler {
@@ -26,13 +27,13 @@ type capiReconcilerAdapter[object client.Object] struct {
 	k8sClient     client.Client
 }
 
-func (a *capiReconcilerAdapter[object]) Reconcile(ctx context.Context, o object) (reconcile.Result, error) {
+func (a *capiReconcilerAdapter[object]) Reconcile(ctx context.Context, obj object) (reconcile.Result, error) {
 	// Skip normal reconciliation when clusterctl marks the object for deletion during a move.
 	// Reconciling here could recreate or mutate infrastructure while ownership is being handed off.
-	if annotations := o.GetAnnotations(); annotations != nil {
+	if annotations := obj.GetAnnotations(); annotations != nil {
 		if _, exists := annotations[clusterctlv1.DeleteForMoveAnnotation]; exists {
 			return reconcile.Result{}, nil
 		}
 	}
-	return a.objReconciler.Reconcile(ctx, o)
+	return a.objReconciler.Reconcile(ctx, obj)
 }
