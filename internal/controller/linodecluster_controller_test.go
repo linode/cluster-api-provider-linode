@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -289,9 +288,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				}),
 				Result("no capl cluster error", func(ctx context.Context, mck Mock) {
 					reconciler.Client = k8sClient
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
-						NamespacedName: client.ObjectKeyFromObject(cScope.LinodeCluster),
-					})
+					_, err := reconciler.Reconcile(ctx, cScope.LinodeCluster)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(linodeCluster.Status.Ready).To(BeFalseBecause("failed to get Cluster/no-capl-cluster: clusters.cluster.x-k8s.io \"no-capl-cluster\" not found"))
 				}),
@@ -373,7 +370,7 @@ var _ = Describe("pause handling", Label("cluster", "pause"), func() {
 			DnsClientConfig:    scope.ClientConfig{Token: "test-token"},
 		}
 
-		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(linodeCluster)})
+		_, err := reconciler.Reconcile(ctx, linodeCluster)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(linodeCluster), linodeCluster)).To(Succeed())
