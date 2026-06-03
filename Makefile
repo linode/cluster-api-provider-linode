@@ -90,7 +90,7 @@ generate-code: controller-gen gowrap ## Generate code containing DeepCopy, DeepC
 
 .PHONY: generate-mock
 generate-mock: mockgen ## Generate mocks for the Linode API client.
-	$(MOCKGEN) -source=./clients/clients.go -destination ./mock/client.go -package mock
+	GOROOT=$$(go env GOROOT) $(MOCKGEN) -source=./clients/clients.go -destination ./mock/client.go -package mock
 
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)
@@ -154,7 +154,7 @@ docs:
 
 .PHONY: test
 test: generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use ${ENVTEST_K8S_VERSION#v} --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use ${ENVTEST_K8S_VERSION#v} --bin-dir $(CACHE_BIN) -p path)" go test -timeout 60s `go list ./... | grep -v ./mock$$` -coverpkg=./... -coverprofile cover.out.tmp
 	grep -v "zz_generated.*" cover.out.tmp > cover.out
 	rm cover.out.tmp
 
@@ -381,6 +381,7 @@ GOWRAP_VERSION           ?= v1.4.0
 S5CMD_VERSION            ?= v2.2.2
 CONVERSION_GEN_VERSION   ?= v0.32.2
 GOLANGCI_LINT_VERSION    ?= v2.1.5
+ENVTEST_VERSION          ?= release-0.22
 
 .PHONY: tools
 tools: $(KUSTOMIZE) $(CTLPTL) $(CLUSTERCTL) $(KUBECTL) $(CONTROLLER_GEN) $(CONVERSION_GEN) $(TILT) $(KIND) $(CHAINSAW) $(ENVTEST) $(HUSKY) $(NILAWAY) $(GOVULNC) $(MOCKGEN) $(GOWRAP)
@@ -452,7 +453,7 @@ $(CHAINSAW): $(CACHE_BIN)
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(CACHE_BIN)
-	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230216140739-c98506dc3b8e
+	GOBIN=$(CACHE_BIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 
 .phony: golangci-lint
 golangci-lint: $(GOLANGCI_LINT)
