@@ -90,7 +90,7 @@ generate-code: controller-gen gowrap ## Generate code containing DeepCopy, DeepC
 
 .PHONY: generate-mock
 generate-mock: mockgen ## Generate mocks for the Linode API client.
-	$(MOCKGEN) -source=./clients/clients.go -destination ./mock/client.go -package mock
+	GOROOT=$$(go env GOROOT) $(MOCKGEN) -source=./clients/clients.go -destination ./mock/client.go -package mock
 
 .PHONY: generate-flavors ## Generate template flavors.
 generate-flavors: $(KUSTOMIZE)

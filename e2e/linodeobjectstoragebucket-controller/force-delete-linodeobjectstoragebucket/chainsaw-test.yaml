@@ -92,11 +92,10 @@ spec:
               - name: BUCKET
                 value: ($bucket)
             content: |
-              set -e
-              curl -s \
+              curl -s -w "\n%{http_code}" \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "Content-Type: application/json" \
                 "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
             check:
-              ($stdout): |-
-                {"errors": [{"reason": "Not found"}]}
+              ($error): ~
+              (ends_with(trim($stdout), '404')): true
