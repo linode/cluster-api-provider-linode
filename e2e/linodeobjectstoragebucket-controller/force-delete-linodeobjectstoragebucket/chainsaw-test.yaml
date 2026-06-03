@@ -98,4 +98,4 @@ spec:
                 "https://api.linode.com/v4/object-storage/buckets/us-sea-1/$BUCKET"
             check:
               ($error): ~
-              (ends_with(trim($stdout), '404')): true
+              (ends_with(trim($stdout, '\n'), '404')): true
