@@ -44,7 +44,6 @@ import (
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
-	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
 	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/util/reconciler"
 )
@@ -75,22 +74,13 @@ type LinodeObjectStorageKeyReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.18.2/pkg/reconcile
-func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, objectStorageKey *infrav1alpha2.LinodeObjectStorageKey) (ctrl.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultedLoopTimeout(r.ReconcileTimeout))
 	defer cancel()
 
-	logger := r.Logger.WithValues("name", req.String())
+	logger := r.Logger.WithValues("name", objectStorageKey.Name, "namespace", objectStorageKey.Namespace)
 
 	tracedClient := r.TracedClient()
-
-	objectStorageKey := &infrav1alpha2.LinodeObjectStorageKey{}
-	if err := tracedClient.Get(ctx, req.NamespacedName, objectStorageKey); err != nil {
-		if err = client.IgnoreNotFound(err); err != nil {
-			logger.Error(err, "Failed to fetch LinodeObjectStorageKey", "name", req.String())
-		}
-
-		return ctrl.Result{}, err
-	}
 
 	if _, ok := objectStorageKey.Labels[clusterv1.ClusterNameLabel]; ok {
 		cluster, err := kutil.GetClusterFromMetadata(ctx, r.TracedClient(), objectStorageKey.ObjectMeta)
@@ -348,7 +338,7 @@ func (r *LinodeObjectStorageKeyReconciler) SetupWithManager(mgr ctrl.Manager, op
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(linodeObjectStorageKeyMapper),
 			builder.WithPredicates(predicates.ClusterPausedTransitionsOrInfrastructureProvisioned(mgr.GetScheme(), mgr.GetLogger())),
-		).Complete(wrappedruntimereconciler.NewRuntimeReconcilerWithTracing(r, wrappedruntimereconciler.DefaultDecorator()))
+		).Complete(reconciler.AsReconcilerWithTracing(r.TracedClient(), r))
 	if err != nil {
 		return fmt.Errorf("failed to build controller: %w", err)
 	}

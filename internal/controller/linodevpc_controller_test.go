@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -338,7 +337,7 @@ var _ = Describe("pause handling", Label("vpc", "pause"), func() {
 			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
 		}
 
-		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(vpc)})
+		_, err := reconciler.Reconcile(ctx, vpc)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(vpc), vpc)).To(Succeed())
