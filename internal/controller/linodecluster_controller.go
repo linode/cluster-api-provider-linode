@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/linode/linodego"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,8 @@ import (
 	"k8s.io/client-go/tools/events"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/conditions"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,6 +57,7 @@ const (
 	lbTypeNB                                string = "NodeBalancer"
 	ConditionPreflightLinodeVPCReady        string = "PreflightLinodeVPCReady"
 	ConditionPreflightLinodeNBFirewallReady string = "PreflightLinodeNBFirewallReady"
+	ConditionMaintenanceScheduled           string = "MaintenanceScheduled"
 )
 
 // LinodeClusterReconciler reconciles a LinodeCluster object
@@ -69,7 +73,8 @@ type LinodeClusterReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
-
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines/status,verbs=get;update;patch
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 
@@ -218,7 +223,90 @@ func (r *LinodeClusterReconciler) reconcile(
 		return retryIfTransient(err, logger)
 	}
 
+	if err := r.setMaintenanceConditions(ctx, clusterScope, logger); err != nil {
+		return retryIfTransient(err, logger)
+	}
+
 	return res, nil
+}
+
+func (r *LinodeClusterReconciler) setMaintenanceConditions(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) error {
+	linodeMachines, err := r.collectMaintenanceInfo(ctx, clusterScope, logger)
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for i := range linodeMachines {
+		capiMachine, err := kutil.GetOwnerMachine(ctx, clusterScope.Client, linodeMachines[i].ObjectMeta)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to get owner Machine for LinodeMachine %s: %w", linodeMachines[i].Name, err))
+			continue
+		}
+		if capiMachine == nil {
+			logger.Info("no owner Machine found for LinodeMachine, skipping", "LinodeMachine", linodeMachines[i].Name)
+			continue
+		}
+		patchHelper, err := patch.NewHelper(capiMachine, clusterScope.Client)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("failed to create patch helper for Machine %s: %w", capiMachine.Name, err))
+			continue
+		}
+		conditions.Set(capiMachine, metav1.Condition{
+			Type:   ConditionMaintenanceScheduled,
+			Status: metav1.ConditionTrue,
+			Reason: ConditionMaintenanceScheduled,
+		})
+		if err := patchHelper.Patch(ctx, capiMachine); err != nil {
+			errs = append(errs, fmt.Errorf("failed to patch Machine %s: %w", capiMachine.Name, err))
+			continue
+		}
+	}
+	return utilerrors.NewAggregate(errs)
+}
+
+func (r *LinodeClusterReconciler) collectMaintenanceInfo(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) ([]infrav1alpha2.LinodeMachine, error) {
+	// Fetch all maintenance information
+	threeDaysLater := time.Now().Add(72 * time.Hour).UTC().Format("2006-01-02T15:04:05") // API doesn't like RFC3339
+	f := linodego.Filter{}
+	f.AddField(linodego.Eq, "status", "scheduled")
+	f.AddField(linodego.Lte, "when", threeDaysLater)
+	filter, err := f.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("could not marshal filter: %w", err)
+	}
+	maintenances, err := clusterScope.LinodeClient.ListMaintenances(ctx, &linodego.ListOptions{Filter: string(filter)})
+	if err != nil {
+		logger.Error(err, "Failed to fetch maintenance information from Linode API")
+		return nil, err
+	}
+
+	maintenanceLabels := make(map[int]struct{}, len(maintenances))
+	for _, maint := range maintenances {
+		if maint.Entity == nil {
+			continue
+		}
+		if maint.Entity.Type != "linode" {
+			continue
+		}
+		maintenanceLabels[maint.Entity.ID] = struct{}{}
+	}
+
+	var machinesForMaintenance []infrav1alpha2.LinodeMachine
+	linodeMachines, err := util.GetLinodeMachinesForCluster(ctx, clusterScope.Client, clusterScope.Cluster)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, lm := range linodeMachines.Items {
+		if lm.Spec.InstanceID == nil {
+			continue
+		}
+		if _, ok := maintenanceLabels[*lm.Spec.InstanceID]; ok {
+			logger.Info("Found maintenance information for", "LinodeMachine", lm.Name, "id", *lm.Spec.InstanceID)
+			machinesForMaintenance = append(machinesForMaintenance, lm)
+		}
+	}
+	return machinesForMaintenance, nil
 }
 
 func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
