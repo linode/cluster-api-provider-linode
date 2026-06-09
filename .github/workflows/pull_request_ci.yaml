@@ -127,6 +127,7 @@ jobs:
             registry-1.docker.io:443
             auth.docker.io:443
             production.cloudflare.docker.com:443
+            production.cloudfront.docker.com:443
             gcr.io:443
             storage.googleapis.com:443
 
