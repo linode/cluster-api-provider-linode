@@ -299,6 +299,7 @@ type InstanceConfigInterfaceCreateOptions struct {
 
 	// subnetId is the ID of the subnet to use for the interface.
 	// +optional
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	SubnetID *int `json:"subnetId,omitempty"`
 
 	// ipv4 is the IPv4 configuration for the interface.
@@ -315,10 +316,12 @@ type InstanceConfigInterfaceCreateOptions struct {
 type LinodeInterfaceCreateOptions struct {
 	// firewall_id is the ID of the firewall to use for the interface.
 	// +optional
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	FirewallID *int `json:"firewall_id,omitempty"`
 
 	// default_route is the default route for the interface.
 	// +optional
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	DefaultRoute *InterfaceDefaultRoute `json:"default_route,omitempty"`
 
 	// public is the public interface configuration for the interface.
@@ -425,6 +428,7 @@ type VPCInterfaceIPv6CreateOptions struct {
 
 	// is_public is a boolean indicating whether the interface is public.
 	// +required
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	IsPublic *bool `json:"is_public,omitempty"`
 }
 
@@ -472,6 +476,7 @@ type VPCInterfaceIPv4AddressCreateOptions struct {
 
 	// nat_1_1_address is the NAT 1:1 address for the interface.
 	// +optional
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	NAT1To1Address *string `json:"nat_1_1_address,omitempty"`
 }
 
@@ -488,10 +493,12 @@ type VLANInterface struct {
 	// vlan_label is the label of the VLAN.
 	// +kubebuilder:validation:MinLength=1
 	// +required
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	VLANLabel string `json:"vlan_label,omitempty"`
 
 	// ipam_address is the IP address to assign to the interface.
 	// +optional
+	//nolint:kubeapilinter  // to maintain backwards compatibility
 	IPAMAddress *string `json:"ipam_address,omitempty"`
 }
 

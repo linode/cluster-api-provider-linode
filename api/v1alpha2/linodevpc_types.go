@@ -89,7 +89,8 @@ type VPCCreateOptionsIPv6 struct {
 
 	// allocation_class is the IPv6 inventory from which the VPC prefix should be allocated.
 	// +optional
-	AllocationClass *string `json:"allocation_class,omitempty" yaml:"allocationClass,omitempty"`
+	//nolint:kubeapilinter // to maintain backwards compatibility
+	AllocationClass *string `json:"allocation_class,omitempty"`
 }
 
 // VPCSubnetCreateOptions defines subnet options
