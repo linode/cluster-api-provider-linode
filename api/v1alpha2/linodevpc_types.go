@@ -83,13 +83,15 @@ type LinodeVPCSpec struct {
 // Values supported by the linode API should be used here.
 // See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
 type VPCCreateOptionsIPv6 struct {
-	// range is the IPv6 prefix for the VPC.
+	// Range is the IPv6 prefix for the VPC.
 	// +optional
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	Range *string `json:"range,omitempty"`
 
-	// allocationClass is the IPv6 inventory from which the VPC prefix should be allocated.
+	// allocation_class is the IPv6 inventory from which the VPC prefix should be allocated.
 	// +optional
-	AllocationClass *string `json:"allocationClass,omitempty"`
+	//nolint:kubeapilinter // to maintain backwards compatibility
+	AllocationClass *string `json:"allocation_class,omitempty"`
 }
 
 // VPCSubnetCreateOptions defines subnet options

@@ -614,8 +614,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `firewallID` _integer_ | firewallID is the ID of the firewall to use for the interface. |  | Optional: \{\} <br /> |
-| `defaultRoute` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | defaultRoute is the default route for the interface. |  | Optional: \{\} <br /> |
+| `firewall_id` _integer_ | firewall_id is the ID of the firewall to use for the interface. |  | Optional: \{\} <br /> |
+| `default_route` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | default_route is the default route for the interface. |  | Optional: \{\} <br /> |
 | `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  | Optional: \{\} <br /> |
@@ -1372,8 +1372,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `vlanLabel` _string_ | vlanLabel is the label of the VLAN. |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `ipamAddress` _string_ | ipamAddress is the IP address to assign to the interface. |  | Optional: \{\} <br /> |
+| `vlan_label` _string_ | vlan_label is the label of the VLAN. |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `ipam_address` _string_ | ipam_address is the IP address to assign to the interface. |  | Optional: \{\} <br /> |
 
 
 #### VPCCreateOptionsIPv6
@@ -1392,8 +1392,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `range` _string_ | range is the IPv6 prefix for the VPC. |  | Optional: \{\} <br /> |
-| `allocationClass` _string_ | allocationClass is the IPv6 inventory from which the VPC prefix should be allocated. |  | Optional: \{\} <br /> |
+| `range` _string_ | Range is the IPv6 prefix for the VPC. |  | Optional: \{\} <br /> |
+| `allocation_class` _string_ | allocation_class is the IPv6 inventory from which the VPC prefix should be allocated. |  | Optional: \{\} <br /> |
 
 
 #### VPCIPv4
@@ -1426,7 +1426,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `subnetId` _integer_ | subnetId is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
+| `subnet_id` _integer_ | subnet_id is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
 | `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the interface. |  | Optional: \{\} <br /> |
 | `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  | Optional: \{\} <br /> |
 
@@ -1446,7 +1446,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `address` _string_ | address is the IPv4 address for the interface. |  | MinLength: 1 <br />Required: \{\} <br /> |
 | `primary` _boolean_ | primary is a boolean indicating whether the address is primary. |  | Optional: \{\} <br /> |
-| `nat1to1Address` _string_ | nat1to1Address is the NAT 1:1 address for the interface. |  | Optional: \{\} <br /> |
+| `nat_1_1_address` _string_ | nat_1_1_address is the NAT 1:1 address for the interface. |  | Optional: \{\} <br /> |
 
 
 #### VPCInterfaceIPv4CreateOptions
@@ -1497,7 +1497,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `slaac` _[VPCInterfaceIPv6SLAACCreateOptions](#vpcinterfaceipv6slaaccreateoptions) array_ | slaac is the IPv6 SLAAC configuration for the interface. |  | Optional: \{\} <br /> |
 | `ranges` _[VPCInterfaceIPv6RangeCreateOptions](#vpcinterfaceipv6rangecreateoptions) array_ | ranges is the IPv6 ranges for the interface. |  | Optional: \{\} <br /> |
-| `isPublic` _boolean_ | isPublic is a boolean indicating whether the interface is public. |  | Required: \{\} <br /> |
+| `is_public` _boolean_ | is_public is a boolean indicating whether the interface is public. |  | Required: \{\} <br /> |
 
 
 #### VPCInterfaceIPv6RangeCreateOptions

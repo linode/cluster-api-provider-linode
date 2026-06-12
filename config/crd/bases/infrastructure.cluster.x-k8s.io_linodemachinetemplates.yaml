@@ -532,9 +532,9 @@ spec:
                           description: LinodeInterfaceCreateOptions defines the linode
                             network interface config
                           properties:
-                            defaultRoute:
-                              description: defaultRoute is the default route for the
-                                interface.
+                            default_route:
+                              description: default_route is the default route for
+                                the interface.
                               properties:
                                 ipv4:
                                   description: ipv4 is the IPv4 default route for
@@ -545,8 +545,8 @@ spec:
                                     the interface.
                                   type: boolean
                               type: object
-                            firewallID:
-                              description: firewallID is the ID of the firewall to
+                            firewall_id:
+                              description: firewall_id is the ID of the firewall to
                                 use for the interface.
                               type: integer
                             public:
@@ -611,16 +611,16 @@ spec:
                               description: vlan is the VLAN interface configuration
                                 for the interface.
                               properties:
-                                ipamAddress:
-                                  description: ipamAddress is the IP address to assign
+                                ipam_address:
+                                  description: ipam_address is the IP address to assign
                                     to the interface.
                                   type: string
-                                vlanLabel:
-                                  description: vlanLabel is the label of the VLAN.
+                                vlan_label:
+                                  description: vlan_label is the label of the VLAN.
                                   minLength: 1
                                   type: string
                               required:
-                              - vlanLabel
+                              - vlan_label
                               type: object
                             vpc:
                               description: vpc is the VPC interface configuration
@@ -643,8 +643,8 @@ spec:
                                               for the interface.
                                             minLength: 1
                                             type: string
-                                          nat1to1Address:
-                                            description: nat1to1Address is the NAT
+                                          nat_1_1_address:
+                                            description: nat_1_1_address is the NAT
                                               1:1 address for the interface.
                                             type: string
                                           primary:
@@ -682,8 +682,8 @@ spec:
                                   description: ipv6 is the IPv6 configuration for
                                     the interface.
                                   properties:
-                                    isPublic:
-                                      description: isPublic is a boolean indicating
+                                    is_public:
+                                      description: is_public is a boolean indicating
                                         whether the interface is public.
                                       type: boolean
                                     ranges:
@@ -725,10 +725,10 @@ spec:
                                       - range
                                       x-kubernetes-list-type: map
                                   required:
-                                  - isPublic
+                                  - is_public
                                   type: object
-                                subnetId:
-                                  description: subnetId is the ID of the subnet to
+                                subnet_id:
+                                  description: subnet_id is the ID of the subnet to
                                     use for the interface.
                                   type: integer
                               type: object
