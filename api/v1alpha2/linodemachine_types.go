@@ -401,6 +401,7 @@ type PublicInterfaceIPv6RangeCreateOptions struct {
 type VPCInterfaceCreateOptions struct {
 	// subnet_id is the ID of the subnet to use for the interface.
 	// +optional
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	SubnetID *int `json:"subnet_id,omitempty"`
 
 	// ipv4 is the IPv4 configuration for the interface.

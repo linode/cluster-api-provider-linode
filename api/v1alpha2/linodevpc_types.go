@@ -85,6 +85,7 @@ type LinodeVPCSpec struct {
 type VPCCreateOptionsIPv6 struct {
 	// Range is the IPv6 prefix for the VPC.
 	// +optional
+	//nolint:kubeapilinter // to maintain backwards compatibility
 	Range *string `json:"range,omitempty"`
 
 	// allocation_class is the IPv6 inventory from which the VPC prefix should be allocated.
