@@ -87,7 +87,7 @@ type VPCCreateOptionsIPv6 struct {
 	// +optional
 	Range *string `json:"range,omitempty"`
 
-	// AllocationClass is the IPv6 inventory from which the VPC prefix should be allocated.
+	// allocation_class is the IPv6 inventory from which the VPC prefix should be allocated.
 	// +optional
 	AllocationClass *string `json:"allocation_class,omitempty" yaml:"allocationClass,omitempty"`
 }

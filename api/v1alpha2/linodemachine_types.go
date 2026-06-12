@@ -313,11 +313,11 @@ type InstanceConfigInterfaceCreateOptions struct {
 
 // LinodeInterfaceCreateOptions defines the linode network interface config
 type LinodeInterfaceCreateOptions struct {
-	// FirewallID is the ID of the firewall to use for the interface.
+	// firewall_id is the ID of the firewall to use for the interface.
 	// +optional
 	FirewallID *int `json:"firewall_id,omitempty"`
 
-	// DefaultRoute is the default route for the interface.
+	// default_route is the default route for the interface.
 	// +optional
 	DefaultRoute *InterfaceDefaultRoute `json:"default_route,omitempty"`
 
@@ -396,7 +396,7 @@ type PublicInterfaceIPv6RangeCreateOptions struct {
 
 // VPCInterfaceCreateOptions defines the VPC interface configuration for an instance
 type VPCInterfaceCreateOptions struct {
-	// subnetId is the ID of the subnet to use for the interface.
+	// subnet_id is the ID of the subnet to use for the interface.
 	// +optional
 	SubnetID *int `json:"subnet_id,omitempty"`
 
@@ -423,7 +423,7 @@ type VPCInterfaceIPv6CreateOptions struct {
 	// +listMapKey=range
 	Ranges []VPCInterfaceIPv6RangeCreateOptions `json:"ranges,omitempty"`
 
-	// IsPublic is a boolean indicating whether the interface is public.
+	// is_public is a boolean indicating whether the interface is public.
 	// +required
 	IsPublic *bool `json:"is_public,omitempty"`
 }
@@ -470,7 +470,7 @@ type VPCInterfaceIPv4AddressCreateOptions struct {
 	// +optional
 	Primary *bool `json:"primary,omitempty"`
 
-	// NAT1To1Address is the NAT 1:1 address for the interface.
+	// nat_1_1_address is the NAT 1:1 address for the interface.
 	// +optional
 	NAT1To1Address *string `json:"nat_1_1_address,omitempty"`
 }
@@ -485,12 +485,12 @@ type VPCInterfaceIPv4RangeCreateOptions struct {
 
 // VLANInterface defines the VLAN interface configuration for an instance
 type VLANInterface struct {
-	// VLANLabel is the label of the VLAN.
+	// vlan_label is the label of the VLAN.
 	// +kubebuilder:validation:MinLength=1
 	// +required
 	VLANLabel string `json:"vlan_label,omitempty"`
 
-	// IPAMAddress is the IP address to assign to the interface.
+	// ipam_address is the IP address to assign to the interface.
 	// +optional
 	IPAMAddress *string `json:"ipam_address,omitempty"`
 }

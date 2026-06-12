@@ -533,8 +533,8 @@ spec:
                             network interface config
                           properties:
                             default_route:
-                              description: DefaultRoute is the default route for the
-                                interface.
+                              description: default_route is the default route for
+                                the interface.
                               properties:
                                 ipv4:
                                   description: ipv4 is the IPv4 default route for
@@ -546,7 +546,7 @@ spec:
                                   type: boolean
                               type: object
                             firewall_id:
-                              description: FirewallID is the ID of the firewall to
+                              description: firewall_id is the ID of the firewall to
                                 use for the interface.
                               type: integer
                             public:
@@ -612,11 +612,11 @@ spec:
                                 for the interface.
                               properties:
                                 ipam_address:
-                                  description: IPAMAddress is the IP address to assign
+                                  description: ipam_address is the IP address to assign
                                     to the interface.
                                   type: string
                                 vlan_label:
-                                  description: VLANLabel is the label of the VLAN.
+                                  description: vlan_label is the label of the VLAN.
                                   minLength: 1
                                   type: string
                               required:
@@ -644,7 +644,7 @@ spec:
                                             minLength: 1
                                             type: string
                                           nat_1_1_address:
-                                            description: NAT1To1Address is the NAT
+                                            description: nat_1_1_address is the NAT
                                               1:1 address for the interface.
                                             type: string
                                           primary:
@@ -683,7 +683,7 @@ spec:
                                     the interface.
                                   properties:
                                     is_public:
-                                      description: IsPublic is a boolean indicating
+                                      description: is_public is a boolean indicating
                                         whether the interface is public.
                                       type: boolean
                                     ranges:
@@ -728,7 +728,7 @@ spec:
                                   - is_public
                                   type: object
                                 subnet_id:
-                                  description: subnetId is the ID of the subnet to
+                                  description: subnet_id is the ID of the subnet to
                                     use for the interface.
                                   type: integer
                               type: object
