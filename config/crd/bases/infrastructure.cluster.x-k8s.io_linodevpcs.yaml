@@ -99,12 +99,12 @@ spec:
                     Values supported by the linode API should be used here.
                     See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
                   properties:
-                    allocationClass:
-                      description: allocationClass is the IPv6 inventory from which
+                    allocation_class:
+                      description: AllocationClass is the IPv6 inventory from which
                         the VPC prefix should be allocated.
                       type: string
                     range:
-                      description: range is the IPv6 prefix for the VPC.
+                      description: Range is the IPv6 prefix for the VPC.
                       type: string
                   type: object
                 type: array

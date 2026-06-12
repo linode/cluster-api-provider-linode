@@ -525,8 +525,8 @@ spec:
                   description: LinodeInterfaceCreateOptions defines the linode network
                     interface config
                   properties:
-                    defaultRoute:
-                      description: defaultRoute is the default route for the interface.
+                    default_route:
+                      description: DefaultRoute is the default route for the interface.
                       properties:
                         ipv4:
                           description: ipv4 is the IPv4 default route for the interface.
@@ -535,8 +535,8 @@ spec:
                           description: ipv6 is the IPv6 default route for the interface.
                           type: boolean
                       type: object
-                    firewallID:
-                      description: firewallID is the ID of the firewall to use for
+                    firewall_id:
+                      description: FirewallID is the ID of the firewall to use for
                         the interface.
                       type: integer
                     public:
@@ -601,16 +601,16 @@ spec:
                       description: vlan is the VLAN interface configuration for the
                         interface.
                       properties:
-                        ipamAddress:
-                          description: ipamAddress is the IP address to assign to
+                        ipam_address:
+                          description: IPAMAddress is the IP address to assign to
                             the interface.
                           type: string
-                        vlanLabel:
-                          description: vlanLabel is the label of the VLAN.
+                        vlan_label:
+                          description: VLANLabel is the label of the VLAN.
                           minLength: 1
                           type: string
                       required:
-                      - vlanLabel
+                      - vlan_label
                       type: object
                     vpc:
                       description: vpc is the VPC interface configuration for the
@@ -631,8 +631,8 @@ spec:
                                       interface.
                                     minLength: 1
                                     type: string
-                                  nat1to1Address:
-                                    description: nat1to1Address is the NAT 1:1 address
+                                  nat_1_1_address:
+                                    description: NAT1To1Address is the NAT 1:1 address
                                       for the interface.
                                     type: string
                                   primary:
@@ -667,8 +667,8 @@ spec:
                         ipv6:
                           description: ipv6 is the IPv6 configuration for the interface.
                           properties:
-                            isPublic:
-                              description: isPublic is a boolean indicating whether
+                            is_public:
+                              description: IsPublic is a boolean indicating whether
                                 the interface is public.
                               type: boolean
                             ranges:
@@ -707,9 +707,9 @@ spec:
                               - range
                               x-kubernetes-list-type: map
                           required:
-                          - isPublic
+                          - is_public
                           type: object
-                        subnetId:
+                        subnet_id:
                           description: subnetId is the ID of the subnet to use for
                             the interface.
                           type: integer
