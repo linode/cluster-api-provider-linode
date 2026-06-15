@@ -323,7 +323,7 @@ type LinodeInterfaceCreateOptions struct {
 	//nolint:kubeapilinter // to maintain backwards compatibility
 	FirewallIDLegacy *int `json:"firewall_id,omitempty"`
 
-	// default_route is the default route for the interface.
+	// defaultRoute is the default route for the interface.
 	// +optional
 	DefaultRoute *InterfaceDefaultRoute `json:"defaultRoute,omitempty"`
 
@@ -407,7 +407,7 @@ type PublicInterfaceIPv6RangeCreateOptions struct {
 
 // VPCInterfaceCreateOptions defines the VPC interface configuration for an instance
 type VPCInterfaceCreateOptions struct {
-	// subnet_id is the ID of the subnet to use for the interface.
+	// subnetId is the ID of the subnet to use for the interface.
 	// +optional
 	SubnetID *int `json:"subnetId,omitempty"`
 

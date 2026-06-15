@@ -616,7 +616,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `firewallID` _integer_ | firewallID is the ID of the firewall to use for the interface. |  | Optional: \{\} <br /> |
 | `firewall_id` _integer_ | firewall_id is the ID of the firewall to use for the interface. |  | Optional: \{\} <br /> |
-| `defaultRoute` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | default_route is the default route for the interface. |  | Optional: \{\} <br /> |
+| `defaultRoute` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | defaultRoute is the default route for the interface. |  | Optional: \{\} <br /> |
 | `default_route` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | default_route is the default route for the interface. |  | Optional: \{\} <br /> |
 | `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  | Optional: \{\} <br /> |
@@ -1431,7 +1431,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `subnetId` _integer_ | subnet_id is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
+| `subnetId` _integer_ | subnetId is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
 | `subnet_id` _integer_ | subnet_id is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
 | `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the interface. |  | Optional: \{\} <br /> |
 | `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  | Optional: \{\} <br /> |

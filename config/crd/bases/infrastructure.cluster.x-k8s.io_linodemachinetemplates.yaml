@@ -546,8 +546,8 @@ spec:
                                   type: boolean
                               type: object
                             defaultRoute:
-                              description: default_route is the default route for
-                                the interface.
+                              description: defaultRoute is the default route for the
+                                interface.
                               properties:
                                 ipv4:
                                   description: ipv4 is the IPv4 default route for
@@ -765,7 +765,7 @@ spec:
                                     use for the interface.
                                   type: integer
                                 subnetId:
-                                  description: subnet_id is the ID of the subnet to
+                                  description: subnetId is the ID of the subnet to
                                     use for the interface.
                                   type: integer
                               type: object
