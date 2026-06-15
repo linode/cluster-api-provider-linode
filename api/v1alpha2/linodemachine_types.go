@@ -314,15 +314,23 @@ type InstanceConfigInterfaceCreateOptions struct {
 
 // LinodeInterfaceCreateOptions defines the linode network interface config
 type LinodeInterfaceCreateOptions struct {
+	// firewallID is the ID of the firewall to use for the interface.
+	// +optional
+	FirewallID *int `json:"firewallID,omitempty"`
+
 	// firewall_id is the ID of the firewall to use for the interface.
 	// +optional
 	//nolint:kubeapilinter // to maintain backwards compatibility
-	FirewallID *int `json:"firewall_id,omitempty"`
+	FirewallIDLegacy *int `json:"firewall_id,omitempty"`
+
+	// default_route is the default route for the interface.
+	// +optional
+	DefaultRoute *InterfaceDefaultRoute `json:"defaultRoute,omitempty"`
 
 	// default_route is the default route for the interface.
 	// +optional
 	//nolint:kubeapilinter // to maintain backwards compatibility
-	DefaultRoute *InterfaceDefaultRoute `json:"default_route,omitempty"`
+	DefaultRouteLegacy *InterfaceDefaultRoute `json:"default_route,omitempty"`
 
 	// public is the public interface configuration for the interface.
 	// +optional
@@ -401,8 +409,12 @@ type PublicInterfaceIPv6RangeCreateOptions struct {
 type VPCInterfaceCreateOptions struct {
 	// subnet_id is the ID of the subnet to use for the interface.
 	// +optional
+	SubnetID *int `json:"subnetId,omitempty"`
+
+	// subnet_id is the ID of the subnet to use for the interface.
+	// +optional
 	//nolint:kubeapilinter // to maintain backwards compatibility
-	SubnetID *int `json:"subnet_id,omitempty"`
+	SubnetIDLegacy *int `json:"subnet_id,omitempty"`
 
 	// ipv4 is the IPv4 configuration for the interface.
 	// +optional
@@ -427,10 +439,14 @@ type VPCInterfaceIPv6CreateOptions struct {
 	// +listMapKey=range
 	Ranges []VPCInterfaceIPv6RangeCreateOptions `json:"ranges,omitempty"`
 
-	// is_public is a boolean indicating whether the interface is public.
+	// isPublic is a boolean indicating whether the interface is public.
 	// +required
+	IsPublic *bool `json:"isPublic,omitempty"`
+
+	// +optional
 	//nolint:kubeapilinter // to maintain backwards compatibility
-	IsPublic *bool `json:"is_public,omitempty"`
+	// is_public is a boolean indicating whether the interface is public.
+	IsPublicLegacy *bool `json:"is_public,omitempty"`
 }
 
 // VPCInterfaceIPv6SLAACCreateOptions defines the Range for IPv6 SLAAC
@@ -475,10 +491,14 @@ type VPCInterfaceIPv4AddressCreateOptions struct {
 	// +optional
 	Primary *bool `json:"primary,omitempty"`
 
+	// nat1to1Address is the NAT 1:1 address for the interface.
+	// +optional
+	NAT1To1Address *string `json:"nat1to1Address,omitempty"`
+
 	// nat_1_1_address is the NAT 1:1 address for the interface.
 	// +optional
 	//nolint:kubeapilinter // to maintain backwards compatibility
-	NAT1To1Address *string `json:"nat_1_1_address,omitempty"`
+	NAT1To1AddressLegacy *string `json:"nat_1_1_address,omitempty"`
 }
 
 // VPCInterfaceIPv4RangeCreateOptions defines the IPv4 range for a VPC interface
@@ -491,16 +511,25 @@ type VPCInterfaceIPv4RangeCreateOptions struct {
 
 // VLANInterface defines the VLAN interface configuration for an instance
 type VLANInterface struct {
-	// vlan_label is the label of the VLAN.
+	// vlanLabel is the label of the VLAN.
 	// +kubebuilder:validation:MinLength=1
 	// +required
+	VLANLabel string `json:"vlanLabel,omitempty"`
+
+	// vlan_label is the label of the VLAN.
+	// +kubebuilder:validation:MinLength=1
+	// +optional
 	//nolint:kubeapilinter // to maintain backwards compatibility
-	VLANLabel string `json:"vlan_label,omitempty"`
+	VLANLabelLegacy string `json:"vlan_label,omitempty"`
+
+	// ipamAddress is the IP address to assign to the interface.
+	// +optional
+	IPAMAddress *string `json:"ipamAddress,omitempty"`
 
 	// ipam_address is the IP address to assign to the interface.
 	// +optional
 	//nolint:kubeapilinter  // to maintain backwards compatibility
-	IPAMAddress *string `json:"ipam_address,omitempty"`
+	IPAMAddressLegacy *string `json:"ipam_address,omitempty"`
 }
 
 // VPCIPv4 defines VPC IPV4 settings

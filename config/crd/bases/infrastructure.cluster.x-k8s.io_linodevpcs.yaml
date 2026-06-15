@@ -103,8 +103,12 @@ spec:
                       description: allocation_class is the IPv6 inventory from which
                         the VPC prefix should be allocated.
                       type: string
+                    allocationClass:
+                      description: allocationClass is the IPv6 inventory from which
+                        the VPC prefix should be allocated.
+                      type: string
                     range:
-                      description: Range is the IPv6 prefix for the VPC.
+                      description: range is the IPv6 prefix for the VPC.
                       type: string
                   type: object
                 type: array
