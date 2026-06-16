@@ -988,7 +988,9 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 		if iface.FirewallID != nil {
 			firewallID = iface.FirewallID
 		}
-		ifaceCreateOpts.FirewallID = ptr.To(firewallID)
+		if firewallID != nil {
+			ifaceCreateOpts.FirewallID = ptr.To(firewallID)
+		}
 		// createOpts is now fully populated with the interface options
 		linodeInterfaces[idx] = ifaceCreateOpts
 	}
