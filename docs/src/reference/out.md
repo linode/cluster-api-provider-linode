@@ -620,7 +620,7 @@ _Appears in:_
 | `default_route` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | default_route is the default route for the interface. |  | Optional: \{\} <br /> |
 | `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  | Optional: \{\} <br /> |
-| `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  | Optional: \{\} <br /> |
+| `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  | AtLeastOneOf: [vlanLabel vlan_label] <br />Optional: \{\} <br /> |
 
 
 #### LinodeMachine
@@ -1367,14 +1367,15 @@ _Appears in:_
 
 VLANInterface defines the VLAN interface configuration for an instance
 
-
+_Validation:_
+- AtLeastOneOf: [vlanLabel vlan_label]
 
 _Appears in:_
 - [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `vlanLabel` _string_ | vlanLabel is the label of the VLAN. |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `vlanLabel` _string_ | vlanLabel is the label of the VLAN. |  | MinLength: 1 <br />Optional: \{\} <br /> |
 | `vlan_label` _string_ | vlan_label is the label of the VLAN. |  | MinLength: 1 <br />Optional: \{\} <br /> |
 | `ipamAddress` _string_ | ipamAddress is the IP address to assign to the interface. |  | Optional: \{\} <br /> |
 | `ipam_address` _string_ | ipam_address is the IP address to assign to the interface. |  | Optional: \{\} <br /> |
@@ -1434,7 +1435,7 @@ _Appears in:_
 | `subnetId` _integer_ | subnetId is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
 | `subnet_id` _integer_ | subnet_id is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
 | `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the interface. |  | Optional: \{\} <br /> |
-| `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  | Optional: \{\} <br /> |
+| `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  | AtLeastOneOf: [isPublic is_public] <br />Optional: \{\} <br /> |
 
 
 #### VPCInterfaceIPv4AddressCreateOptions
@@ -1495,7 +1496,8 @@ _Appears in:_
 
 VPCInterfaceIPv6CreateOptions defines the IPv6 configuration for a VPC interface
 
-
+_Validation:_
+- AtLeastOneOf: [isPublic is_public]
 
 _Appears in:_
 - [VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)
@@ -1504,7 +1506,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `slaac` _[VPCInterfaceIPv6SLAACCreateOptions](#vpcinterfaceipv6slaaccreateoptions) array_ | slaac is the IPv6 SLAAC configuration for the interface. |  | Optional: \{\} <br /> |
 | `ranges` _[VPCInterfaceIPv6RangeCreateOptions](#vpcinterfaceipv6rangecreateoptions) array_ | ranges is the IPv6 ranges for the interface. |  | Optional: \{\} <br /> |
-| `isPublic` _boolean_ | isPublic is a boolean indicating whether the interface is public. |  | Required: \{\} <br /> |
+| `isPublic` _boolean_ | isPublic is a boolean indicating whether the interface is public. |  | Optional: \{\} <br /> |
 | `is_public` _boolean_ | is_public is a boolean indicating whether the interface is public. |  | Optional: \{\} <br /> |
 
 

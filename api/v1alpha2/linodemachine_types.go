@@ -425,6 +425,7 @@ type VPCInterfaceCreateOptions struct {
 	IPv6 *VPCInterfaceIPv6CreateOptions `json:"ipv6,omitempty"`
 }
 
+// +kubebuilder:validation:AtLeastOneOf=isPublic;is_public
 // VPCInterfaceIPv6CreateOptions defines the IPv6 configuration for a VPC interface
 type VPCInterfaceIPv6CreateOptions struct {
 	// slaac is the IPv6 SLAAC configuration for the interface.
@@ -440,7 +441,7 @@ type VPCInterfaceIPv6CreateOptions struct {
 	Ranges []VPCInterfaceIPv6RangeCreateOptions `json:"ranges,omitempty"`
 
 	// isPublic is a boolean indicating whether the interface is public.
-	// +required
+	// +optional
 	IsPublic *bool `json:"isPublic,omitempty"`
 
 	// +optional
@@ -509,11 +510,12 @@ type VPCInterfaceIPv4RangeCreateOptions struct {
 	Range string `json:"range,omitempty"`
 }
 
+// +kubebuilder:validation:AtLeastOneOf=vlanLabel;vlan_label
 // VLANInterface defines the VLAN interface configuration for an instance
 type VLANInterface struct {
 	// vlanLabel is the label of the VLAN.
 	// +kubebuilder:validation:MinLength=1
-	// +required
+	// +optional
 	VLANLabel string `json:"vlanLabel,omitempty"`
 
 	// vlan_label is the label of the VLAN.
