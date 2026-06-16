@@ -620,7 +620,7 @@ _Appears in:_
 | `default_route` _[InterfaceDefaultRoute](#interfacedefaultroute)_ | default_route is the default route for the interface. |  | Optional: \{\} <br /> |
 | `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  | Optional: \{\} <br /> |
-| `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  | AtLeastOneOf: [vlanLabel vlan_label] <br />Optional: \{\} <br /> |
+| `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  | Optional: \{\} <br /> |
 
 
 #### LinodeMachine
@@ -1367,8 +1367,7 @@ _Appears in:_
 
 VLANInterface defines the VLAN interface configuration for an instance
 
-_Validation:_
-- AtLeastOneOf: [vlanLabel vlan_label]
+
 
 _Appears in:_
 - [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
@@ -1435,7 +1434,7 @@ _Appears in:_
 | `subnetId` _integer_ | subnetId is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
 | `subnet_id` _integer_ | subnet_id is the ID of the subnet to use for the interface. |  | Optional: \{\} <br /> |
 | `ipv4` _[VPCInterfaceIPv4CreateOptions](#vpcinterfaceipv4createoptions)_ | ipv4 is the IPv4 configuration for the interface. |  | Optional: \{\} <br /> |
-| `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  | AtLeastOneOf: [isPublic is_public] <br />Optional: \{\} <br /> |
+| `ipv6` _[VPCInterfaceIPv6CreateOptions](#vpcinterfaceipv6createoptions)_ | ipv6 is the IPv6 configuration for the interface. |  | Optional: \{\} <br /> |
 
 
 #### VPCInterfaceIPv4AddressCreateOptions
@@ -1496,8 +1495,7 @@ _Appears in:_
 
 VPCInterfaceIPv6CreateOptions defines the IPv6 configuration for a VPC interface
 
-_Validation:_
-- AtLeastOneOf: [isPublic is_public]
+
 
 _Appears in:_
 - [VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)

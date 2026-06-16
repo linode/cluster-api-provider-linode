@@ -645,11 +645,6 @@ spec:
                                   minLength: 1
                                   type: string
                               type: object
-                              x-kubernetes-validations:
-                              - message: at least one of the fields in [vlanLabel
-                                  vlan_label] must be set
-                                rule: '[has(self.vlanLabel),has(self.vlan_label)].filter(x,x==true).size()
-                                  >= 1'
                             vpc:
                               description: vpc is the VPC interface configuration
                                 for the interface.
@@ -761,11 +756,6 @@ spec:
                                       - range
                                       x-kubernetes-list-type: map
                                   type: object
-                                  x-kubernetes-validations:
-                                  - message: at least one of the fields in [isPublic
-                                      is_public] must be set
-                                    rule: '[has(self.isPublic),has(self.is_public)].filter(x,x==true).size()
-                                      >= 1'
                                 subnet_id:
                                   description: subnet_id is the ID of the subnet to
                                     use for the interface.
