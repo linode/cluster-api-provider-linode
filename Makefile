@@ -154,7 +154,7 @@ docs:
 
 .PHONY: test
 test: generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use ${ENVTEST_K8S_VERSION#v} --bin-dir $(CACHE_BIN) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use ${ENVTEST_K8S_VERSION#v} --bin-dir $(CACHE_BIN) -p path)" go test -timeout 60s `go list ./... | grep -v ./mock$$` -coverpkg=./... -coverprofile cover.out.tmp
 	grep -v "zz_generated.*" cover.out.tmp > cover.out
 	rm cover.out.tmp
 

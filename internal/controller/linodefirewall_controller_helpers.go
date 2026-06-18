@@ -57,7 +57,7 @@ func findObjectsForObject(logger logr.Logger, tracedClient client.Client) handle
 				logger.Info("LinodeFirewall(s) not found for %s")
 
 				return nil
-			case err != nil:
+			default:
 				logger.Error(err, "Failed to get LinodeFirewalls")
 
 				return nil
