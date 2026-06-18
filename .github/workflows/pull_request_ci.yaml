@@ -73,12 +73,9 @@ jobs:
             sum.golang.org:443
             *.githubusercontent.com:443
             storage.googleapis.com:443
-            get.jetify.com:443
-            get.jetpack.io:443
-            releases.jetify.com:443
-            releases.jetpack.io:443
-            artifacts.nixos.org:443
-            cache.nixos.org:443
+            mise.jdx.dev:443
+            mise-versions.jdx.dev:443
+            tuf-repo-cdn.sigstore.dev:443
             dl.k8s.io:443
             cdn.dl.k8s.io:443
 
@@ -86,25 +83,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      - name: Set up Mise
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
-          go-version-file: 'go.mod'
-          check-latest: true
-
-      - name: Install devbox
-        uses: jetify-com/devbox-install-action@8c6a66ed6273138b1915457069de78cb52fe3bd7 # v0.15.0
-        with:
-          enable-cache: 'true'
-          refresh-cli: 'false'
+          install_args: go
 
       - name: Build
-        run: devbox run make build
+        run: mise run build
 
       - name: Check for generated diff
-        run: make check-gen-diff
+        run: mise run check-gen-diff
 
-  docker-build:
+  image-build:
     runs-on: ubuntu-latest
     needs: changes
     if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
@@ -130,15 +120,19 @@ jobs:
             production.cloudfront.docker.com:443
             gcr.io:443
             storage.googleapis.com:443
+            mise.jdx.dev:443
+            mise-versions.jdx.dev:443
+            tuf-repo-cdn.sigstore.dev:443
+            dl.k8s.io:443
 
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: Docker cache
-        uses: ScribeMD/docker-cache@fb28c93772363301b8d0a6072ce850224b73f74e # 0.5.0
+      - name: Set up Mise
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
-          key: docker-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          install_args: go ko
 
-      - name: Build the Docker image
-        run: make docker-build
+      - name: Build the image
+        run: mise run ko-build

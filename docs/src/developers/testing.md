@@ -15,7 +15,7 @@
 ### Executing Tests
 In order to run the unit tests run the following command
 ```bash
-make test
+mise run test
 ```
 ### Creating Tests
 General unit tests of functions follow the same conventions for testing using Go's `testing` standard library, along with the [testify](https://github.com/stretchr/testify) toolkit for making assertions.
@@ -209,9 +209,9 @@ export LINODE_REGION=us-sea
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
 
-make e2etest
+mise run e2etest
 ```
-*Note: By default `make e2etest` runs all the e2e tests defined under `/e2e` dir*
+*Note: By default `mise run e2etest` runs all the e2e tests defined under `/e2e` dir*
 
 In order to run specific test, you need to pass flags to chainsaw by setting env var `E2E_SELECTOR`
 
@@ -219,7 +219,7 @@ Additional settings can be passed to chainsaw by setting env var `E2E_FLAGS`
 
 Example: Only running e2e tests for flavors *(default, k3s, rke2)*
 ```bash
-make e2etest E2E_SELECTOR='flavors' E2E_FLAGS='--assert-timeout 10m0s'
+mise run e2etest E2E_SELECTOR='flavors' E2E_FLAGS='--assert-timeout 10m0s'
 ```
 *Note: We need to bump up the assert timeout to 10 mins to allow the cluster to complete building and become available*
 

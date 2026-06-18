@@ -12,7 +12,7 @@ In order to install the observability tools, please run the following commands:
 
 ```shell
 export CAPL_MONITORING=true
-make local-deploy
+mise run local-deploy
 ```
 *Note: By setting the environment variable `CAPL_MONITORING=true`, Tilt will deploy the monitoring stack*
 
