@@ -60,6 +60,8 @@ const (
 	ConditionMaintenanceScheduled           string = "MaintenanceScheduled"
 )
 
+var threeDays = 72 * time.Hour
+
 // LinodeClusterReconciler reconciles a LinodeCluster object
 type LinodeClusterReconciler struct {
 	client.Client
@@ -73,7 +75,7 @@ type LinodeClusterReconciler struct {
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters/finalizers,verbs=update
-// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list
+// +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list;patch
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines/status,verbs=get;update;patch
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -236,14 +238,14 @@ func (r *LinodeClusterReconciler) setMaintenanceConditions(ctx context.Context, 
 		return err
 	}
 	var errs []error
-	for i := range linodeMachines {
-		capiMachine, err := kutil.GetOwnerMachine(ctx, clusterScope.Client, linodeMachines[i].ObjectMeta)
+	for _, lm := range linodeMachines {
+		capiMachine, err := kutil.GetOwnerMachine(ctx, clusterScope.Client, lm.ObjectMeta)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to get owner Machine for LinodeMachine %s: %w", linodeMachines[i].Name, err))
+			errs = append(errs, fmt.Errorf("failed to get owner Machine for LinodeMachine %s: %w", lm.Name, err))
 			continue
 		}
 		if capiMachine == nil {
-			logger.Info("no owner Machine found for LinodeMachine, skipping", "LinodeMachine", linodeMachines[i].Name)
+			logger.Info("no owner Machine found for LinodeMachine, skipping", "LinodeMachine", lm.Name)
 			continue
 		}
 		patchHelper, err := patch.NewHelper(capiMachine, clusterScope.Client)
@@ -266,7 +268,7 @@ func (r *LinodeClusterReconciler) setMaintenanceConditions(ctx context.Context, 
 
 func (r *LinodeClusterReconciler) collectMaintenanceInfo(ctx context.Context, clusterScope *scope.ClusterScope, logger logr.Logger) ([]infrav1alpha2.LinodeMachine, error) {
 	// Fetch all maintenance information
-	threeDaysLater := time.Now().Add(72 * time.Hour).UTC().Format("2006-01-02T15:04:05") // API doesn't like RFC3339
+	threeDaysLater := time.Now().Add(threeDays).UTC().Format("2006-01-02T15:04:05") // API doesn't like RFC3339
 	f := linodego.Filter{}
 	f.AddField(linodego.Eq, "status", "scheduled")
 	f.AddField(linodego.Lte, "when", threeDaysLater)

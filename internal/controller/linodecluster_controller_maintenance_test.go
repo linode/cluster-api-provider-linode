@@ -471,4 +471,3 @@ func TestSetMaintenanceConditions(t *testing.T) {
 		assert.Contains(t, err.Error(), "API down")
 	})
 }
-

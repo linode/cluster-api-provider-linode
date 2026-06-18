@@ -21,11 +21,27 @@ rules:
   - cluster.x-k8s.io
   resources:
   - clusters
-  - machines
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
