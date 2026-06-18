@@ -61,8 +61,13 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 			},
 		},
 		LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{{
-			FirewallID: ptr.To(123),
+			FirewallID:       ptr.To(123),
+			FirewallIDLegacy: ptr.To(123),
 			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
+				IPv4: ptr.To(true),
+				IPv6: ptr.To(true),
+			},
+			DefaultRouteLegacy: &infrav1alpha2.InterfaceDefaultRoute{
 				IPv4: ptr.To(true),
 				IPv6: ptr.To(true),
 			},
@@ -83,9 +88,10 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 			},
 			VPC: &infrav1alpha2.VPCInterfaceCreateOptions{
 				IPv4: &infrav1alpha2.VPCInterfaceIPv4CreateOptions{Addresses: []infrav1alpha2.VPCInterfaceIPv4AddressCreateOptions{{
-					Address:        "1.2.3.4",
-					Primary:        nil,
-					NAT1To1Address: ptr.To("true"),
+					Address:              "1.2.3.4",
+					Primary:              nil,
+					NAT1To1Address:       ptr.To("true"),
+					NAT1To1AddressLegacy: ptr.To("true"),
 				}},
 					Ranges: []infrav1alpha2.VPCInterfaceIPv4RangeCreateOptions{{
 						Range: "1.2.3.4/32",
@@ -95,7 +101,8 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 					Ranges: []infrav1alpha2.VPCInterfaceIPv6RangeCreateOptions{{
 						Range: "1234:5678:90ab:cdef:1234:5678:90ab:cdef/64",
 					}},
-					IsPublic: ptr.To(false),
+					IsPublic:       ptr.To(false),
+					IsPublicLegacy: ptr.To(false),
 				},
 			},
 		}, {
@@ -105,8 +112,10 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 				IPv6: ptr.To(true),
 			},
 			VLAN: &infrav1alpha2.VLANInterface{
-				VLANLabel:   "test-label",
-				IPAMAddress: nil,
+				VLANLabel:         "test-label",
+				VLANLabelLegacy:   "test-label",
+				IPAMAddress:       ptr.To("address"),
+				IPAMAddressLegacy: ptr.To("address"),
 			},
 		}},
 		BackupsEnabled: true,
@@ -2530,7 +2539,11 @@ func TestBuildInstanceAddrs(t *testing.T) {
 				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					Spec: infrav1alpha2.LinodeMachineSpec{
 						LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{
-							{VLAN: &infrav1alpha2.VLANInterface{VLANLabel: "test-vlan"}},
+							{
+								VLAN: &infrav1alpha2.VLANInterface{
+									VLANLabel:       "test-vlan",
+									VLANLabelLegacy: "test-vlan",
+								}},
 						},
 					},
 				},
@@ -2607,7 +2620,11 @@ func TestBuildInstanceAddrs(t *testing.T) {
 				LinodeMachine: &infrav1alpha2.LinodeMachine{
 					Spec: infrav1alpha2.LinodeMachineSpec{
 						LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{
-							{VLAN: &infrav1alpha2.VLANInterface{VLANLabel: "test-vlan"}},
+							{
+								VLAN: &infrav1alpha2.VLANInterface{
+									VLANLabel:       "test-vlan",
+									VLANLabelLegacy: "test-vlan",
+								}},
 						},
 					},
 				},
