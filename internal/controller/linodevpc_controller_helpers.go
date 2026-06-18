@@ -171,6 +171,10 @@ func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linode
 		vpcIPv6[idx] = linodego.VPCCreateOptionsIPv6{
 			Range: ipv6.Range,
 		}
+		if ipv6.AllocationClassLegacy != nil {
+			vpcIPv6[idx].AllocationClass = ipv6.AllocationClassLegacy
+		}
+		// in the case of both AllocationClass and AllocationClassLegacy being set, use the non-legacy field's value
 		if ipv6.AllocationClass != nil {
 			vpcIPv6[idx].AllocationClass = ipv6.AllocationClass
 		}
