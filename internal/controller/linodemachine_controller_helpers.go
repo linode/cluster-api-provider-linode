@@ -946,9 +946,19 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 		ifaceCreateOpts := linodego.LinodeInterfaceCreateOptions{}
 		// Handle VLAN
 		if iface.VLAN != nil {
+			vlanLabel := iface.VLAN.VLANLabelLegacy
+			// in the case of both VLANLabel and VLANLabelLegacy being set, use the non-legacy field's value
+			if iface.VLAN.VLANLabel != "" {
+				vlanLabel = iface.VLAN.VLANLabel
+			}
+			ipamAddress := iface.VLAN.IPAMAddressLegacy
+			// in the case of both IPAMAddress and IPAMAddressLegacy being set, use the non-legacy field's value
+			if iface.VLAN.IPAMAddress != nil {
+				ipamAddress = iface.VLAN.IPAMAddress
+			}
 			ifaceCreateOpts.VLAN = &linodego.VLANInterface{
-				VLANLabel:   iface.VLAN.VLANLabel,
-				IPAMAddress: iface.VLAN.IPAMAddress,
+				VLANLabel:   vlanLabel,
+				IPAMAddress: ipamAddress,
 			}
 		}
 		// Handle VPC
@@ -960,13 +970,27 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 			ifaceCreateOpts.Public = constructLinodeInterfacePublic(iface)
 		}
 		// Handle Default Route
+		if iface.DefaultRouteLegacy != nil {
+			ifaceCreateOpts.DefaultRoute = &linodego.InterfaceDefaultRoute{
+				IPv4: iface.DefaultRouteLegacy.IPv4,
+				IPv6: iface.DefaultRouteLegacy.IPv6,
+			}
+		}
+		// in the case of both DefaultRoute and DefaultRouteLegacy being set, use the non-legacy field's value
 		if iface.DefaultRoute != nil {
 			ifaceCreateOpts.DefaultRoute = &linodego.InterfaceDefaultRoute{
 				IPv4: iface.DefaultRoute.IPv4,
 				IPv6: iface.DefaultRoute.IPv6,
 			}
 		}
-		ifaceCreateOpts.FirewallID = ptr.To(iface.FirewallID)
+		firewallID := iface.FirewallIDLegacy
+		// in the case of both FirewallID and FirewallIDLegacy being set, use the non-legacy field's value
+		if iface.FirewallID != nil {
+			firewallID = iface.FirewallID
+		}
+		if firewallID != nil {
+			ifaceCreateOpts.FirewallID = ptr.To(firewallID)
+		}
 		// createOpts is now fully populated with the interface options
 		linodeInterfaces[idx] = ifaceCreateOpts
 	}
@@ -985,10 +1009,15 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 	)
 	if iface.VPC.IPv4 != nil {
 		for _, addr := range iface.VPC.IPv4.Addresses {
+			nat1To1addr := addr.NAT1To1AddressLegacy
+			// in the case of both NAT1To1Address and NAT1To1AddressLegacy being set, use the non-legacy field's value
+			if addr.NAT1To1Address != nil {
+				nat1To1addr = addr.NAT1To1Address
+			}
 			ipv4Addrs = append(ipv4Addrs, linodego.VPCInterfaceIPv4AddressCreateOptions{
 				Address:        ptr.To(addr.Address),
 				Primary:        addr.Primary,
-				NAT1To1Address: addr.NAT1To1Address,
+				NAT1To1Address: nat1To1addr,
 			})
 		}
 		for _, rng := range iface.VPC.IPv4.Ranges {
@@ -1017,11 +1046,19 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 				Range: rng.Range,
 			})
 		}
+		if iface.VPC.IPv6.IsPublicLegacy != nil {
+			ipv6IsPublic = *iface.VPC.IPv6.IsPublicLegacy
+		}
+		// in the case of both IsPublic and IsPublicLegacy being set, use the non-legacy field's value
 		if iface.VPC.IPv6.IsPublic != nil {
 			ipv6IsPublic = *iface.VPC.IPv6.IsPublic
 		}
 	}
 	subnetID := 0
+	if iface.VPC.SubnetIDLegacy != nil {
+		subnetID = *iface.VPC.SubnetIDLegacy
+	}
+	// in the case of both SubnetID and SubnetIDLegacy being set, use the non-legacy field's value
 	if iface.VPC.SubnetID != nil {
 		subnetID = *iface.VPC.SubnetID
 	}
