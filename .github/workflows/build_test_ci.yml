@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request: # CHANGE ME BACK WHEN DONE TESTING
+  pull_request_target:
   workflow_dispatch:
 
 permissions:
