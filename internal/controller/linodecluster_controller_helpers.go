@@ -143,6 +143,43 @@ func buildPortCombosForIP(ip string, apiServerLBPort int, additionalPorts []infr
 	return results
 }
 
+func machineToLinodeCluster(tracedClient client.Client, logger logr.Logger) handler.MapFunc {
+	logger = logger.WithName("LinodeClusterReconciler").WithName("MachineToLinodeCluster")
+
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
+		ctx, cancel := context.WithTimeout(ctx, reconciler.DefaultMappingTimeout)
+		defer cancel()
+
+		machine, ok := o.(*clusterv1.Machine)
+		if !ok {
+			logger.Info("Failed to cast object to Machine")
+			return nil
+		}
+
+		linodeCluster := infrav1alpha2.LinodeCluster{}
+		if err := tracedClient.Get(
+			ctx,
+			types.NamespacedName{
+				Name:      machine.Labels[clusterv1.ClusterNameLabel],
+				Namespace: machine.Namespace,
+			},
+			&linodeCluster); err != nil {
+			logger.Info("Failed to get LinodeCluster")
+			return nil
+		}
+
+		result := make([]ctrl.Request, 0, 1)
+		result = append(result, ctrl.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: linodeCluster.Namespace,
+				Name:      linodeCluster.Name,
+			},
+		})
+
+		return result
+	}
+}
+
 func linodeMachineToLinodeCluster(tracedClient client.Client, logger logr.Logger) handler.MapFunc {
 	logger = logger.WithName("LinodeClusterReconciler").WithName("linodeMachineToLinodeCluster")
 
