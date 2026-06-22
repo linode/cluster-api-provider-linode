@@ -35,30 +35,28 @@ jobs:
             sum.golang.org:443
             *.githubusercontent.com:443
             storage.googleapis.com:443
+            mise.jdx.dev:443
+            mise-versions.jdx.dev:443
+            tuf-repo-cdn.sigstore.dev:443
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
-      - name: Docker Meta
-        id: meta
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+
+      - name: Set up Mise
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
-          images: linode/cluster-api-provider-linode
+          install_args: go ko
+
       - name: Login to Docker Hub
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Build and Push to Docker Hub
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        with:
-          context: .
-          build-args: VERSION=${{ github.ref_name == 'main' && format('main-{0}', github.sha) || github.ref_name }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Publish image with ko
+        env:
+          KO_DOCKER_REPO: docker.io/linode/cluster-api-provider-linode
+          IMAGE_VERSION: ${{ github.ref_name }}
+        run: mise run ko-publish

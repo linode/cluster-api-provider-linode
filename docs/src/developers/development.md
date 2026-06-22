@@ -7,8 +7,7 @@
 - [Setting up](#setting-up)
   - [Base requirements](#base-requirements)
   - [Clone the source code](#clone-the-source-code)
-  - [Enable git hooks](#enable-git-hooks)
-  - [Set up devbox](#recommended-set-up-devbox)
+  - [Install Mise](#install-mise)
   - [Get familiar with basic concepts](#get-familiar-with-basic-concepts)
 - [Developing](#developing)
   - [Code Overview](#code-overview)
@@ -33,10 +32,6 @@ Ensure you have your `LINODE_TOKEN` set as outlined in the
 [getting started prerequisites](../topics/getting-started.md#Prerequisites) section.
 ```
 
-There are no requirements since development dependencies are fetched as
-needed via the make targets, but a recommendation is to
-[install Devbox](https://www.jetify.com/docs/devbox/installing-devbox)
-
 #### Optional Environment Variables
 ```bash
 export LINODE_URL= # Default unset. Set this to talk to a specific linode api endpoint
@@ -57,26 +52,11 @@ git clone https://github.com/linode/cluster-api-provider-linode
 cd cluster-api-provider-linode
 ```
 
-### [Recommended] Set up devbox
+### Install Mise
+Local development in this repo uses [mise](https://mise.jdx.dev/) to install and run the pinned toolchain from `mise.toml`.
 
-1. Install dependent packages in your project
-   ```sh
-   devbox install
-   ```
+Install `mise` before working on the repo, then run `mise install` once from the repository root to provision the required tools. Run tasks with `mise run`.
 
-   ```admonish success title=""
-   This will take a while, go and grab a drink of water.
-   ```
-
-2. Use devbox environment
-   ```sh
-   devbox shell
-   ```
-
-From this point you can use the devbox shell like a regular shell.
-The rest of the guide assumes a devbox shell is used, but the make target
-dependencies will install any missing dependencies if needed when running
-outside a devbox shell.
 
 ### Get familiar with basic concepts
 
@@ -125,7 +105,7 @@ export SKIP_DOCKER_BUILD=true
 
 To build a kind cluster and start Tilt, simply run:
 ```sh
-make local-deploy
+mise run local-deploy
 ```
 
 Once your kind management cluster is up and running, you can
@@ -146,7 +126,7 @@ After your kind management cluster is up and running with Tilt, you should be re
 For local development, templates should be generated via:
 
 ```sh
-make local-release
+mise run local-release
 ```
 
 This creates `infrastructure-local-linode/v0.0.0/` with all the cluster templates:
@@ -218,7 +198,7 @@ and the [linode-ccm](../topics/addons.md#ccm) installed.
 
 ~~~admonish success title=""
 ClusterClass experimental feature is enabled by default in the KIND management cluster
-created via `make tilt-cluster`
+created via `mise run tilt-cluster`
 ~~~
 
 You can use the `clusterclass` flavor to create a workload cluster as well, assuming the
@@ -255,7 +235,7 @@ For any issues, please refer to the [troubleshooting guide](../topics/troublesho
 CAPL supports using [Delve](https://github.com/go-delve/delve/) to attach a debugger to CAPL. This will start Delve in the
 CAPL container on port `40000` and use Tilt live_reload to rebuild the CAPL Controller on your host and insert it into the container without needing to rebuild the container.
   ```bash
-  CAPL_DEBUG=true make tilt-cluster
+  CAPL_DEBUG=true mise run tilt-cluster
   ```
 
 ### Automated Testing
@@ -271,7 +251,7 @@ export LINODE_REGION=us-sea
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
 
-make e2etest
+mise run e2etest
 ```
 
 This command creates a KIND cluster, and executes all the defined tests. 

@@ -166,7 +166,7 @@ if debug == "true":
     docker_build_with_restart(
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
-        dockerfile_contents="""FROM golang:1.22
+        dockerfile_contents="""FROM golang:1.26
         RUN go install github.com/go-delve/delve/cmd/dlv@latest
         COPY bin/manager /manager
         WORKDIR /""",
@@ -218,7 +218,8 @@ if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":
     docker_build(
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
-        only=("Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
+        dockerfile="dev.Dockerfile",
+        only=("dev.Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
         "./api", "./clients", "./cloud", "./cmd", "./internal", "./observability", "./util", "./version"),
         build_args={"VERSION": os.getenv("VERSION", "")},
     )

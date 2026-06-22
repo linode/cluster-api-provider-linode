@@ -22,7 +22,7 @@
 <!-- go build / test CI -->
 <a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build_test_ci.yml">
 <img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build_test_ci.yml/badge.svg"></a>
-<!-- docker build CI -->
+<!-- image build CI -->
 <a href="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-push.yml">
 <img src="https://github.com/linode/cluster-api-provider-linode/actions/workflows/build-push.yml/badge.svg"></a>
 <!-- CodeQL -->
