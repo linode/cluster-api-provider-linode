@@ -788,32 +788,6 @@ func (_d LinodeClientWithTracing) GetInstance(ctx context.Context, linodeID int)
 	return _d.LinodeClient.GetInstance(ctx, linodeID)
 }
 
-// GetInstanceDisk implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (ip1 *linodego.InstanceDisk, err error) {
-	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetInstanceDisk")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":      ctx,
-				"linodeID": linodeID,
-				"diskID":   diskID}, map[string]interface{}{
-				"ip1": ip1,
-				"err": err})
-		}
-
-		if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.GetInstanceDisk(ctx, linodeID, diskID)
-}
-
 // GetInstanceIPAddresses implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetInstanceIPAddresses(ctx context.Context, linodeID int) (ip1 *linodego.InstanceIPAddressResponse, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetInstanceIPAddresses")
@@ -1373,32 +1347,6 @@ func (_d LinodeClientWithTracing) ListVPCs(ctx context.Context, opts *linodego.L
 		_span.End()
 	}()
 	return _d.LinodeClient.ListVPCs(ctx, opts)
-}
-
-// ResizeInstanceDisk implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) ResizeInstanceDisk(ctx context.Context, linodeID int, diskID int, size int) (err error) {
-	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ResizeInstanceDisk")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":      ctx,
-				"linodeID": linodeID,
-				"diskID":   diskID,
-				"size":     size}, map[string]interface{}{
-				"err": err})
-		}
-
-		if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.ResizeInstanceDisk(ctx, linodeID, diskID, size)
 }
 
 // UnassignPlacementGroupLinodes implements _sourceClients.LinodeClient

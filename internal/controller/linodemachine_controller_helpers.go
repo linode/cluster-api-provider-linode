@@ -79,7 +79,7 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 	return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 }
 
-func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
+func fillCreateConfig(ctx context.Context, createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) error {
 	// This will only be empty if no interfaces or linodeInterfaces were specified in the LinodeMachine spec.
 	// In that case we default to legacy interfaces.
 	switch createConfig.InterfaceGeneration {
@@ -115,9 +115,21 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 	if createConfig.Image == "" {
 		createConfig.Image = reconciler.DefaultMachineControllerLinodeImage
 	}
-	if createConfig.RootPass == "" {
+
+	//  You can now omit the root pass entirely during instance creation
+	// as long as you supply at least one SSH key.
+	if createConfig.RootPass == "" && len(createConfig.AuthorizedKeys) == 0 {
 		createConfig.RootPass = uuid.NewString()
 	}
+
+	// dynamically calculate root disk size unless an explicit OS disk is being set
+	diskSize, err := calculateRootDisk(ctx, machineScope)
+	if err != nil {
+		return err
+	}
+	createConfig.BootSize = ptr.To(diskSize)
+
+	return nil
 }
 
 func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzipCompressionEnabled bool, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
@@ -135,7 +147,9 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 		return nil, err
 	}
 
-	fillCreateConfig(createConfig, machineScope)
+	if err := fillCreateConfig(ctx, createConfig, machineScope); err != nil {
+		return nil, err
+	}
 
 	// Configure VPC interface if needed
 	if err := configureVPCInterface(ctx, machineScope, createConfig, logger); err != nil {
@@ -989,7 +1003,7 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 			firewallID = iface.FirewallID
 		}
 		if firewallID != nil {
-			ifaceCreateOpts.FirewallID = ptr.To(firewallID)
+			ifaceCreateOpts.FirewallID = firewallID
 		}
 		// createOpts is now fully populated with the interface options
 		linodeInterfaces[idx] = ifaceCreateOpts
@@ -1290,9 +1304,6 @@ func configureDisks(ctx context.Context, logger logr.Logger, machineScope *scope
 		return nil
 	}
 
-	if err := resizeRootDisk(ctx, logger, machineScope, linodeInstanceID); err != nil {
-		return err
-	}
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightAdditionalDisksCreated)) {
 		if err := createDisks(ctx, logger, machineScope, linodeInstanceID); err != nil {
 			return err
@@ -1381,90 +1392,19 @@ func configureDisk(ctx context.Context, logger logr.Logger, machineScope *scope.
 	return nil
 }
 
-func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
-	if reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightRootDiskResized)) {
-		return nil
-	}
-
-	instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, linodeInstanceID)
-	if err != nil {
-		logger.Error(err, "Failed to get default instance configuration")
-
-		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:    ConditionPreflightRootDiskResized,
-			Status:  metav1.ConditionFalse,
-			Reason:  util.CreateError,
-			Message: err.Error(),
-		})
-		return err
-	}
-
-	if instanceConfig.Devices.SDA == nil {
-		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:    ConditionPreflightRootDiskResized,
-			Status:  metav1.ConditionFalse,
-			Reason:  util.CreateError,
-			Message: "root disk not yet ready",
-		})
-
-		return errors.New("root disk not yet ready")
-	}
-
-	rootDiskID := instanceConfig.Devices.SDA.DiskID
-
-	// carve out space for the etcd disk
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightRootDiskResizing)) {
-		rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
-		if err != nil {
-			logger.Error(err, "Failed to get root disk for instance")
-
-			machineScope.LinodeMachine.SetCondition(metav1.Condition{
-				Type:    ConditionPreflightRootDiskResizing,
-				Status:  metav1.ConditionFalse,
-				Reason:  util.CreateError,
-				Message: err.Error(),
-			})
-
-			return err
-		}
-		// dynamically calculate root disk size unless an explicit OS disk is being set
-		diskSize := calculateRootDisk(machineScope, rootDisk)
-
-		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-			machineScope.LinodeMachine.SetCondition(metav1.Condition{
-				Type:    ConditionPreflightRootDiskResizing,
-				Status:  metav1.ConditionFalse,
-				Reason:  util.CreateError,
-				Message: err.Error(),
-			})
-			return err
-		}
-		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:   ConditionPreflightRootDiskResizing,
-			Status: metav1.ConditionTrue,
-			Reason: "RootDiskResizing",
-		})
-	}
-
-	machineScope.LinodeMachine.DeleteCondition(ConditionPreflightRootDiskResizing)
-	machineScope.LinodeMachine.SetCondition(metav1.Condition{
-		Type:   ConditionPreflightRootDiskResized,
-		Status: metav1.ConditionTrue,
-		Reason: "RootDiskResized",
-	})
-
-	return nil
-}
-
-func calculateRootDisk(machineScope *scope.MachineScope, rootDisk *linodego.InstanceDisk) int {
+func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (int, error) {
 	additionalDiskSize := 0
-	// If the user has specified an OS disk, use it's size.
+	// If the user has specified an OS disk, use its size.
 	if machineScope.LinodeMachine.Spec.OSDisk != nil {
-		return int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))
+		return int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega)), nil
 	}
-	// If no DataDisks are specified, use the default root disk size.
+	// If no DataDisks are specified, use the default root disk size for the selected plan type.
+	planType, err := machineScope.LinodeClient.GetType(ctx, machineScope.LinodeMachine.Spec.Type)
+	if err != nil {
+		return 0, err
+	}
 	if machineScope.LinodeMachine.Spec.DataDisks == nil {
-		return rootDisk.Size
+		return planType.Disk, nil
 	}
 	// If DataDisks are specified, calculate the size of the additional disk + root disk for resizing.
 	if machineScope.LinodeMachine.Spec.DataDisks.SDB != nil {
@@ -1488,8 +1428,9 @@ func calculateRootDisk(machineScope *scope.MachineScope, rootDisk *linodego.Inst
 	if machineScope.LinodeMachine.Spec.DataDisks.SDH != nil {
 		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDH.Size.ScaledValue(resource.Mega))
 	}
-	diskSize := rootDisk.Size - additionalDiskSize
-	return diskSize
+	diskSize := planType.Disk - additionalDiskSize
+
+	return diskSize, nil
 }
 
 func updateInstanceConfigProfile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
@@ -1638,7 +1579,7 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 
 	// If using LinodeInterfaces that needs to know about the firewall ID
 	for i := range createConfig.LinodeInterfaces {
-		createConfig.LinodeInterfaces[i].FirewallID = ptr.To(ptr.To(fwID))
+		createConfig.LinodeInterfaces[i].FirewallID = ptr.To(fwID)
 	}
 
 	return nil
