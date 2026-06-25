@@ -130,7 +130,6 @@ func fillCreateConfig(ctx context.Context, createConfig *linodego.InstanceCreate
 	if diskSize != nil {
 		createConfig.BootSize = diskSize
 	}
-
 	return nil
 }
 
@@ -145,6 +144,8 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 	}
 
 	createConfig.Booted = util.Pointer(false)
+	// The user can configure a swap disk in LinodeMachine.Spec.DataDisks, but all our flavors set swapoff for all k8s distros
+	createConfig.SwapSize = util.Pointer(0)
 	if err := setUserData(ctx, machineScope, createConfig, gzipCompressionEnabled, logger); err != nil {
 		return nil, err
 	}
@@ -1402,7 +1403,7 @@ func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (*
 	}
 	// If no DataDisks are specified, omit the size
 	if machineScope.LinodeMachine.Spec.DataDisks == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // we want to let the API default the size if there are no other disks to make room for
 	}
 
 	// If DataDisks are specified, calculate the size of the additional disk + root disk for resizing.
