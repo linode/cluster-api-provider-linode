@@ -73,7 +73,7 @@ var (
 	// cloud-init while it waits for swap regardless of the storage configuration.
 	// This value only gets used if LinodeMachine.Spec.DataDisks.SDB isn't set
 	// (swap is by default on /dev/sdb for created Linodes)
-	defaultSwapDiskSize = int(resource.NewScaledQuantity(512, resource.Mega).ScaledValue(resource.Mega))
+	defaultSwapDiskSize = int(resource.NewScaledQuantity(512, resource.Mega).ScaledValue(resource.Mega)) //nolint:mnd // already explained
 )
 
 func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
