@@ -127,7 +127,10 @@ func fillCreateConfig(ctx context.Context, createConfig *linodego.InstanceCreate
 	if err != nil {
 		return err
 	}
-	createConfig.BootSize = ptr.To(diskSize)
+	if diskSize != nil {
+		createConfig.BootSize = diskSize
+
+	}
 
 	return nil
 }
@@ -1392,20 +1395,17 @@ func configureDisk(ctx context.Context, logger logr.Logger, machineScope *scope.
 	return nil
 }
 
-func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (int, error) {
+func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (*int, error) {
 	additionalDiskSize := 0
 	// If the user has specified an OS disk, use its size.
 	if machineScope.LinodeMachine.Spec.OSDisk != nil {
-		return int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega)), nil
+		return ptr.To(int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))), nil
 	}
-	// If no DataDisks are specified, use the default root disk size for the selected plan type.
-	planType, err := machineScope.LinodeClient.GetType(ctx, machineScope.LinodeMachine.Spec.Type)
-	if err != nil {
-		return 0, err
-	}
+	// If no DataDisks are specified, omit the size
 	if machineScope.LinodeMachine.Spec.DataDisks == nil {
-		return planType.Disk, nil
+		return nil, nil
 	}
+
 	// If DataDisks are specified, calculate the size of the additional disk + root disk for resizing.
 	if machineScope.LinodeMachine.Spec.DataDisks.SDB != nil {
 		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDB.Size.ScaledValue(resource.Mega))
@@ -1428,9 +1428,13 @@ func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (i
 	if machineScope.LinodeMachine.Spec.DataDisks.SDH != nil {
 		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDH.Size.ScaledValue(resource.Mega))
 	}
+	planType, err := machineScope.LinodeClient.GetType(ctx, machineScope.LinodeMachine.Spec.Type)
+	if err != nil {
+		return nil, err
+	}
 	diskSize := planType.Disk - additionalDiskSize
 
-	return diskSize, nil
+	return ptr.To(diskSize), nil
 }
 
 func updateInstanceConfigProfile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
