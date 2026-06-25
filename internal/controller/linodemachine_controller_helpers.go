@@ -66,6 +66,14 @@ var (
 	errNoPublicIPv4Addrs      = errors.New("no public ipv4 addresses set")
 	errNoPublicIPv6Addrs      = errors.New("no public IPv6 address set")
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
+
+	// We have to account for the default swap in Linodes when calculating the root disk size.
+	// While we don't actually use swap in any of our flavors (we set swapoff), we can't
+	// explicitly set to swap to 0 for any created Linodes because it adds a 90 second hang on
+	// cloud-init while it waits for swap regardless of the storage configuration.
+	// This value only gets used if LinodeMachine.Spec.DataDisks.SDB isn't set
+	// (swap is by default on /dev/sdb for created Linodes)
+	defaultSwapDiskSize = int(resource.NewScaledQuantity(512, resource.Mega).ScaledValue(resource.Mega))
 )
 
 func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
@@ -1407,6 +1415,9 @@ func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (*
 	// If DataDisks are specified, calculate the size of the additional disk + root disk for resizing.
 	if machineScope.LinodeMachine.Spec.DataDisks.SDB != nil {
 		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDB.Size.ScaledValue(resource.Mega))
+	} else {
+		// account for the 512 MB default swap disk
+		additionalDiskSize += defaultSwapDiskSize
 	}
 	if machineScope.LinodeMachine.Spec.DataDisks.SDC != nil {
 		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDC.Size.ScaledValue(resource.Mega))
