@@ -129,7 +129,6 @@ func fillCreateConfig(ctx context.Context, createConfig *linodego.InstanceCreate
 	}
 	if diskSize != nil {
 		createConfig.BootSize = diskSize
-
 	}
 
 	return nil
