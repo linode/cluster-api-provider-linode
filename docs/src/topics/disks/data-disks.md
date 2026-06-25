@@ -8,6 +8,11 @@ There are a couple caveats with specifying disks for a linode instance:
 2. Instance disk configuration is currently immutable via CAPL after the instance is booted.
 ~~~
 
+```admonish warning
+By default, /dev/sdb is expected to be a swap disk that is waited for by a start job in cloud-init.
+Replacing this disk with a data disk will slow down linode creation by 90 seconds.
+```
+
 ## Specify a data disk
 A LinodeMachine can be configured with additional data disks with the key being the device to be mounted as and including an optional label and size.
 
@@ -28,10 +33,10 @@ spec:
       region: us-ord
       type: g6-standard-4
       dataDisks:
-        sdb:
+        sdc:
           label: etcd_disk
           size: 16Gi
-        sdc:
+        sdd:
           label: data_disk
           size: 10Gi
 ```
@@ -50,7 +55,7 @@ spec:
       region: us-ord
       type: g6-standard-4
       dataDisks:
-        sdb:
+        sdc:
           label: etcd_disk
           size: 16Gi
 
@@ -64,7 +69,7 @@ spec:
       filesystems:
         - label: etcd_data
           filesystem: ext4
-          device: /dev/sdb
+          device: /dev/sdc
     mounts:
       - - LABEL=etcd_data
         - /var/lib/etcd_data

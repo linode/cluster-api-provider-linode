@@ -144,8 +144,6 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 	}
 
 	createConfig.Booted = util.Pointer(false)
-	// The user can configure a swap disk in LinodeMachine.Spec.DataDisks, but all our flavors set swapoff for all k8s distros
-	createConfig.SwapSize = util.Pointer(0)
 	if err := setUserData(ctx, machineScope, createConfig, gzipCompressionEnabled, logger); err != nil {
 		return nil, err
 	}
