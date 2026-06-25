@@ -53,6 +53,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const nanodePlan = "g6-nanode-1"
+
 var _ = Describe("create", Label("machine", "create"), func() {
 	var machine clusterv1.Machine
 	var linodeMachine infrav1alpha2.LinodeMachine
@@ -120,7 +122,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				Region:         "us-east",
-				Type:           "g6-nanode-1",
+				Type:           nanodePlan,
 				Image:          rutil.DefaultMachineControllerLinodeImage,
 				DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
 			},
@@ -768,6 +770,47 @@ var _ = Describe("create", Label("machine", "create"), func() {
 	})
 
 	Context("creates a instance with disks", func() {
+		It("requeues if the plan type can't be fetched", func(ctx SpecContext) {
+			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
+			getRegion := mockLinodeClient.EXPECT().
+				GetRegion(ctx, gomock.Any()).
+				Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
+			getImage := mockLinodeClient.EXPECT().
+				GetImage(ctx, gomock.Any()).
+				After(getRegion).
+				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+			mockLinodeClient.EXPECT().
+				GetType(ctx, nanodePlan).
+				After(getImage).
+				Return(nil, &linodego.Error{Code: http.StatusServiceUnavailable})
+			extraDisk := resource.MustParse("128Mi")
+			linodeMachine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{
+				SDB: ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")}),
+				SDC: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk2", Size: extraDisk}),
+				SDD: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk3", Size: extraDisk}),
+				SDE: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk4", Size: extraDisk}),
+				SDF: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk5", Size: extraDisk}),
+				SDG: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk6", Size: extraDisk}),
+				SDH: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk7", Size: extraDisk}),
+			}
+			mScope := scope.MachineScope{
+				Client:        k8sClient,
+				LinodeClient:  mockLinodeClient,
+				Cluster:       &cluster,
+				Machine:       &machine,
+				LinodeCluster: &linodeCluster,
+				LinodeMachine: &linodeMachine,
+			}
+
+			patchHelper, err := patch.NewHelper(mScope.LinodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
+			mScope.PatchHelper = patchHelper
+
+			res, err := reconciler.reconcileCreate(ctx, logger, &mScope)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+			Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
+		})
 		It("in a single call when disks aren't delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 			extraDisk := resource.MustParse("128Mi")
@@ -790,9 +833,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
+			getInstType := mockLinodeClient.EXPECT().
+				GetType(ctx, nanodePlan).
+				After(getImage).
+				Return(&linodego.LinodeType{Label: nanodePlan, Disk: 15000}, nil)
 			mockLinodeClient.EXPECT().
 				CreateInstance(ctx, gomock.Any()).
-				After(getImage).
+				After(getInstType).
 				Return(&linodego.Instance{
 					ID:     123,
 					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
@@ -813,20 +860,12 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
 				Helpers: &linodego.InstanceConfigHelpers{Network: true},
 			}).Return(nil, nil)
-			getInstDisk := mockLinodeClient.EXPECT().
-				GetInstanceDisk(ctx, 123, 100).
-				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
-			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 3452).
-				After(getInstDisk).
-				Return(nil)
 			createEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
 					Label:      "etcd-data",
 					Size:       10738,
 					Filesystem: string(linodego.FilesystemExt4),
 				}).
-				After(resizeInstDisk).
 				Return(&linodego.InstanceDisk{ID: 101}, nil)
 			createAdditionalDisk2 := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
@@ -987,16 +1026,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			linodeMachine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
-			getRegion := mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
 				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
-			getImage := mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
-				After(getRegion).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
-			createInst := mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
+				GetType(ctx, nanodePlan).
+				Return(&linodego.LinodeType{Label: nanodePlan, Disk: 15000}, nil)
+			mockLinodeClient.EXPECT().
 				CreateInstance(ctx, gomock.Any()).
-				After(getImage).
 				Return(&linodego.Instance{
 					ID:     123,
 					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
@@ -1006,9 +1046,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient.EXPECT().
 				OnAfterResponse(gomock.Any()).
 				Return()
-			listInstConfs := mockLinodeClient.EXPECT().
+			mockLinodeClient.EXPECT().
 				ListInstanceConfigs(ctx, 123, gomock.Any()).
-				After(createInst).
 				Return([]linodego.InstanceConfig{{
 					ID: 1,
 					Devices: &linodego.InstanceConfigDeviceMap{
@@ -1018,23 +1057,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient.EXPECT().UpdateInstanceConfig(ctx, 123, 1, linodego.InstanceConfigUpdateOptions{
 				Helpers: &linodego.InstanceConfigHelpers{Network: true},
 			}).
-				After(listInstConfs).
 				Return(nil, nil)
-			getInstDisk := mockLinodeClient.EXPECT().
-				GetInstanceDisk(ctx, 123, 100).
-				After(listInstConfs).
-				Return(&linodego.InstanceDisk{ID: 100, Size: 15000}, nil)
-			resizeInstDisk := mockLinodeClient.EXPECT().
-				ResizeInstanceDisk(ctx, 123, 100, 4262).
-				After(getInstDisk).
-				Return(nil)
 			createFailedEtcdDisk := mockLinodeClient.EXPECT().
 				CreateInstanceDisk(ctx, 123, linodego.InstanceDiskCreateOptions{
 					Label:      "etcd-data",
 					Size:       10738,
 					Filesystem: string(linodego.FilesystemExt4),
 				}).
-				After(resizeInstDisk).
 				Return(nil, &linodego.Error{Code: 500})
 
 			mScope := scope.MachineScope{
@@ -1348,7 +1377,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				Type:  "g6-nanode-1",
+				Type:  nanodePlan,
 				Image: rutil.DefaultMachineControllerLinodeImage,
 			},
 		}
@@ -1486,7 +1515,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 	linodeMachine := &infrav1alpha2.LinodeMachine{
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
-			Type:   "g6-nanode-1",
+			Type:   nanodePlan,
 			Image:  rutil.DefaultMachineControllerLinodeImage,
 			Region: "us-east",
 		},
@@ -1578,17 +1607,13 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 				Call("machine is not created because of too many requests", func(ctx context.Context, mck Mock) {
 				}),
 				Path(Result("create requeues when failing to create instance config", func(ctx context.Context, mck Mock) {
-					getRegion := mck.LinodeClient.EXPECT().
-						GetRegion(ctx, gomock.Any()).
-						Return(&linodego.Region{Capabilities: []string{"Metadata"}}, nil)
 					mck.LinodeClient.EXPECT().
-						GetImage(ctx, gomock.Any()).
-						After(getRegion).
+						GetRegion(ctx, gomock.Any()).
 						Return(nil, &linodego.Error{Code: http.StatusTooManyRequests})
 					res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(res.RequeueAfter).To(Equal(rutil.DefaultLinodeTooManyRequestsErrorRetryDelay))
-					Expect(mck.Logs()).To(ContainSubstring("Failed to fetch image"))
+					Expect(mck.Logs()).To(ContainSubstring("Failed to fetch region"))
 				})),
 				Call("machine is not created because there was an error creating instance", func(ctx context.Context, mck Mock) {
 				}),
@@ -1721,7 +1746,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 						linodeMachine = &infrav1alpha2.LinodeMachine{
 							ObjectMeta: metadata,
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								Type:          "g6-nanode-1",
+								Type:          nanodePlan,
 								Image:         rutil.DefaultMachineControllerLinodeImage,
 								Configuration: nil,
 							},
@@ -1813,7 +1838,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 		ObjectMeta: metadata,
 		Spec: infrav1alpha2.LinodeMachineSpec{
 			Region:     "us-ord",
-			Type:       "g6-nanode-1",
+			Type:       nanodePlan,
 			Image:      rutil.DefaultMachineControllerLinodeImage,
 			ProviderID: util.Pointer("linode://11111"),
 		},
@@ -2465,7 +2490,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				ProviderID: ptr.To("linode://0"),
-				Type:       "g6-nanode-1",
+				Type:       nanodePlan,
 				Image:      rutil.DefaultMachineControllerLinodeImage,
 				PlacementGroupRef: &corev1.ObjectReference{
 					Namespace: defaultNamespace,
@@ -2501,7 +2526,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 		}
 	})
 
-	It("creates a instance in a PlacementGroup with a firewall", func(ctx SpecContext) {
+	It("creates an instance in a PlacementGroup with a firewall", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		helper, err := patch.NewHelper(&linodePlacementGroup, k8sClient)
 		Expect(err).NotTo(HaveOccurred())
@@ -2649,7 +2674,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 		}
 	})
 
-	It("creates a instance with vpc", func(ctx SpecContext) {
+	It("creates an instance with vpc", func(ctx SpecContext) {
 		linodeMachine := infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
@@ -2658,7 +2683,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				ProviderID: ptr.To("linode://0"),
-				Type:       "g6-nanode-1",
+				Type:       nanodePlan,
 				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
 					{
 						Primary: true,
@@ -2718,7 +2743,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			},
 		}))
 	})
-	It("creates a instance with pre defined vpc interface", func(ctx SpecContext) {
+	It("creates an instance with pre defined vpc interface", func(ctx SpecContext) {
 		linodeMachine := infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
@@ -2727,7 +2752,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				ProviderID: ptr.To("linode://0"),
-				Type:       "g6-nanode-1",
+				Type:       nanodePlan,
 				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
 					{
 						Purpose: linodego.InterfacePurposeVPC,
@@ -2803,7 +2828,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				ProviderID: ptr.To("linode://0"),
-				Type:       "g6-nanode-1",
+				Type:       nanodePlan,
 				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
 					{
 						Primary: true,
@@ -2984,7 +3009,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 		}
 	})
 
-	It("creates a instance with vpc", func(ctx SpecContext) {
+	It("creates an instance with vpc", func(ctx SpecContext) {
 		linodeMachine := infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
@@ -2993,7 +3018,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				ProviderID:          ptr.To("linode://0"),
-				Type:                "g6-nanode-1",
+				Type:                nanodePlan,
 				InterfaceGeneration: linodego.GenerationLinode,
 			},
 		}
@@ -3051,7 +3076,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 			},
 		}))
 	})
-	It("creates a instance with pre defined vpc interface", func(ctx SpecContext) {
+	It("creates an instance with pre defined vpc interface", func(ctx SpecContext) {
 		linodeMachine := infrav1alpha2.LinodeMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "mock",
@@ -3060,7 +3085,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				ProviderID:          ptr.To("linode://0"),
-				Type:                "g6-nanode-1",
+				Type:                nanodePlan,
 				InterfaceGeneration: linodego.GenerationLinode,
 			},
 		}
@@ -3127,7 +3152,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				ProviderID:          ptr.To("linode://0"),
-				Type:                "g6-nanode-1",
+				Type:                nanodePlan,
 				InterfaceGeneration: linodego.GenerationLinode,
 			},
 		}
@@ -3253,7 +3278,7 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				Type:           "g6-nanode-1",
+				Type:           nanodePlan,
 				Image:          rutil.DefaultMachineControllerLinodeImage,
 				DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
 				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
@@ -3440,7 +3465,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				Type:           "g6-nanode-1",
+				Type:           nanodePlan,
 				Image:          rutil.DefaultMachineControllerLinodeImage,
 				DiskEncryption: string(linodego.InstanceDiskEncryptionEnabled),
 				LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{{
@@ -3576,7 +3601,7 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 				Namespace: defaultNamespace,
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				Type:   "g6-nanode-1",
+				Type:   nanodePlan,
 				Image:  "linode/ubuntu22.04",
 				Region: "us-east",
 				VPCID:  ptr.To(12345),
@@ -3768,7 +3793,7 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 				Namespace: defaultNamespace,
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				Type:                "g6-nanode-1",
+				Type:                nanodePlan,
 				Image:               "linode/ubuntu22.04",
 				Region:              "us-east",
 				VPCID:               ptr.To(12345),
