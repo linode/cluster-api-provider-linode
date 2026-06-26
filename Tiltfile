@@ -168,13 +168,13 @@ if debug == "true":
         context=".",
         dockerfile_contents="""FROM golang:1.26
         RUN go install github.com/go-delve/delve/cmd/dlv@latest
-        COPY bin/manager /manager
+        COPY bin/manager /ko-app/cmd
         WORKDIR /""",
         only=("bin/manager"),
         build_args={"VERSION": os.getenv("VERSION", "")},
-        entrypoint="$GOPATH/bin/dlv --listen=:40000 --continue --accept-multiclient --api-version=2 --headless=true exec /manager",
+        entrypoint="$GOPATH/bin/dlv --listen=:40000 --continue --accept-multiclient --api-version=2 --headless=true exec /ko-app/cmd",
         live_update=[
-            sync("./bin/manager", "/manager"),
+            sync("./bin/manager", "/ko-app/cmd"),
         ],
     )
     capl_deps.append("capl-compile")
