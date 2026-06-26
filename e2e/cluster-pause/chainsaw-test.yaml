@@ -186,13 +186,16 @@ spec:
     - name: Verify CAPL resources are paused
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: CLUSTER
                 value: ($cluster)
               - name: NAMESPACE
                 value: ($namespace)
             content: |
-              set -euo pipefail
+              set -e
 
               wait_for_count() {
                 local resource=$1
@@ -295,13 +298,16 @@ spec:
     - name: Verify CAPL resources are unpaused
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: CLUSTER
                 value: ($cluster)
               - name: NAMESPACE
                 value: ($namespace)
             content: |
-              set -euo pipefail
+              set -e
 
               wait_for_count() {
                 local resource=$1
@@ -372,6 +378,9 @@ spec:
     - name: Delete child cluster
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: CLUSTER
                 value: ($cluster)
@@ -411,6 +420,9 @@ spec:
     - name: Check if the Linodes are deleted
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: TARGET_API
                 value: api.linode.com
