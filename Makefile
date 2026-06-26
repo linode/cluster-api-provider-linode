@@ -6,7 +6,6 @@ IMAGE_TAGS          ?= $(VERSION)
 WITH_GOFLAGS        ?= "GOFLAGS=\"-ldflags=-X github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)\""
 KO_DOCKER_REPO      ?= docker.io/linode/cluster-api-provider-linode
 KOCACHE ?= ~/.ko
-RELEASE_DIR ?= release
 ENVTEST_K8S_VERSION := $(shell go list -m -f '{{.Version}}' k8s.io/client-go)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
