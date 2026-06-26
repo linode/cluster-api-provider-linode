@@ -192,7 +192,7 @@ spec:
               - name: NAMESPACE
                 value: ($namespace)
             content: |
-              set -euo pipefail
+              set -e
 
               wait_for_count() {
                 local resource=$1
@@ -301,7 +301,7 @@ spec:
               - name: NAMESPACE
                 value: ($namespace)
             content: |
-              set -euo pipefail
+              set -e
 
               wait_for_count() {
                 local resource=$1
