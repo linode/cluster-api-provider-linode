@@ -186,6 +186,9 @@ spec:
     - name: Verify CAPL resources are paused
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: CLUSTER
                 value: ($cluster)
@@ -295,6 +298,9 @@ spec:
     - name: Verify CAPL resources are unpaused
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: CLUSTER
                 value: ($cluster)
@@ -372,6 +378,9 @@ spec:
     - name: Delete child cluster
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: CLUSTER
                 value: ($cluster)
@@ -411,6 +420,9 @@ spec:
     - name: Check if the Linodes are deleted
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: TARGET_API
                 value: api.linode.com

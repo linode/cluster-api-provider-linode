@@ -131,6 +131,9 @@ spec:
     - name: Delete child cluster
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: CLUSTER
                 value: ($cluster)
@@ -153,6 +156,9 @@ spec:
     - name: Check if the linodes are deleted
       try:
         - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: TARGET_API
                 value: api.linode.com
