@@ -10,5 +10,5 @@ spec:
     name: ${CLUSTER_NAME}-credentials
   region: ${LINODE_REGION}
   subnets:
-    - ipv4: 10.0.0.0/8
+    - ipv4: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
       label: default

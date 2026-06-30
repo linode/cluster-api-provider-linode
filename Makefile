@@ -1,6 +1,8 @@
 #####################################################################
 # top-level Makefile for cluster-api-provider-linode
 #####################################################################
+REGISTRY            ?= docker.io/linode
+IMAGE_NAME          ?= cluster-api-provider-linode
 VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 IMAGE_TAGS          ?= $(VERSION)
 WITH_GOFLAGS        ?= "GOFLAGS=\"-ldflags=-X github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)\""

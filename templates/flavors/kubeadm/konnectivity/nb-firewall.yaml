@@ -13,7 +13,7 @@ spec:
     - action: ACCEPT
       addresses:
         ipv4:
-          - 10.0.0.0/8
+          - ${VPC_NETWORK_CIDR:=10.0.0.0/8}
       description: accept all tcp traffic within the vpc
       label: intra-cluster-tcp
       ports: 1-65535
@@ -21,7 +21,7 @@ spec:
     - action: ACCEPT
       addresses:
         ipv4:
-          - 10.0.0.0/8
+          - ${VPC_NETWORK_CIDR:=10.0.0.0/8}
       description: accept all udp traffic within the vpc
       label: intra-cluster-udp
       ports: 1-65535
@@ -29,7 +29,7 @@ spec:
     - action: ACCEPT
       addresses:
         ipv4:
-          - 10.0.0.0/8
+          - ${VPC_NETWORK_CIDR:=10.0.0.0/8}
       description: accept all icmp traffic within the vpc
       label: intra-cluster-icmp
       protocol: ICMP

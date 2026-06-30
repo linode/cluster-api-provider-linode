@@ -17,7 +17,7 @@ spec:
       protocol: "TCP"
       addresses:
         ipv4:
-          - "10.0.0.0/8"
+          - ${VPC_NETWORK_CIDR:=10.0.0.0/8}
       description: accept all tcp traffic within the vpc
     - action: ACCEPT
       label: intra-cluster-udp
@@ -25,14 +25,14 @@ spec:
       protocol: "UDP"
       addresses:
         ipv4:
-          - "10.0.0.0/8"
+          - ${VPC_NETWORK_CIDR:=10.0.0.0/8}
       description: accept all udp traffic within the vpc
     - action: ACCEPT
       label: intra-cluster-icmp
       protocol: "ICMP"
       addresses:
         ipv4:
-          - "10.0.0.0/8"
+          - ${VPC_NETWORK_CIDR:=10.0.0.0/8}
       description: accept all icmp traffic within the vpc
     - action: ACCEPT
       addresses:
