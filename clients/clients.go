@@ -24,7 +24,7 @@ type LinodeClient interface {
 	LinodeFirewallClient
 	LinodeTokenClient
 	LinodeInterfacesClient
-
+	LinodeMaintenanceClient
 	OnAfterResponse(m func(response *resty.Response) error)
 }
 
@@ -130,6 +130,10 @@ type LinodeFirewallClient interface {
 type LinodeInterfacesClient interface {
 	ListInterfaces(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.LinodeInterface, error)
 	ListInterfaceFirewalls(ctx context.Context, linodeID int, interfaceID int, opts *linodego.ListOptions) ([]linodego.Firewall, error)
+}
+
+type LinodeMaintenanceClient interface {
+	ListMaintenances(ctx context.Context, opts *linodego.ListOptions) ([]linodego.AccountMaintenance, error)
 }
 
 type K8sClient interface {

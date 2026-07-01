@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -11,7 +12,9 @@ import (
 	"strings"
 
 	"github.com/linode/linodego"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -136,4 +139,19 @@ func SetOwnerReferenceToLinodeCluster(ctx context.Context, k8sclient client.Clie
 	}
 
 	return nil
+}
+
+func GetLinodeMachinesForCluster(ctx context.Context, k8sclient client.Client, cluster *clusterv1.Cluster) (*infrav1alpha2.LinodeMachineList, error) {
+	clusterReq, err := labels.NewRequirement("cluster.x-k8s.io/cluster-name", selection.Equals, []string{cluster.Name})
+	if err != nil {
+		return nil, fmt.Errorf("building label selector: %w", err)
+	}
+
+	selector := labels.NewSelector()
+	selector = selector.Add(*clusterReq)
+	var linodeMachineList infrav1alpha2.LinodeMachineList
+	if err := k8sclient.List(ctx, &linodeMachineList, &client.ListOptions{Namespace: cluster.Namespace, LabelSelector: selector}); err != nil {
+		return nil, fmt.Errorf("listing linode machines %w", err)
+	}
+	return &linodeMachineList, nil
 }

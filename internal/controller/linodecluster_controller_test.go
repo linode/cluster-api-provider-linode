@@ -114,6 +114,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 		reconciler.Recorder = mck.Recorder()
 
 		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
+		cScope.Cluster = &clusterv1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: defaultNamespace}}
 		cScope.LinodeCluster = &linodeCluster
 
 		// Create patch helper with latest state of resource.
@@ -310,6 +311,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				Call("cluster is created", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nil
+					mck.LinodeClient.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{}, nil).AnyTimes()
 					mck.LinodeClient.EXPECT().ListNodeBalancerNodes(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancerNode{}, nil).AnyTimes()
 					getNB := mck.LinodeClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(&linodego.NodeBalancer{
@@ -499,6 +501,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 		reconciler.Recorder = mck.Recorder()
 
 		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
+		cScope.Cluster = &clusterv1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: defaultNamespace}}
 		cScope.LinodeCluster = &linodeCluster
 
 		// Create patch helper with latest state of resource.
@@ -514,6 +517,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 				Call("cluster with dns loadbalancing is created", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.LinodeDomainsClient = mck.LinodeClient
+					mck.LinodeClient.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{}, nil).AnyTimes()
 					mck.LinodeClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{
 						{
 							ID:     1,
@@ -793,6 +797,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.LinodeDomainsClient = mck.LinodeClient
 					cScope.AkamaiDomainsClient = mck.AkamEdgeDNSClient
+					mck.LinodeClient.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{}, nil).AnyTimes()
 					linodeMachines := infrav1alpha2.LinodeMachineList{
 						Items: []infrav1alpha2.LinodeMachine{linodeMachine},
 					}
@@ -879,6 +884,7 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 		reconciler.Recorder = mck.Recorder()
 
 		Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
+		cScope.Cluster = &clusterv1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: defaultNamespace}}
 		cScope.LinodeCluster = &linodeCluster
 
 		// Create patch helper with latest state of resource.
@@ -892,6 +898,7 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 			Path(
 				Call("direct VPCID exists and has subnets", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
+					mck.LinodeClient.EXPECT().ListMaintenances(gomock.Any(), gomock.Any()).Return([]linodego.AccountMaintenance{}, nil).AnyTimes()
 
 					// Mock GetVPC call to return a VPC with subnets
 					mck.LinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(12345)).
