@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -90,11 +90,6 @@ type VPCCreateOptionsIPv6 struct {
 	// allocationClass is the IPv6 inventory from which the VPC prefix should be allocated.
 	// +optional
 	AllocationClass *string `json:"allocationClass,omitempty"`
-
-	// allocation_class is the IPv6 inventory from which the VPC prefix should be allocated.
-	// +optional
-	//nolint:kubeapilinter // to maintain backwards compatibility
-	AllocationClassLegacy *string `json:"allocation_class,omitempty"`
 }
 
 // VPCSubnetCreateOptions defines subnet options

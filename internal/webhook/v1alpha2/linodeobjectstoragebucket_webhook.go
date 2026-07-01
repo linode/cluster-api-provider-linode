@@ -20,7 +20,7 @@ import (
 	"context"
 	"slices"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -53,8 +53,11 @@ type LinodeObjectStorageBucketCustomValidator struct {
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageBucket.
 func (v *LinodeObjectStorageBucketCustomValidator) ValidateCreate(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket) (admission.Warnings, error) {
 	linodeobjectstoragebucketlog.Info("validate create", "name", bucket.Name)
-	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, v.Client, bucket.Spec.CredentialsRef,
+	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, v.Client, bucket.Spec.CredentialsRef,
 		bucket.Name, bucket.GetNamespace(), linodemachinelog)
+	if err != nil {
+		return admission.Warnings{}, err
+	}
 
 	var errs field.ErrorList
 	if err := validateLabelLength(bucket.GetName(), field.NewPath("metadata").Child("name")); err != nil {
@@ -92,7 +95,7 @@ func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBu
 	if skipAPIValidation {
 		return errs
 	}
-	if err := validateRegion(ctx, linodeClient, bucket.Spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityObjectStorage); err != nil {
+	if err := validateRegion(ctx, linodeClient, bucket.Spec.Region, field.NewPath("spec").Child("region"), string(linodego.CapabilityObjectStorage)); err != nil {
 		errs = append(errs, err)
 	}
 

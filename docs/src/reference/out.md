@@ -1398,7 +1398,6 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `range` _string_ | range is the IPv6 prefix for the VPC. |  | Optional: \{\} <br /> |
 | `allocationClass` _string_ | allocationClass is the IPv6 inventory from which the VPC prefix should be allocated. |  | Optional: \{\} <br /> |
-| `allocation_class` _string_ | allocation_class is the IPv6 inventory from which the VPC prefix should be allocated. |  | Optional: \{\} <br /> |
 
 
 #### VPCIPv4

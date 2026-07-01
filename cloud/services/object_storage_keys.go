@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -28,9 +28,9 @@ func RotateObjectStorageKey(ctx context.Context, keyScope *scope.ObjectStorageKe
 }
 
 func createObjectStorageKey(ctx context.Context, keyScope *scope.ObjectStorageKeyScope) (*linodego.ObjectStorageKey, error) {
-	bucketAccess := make([]linodego.ObjectStorageKeyBucketAccess, len(keyScope.Key.Spec.BucketAccess))
+	bucketAccess := make([]linodego.ObjectStorageKeyBucketAccessCreateOptions, len(keyScope.Key.Spec.BucketAccess))
 	for idx, bucket := range keyScope.Key.Spec.BucketAccess {
-		bucketAccess[idx] = linodego.ObjectStorageKeyBucketAccess{
+		bucketAccess[idx] = linodego.ObjectStorageKeyBucketAccessCreateOptions{
 			Region:      bucket.Region,
 			BucketName:  bucket.BucketName,
 			Permissions: bucket.Permissions,
@@ -38,7 +38,7 @@ func createObjectStorageKey(ctx context.Context, keyScope *scope.ObjectStorageKe
 	}
 	opts := linodego.ObjectStorageKeyCreateOptions{
 		Label:        keyScope.Key.Name,
-		BucketAccess: &bucketAccess,
+		BucketAccess: bucketAccess,
 	}
 
 	key, err := keyScope.LinodeClient.CreateObjectStorageKey(ctx, opts)

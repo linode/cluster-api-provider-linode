@@ -21,7 +21,7 @@ import (
 	"errors"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"

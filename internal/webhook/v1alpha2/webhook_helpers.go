@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -114,14 +114,18 @@ func getCredentials(ctx context.Context, crClient clients.K8sClient, credentials
 // Returns (skipAPIValidation, client) - skipAPIValidation will be true if credentials cannot be found
 // and API validation should be skipped
 func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient, credRef *corev1.SecretReference,
-	resourceName, namespace string, logger logr.Logger) (bool, clients.LinodeClient) {
+	resourceName, namespace string, logger logr.Logger) (bool, clients.LinodeClient, error) {
+	newClient, err := linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})
+	if err != nil {
+		logger.Error(err, "failed to create linode client")
+		return false, nil, err
+	}
 	linodeClient := linodeclient.NewLinodeClientWithTracing(
-		ptr.To(linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})),
+		ptr.To(newClient),
 		linodeclient.DefaultDecorator(),
 	)
 	credName := ""
 	apiToken := []byte(os.Getenv("LINODE_TOKEN"))
-	var err error
 	if credRef != nil {
 		credName = credRef.Name
 		apiToken, err = getCredentialDataFromRef(ctx, crClient, *credRef, namespace)
@@ -130,18 +134,18 @@ func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient,
 	if err == nil {
 		logger.Info("creating a verified linode client for create request", "name", resourceName)
 		linodeClient.SetToken(string(apiToken))
-		return false, linodeClient
+		return false, linodeClient, nil
 	}
 
 	// Handle error cases
 	if apierrors.IsNotFound(err) {
 		logger.Info("credentials secret not found, skipping API validation",
 			"name", resourceName, "secret", credName)
-		return true, linodeClient
+		return true, linodeClient, nil
 	}
 
 	// For other errors, log the error but return the default client
 	// The caller should handle validation with the default client
 	logger.Error(err, "failed getting credentials from secret ref", "name", resourceName)
-	return false, linodeClient
+	return false, linodeClient, nil
 }

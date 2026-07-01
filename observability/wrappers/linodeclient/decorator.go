@@ -17,7 +17,7 @@ limitations under the License.
 package linodeclient
 
 import (
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 

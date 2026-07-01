@@ -9,7 +9,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -49,11 +49,11 @@ func EnsureAndUpdateObjectStorageBucket(ctx context.Context, bScope *scope.Objec
 		bucket.Region,
 		bucket.Label,
 	)
-	if err != nil {
+	if err != nil || bucketAccess == nil {
 		return nil, fmt.Errorf("failed to get bucket access details for %s: %w", bScope.Bucket.Name, err)
 	}
 
-	if bucketAccess.ACL == linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL) && bucketAccess.CorsEnabled == bScope.Bucket.Spec.CorsEnabled {
+	if bucketAccess.ACL == linodego.ObjectStorageACL(bScope.Bucket.Spec.ACL) && *bucketAccess.CorsEnabled == bScope.Bucket.Spec.CorsEnabled {
 		return bucket, nil
 	}
 

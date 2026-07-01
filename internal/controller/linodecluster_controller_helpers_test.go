@@ -9,7 +9,7 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"

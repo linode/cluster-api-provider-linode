@@ -22,7 +22,7 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -170,9 +170,6 @@ func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linode
 	for idx, ipv6 := range vpcSpec.IPv6Range {
 		vpcIPv6[idx] = linodego.VPCCreateOptionsIPv6{
 			Range: ipv6.Range,
-		}
-		if ipv6.AllocationClassLegacy != nil {
-			vpcIPv6[idx].AllocationClass = ipv6.AllocationClassLegacy
 		}
 		// in the case of both AllocationClass and AllocationClassLegacy being set, use the non-legacy field's value
 		if ipv6.AllocationClass != nil {
