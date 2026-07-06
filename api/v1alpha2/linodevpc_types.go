@@ -72,7 +72,7 @@ type LinodeVPCSpec struct {
 	// Once ranges are allocated, they will be added to the IPv4 field.
 	// +optional
 	// +listType=atomic
-	IPv4Range []VPCCreateOptionsIPv4 `json:"ipv4Range,omitzero"`
+	IPv4Range []string `json:"ipv4Range,omitzero"`
 
 	// subnets is a list of subnets to create in the VPC.
 	// +optional

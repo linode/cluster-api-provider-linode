@@ -51,11 +51,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 				vpcSpec: infrav1alpha2.LinodeVPCSpec{
 					Description: "description",
 					Region:      "region",
-					IPv4Range: []infrav1alpha2.VPCCreateOptionsIPv4{
-						{
-							Range: ptr.To("10.0.0.0/8"),
-						},
-					},
+					IPv4Range:   []string{"10.0.0.0/8"},
 					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
 						{
 							Range: ptr.To("2001:db8::/52"),

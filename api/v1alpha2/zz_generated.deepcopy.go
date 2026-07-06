@@ -1706,10 +1706,8 @@ func (in *LinodeVPCSpec) DeepCopyInto(out *LinodeVPCSpec) {
 	}
 	if in.IPv4Range != nil {
 		in, out := &in.IPv4Range, &out.IPv4Range
-		*out = make([]VPCCreateOptionsIPv4, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	if in.Subnets != nil {
 		in, out := &in.Subnets, &out.Subnets

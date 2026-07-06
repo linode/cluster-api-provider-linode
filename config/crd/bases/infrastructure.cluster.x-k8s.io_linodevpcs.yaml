@@ -93,16 +93,7 @@ spec:
                   If not specified, the VPC will not have an IPv4 range allocated.
                   Once ranges are allocated, they will be added to the IPv4 field.
                 items:
-                  description: |-
-                    VPCCreateOptionsIPv4 defines the options for creating an IPv4 range in a VPC.
-                    It's copied from linodego.VPCCreateOptionsIPv4 and should be kept in sync.
-                    Values supported by the linode API should be used here.
-                    See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
-                  properties:
-                    range:
-                      description: range is the IPv4 prefix for the VPC.
-                      type: string
-                  type: object
+                  type: string
                 type: array
                 x-kubernetes-list-type: atomic
               ipv6:
