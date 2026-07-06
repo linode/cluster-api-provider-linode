@@ -108,11 +108,9 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (clients.LinodeClie
 	}
 	newClient.SetUserAgent(fmt.Sprintf("CAPL/%s", version.GetVersion()))
 
-	//nolint:gocritic // see below
-	// NOTE: Trying to call SetRetryCount somehow makes the client not invoke POST/DELETE as of linodego v2
-	/* for _, opt := range opts {
+	for _, opt := range opts {
 		opt.set(&newClient)
-	} */
+	}
 
 	return linodeclient.NewLinodeClientWithTracing(
 		&newClient,

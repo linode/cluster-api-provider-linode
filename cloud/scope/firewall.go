@@ -60,7 +60,7 @@ func NewFirewallScope(ctx context.Context, linodeClientConfig ClientConfig, para
 		return nil, err
 	}
 	linodeClient, err := CreateLinodeClient(linodeClientConfig,
-		WithRetryCount(0),
+		WithRetryCount(1),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)

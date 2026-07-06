@@ -69,7 +69,7 @@ func NewClusterScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 	if err != nil {
 		return nil, fmt.Errorf("failed to create akamai dns client: %w", err)
 	}
-	linodeDomainsClient, err := CreateLinodeClient(dnsClientConfig, WithRetryCount(0))
+	linodeDomainsClient, err := CreateLinodeClient(dnsClientConfig, WithRetryCount(1))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
