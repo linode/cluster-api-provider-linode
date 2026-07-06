@@ -246,7 +246,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
-				BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+				BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 				After(createInst).
 				Return(nil)
 			mockLinodeClient.EXPECT().
@@ -405,7 +405,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
-				BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+				BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 				After(createInst).
 				Return(nil)
 			mockLinodeClient.EXPECT().
@@ -483,7 +483,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(createInst).
 			Return(nil)
 		mockLinodeClient.EXPECT().
@@ -580,7 +580,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(listInst).
 			Return(nil)
 		mockLinodeClient.EXPECT().
@@ -938,7 +938,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					}}).
 				After(listInstConfsForProfile)
 			bootInst := mockLinodeClient.EXPECT().
-				BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+				BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 				After(createInstanceProfile).
 				Return(nil)
 			getAddrs := mockLinodeClient.EXPECT().
@@ -1134,7 +1134,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					}}).
 				After(listInstConfsForProfile)
 			bootInst := mockLinodeClient.EXPECT().
-				BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+				BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 				After(createInstanceProfile).
 				Return(nil)
 			getAddrs := mockLinodeClient.EXPECT().
@@ -1435,7 +1435,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(createInst).
 			Return(nil)
 		mockLinodeClient.EXPECT().
@@ -1772,7 +1772,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							OnAfterResponse(gomock.Any()).
 							Return()
 						bootInst := mck.LinodeClient.EXPECT().
-							BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+							BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 							After(createInst).
 							Return(nil)
 						getAddrs := mck.LinodeClient.EXPECT().
@@ -3346,7 +3346,7 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(createInst).
 			Return(nil)
 		getAddrs := mockLinodeClient.EXPECT().
@@ -3528,7 +3528,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(createInst).
 			Return(nil)
 		getAddrs := mockLinodeClient.EXPECT().

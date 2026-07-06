@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/paused"
@@ -670,7 +669,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, instanceID int, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
-	if err := machineScope.LinodeClient.BootInstance(ctx, instanceID, linodego.InstanceBootOptions{ConfigID: ptr.To(0)}); err != nil && !strings.HasSuffix(err.Error(), "already booted.") {
+	if err := machineScope.LinodeClient.BootInstance(ctx, instanceID, linodego.InstanceBootOptions{}); err != nil && !strings.HasSuffix(err.Error(), "already booted.") {
 		logger.Error(err, "Failed to boot instance")
 		if reconciler.HasStaleCondition(machineScope.LinodeMachine.GetCondition(ConditionPreflightBootTriggered),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
