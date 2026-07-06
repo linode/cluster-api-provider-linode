@@ -50,19 +50,19 @@ type LinodeVPCSpec struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=range
-	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
+	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitzero"`
 
 	// ipv6Range is a list of IPv6 ranges to allocate to the VPC.
 	// If not specified, the VPC will not have an IPv6 range allocated.
 	// Once ranges are allocated, they will be added to the IPv6 field.
 	// +optional
 	// +listType=atomic
-	IPv6Range []VPCCreateOptionsIPv6 `json:"ipv6Range,omitempty"`
+	IPv6Range []VPCCreateOptionsIPv6 `json:"ipv6Range,omitzero"`
 
 	// subnets is a list of subnets to create in the VPC.
 	// +optional
 	// +listType=atomic
-	Subnets []VPCSubnetCreateOptions `json:"subnets,omitempty"`
+	Subnets []VPCSubnetCreateOptions `json:"subnets,omitzero"`
 
 	// retain allows you to keep the VPC after the LinodeVPC object is deleted.
 	// This is useful if you want to use an existing VPC that was not created by this controller.
@@ -85,11 +85,11 @@ type LinodeVPCSpec struct {
 type VPCCreateOptionsIPv6 struct {
 	// range is the IPv6 prefix for the VPC.
 	// +optional
-	Range *string `json:"range,omitempty"`
+	Range *string `json:"range,omitzero"`
 
 	// allocationClass is the IPv6 inventory from which the VPC prefix should be allocated.
 	// +optional
-	AllocationClass *string `json:"allocationClass,omitempty"`
+	AllocationClass *string `json:"allocationClass,omitzero"`
 }
 
 // VPCSubnetCreateOptions defines subnet options
@@ -98,11 +98,11 @@ type VPCSubnetCreateOptions struct {
 	// +kubebuilder:validation:MinLength=3
 	// +kubebuilder:validation:MaxLength=63
 	// +optional
-	Label string `json:"label,omitempty"`
+	Label string `json:"label,omitzero"`
 
 	// ipv4 is the IPv4 address range of the subnet.
 	// +optional
-	IPv4 string `json:"ipv4,omitempty"`
+	IPv4 string `json:"ipv4,omitzero"`
 
 	// ipv6 is a list of IPv6 ranges allocated to the subnet.
 	// Once ranges are allocated based on the IPv6Range field, they will be
@@ -110,18 +110,18 @@ type VPCSubnetCreateOptions struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=range
-	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitempty"`
+	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitzero"`
 
 	// ipv6Range is a list of IPv6 ranges to allocate to the subnet.
 	// If not specified, the subnet will not have an IPv6 range allocated.
 	// Once ranges are allocated, they will be added to the IPv6 field.
 	// +optional
 	// +listType=atomic
-	IPv6Range []VPCSubnetCreateOptionsIPv6 `json:"ipv6Range,omitempty"`
+	IPv6Range []VPCSubnetCreateOptionsIPv6 `json:"ipv6Range,omitzero"`
 
 	// subnetID is subnet id for the subnet
 	// +optional
-	SubnetID int `json:"subnetID,omitempty"`
+	SubnetID int `json:"subnetID,omitzero"`
 
 	// retain allows you to keep the Subnet after the LinodeVPC object is deleted.
 	// This is only applicable when the parent VPC has retain set to true.
@@ -137,7 +137,7 @@ type VPCSubnetCreateOptions struct {
 type VPCSubnetCreateOptionsIPv6 struct {
 	// range is the IPv6 prefix for the subnet.
 	// +optional
-	Range *string `json:"range,omitempty"`
+	Range *string `json:"range,omitzero"`
 }
 
 // LinodeVPCStatus defines the observed state of LinodeVPC
