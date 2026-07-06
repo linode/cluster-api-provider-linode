@@ -21,7 +21,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 		want *linodego.VPCCreateOptions
 	}{
 		{
-			name: "no ipv6 ranges",
+			name: "no ipv6 or ipv4 ranges",
 			args: args{
 				vpcSpec: infrav1alpha2.LinodeVPCSpec{
 					Description: "description",
@@ -29,7 +29,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							Label: "subnet",
-							IPv4:  "ipv4",
 						},
 					},
 				},
@@ -40,11 +39,65 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 				Subnets: []linodego.VPCSubnetCreateOptions{
 					{
 						Label: "subnet",
-						IPv4:  "ipv4",
 						IPv6:  []linodego.VPCSubnetCreateOptionsIPv6{},
 					},
 				},
 				IPv6: []linodego.VPCCreateOptionsIPv6{},
+			},
+		},
+		{
+			name: "BYO ipv4 range",
+			args: args{
+				vpcSpec: infrav1alpha2.LinodeVPCSpec{
+					Description: "description",
+					Region:      "region",
+					IPv4Range: []infrav1alpha2.VPCCreateOptionsIPv4{
+						{
+							Range: ptr.To("10.0.0.0/8"),
+						},
+					},
+					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
+						{
+							Range: ptr.To("2001:db8::/52"),
+						},
+					},
+					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							Label: "subnet",
+							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
+								{
+									Range: ptr.To("2001:db8:1::/56"),
+								},
+							},
+							IPv4: "10.1.2.0/24",
+						},
+					},
+				},
+			},
+			want: &linodego.VPCCreateOptions{
+				Description: "description",
+				Region:      "region",
+				Subnets: []linodego.VPCSubnetCreateOptions{
+					{
+						Label: "subnet",
+						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
+							{
+								Range: ptr.To("2001:db8:1::/56"),
+							},
+						},
+						IPv4: "10.1.2.0/24",
+					},
+				},
+				IPv6: []linodego.VPCCreateOptionsIPv6{
+					{
+						Range: ptr.To("2001:db8::/52"),
+					},
+				},
+				IPv4: []linodego.VPCCreateOptionsIPv4{
+					{
+						Range: ptr.To("10.0.0.0/8"),
+					},
+				},
 			},
 		},
 		{
@@ -61,7 +114,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							Label: "subnet",
-							IPv4:  "ipv4",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
 									Range: ptr.To("2001:db8:1::/56"),
@@ -77,7 +129,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 				Subnets: []linodego.VPCSubnetCreateOptions{
 					{
 						Label: "subnet",
-						IPv4:  "ipv4",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
 								Range: ptr.To("2001:db8:1::/56"),
@@ -107,7 +158,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							Label: "subnet",
-							IPv4:  "ipv4",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
 									Range: ptr.To("2001:db8:1::/56"),
@@ -123,7 +173,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 				Subnets: []linodego.VPCSubnetCreateOptions{
 					{
 						Label: "subnet",
-						IPv4:  "ipv4",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
 								Range: ptr.To("2001:db8:1::/56"),
@@ -154,7 +203,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							Label: "subnet",
-							IPv4:  "ipv4",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
 									Range: ptr.To("2001:db8:1::/56"),
@@ -170,7 +218,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 				Subnets: []linodego.VPCSubnetCreateOptions{
 					{
 						Label: "subnet",
-						IPv4:  "ipv4",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
 								Range: ptr.To("2001:db8:1::/56"),
@@ -202,7 +249,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							Label: "subnet",
-							IPv4:  "ipv4",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
 									Range: ptr.To("2001:db8:1::/56"),
@@ -218,7 +264,6 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 				Subnets: []linodego.VPCSubnetCreateOptions{
 					{
 						Label: "subnet",
-						IPv4:  "ipv4",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
 								Range: ptr.To("2001:db8:1::/56"),

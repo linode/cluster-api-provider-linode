@@ -1168,7 +1168,9 @@ _Appears in:_
 | `description` _string_ | description is the description of the VPC. |  | Optional: \{\} <br /> |
 | `region` _string_ | region is the region to create the VPC in. |  | MinLength: 1 <br />Required: \{\} <br /> |
 | `ipv6` _VPCIPv6Range array_ | ipv6 is a list of IPv6 ranges allocated to the VPC.<br />Once ranges are allocated based on the IPv6Range field, they will be<br />added to this field. |  | Optional: \{\} <br /> |
+| `ipv4` _VPCIPv4Range array_ | ipv4 is a list of IPv4 ranges allocated to the VPC.<br />Once ranges are allocated based on the IPv4Range field, they will be<br />added to this field. |  | Optional: \{\} <br /> |
 | `ipv6Range` _[VPCCreateOptionsIPv6](#vpccreateoptionsipv6) array_ | ipv6Range is a list of IPv6 ranges to allocate to the VPC.<br />If not specified, the VPC will not have an IPv6 range allocated.<br />Once ranges are allocated, they will be added to the IPv6 field. |  | Optional: \{\} <br /> |
+| `ipv4Range` _[VPCCreateOptionsIPv4](#vpccreateoptionsipv4) array_ | ipv4Range is a list of IPv4 ranges to allocate to the VPC.<br />If not specified, the VPC will not have an IPv4 range allocated.<br />Once ranges are allocated, they will be added to the IPv4 field. |  | Optional: \{\} <br /> |
 | `subnets` _[VPCSubnetCreateOptions](#vpcsubnetcreateoptions) array_ | subnets is a list of subnets to create in the VPC. |  | Optional: \{\} <br /> |
 | `retain` _boolean_ | retain allows you to keep the VPC after the LinodeVPC object is deleted.<br />This is useful if you want to use an existing VPC that was not created by this controller.<br />If set to true, the controller will not delete the VPC resource in Linode.<br />Defaults to false. | false | Optional: \{\} <br /> |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC.<br />If not supplied, then the credentials of the controller will be used. |  | Optional: \{\} <br /> |
@@ -1378,6 +1380,25 @@ _Appears in:_
 | `vlan_label` _string_ | vlan_label is the label of the VLAN. |  | MinLength: 1 <br />Optional: \{\} <br /> |
 | `ipamAddress` _string_ | ipamAddress is the IP address to assign to the interface. |  | Optional: \{\} <br /> |
 | `ipam_address` _string_ | ipam_address is the IP address to assign to the interface. |  | Optional: \{\} <br /> |
+
+
+#### VPCCreateOptionsIPv4
+
+
+
+VPCCreateOptionsIPv4 defines the options for creating an IPv4 range in a VPC.
+It's copied from linodego.VPCCreateOptionsIPv4 and should be kept in sync.
+Values supported by the linode API should be used here.
+See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
+
+
+
+_Appears in:_
+- [LinodeVPCSpec](#linodevpcspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `range` _string_ | range is the IPv4 prefix for the VPC. |  | Optional: \{\} <br /> |
 
 
 #### VPCCreateOptionsIPv6

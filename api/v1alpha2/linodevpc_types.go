@@ -52,12 +52,27 @@ type LinodeVPCSpec struct {
 	// +listMapKey=range
 	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitzero"`
 
+	// ipv4 is a list of IPv4 ranges allocated to the VPC.
+	// Once ranges are allocated based on the IPv4Range field, they will be
+	// added to this field.
+	// +optional
+	// +listType=map
+	// +listMapKey=range
+	IPv4 []linodego.VPCIPv4Range `json:"ipv4,omitzero"`
+
 	// ipv6Range is a list of IPv6 ranges to allocate to the VPC.
 	// If not specified, the VPC will not have an IPv6 range allocated.
 	// Once ranges are allocated, they will be added to the IPv6 field.
 	// +optional
 	// +listType=atomic
 	IPv6Range []VPCCreateOptionsIPv6 `json:"ipv6Range,omitzero"`
+
+	// ipv4Range is a list of IPv4 ranges to allocate to the VPC.
+	// If not specified, the VPC will not have an IPv4 range allocated.
+	// Once ranges are allocated, they will be added to the IPv4 field.
+	// +optional
+	// +listType=atomic
+	IPv4Range []VPCCreateOptionsIPv4 `json:"ipv4Range,omitzero"`
 
 	// subnets is a list of subnets to create in the VPC.
 	// +optional
@@ -95,6 +110,16 @@ type VPCCreateOptionsIPv6 struct {
 	// +optional
 	//nolint:kubeapilinter // to maintain backwards compatibility
 	AllocationClassLegacy *string `json:"allocation_class,omitempty"`
+}
+
+// VPCCreateOptionsIPv4 defines the options for creating an IPv4 range in a VPC.
+// It's copied from linodego.VPCCreateOptionsIPv4 and should be kept in sync.
+// Values supported by the linode API should be used here.
+// See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
+type VPCCreateOptionsIPv4 struct {
+	// range is the IPv4 prefix for the VPC.
+	// +optional
+	Range *string `json:"range,omitzero"`
 }
 
 // VPCSubnetCreateOptions defines subnet options
