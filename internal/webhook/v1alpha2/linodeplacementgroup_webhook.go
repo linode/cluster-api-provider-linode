@@ -103,7 +103,7 @@ func (v *LinodePlacementGroupCustomValidator) validateLinodePlacementGroupSpec(c
 	var errs field.ErrorList
 
 	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), string(linodego.CapabilityPlacementGroup)); err != nil {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityPlacementGroup); err != nil {
 			errs = append(errs, err)
 		}
 	}

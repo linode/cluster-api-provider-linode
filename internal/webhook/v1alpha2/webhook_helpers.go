@@ -54,14 +54,14 @@ func validateLabelLength(label string, path *field.Path) *field.Error {
 	return nil
 }
 
-func validateRegion(ctx context.Context, linodegoclient clients.LinodeClient, id string, path *field.Path, capabilities ...string) *field.Error {
+func validateRegion(ctx context.Context, linodegoclient clients.LinodeClient, id string, path *field.Path, capabilities ...linodego.RegionCapability) *field.Error {
 	region, err := linodegoclient.GetRegion(ctx, id)
 	if err != nil {
 		return field.NotFound(path, id)
 	}
 
 	for _, capability := range capabilities {
-		if !slices.Contains(region.Capabilities, capability) {
+		if !slices.Contains(region.Capabilities, string(capability)) {
 			return field.Invalid(path, id, fmt.Sprintf("no capability: %s", capability))
 		}
 	}

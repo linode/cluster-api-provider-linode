@@ -95,7 +95,7 @@ func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBu
 	if skipAPIValidation {
 		return errs
 	}
-	if err := validateRegion(ctx, linodeClient, bucket.Spec.Region, field.NewPath("spec").Child("region"), string(linodego.CapabilityObjectStorage)); err != nil {
+	if err := validateRegion(ctx, linodeClient, bucket.Spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityObjectStorage); err != nil {
 		errs = append(errs, err)
 	}
 

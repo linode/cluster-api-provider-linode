@@ -98,7 +98,7 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 
 	if !skipAPIValidation { //nolint:nestif // too simple for switch
 		if spec.LinodeInterfaces != nil {
-			if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), string(linodego.CapabilityLinodeInterfaces)); err != nil {
+			if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityLinodeInterfaces); err != nil {
 				errs = append(errs, err)
 			}
 		} else {

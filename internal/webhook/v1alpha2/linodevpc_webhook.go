@@ -129,7 +129,7 @@ func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodecl
 	var errs field.ErrorList
 
 	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), string(linodego.CapabilityVPCs)); err != nil {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityVPCs); err != nil {
 			errs = append(errs, err)
 		}
 	}
