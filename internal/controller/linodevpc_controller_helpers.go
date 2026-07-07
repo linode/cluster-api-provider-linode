@@ -80,6 +80,8 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 }
 
 func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *linodego.VPC) error {
+	setVPCFields(&vpcScope.LinodeVPC.Spec, vpc)
+
 	// if there's an ipv4 range specified in the VPC spec, we need to call VPCUpdate
 	if len(vpcScope.LinodeVPC.Spec.IPv4Range) > 0 {
 		ipv4Ranges := make([]linodego.VPCUpdateOptionsIPv4, len(vpcScope.LinodeVPC.Spec.IPv4Range))
@@ -93,7 +95,6 @@ func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *li
 			return err
 		}
 	}
-	setVPCFields(&vpcScope.LinodeVPC.Spec, vpc)
 
 	// Build a map of VPC subnets by both label and ID. We check for
 	// the subnet ID but fallback to the label because the ID is not guaranteed
