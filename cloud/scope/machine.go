@@ -57,9 +57,7 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
-	linodeClient, err := CreateLinodeClient(linodeClientConfig,
-		WithRetryCount(1),
-	)
+	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
