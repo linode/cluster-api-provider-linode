@@ -2,7 +2,7 @@
 minimum_release_age = "7d"  # only install versions released more than 7 days ago - https://mise.en.dev/security.html#minimum-release-age
 
 [tools]
-go = "1.26.4"
+go = "1.26.5"
 ko = "0.18.1"
 kustomize = "5.8.1"
 ctlptl = "0.9.0"
