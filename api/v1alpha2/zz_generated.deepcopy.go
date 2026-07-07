@@ -21,7 +21,7 @@ limitations under the License.
 package v1alpha2
 
 import (
-	"github.com/linode/linodego"
+	v2 "github.com/linode/linodego/v2"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -1068,7 +1068,7 @@ func (in *LinodeMachineStatus) DeepCopyInto(out *LinodeMachineStatus) {
 	}
 	if in.InstanceState != nil {
 		in, out := &in.InstanceState, &out.InstanceState
-		*out = new(linodego.InstanceStatus)
+		*out = new(v2.InstanceStatus)
 		**out = **in
 	}
 	if in.FailureReason != nil {
@@ -1689,7 +1689,7 @@ func (in *LinodeVPCSpec) DeepCopyInto(out *LinodeVPCSpec) {
 	}
 	if in.IPv6 != nil {
 		in, out := &in.IPv6, &out.IPv6
-		*out = make([]linodego.VPCIPv6Range, len(*in))
+		*out = make([]v2.VPCIPv6Range, len(*in))
 		copy(*out, *in)
 	}
 	if in.IPv6Range != nil {
@@ -2195,7 +2195,7 @@ func (in *VPCSubnetCreateOptions) DeepCopyInto(out *VPCSubnetCreateOptions) {
 	*out = *in
 	if in.IPv6 != nil {
 		in, out := &in.IPv6, &out.IPv6
-		*out = make([]linodego.VPCIPv6Range, len(*in))
+		*out = make([]v2.VPCIPv6Range, len(*in))
 		copy(*out, *in)
 	}
 	if in.IPv6Range != nil {

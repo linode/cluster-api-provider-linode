@@ -23,7 +23,7 @@ import (
 	"regexp"
 	"slices"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -59,8 +59,11 @@ type LinodePlacementGroupCustomValidator struct {
 func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context, pg *infrav1alpha2.LinodePlacementGroup) (admission.Warnings, error) {
 	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon creation", "name", pg.GetName())
 
-	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, v.Client, pg.Spec.CredentialsRef,
+	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, v.Client, pg.Spec.CredentialsRef,
 		pg.Name, pg.GetNamespace(), linodeplacementgrouplog)
+	if err != nil {
+		return admission.Warnings{}, err
+	}
 
 	var errs field.ErrorList
 	if err := validateLabelLength(pg.GetName(), field.NewPath("metadata").Child("name")); err != nil {

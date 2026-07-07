@@ -22,7 +22,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -51,7 +51,7 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 			},
 		}
 		region                      = linodego.Region{ID: "test"}
-		capabilities                = []string{linodego.CapabilityPlacementGroup}
+		capabilities                = []string{string(linodego.CapabilityPlacementGroup)}
 		capabilities_zero           = []string{}
 		invalidRegionError          = "spec.region: Not found: \"example\""
 		invalidRegionNoPGCapability = "spec.region: Invalid value: \"example\": no capability: Placement Group"

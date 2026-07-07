@@ -52,8 +52,11 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 	spec := cluster.Spec
 	linodeclusterlog.Info("validate create", "name", cluster.Name)
 
-	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
 		cluster.Name, cluster.GetNamespace(), linodeclusterlog)
+	if err != nil {
+		return admission.Warnings{}, err
+	}
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList

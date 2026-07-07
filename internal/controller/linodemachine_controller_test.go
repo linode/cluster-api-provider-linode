@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -217,7 +217,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+				Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
@@ -227,7 +227,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(getImage).
 				Return(&linodego.Instance{
 					ID:     123,
-					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 					IPv6:   "fd00::",
 					Status: linodego.InstanceOffline,
 				}, nil)
@@ -246,7 +246,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
-				BootInstance(ctx, 123, 0).
+				BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 				After(createInst).
 				Return(nil)
 			mockLinodeClient.EXPECT().
@@ -254,8 +254,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(bootInst).
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -376,7 +376,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+				Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
@@ -386,7 +386,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(getImage).
 				Return(&linodego.Instance{
 					ID:     123,
-					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 					IPv6:   "fd00::",
 					Status: linodego.InstanceOffline,
 				}, nil)
@@ -405,7 +405,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(listInstConfs).
 				Return(nil, nil)
 			bootInst := mockLinodeClient.EXPECT().
-				BootInstance(ctx, 123, 0).
+				BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 				After(createInst).
 				Return(nil)
 			mockLinodeClient.EXPECT().
@@ -413,8 +413,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(bootInst).
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -454,7 +454,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
-			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+			Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 		getImage := mockLinodeClient.EXPECT().
 			GetImage(ctx, gomock.Any()).
 			After(getRegion).
@@ -464,7 +464,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(getImage).
 			Return(&linodego.Instance{
 				ID:     123,
-				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+				IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 				IPv6:   "fd00::",
 				Status: linodego.InstanceOffline,
 			}, nil)
@@ -483,7 +483,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, 0).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(createInst).
 			Return(nil)
 		mockLinodeClient.EXPECT().
@@ -491,8 +491,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(bootInst).
 			Return(&linodego.InstanceIPAddressResponse{
 				IPv4: &linodego.InstanceIPv4Response{
-					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-					Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+					Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 				},
 				IPv6: &linodego.InstanceIPv6Response{
 					SLAAC: &linodego.InstanceIP{
@@ -547,7 +547,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
-			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+			Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 		getImage := mockLinodeClient.EXPECT().
 			GetImage(ctx, gomock.Any()).
 			After(getRegion).
@@ -561,7 +561,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(createInst).
 			Return([]linodego.Instance{{
 				ID:     123,
-				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+				IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 				IPv6:   "fd00::",
 				Status: linodego.InstanceOffline,
 			}}, nil)
@@ -580,7 +580,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, 0).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(listInst).
 			Return(nil)
 		mockLinodeClient.EXPECT().
@@ -588,8 +588,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			After(bootInst).
 			Return(&linodego.InstanceIPAddressResponse{
 				IPv4: &linodego.InstanceIPv4Response{
-					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-					Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+					Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 				},
 				IPv6: &linodego.InstanceIPv6Response{
 					SLAAC: &linodego.InstanceIP{
@@ -645,7 +645,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+				Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
@@ -828,7 +828,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			getRegion := mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+				Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 			getImage := mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
 				After(getRegion).
@@ -842,7 +842,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(getInstType).
 				Return(&linodego.Instance{
 					ID:     123,
-					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 					IPv6:   "fd00::",
 					Status: linodego.InstanceOffline,
 				}, nil)
@@ -938,7 +938,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					}}).
 				After(listInstConfsForProfile)
 			bootInst := mockLinodeClient.EXPECT().
-				BootInstance(ctx, 123, 0).
+				BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 				After(createInstanceProfile).
 				Return(nil)
 			getAddrs := mockLinodeClient.EXPECT().
@@ -946,8 +946,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(bootInst).
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -968,8 +968,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(createNB).
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -1028,7 +1028,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			mockLinodeClient.EXPECT().
 				GetRegion(ctx, gomock.Any()).
-				Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+				Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 			mockLinodeClient.EXPECT().
 				GetImage(ctx, gomock.Any()).
 				Return(&linodego.Image{Capabilities: []string{"cloud-init"}}, nil)
@@ -1039,7 +1039,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				CreateInstance(ctx, gomock.Any()).
 				Return(&linodego.Instance{
 					ID:     123,
-					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 					IPv6:   "fd00::",
 					Status: linodego.InstanceOffline,
 				}, nil)
@@ -1105,7 +1105,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(createFailedEtcdDisk).
 				Return(&linodego.Instance{
 					ID:     123,
-					IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+					IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 					IPv6:   "fd00::",
 					Status: linodego.InstanceOffline,
 				}, nil).MaxTimes(2)
@@ -1134,7 +1134,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					}}).
 				After(listInstConfsForProfile)
 			bootInst := mockLinodeClient.EXPECT().
-				BootInstance(ctx, 123, 0).
+				BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 				After(createInstanceProfile).
 				Return(nil)
 			getAddrs := mockLinodeClient.EXPECT().
@@ -1142,9 +1142,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(bootInst).
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-						VPC:     []*linodego.VPCIP{{Address: ptr.To("10.0.0.2")}},
+						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
+						VPC:     []linodego.VPCIP{{Address: ptr.To("10.0.0.2")}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -1165,9 +1165,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(createNB).
 				Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-						VPC:     []*linodego.VPCIP{{Address: ptr.To("10.0.0.2")}},
+						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
+						VPC:     []linodego.VPCIP{{Address: ptr.To("10.0.0.2")}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -1416,7 +1416,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			After(getImage).
 			Return(&linodego.Instance{
 				ID:     123,
-				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+				IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 				IPv6:   "fd00::",
 				Status: linodego.InstanceOffline,
 			}, nil)
@@ -1435,7 +1435,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, 0).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(createInst).
 			Return(nil)
 		mockLinodeClient.EXPECT().
@@ -1443,8 +1443,8 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			After(bootInst).
 			Return(&linodego.InstanceIPAddressResponse{
 				IPv4: &linodego.InstanceIPv4Response{
-					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-					Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+					Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+					Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 				},
 				IPv6: &linodego.InstanceIPv6Response{
 					SLAAC: &linodego.InstanceIP{
@@ -1689,7 +1689,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							CreateInstance(ctx, gomock.Any()).
 							Return(&linodego.Instance{
 								ID:     123,
-								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+								IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 								IPv6:   "fd00::",
 								Tags:   []string{"test-cluster-2"},
 								Status: linodego.InstanceOffline,
@@ -1720,8 +1720,8 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							GetInstanceIPAddresses(ctx, 123).
 							Return(&linodego.InstanceIPAddressResponse{
 								IPv4: &linodego.InstanceIPv4Response{
-									Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-									Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+									Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+									Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 								},
 								IPv6: &linodego.InstanceIPv6Response{
 									SLAAC: &linodego.InstanceIP{
@@ -1764,7 +1764,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							After(getImage).
 							Return(&linodego.Instance{
 								ID:     123,
-								IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+								IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 								IPv6:   "fd00::",
 								Status: linodego.InstanceOffline,
 							}, nil)
@@ -1772,7 +1772,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							OnAfterResponse(gomock.Any()).
 							Return()
 						bootInst := mck.LinodeClient.EXPECT().
-							BootInstance(ctx, 123, 0).
+							BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 							After(createInst).
 							Return(nil)
 						getAddrs := mck.LinodeClient.EXPECT().
@@ -1780,8 +1780,8 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 							After(bootInst).
 							Return(&linodego.InstanceIPAddressResponse{
 								IPv4: &linodego.InstanceIPv4Response{
-									Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-									Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+									Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+									Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
 								},
 								IPv6: &linodego.InstanceIPv6Response{
 									SLAAC: &linodego.InstanceIP{
@@ -1956,7 +1956,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 						&linodego.Instance{
 							ID:      11111,
-							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceProvisioning,
@@ -1977,7 +1977,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 						&linodego.Instance{
 							ID:      11111,
-							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceRunning,
@@ -1986,7 +1986,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					res, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceRunning))
-					Expect(linodeMachine.GetCondition(string(clusterv1.ReadyCondition)).Status).To(Equal(metav1.ConditionTrue))
+					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition).Status).To(Equal(metav1.ConditionTrue))
 				})),
 		),
 		Path(
@@ -1994,7 +1994,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
@@ -2003,7 +2003,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
@@ -2026,7 +2026,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
@@ -2035,7 +2035,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
@@ -2060,7 +2060,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
@@ -2069,7 +2069,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
@@ -2095,7 +2095,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
@@ -2104,7 +2104,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
@@ -2130,7 +2130,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
@@ -2139,7 +2139,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
@@ -2181,7 +2181,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
@@ -2190,7 +2190,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
 						ID:      11111,
-						IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
@@ -2218,7 +2218,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 						&linodego.Instance{
 							ID:      11111,
-							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceRunning,
@@ -2227,7 +2227,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 						&linodego.Instance{
 							ID:      11111,
-							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2", "test-tag"},
 							Status:  linodego.InstanceRunning,
@@ -2250,7 +2250,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 						&linodego.Instance{
 							ID:      11111,
-							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceRunning,
@@ -2259,7 +2259,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 						&linodego.Instance{
 							ID:      11111,
-							IPv4:    []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+							IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2", "test-tag"},
 							Status:  linodego.InstanceRunning,
@@ -2736,7 +2736,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Purpose:  linodego.InterfacePurposeVPC,
 				Primary:  true,
 				SubnetID: ptr.To(1),
-				IPv4:     &linodego.VPCIPv4{NAT1To1: ptr.To("any")},
+				IPv4:     &linodego.VPCIPv4CreateOptions{NAT1To1: ptr.To("any")},
 			},
 			{
 				Primary: true,
@@ -2810,7 +2810,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Purpose:  linodego.InterfacePurposeVPC,
 				Primary:  false,
 				SubnetID: ptr.To(1),
-				IPv4: &linodego.VPCIPv4{
+				IPv4: &linodego.VPCIPv4CreateOptions{
 					NAT1To1: ptr.To("any"),
 				},
 			},
@@ -2886,7 +2886,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Purpose:  linodego.InterfacePurposeVPC,
 				Primary:  true,
 				SubnetID: ptr.To(27),
-				IPv4:     &linodego.VPCIPv4{NAT1To1: ptr.To("any")},
+				IPv4:     &linodego.VPCIPv4CreateOptions{NAT1To1: ptr.To("any")},
 			},
 			{
 				Primary: true,
@@ -3066,7 +3066,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				VPC: &linodego.VPCInterfaceCreateOptions{
 					SubnetID: 1,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
+						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
 							Address:        ptr.To("auto"),
@@ -3133,7 +3133,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				VPC: &linodego.VPCInterfaceCreateOptions{
 					SubnetID: 1,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
+						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
 							Address:        ptr.To("auto"),
@@ -3206,7 +3206,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				VPC: &linodego.VPCInterfaceCreateOptions{
 					SubnetID: 27,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
+						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 							NAT1To1Address: ptr.To("auto"),
 							Primary:        ptr.To(true),
 							Address:        ptr.To("auto"),
@@ -3317,7 +3317,7 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
-			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+			Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 		getImage := mockLinodeClient.EXPECT().
 			GetImage(ctx, gomock.Any()).
 			After(getRegion).
@@ -3327,7 +3327,7 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 			After(getImage).
 			Return(&linodego.Instance{
 				ID:     123,
-				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+				IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 				IPv6:   "fd00::",
 				Status: linodego.InstanceOffline,
 			}, nil)
@@ -3346,7 +3346,7 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, 0).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(createInst).
 			Return(nil)
 		getAddrs := mockLinodeClient.EXPECT().
@@ -3354,9 +3354,9 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 			After(bootInst).
 			Return(&linodego.InstanceIPAddressResponse{
 				IPv4: &linodego.InstanceIPv4Response{
-					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-					Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-					VPC:     []*linodego.VPCIP{},
+					Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+					Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
+					VPC:     []linodego.VPCIP{},
 				},
 				IPv6: &linodego.InstanceIPv6Response{
 					SLAAC: &linodego.InstanceIP{
@@ -3499,7 +3499,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 		getRegion := mockLinodeClient.EXPECT().
 			GetRegion(ctx, gomock.Any()).
-			Return(&linodego.Region{Capabilities: []string{linodego.CapabilityMetadata, linodego.CapabilityDiskEncryption}}, nil)
+			Return(&linodego.Region{Capabilities: []string{string(linodego.CapabilityMetadata), string(linodego.CapabilityDiskEncryption)}}, nil)
 		getImage := mockLinodeClient.EXPECT().
 			GetImage(ctx, gomock.Any()).
 			After(getRegion).
@@ -3509,7 +3509,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 			After(getImage).
 			Return(&linodego.Instance{
 				ID:     123,
-				IPv4:   []*net.IP{ptr.To(net.IPv4(192, 168, 0, 2))},
+				IPv4:   []net.IP{net.IPv4(192, 168, 0, 2)},
 				IPv6:   "fd00::",
 				Status: linodego.InstanceOffline,
 			}, nil)
@@ -3528,7 +3528,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 			After(listInstConfs).
 			Return(nil, nil)
 		bootInst := mockLinodeClient.EXPECT().
-			BootInstance(ctx, 123, 0).
+			BootInstance(ctx, 123, linodego.InstanceBootOptions{}).
 			After(createInst).
 			Return(nil)
 		getAddrs := mockLinodeClient.EXPECT().
@@ -3536,9 +3536,9 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 			After(bootInst).
 			Return(&linodego.InstanceIPAddressResponse{
 				IPv4: &linodego.InstanceIPv4Response{
-					Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-					Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-					VPC:     []*linodego.VPCIP{},
+					Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+					Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
+					VPC:     []linodego.VPCIP{},
 				},
 				IPv6: &linodego.InstanceIPv6Response{
 					SLAAC: &linodego.InstanceIP{
@@ -3668,7 +3668,7 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 					Label:  opts.Label,
 					Region: opts.Region,
 					Status: linodego.InstanceRunning,
-					IPv4:   []*net.IP{ptr.To(net.ParseIP("192.168.1.2"))},
+					IPv4:   []net.IP{net.ParseIP("192.168.1.2")},
 					IPv6:   "2001:db8::2",
 				}, nil
 			}).
@@ -3695,8 +3695,8 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 			GetInstanceIPAddresses(gomock.Any(), gomock.Any()).
 			Return(&linodego.InstanceIPAddressResponse{
 				IPv4: &linodego.InstanceIPv4Response{
-					Public:  []*linodego.InstanceIP{{Address: "192.168.1.2"}},
-					Private: []*linodego.InstanceIP{},
+					Public:  []linodego.InstanceIP{{Address: "192.168.1.2"}},
+					Private: []linodego.InstanceIP{},
 				},
 				IPv6: &linodego.InstanceIPv6Response{
 					SLAAC: &linodego.InstanceIP{Address: "2001:db8::2"},
@@ -3861,7 +3861,7 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 					Label:  opts.Label,
 					Region: opts.Region,
 					Status: linodego.InstanceRunning,
-					IPv4:   []*net.IP{ptr.To(net.ParseIP("192.168.1.2"))},
+					IPv4:   []net.IP{net.ParseIP("192.168.1.2")},
 					IPv6:   "2001:db8::2",
 				}, nil
 			}).
@@ -3888,8 +3888,8 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 			GetInstanceIPAddresses(gomock.Any(), gomock.Any()).
 			Return(&linodego.InstanceIPAddressResponse{
 				IPv4: &linodego.InstanceIPv4Response{
-					Public:  []*linodego.InstanceIP{{Address: "192.168.1.2"}},
-					Private: []*linodego.InstanceIP{},
+					Public:  []linodego.InstanceIP{{Address: "192.168.1.2"}},
+					Private: []linodego.InstanceIP{},
 				},
 				IPv6: &linodego.InstanceIPv6Response{
 					SLAAC: &linodego.InstanceIP{Address: "2001:db8::2"},

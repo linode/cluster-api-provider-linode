@@ -11,7 +11,7 @@ import (
 
 	_sourceClients "github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -62,14 +62,14 @@ func (_d LinodeClientWithTracing) AssignPlacementGroupLinodes(ctx context.Contex
 }
 
 // BootInstance implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int, configID int) (err error) {
+func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int, copts linodego.InstanceBootOptions) (err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.BootInstance")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
 				"ctx":      ctx,
 				"linodeID": linodeID,
-				"configID": configID}, map[string]interface{}{
+				"copts":    copts}, map[string]interface{}{
 				"err": err})
 		}
 
@@ -83,7 +83,7 @@ func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int
 
 		_span.End()
 	}()
-	return _d.LinodeClient.BootInstance(ctx, linodeID, configID)
+	return _d.LinodeClient.BootInstance(ctx, linodeID, copts)
 }
 
 // CreateDomainRecord implements _sourceClients.LinodeClient
@@ -714,7 +714,7 @@ func (_d LinodeClientWithTracing) GetFirewallDevice(ctx context.Context, firewal
 }
 
 // GetFirewallRules implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) GetFirewallRules(ctx context.Context, firewallID int) (fp1 *linodego.FirewallRuleSet, err error) {
+func (_d LinodeClientWithTracing) GetFirewallRules(ctx context.Context, firewallID int) (fp1 *linodego.FirewallRules, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetFirewallRules")
 	defer func() {
 		if _d._spanDecorator != nil {
@@ -1429,7 +1429,7 @@ func (_d LinodeClientWithTracing) UpdateFirewall(ctx context.Context, firewallID
 }
 
 // UpdateFirewallRules implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRuleSet) (fp1 *linodego.FirewallRuleSet, err error) {
+func (_d LinodeClientWithTracing) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRulesUpdateOptions) (fp1 *linodego.FirewallRules, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateFirewallRules")
 	defer func() {
 		if _d._spanDecorator != nil {

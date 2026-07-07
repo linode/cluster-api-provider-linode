@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/go-logr/logr/testr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -655,17 +655,17 @@ func validateInterfaceExpectations(
 		require.NotNil(t, linodeIface)
 		require.NotNil(t, linodeIface.VPC)
 		if linodeIface.VPC.IPv6 != nil && linodeIface.VPC.IPv6.SLAAC != nil {
-			slaac := *linodeIface.VPC.IPv6.SLAAC
+			slaac := linodeIface.VPC.IPv6.SLAAC
 			require.Equal(t, defaultNodeIPv6CIDRRange, slaac[0].Range)
 		} else if linodeIface.VPC.IPv6 != nil && linodeIface.VPC.IPv6.Ranges != nil {
-			ranges := *linodeIface.VPC.IPv6.Ranges
+			ranges := linodeIface.VPC.IPv6.Ranges
 			require.Equal(t, defaultNodeIPv6CIDRRange, ranges[0].Range)
 		}
 		require.NotNil(t, linodeIface.VPC.SubnetID)
 		require.Equal(t, expectSubnetID, linodeIface.VPC.SubnetID)
 		require.NotNil(t, linodeIface.VPC.IPv4)
 		require.NotNil(t, linodeIface.VPC.IPv4.Addresses)
-		addresses := *linodeIface.VPC.IPv4.Addresses
+		addresses := linodeIface.VPC.IPv4.Addresses
 		require.NotNil(t, addresses[0].NAT1To1Address)
 		require.Equal(t, "auto", *addresses[0].NAT1To1Address)
 	} else {
@@ -2318,7 +2318,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2345,8 +2345,8 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
+						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2374,8 +2374,8 @@ func TestBuildInstanceAddrs(t *testing.T) {
 				vpcAddress := "10.0.0.5"
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-						VPC:    []*linodego.VPCIP{{Address: &vpcAddress}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
+						VPC:    []linodego.VPCIP{{Address: &vpcAddress}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2402,7 +2402,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 				isPublic := true
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2436,7 +2436,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 				isPublic := false
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2481,7 +2481,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{},
+						Public: []linodego.InstanceIP{},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2504,7 +2504,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: nil,
 				}, nil)
@@ -2525,7 +2525,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: nil,
@@ -2564,7 +2564,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2599,7 +2599,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2641,7 +2641,7 @@ func TestBuildInstanceAddrs(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient) {
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{Address: "fd00::"},
@@ -2673,9 +2673,9 @@ func TestBuildInstanceAddrs(t *testing.T) {
 				vpcAddr2 := "10.0.0.6"
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public:  []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-						Private: []*linodego.InstanceIP{{Address: "192.168.0.2"}},
-						VPC: []*linodego.VPCIP{
+						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
+						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
+						VPC: []linodego.VPCIP{
 							{Address: &vpcAddr1},
 							{Address: &vpcAddr2},
 						},
@@ -2707,8 +2707,8 @@ func TestBuildInstanceAddrs(t *testing.T) {
 				emptyAddr := ""
 				mockClient.EXPECT().GetInstanceIPAddresses(gomock.Any(), 123).Return(&linodego.InstanceIPAddressResponse{
 					IPv4: &linodego.InstanceIPv4Response{
-						Public: []*linodego.InstanceIP{{Address: "172.0.0.2"}},
-						VPC: []*linodego.VPCIP{
+						Public: []linodego.InstanceIP{{Address: "172.0.0.2"}},
+						VPC: []linodego.VPCIP{
 							{Address: &vpcAddr1},
 							{Address: &emptyAddr},
 							{Address: nil},

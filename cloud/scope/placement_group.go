@@ -101,10 +101,7 @@ func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig
 	if err := validatePlacementGroupScope(params); err != nil {
 		return nil, err
 	}
-	linodeClient, err := CreateLinodeClient(
-		linodeClientConfig,
-		WithRetryCount(0),
-	)
+	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}

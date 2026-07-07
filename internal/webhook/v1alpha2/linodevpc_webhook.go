@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"go4.org/netipx"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -85,8 +85,11 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, vpc *infrav1alp
 	spec := vpc.Spec
 	linodevpclog.Info("validate create", "name", vpc.Name)
 
-	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
 		vpc.Name, vpc.GetNamespace(), linodevpclog)
+	if err != nil {
+		return admission.Warnings{}, err
+	}
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
