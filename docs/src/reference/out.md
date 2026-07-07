@@ -1382,8 +1382,6 @@ _Appears in:_
 | `ipam_address` _string_ | ipam_address is the IP address to assign to the interface. |  | Optional: \{\} <br /> |
 
 
-
-
 #### VPCCreateOptionsIPv6
 
 

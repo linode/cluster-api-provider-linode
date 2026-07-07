@@ -112,16 +112,6 @@ type VPCCreateOptionsIPv6 struct {
 	AllocationClassLegacy *string `json:"allocation_class,omitempty"`
 }
 
-// VPCCreateOptionsIPv4 defines the options for creating an IPv4 range in a VPC.
-// It's copied from linodego.VPCCreateOptionsIPv4 and should be kept in sync.
-// Values supported by the linode API should be used here.
-// See https://techdocs.akamai.com/linode-api/reference/post-vpc for more details.
-type VPCCreateOptionsIPv4 struct {
-	// range is the IPv4 prefix for the VPC.
-	// +optional
-	Range *string `json:"range,omitzero"`
-}
-
 // VPCSubnetCreateOptions defines subnet options
 type VPCSubnetCreateOptions struct {
 	// label is the label of the subnet.
