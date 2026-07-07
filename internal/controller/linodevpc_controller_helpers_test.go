@@ -93,6 +93,53 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "ipv6 ranges with AllocationClassLegacy only",
+			args: args{
+				vpcSpec: infrav1alpha2.LinodeVPCSpec{
+					Description: "description",
+					Region:      "region",
+					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
+						{
+							Range:                 ptr.To("2001:db8::/52"),
+							AllocationClassLegacy: ptr.To("myclass_legacy"),
+						},
+					},
+					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
+						{
+							Label: "subnet",
+							IPv4:  "ipv4",
+							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
+								{
+									Range: ptr.To("2001:db8:1::/56"),
+								},
+							},
+						},
+					},
+				},
+			},
+			want: &linodego.VPCCreateOptions{
+				Description: "description",
+				Region:      "region",
+				Subnets: []linodego.VPCSubnetCreateOptions{
+					{
+						Label: "subnet",
+						IPv4:  "ipv4",
+						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
+							{
+								Range: ptr.To("2001:db8:1::/56"),
+							},
+						},
+					},
+				},
+				IPv6: []linodego.VPCCreateOptionsIPv6{
+					{
+						Range:           ptr.To("2001:db8::/52"),
+						AllocationClass: ptr.To("myclass_legacy"),
+					},
+				},
+			},
+		},
+		{
 			name: "ipv6 ranges with allocation_class",
 			args: args{
 				vpcSpec: infrav1alpha2.LinodeVPCSpec{
@@ -147,8 +194,9 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Region:      "region",
 					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
 						{
-							Range:           ptr.To("2001:db8::/52"),
-							AllocationClass: ptr.To("myclass"),
+							Range:                 ptr.To("2001:db8::/52"),
+							AllocationClass:       ptr.To("myclass"),
+							AllocationClassLegacy: ptr.To("myclass_legacy"),
 						},
 					},
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
