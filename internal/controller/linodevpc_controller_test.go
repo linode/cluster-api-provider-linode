@@ -157,10 +157,14 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 							},
 						},
 					}, nil)
+					mck.LinodeClient.EXPECT().UpdateVPC(ctx, 1, linodego.VPCUpdateOptions{
+						IPv4: []linodego.VPCUpdateOptionsIPv4{{Range: ptr.To("10.118.0.0/20")}},
+					})
 				}),
 				Result("update success", func(ctx context.Context, mck Mock) {
 					err = vpcScope.Client.Get(ctx, client.ObjectKeyFromObject(vpcScope.LinodeVPC), vpcScope.LinodeVPC)
 					Expect(err).NotTo(HaveOccurred())
+					vpcScope.LinodeVPC.Spec.IPv4Range = []string{"10.118.0.0/20"}
 
 					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
 					Expect(err).NotTo(HaveOccurred())

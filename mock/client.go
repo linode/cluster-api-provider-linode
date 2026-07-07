@@ -977,6 +977,21 @@ func (mr *MockLinodeClientMockRecorder) UpdatePlacementGroup(ctx, id, options an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePlacementGroup", reflect.TypeOf((*MockLinodeClient)(nil).UpdatePlacementGroup), ctx, id, options)
 }
 
+// UpdateVPC mocks base method.
+func (m *MockLinodeClient) UpdateVPC(ctx context.Context, vpcID int, opts linodego.VPCUpdateOptions) (*linodego.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVPC", ctx, vpcID, opts)
+	ret0, _ := ret[0].(*linodego.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateVPC indicates an expected call of UpdateVPC.
+func (mr *MockLinodeClientMockRecorder) UpdateVPC(ctx, vpcID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVPC", reflect.TypeOf((*MockLinodeClient)(nil).UpdateVPC), ctx, vpcID, opts)
+}
+
 // MockAkamClient is a mock of AkamClient interface.
 type MockAkamClient struct {
 	ctrl     *gomock.Controller
@@ -1496,6 +1511,21 @@ func (m *MockLinodeVPCClient) ListVPCs(ctx context.Context, opts *linodego.ListO
 func (mr *MockLinodeVPCClientMockRecorder) ListVPCs(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockLinodeVPCClient)(nil).ListVPCs), ctx, opts)
+}
+
+// UpdateVPC mocks base method.
+func (m *MockLinodeVPCClient) UpdateVPC(ctx context.Context, vpcID int, opts linodego.VPCUpdateOptions) (*linodego.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVPC", ctx, vpcID, opts)
+	ret0, _ := ret[0].(*linodego.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateVPC indicates an expected call of UpdateVPC.
+func (mr *MockLinodeVPCClientMockRecorder) UpdateVPC(ctx, vpcID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).UpdateVPC), ctx, vpcID, opts)
 }
 
 // MockLinodeNodeBalancerClient is a mock of LinodeNodeBalancerClient interface.

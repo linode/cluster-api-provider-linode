@@ -63,6 +63,7 @@ type LinodeVPCClient interface {
 	GetVPC(ctx context.Context, vpcID int) (*linodego.VPC, error)
 	ListVPCs(ctx context.Context, opts *linodego.ListOptions) ([]linodego.VPC, error)
 	CreateVPC(ctx context.Context, opts linodego.VPCCreateOptions) (*linodego.VPC, error)
+	UpdateVPC(ctx context.Context, vpcID int, opts linodego.VPCUpdateOptions) (*linodego.VPC, error)
 	DeleteVPC(ctx context.Context, vpcID int) error
 	CreateVPCSubnet(ctx context.Context, opts linodego.VPCSubnetCreateOptions, vpcID int) (*linodego.VPCSubnet, error)
 	DeleteVPCSubnet(ctx context.Context, vpcID, subnetID int) error
