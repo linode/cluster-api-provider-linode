@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego/v2"
+	"k8s.io/utils/ptr"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -81,6 +82,20 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *linodego.VPC) error {
 	setVPCFields(&vpcScope.LinodeVPC.Spec, vpc)
 
+	// if there's an ipv4 range specified in the VPC spec, we need to call VPCUpdate
+	if len(vpcScope.LinodeVPC.Spec.IPv4Range) > 0 {
+		ipv4Ranges := make([]linodego.VPCUpdateOptionsIPv4, len(vpcScope.LinodeVPC.Spec.IPv4Range))
+		for idx, ipv4Range := range vpcScope.LinodeVPC.Spec.IPv4Range {
+			ipv4Ranges[idx] = linodego.VPCUpdateOptionsIPv4{
+				Range: ptr.To(ipv4Range),
+			}
+		}
+		_, err := vpcScope.LinodeClient.UpdateVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID, linodego.VPCUpdateOptions{IPv4: ipv4Ranges})
+		if err != nil {
+			return err
+		}
+	}
+
 	// Build a map of VPC subnets by both label and ID. We check for
 	// the subnet ID but fallback to the label because the ID is not guaranteed
 	// to be set until we've processed the subnet at least once.
@@ -88,11 +103,12 @@ func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *li
 		ID    int
 		Label string
 		IPv6  []linodego.VPCIPv6Range
+		IPv4  string
 	}
 	subnetsByLabel := make(map[string]SubnetConfig, len(vpc.Subnets))
 	subnetsById := make(map[int]SubnetConfig, len(vpc.Subnets))
 	for _, subnet := range vpc.Subnets {
-		config := SubnetConfig{subnet.ID, subnet.Label, subnet.IPv6}
+		config := SubnetConfig{subnet.ID, subnet.Label, subnet.IPv6, subnet.IPv4}
 		subnetsByLabel[subnet.Label], subnetsById[subnet.ID] = config, config
 	}
 
@@ -102,12 +118,14 @@ func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *li
 			if config, ok := subnetsById[subnet.SubnetID]; ok {
 				vpcScope.LinodeVPC.Spec.Subnets[idx].Label = config.Label
 				vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6 = config.IPv6
+				vpcScope.LinodeVPC.Spec.Subnets[idx].IPv4 = config.IPv4
 			}
 		} else if config, ok := subnetsByLabel[subnet.Label]; ok {
 			// Handle subnets that exist in the Linode API but have not had their
 			// ID set on the LinodeVPC yet.
 			vpcScope.LinodeVPC.Spec.Subnets[idx].SubnetID = config.ID
 			vpcScope.LinodeVPC.Spec.Subnets[idx].IPv6 = config.IPv6
+			vpcScope.LinodeVPC.Spec.Subnets[idx].IPv4 = config.IPv4
 		} else {
 			// Handle subnets that we need to create in the Linode API.
 			ipv6 := make([]linodego.VPCSubnetCreateOptionsIPv6, len(subnet.IPv6Range))
@@ -145,13 +163,17 @@ func updateVPCSpecSubnets(vpcScope *scope.VPCScope, vpc *linodego.VPC) {
 	}
 }
 
-// setVPCFields sets the VPCID and IPv6 in the LinodeVPCSpec from the Linode VPC.
+// setVPCFields sets the VPCID, IPv6, and IPv4 in the LinodeVPCSpec from the Linode VPC.
 func setVPCFields(vpc *infrav1alpha2.LinodeVPCSpec, linodeVPC *linodego.VPC) {
 	vpc.VPCID = &linodeVPC.ID
-	// Clear existing IPv6 ranges and set new ones
+	// Clear existing ranges and set new ones
 	vpc.IPv6 = nil
+	vpc.IPv4 = nil
 	for _, ipv6 := range linodeVPC.IPv6 {
 		vpc.IPv6 = append(vpc.IPv6, linodego.VPCIPv6Range{Range: ipv6.Range})
+	}
+	for _, ipv4 := range linodeVPC.IPv4 {
+		vpc.IPv4 = append(vpc.IPv4, linodego.VPCIPv4Range{Range: ipv4.Range})
 	}
 }
 
@@ -195,12 +217,23 @@ func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linode
 		}
 	}
 
-	return &linodego.VPCCreateOptions{
+	createOpts := &linodego.VPCCreateOptions{
 		Description: vpcSpec.Description,
 		Region:      vpcSpec.Region,
 		Subnets:     subnets,
 		IPv6:        vpcIPv6,
 	}
+	if len(vpcSpec.IPv4Range) > 0 {
+		vpcIPv4 := make([]linodego.VPCCreateOptionsIPv4, len(vpcSpec.IPv4Range))
+		for idx, ipv4 := range vpcSpec.IPv4Range {
+			vpcIPv4[idx] = linodego.VPCCreateOptionsIPv4{
+				Range: ptr.To(ipv4),
+			}
+		}
+		createOpts.IPv4 = vpcIPv4
+	}
+
+	return createOpts
 }
 
 // getVPC fetches a VPC and handles not-found errors.

@@ -1584,3 +1584,29 @@ func (_d LinodeClientWithTracing) UpdatePlacementGroup(ctx context.Context, id i
 	}()
 	return _d.LinodeClient.UpdatePlacementGroup(ctx, id, options)
 }
+
+// UpdateVPC implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateVPC(ctx context.Context, vpcID int, opts linodego.VPCUpdateOptions) (vp1 *linodego.VPC, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateVPC")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":   ctx,
+				"vpcID": vpcID,
+				"opts":  opts}, map[string]interface{}{
+				"vp1": vp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateVPC(ctx, vpcID, opts)
+}

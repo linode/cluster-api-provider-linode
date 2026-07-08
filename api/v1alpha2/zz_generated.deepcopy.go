@@ -1692,12 +1692,22 @@ func (in *LinodeVPCSpec) DeepCopyInto(out *LinodeVPCSpec) {
 		*out = make([]v2.VPCIPv6Range, len(*in))
 		copy(*out, *in)
 	}
+	if in.IPv4 != nil {
+		in, out := &in.IPv4, &out.IPv4
+		*out = make([]v2.VPCIPv4Range, len(*in))
+		copy(*out, *in)
+	}
 	if in.IPv6Range != nil {
 		in, out := &in.IPv6Range, &out.IPv6Range
 		*out = make([]VPCCreateOptionsIPv6, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
+	}
+	if in.IPv4Range != nil {
+		in, out := &in.IPv4Range, &out.IPv4Range
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	if in.Subnets != nil {
 		in, out := &in.Subnets, &out.Subnets

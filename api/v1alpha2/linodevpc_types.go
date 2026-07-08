@@ -52,12 +52,27 @@ type LinodeVPCSpec struct {
 	// +listMapKey=range
 	IPv6 []linodego.VPCIPv6Range `json:"ipv6,omitzero"`
 
+	// ipv4 is a list of IPv4 ranges allocated to the VPC.
+	// Once ranges are allocated based on the IPv4Range field, they will be
+	// added to this field.
+	// +optional
+	// +listType=map
+	// +listMapKey=range
+	IPv4 []linodego.VPCIPv4Range `json:"ipv4,omitzero"`
+
 	// ipv6Range is a list of IPv6 ranges to allocate to the VPC.
 	// If not specified, the VPC will not have an IPv6 range allocated.
 	// Once ranges are allocated, they will be added to the IPv6 field.
 	// +optional
 	// +listType=atomic
 	IPv6Range []VPCCreateOptionsIPv6 `json:"ipv6Range,omitzero"`
+
+	// ipv4Range is a list of IPv4 ranges to allocate to the VPC.
+	// If not specified, the VPC will not have an IPv4 range allocated.
+	// Once ranges are allocated, they will be added to the IPv4 field.
+	// +optional
+	// +listType=atomic
+	IPv4Range []string `json:"ipv4Range,omitzero"`
 
 	// subnets is a list of subnets to create in the VPC.
 	// +optional
