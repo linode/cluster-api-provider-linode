@@ -234,23 +234,30 @@ func (r *LinodeClusterReconciler) performPreflightChecks(ctx context.Context, lo
 		}
 	}
 
-	// Check firewall configuration - either direct ID or reference
-	if !reconciler.ConditionTrue(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady)) {
-		if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
-			if res, err := r.reconcilePreflightFirewallID(ctx, logger, clusterScope); err != nil || !res.IsZero() {
-				return res, err
-			}
-		} else if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
-			if res, err := r.reconcilePreflightFirewallRef(ctx, logger, clusterScope); err != nil || !res.IsZero() {
-				return res, err
-			}
-		}
+	if res, err := r.reconcilePreflightFirewallCheck(ctx, logger, clusterScope); err != nil || !res.IsZero() {
+		return res, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *LinodeClusterReconciler) reconcilePreflightFirewallID(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
+func (r *LinodeClusterReconciler) reconcilePreflightFirewallCheck(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
+	if reconciler.ConditionTrue(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady)) {
+		return ctrl.Result{}, nil
+	}
+
+	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
+		return r.reconcilePreflightFirewallID(ctx, logger, clusterScope), nil
+	}
+
+	if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
+		return r.reconcilePreflightFirewallRef(ctx, logger, clusterScope)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *LinodeClusterReconciler) reconcilePreflightFirewallID(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) ctrl.Result {
 	firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
 	logger.Info("Verifying direct NodeBalancerFirewallID", "firewallID", firewallID)
 	_, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
@@ -262,14 +269,14 @@ func (r *LinodeClusterReconciler) reconcilePreflightFirewallID(ctx context.Conte
 			Reason:  util.CreateError,
 			Message: err.Error(),
 		})
-		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}, nil
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultClusterControllerReconcileDelay)}
 	}
 	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeNBFirewallReady,
 		Status: metav1.ConditionTrue,
 		Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
 	})
-	return ctrl.Result{}, nil
+	return ctrl.Result{}
 }
 
 func (r *LinodeClusterReconciler) reconcilePreflightFirewallRef(ctx context.Context, logger logr.Logger, clusterScope *scope.ClusterScope) (ctrl.Result, error) {

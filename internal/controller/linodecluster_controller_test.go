@@ -199,7 +199,8 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					reconciler.Client = k8sClient
 					res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(res.RequeueAfter).To(Equal(rec.DefaultClusterControllerReconcileDelay))
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
 					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady).Status).To(Equal(metav1.ConditionFalse))
 				}),
 			),
