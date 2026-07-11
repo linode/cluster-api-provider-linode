@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"go4.org/netipx"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,11 +46,6 @@ var (
 	//
 	// [Valid IPv4 Ranges for a Subnet]: https://www.linode.com/docs/products/networking/vpc/guides/subnets/#valid-ipv4-ranges
 	LinodeVPCSubnetReserved = mustParseIPSet("192.168.128.0/17")
-
-	// IPv4 private address space as defined in [RFC 1918].
-	//
-	// [RFC 1918]: https://datatracker.ietf.org/doc/html/rfc1918
-	privateIPv4 = mustParseIPSet("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
 )
 
 // mustParseIPSet parses the given IP CIDRs as a [go4.org/netipx.IPSet]. It is intended for use with hard-coded strings.
@@ -90,8 +85,11 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, vpc *infrav1alp
 	spec := vpc.Spec
 	linodevpclog.Info("validate create", "name", vpc.Name)
 
-	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
 		vpc.Name, vpc.GetNamespace(), linodevpclog)
+	if err != nil {
+		return admission.Warnings{}, err
+	}
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
@@ -259,9 +257,6 @@ func validateSubnetIPv4CIDR(cidr string, path *field.Path) (*netipx.IPSet, *fiel
 	}
 	if netipx.ComparePrefix(prefix, prefix.Masked()) != 0 {
 		return nil, field.Invalid(path, cidr, errs[0].Error()) // #nosec G602: false positive
-	}
-	if !privateIPv4.ContainsPrefix(prefix) {
-		return nil, field.Invalid(path, cidr, errs[1].Error()) // #nosec G602: false positive
 	}
 	size, _ := netipx.PrefixIPNet(prefix).Mask.Size()
 	if size < minPrefix || size > maxPrefix {

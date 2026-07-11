@@ -22,8 +22,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/go-resty/resty/v2"
 )
 
 // PostRequestCounter keeps track of rate limits for POST to /linode/instances
@@ -41,18 +39,21 @@ var (
 )
 
 // ApiResponseRatelimitCounter updates ReqRemaining and RefreshTime when a POST call is made to /linode/instances
-func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *resty.Response) error {
-	if resp.Request.Method != http.MethodPost || !strings.HasSuffix(resp.Request.URL, "/linode/instances") {
+func (c *PostRequestCounter) ApiResponseRatelimitCounter(resp *http.Response) error {
+	if resp == nil || resp.Request == nil || resp.Request.URL == nil {
+		return nil
+	}
+	if resp.Request.Method != http.MethodPost || !strings.HasSuffix(resp.Request.URL.Path, "/linode/instances") {
 		return nil
 	}
 
 	var err error
-	c.ReqRemaining, err = strconv.Atoi(resp.Header().Get("X-Ratelimit-Remaining"))
+	c.ReqRemaining, err = strconv.Atoi(resp.Header.Get("X-Ratelimit-Remaining"))
 	if err != nil {
 		return err
 	}
 
-	epochTime, err := strconv.ParseInt(resp.Header().Get("X-Ratelimit-Reset"), 10, 64)
+	epochTime, err := strconv.ParseInt(resp.Header.Get("X-Ratelimit-Reset"), 10, 64)
 	if err != nil {
 		return err
 	}

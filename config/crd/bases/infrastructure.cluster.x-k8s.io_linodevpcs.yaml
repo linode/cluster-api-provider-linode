@@ -68,6 +68,34 @@ spec:
               description:
                 description: description is the description of the VPC.
                 type: string
+              ipv4:
+                description: |-
+                  ipv4 is a list of IPv4 ranges allocated to the VPC.
+                  Once ranges are allocated based on the IPv4Range field, they will be
+                  added to this field.
+                items:
+                  description: |-
+                    VPCIPv4Range represents a single IPv4 range assigned to a VPC.
+                    NOTE: IPv4 VPCs may not currently be available to all users.
+                  properties:
+                    range:
+                      type: string
+                  required:
+                  - range
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - range
+                x-kubernetes-list-type: map
+              ipv4Range:
+                description: |-
+                  ipv4Range is a list of IPv4 ranges to allocate to the VPC.
+                  If not specified, the VPC will not have an IPv4 range allocated.
+                  Once ranges are allocated, they will be added to the IPv4 field.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
               ipv6:
                 description: |-
                   ipv6 is a list of IPv6 ranges allocated to the VPC.

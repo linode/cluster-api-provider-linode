@@ -20,7 +20,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -91,14 +91,18 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (clients.LinodeClie
 		},
 	}
 
-	newClient := linodego.NewClient(httpClient)
+	newClient, err := linodego.NewClient(httpClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
 	newClient.SetToken(config.Token)
 	if config.RootCertificatePath != "" {
-		newClient.SetRootCertificate(config.RootCertificatePath)
+		if err := newClient.SetRootCertificate(config.RootCertificatePath); err != nil {
+			return nil, fmt.Errorf("failed to set root certificate path: %w", err)
+		}
 	}
 	if config.BaseUrl != "" {
-		_, err := newClient.UseURL(config.BaseUrl)
-		if err != nil {
+		if _, err := newClient.UseURL(config.BaseUrl); err != nil {
 			return nil, fmt.Errorf("failed to set base URL: %w", err)
 		}
 	}

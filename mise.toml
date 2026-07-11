@@ -1,0 +1,117 @@
+[settings]
+minimum_release_age = "7d"  # only install versions released more than 7 days ago - https://mise.en.dev/security.html#minimum-release-age
+
+[tools]
+go = "1.26.5"
+ko = "0.18.1"
+kustomize = "5.8.1"
+ctlptl = "0.9.0"
+clusterctl = "1.12.5"
+kubectl = "1.35.5"
+kubebuilder = "4.13.1"
+"go:sigs.k8s.io/controller-runtime/tools/setup-envtest" = "release-0.22"
+kube-controller-tools = "0.20.1"
+tilt = "0.36.3"
+kind = "0.31.0"
+"go:github.com/kyverno/chainsaw" = "0.2.15"
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.1.4"
+"go:go.uber.org/mock/mockgen" = "0.6.0"
+"aqua:hexdigest/gowrap" = "1.4.3"
+s5cmd = "2.3.0"
+golangci-lint = "2.11.4"
+"aqua:securego/gosec" = "2.22.11"
+mdbook = "0.5.2"
+jq = "1.8.1"
+"go:github.com/elastic/crd-ref-docs" = "0.3.0"
+
+[tasks.fmt]
+description = "Format Go sources"
+run = "make fmt"
+
+[tasks.tidy]
+description = "Tidy Go modules"
+run = "make tidy"
+
+[tasks.vet]
+description = "Run Go vet"
+run = "make vet"
+
+[tasks.gosec]
+description = "Run Go sec"
+run = "make gosec"
+
+[tasks.lint]
+description = "Run lint checks"
+run = "make lint"
+
+[tasks.lint-api]
+description = "Run API lint checks"
+run = "make lint-api"
+
+[tasks.nilcheck]
+description = "Run nilcheck"
+run = "make nilcheck"
+
+[tasks.vulncheck]
+description = "Run vulncheck"
+run = "make vulncheck"
+
+[tasks.docs]
+description = "Serve docs"
+run = "make docs"
+
+[tasks.generate]
+description = "Regenerate manifests, code, mocks, and api docs"
+run = "make generate"
+
+[tasks.generate-flavors]
+description = "Regenerate CAPL flavors"
+run = "make generate-flavors"
+
+[tasks.check-gen-diff]
+description = "Check for diffs when regenerating"
+run = "make check-gen-diff"
+
+[tasks.test]
+description = "Run tests"
+run = "make test"
+
+[tasks.e2etest]
+description = "Run e2e tests"
+run = "make e2etest"
+
+[tasks.test-upgrade]
+description = "Run the CAPL upgrade tests"
+run = "make test-upgrade"
+
+[tasks.clean-child-clusters]
+description = "Clean up the child cluster created by CAPL"
+run = "make clean-child-clusters"
+
+[tasks.clean-kind-cluster]
+description = "Clean up the kind management cluster"
+run = "make clean-kind-cluster"
+
+[tasks.local-deploy]
+description = "Deploy CAPL locally"
+run = "make local-deploy"
+
+[tasks.tilt-cluster]
+description = "Set up a Tilt cluster with CAPL"
+run = "make tilt-cluster"
+
+[tasks.build]
+description = "Build binary"
+run = "make build"
+
+[tasks.ko-build]
+description = "Build ko image"
+run = "make ko-build"
+
+[tasks.ko-publish]
+description = "Publish ko image"
+run = "make ko-publish"
+
+[tasks.local-release]
+description = "Make a local release for testing"
+run = "make local-release"

@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	v1 "k8s.io/api/core/v1"
@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -57,7 +58,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				}, nil)
 				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
 					ACL:         linodego.ACLPrivate,
-					CorsEnabled: true,
+					CorsEnabled: ptr.To(true),
 				}, nil)
 			},
 		},
@@ -141,7 +142,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				}, nil)
 				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
 					ACL:         linodego.ACLPrivate,
-					CorsEnabled: true,
+					CorsEnabled: ptr.To(true),
 				}, nil)
 				mockClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -164,7 +165,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				}, nil)
 				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
 					ACL:         linodego.ACLPrivate,
-					CorsEnabled: true,
+					CorsEnabled: ptr.To(true),
 				}, nil)
 				mockClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error in updating object storage bucket"))
 			},

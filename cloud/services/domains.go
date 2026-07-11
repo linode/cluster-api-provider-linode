@@ -14,7 +14,7 @@ import (
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
@@ -52,7 +52,7 @@ func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation
 	}
 
 	if cscope.LinodeCluster.Spec.Network.DNSProvider == "akamai" {
-		if err := deleteStaleAkamaiEntries(ctx, cscope); err != nil {
+		if err := deleteStaleAkamaiEntries(ctx, cscope, dnsEntries); err != nil {
 			return err
 		}
 		for _, dnsEntry := range dnsEntries {
@@ -67,29 +67,6 @@ func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation
 	}
 
 	return nil
-}
-
-func getMachineIPs(cscope *scope.ClusterScope) (ipv4IPs, ipv6IPs []string, err error) {
-	for _, eachMachine := range cscope.LinodeMachines.Items {
-		if !eachMachine.Status.Ready {
-			continue
-		}
-		for _, IPs := range eachMachine.Status.Addresses {
-			if IPs.Type != v1beta2.MachineExternalIP {
-				continue
-			}
-			addr, err := netip.ParseAddr(IPs.Address)
-			if err != nil {
-				return nil, nil, fmt.Errorf("not a valid IP %w", err)
-			}
-			if addr.Is4() {
-				ipv4IPs = append(ipv4IPs, IPs.Address)
-			} else {
-				ipv6IPs = append(ipv6IPs, IPs.Address)
-			}
-		}
-	}
-	return ipv4IPs, ipv6IPs, nil
 }
 
 func resetAkamaiRecord(ctx context.Context, cscope *scope.ClusterScope, recordResponse *dns.GetRecordResponse, machineIPList []string, rootDomain string) error {
@@ -121,12 +98,8 @@ func resetAkamaiRecord(ctx context.Context, cscope *scope.ClusterScope, recordRe
 	})
 }
 
-func deleteStaleAkamaiEntries(ctx context.Context, cscope *scope.ClusterScope) error {
-	ipv4IPs, ipv6IPs, err := getMachineIPs(cscope)
-	if err != nil {
-		return err
-	}
-
+func deleteStaleAkamaiEntries(ctx context.Context, cscope *scope.ClusterScope, dnsEntries []DNSOptions) error {
+	ipv4IPs, ipv6IPs := getDNSMachineIPs(dnsEntries)
 	rootDomain := cscope.LinodeCluster.Spec.Network.DNSRootDomain
 	fqdn := getSubDomain(cscope) + "." + rootDomain
 
@@ -165,12 +138,20 @@ func deleteStaleAkamaiEntries(ctx context.Context, cscope *scope.ClusterScope) e
 	return nil
 }
 
-func deleteStaleLinodeEntries(ctx context.Context, cscope *scope.ClusterScope, domainRecords []linodego.DomainRecord, domainID int) error {
-	ipv4IPs, ipv6IPs, err := getMachineIPs(cscope)
-	if err != nil {
-		return err
+func getDNSMachineIPs(dnsEntries []DNSOptions) (ipv4IPs, ipv6IPs []string) {
+	for _, entry := range dnsEntries {
+		if entry.DNSRecordType == linodego.RecordTypeA {
+			ipv4IPs = append(ipv4IPs, entry.Target)
+		}
+		if entry.DNSRecordType == linodego.RecordTypeAAAA {
+			ipv6IPs = append(ipv6IPs, entry.Target)
+		}
 	}
+	return ipv4IPs, ipv6IPs
+}
 
+func deleteStaleLinodeEntries(ctx context.Context, cscope *scope.ClusterScope, domainRecords []linodego.DomainRecord, domainID int, dnsEntries []DNSOptions) error {
+	ipv4IPs, ipv6IPs := getDNSMachineIPs(dnsEntries)
 	if len(domainRecords) > 0 {
 		for _, record := range domainRecords {
 			if record.Type == linodego.RecordTypeTXT {
@@ -207,7 +188,7 @@ func EnsureLinodeDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 		return err
 	}
 
-	if err := deleteStaleLinodeEntries(ctx, cscope, domainRecords, domainID); err != nil {
+	if err := deleteStaleLinodeEntries(ctx, cscope, domainRecords, domainID, dnsEntries); err != nil {
 		return err
 	}
 

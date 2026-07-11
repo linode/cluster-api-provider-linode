@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -123,7 +123,13 @@ func reconcileFirewall(
 		return err
 	}
 
-	linodeFW, err := createOrUpdateFirewall(ctx, fwScope, fwConfig, logger)
+	var linodeFW *linodego.Firewall
+	switch fwScope.LinodeFirewall.Spec.FirewallID {
+	case nil:
+		linodeFW, err = createFirewall(ctx, fwScope, fwConfig, logger)
+	default:
+		linodeFW, err = updateFirewall(ctx, fwScope, fwConfig, logger)
+	}
 	if err != nil {
 		return err
 	}
@@ -150,56 +156,70 @@ func reconcileFirewall(
 	return nil
 }
 
-func createOrUpdateFirewall(ctx context.Context, fwScope *scope.FirewallScope, fwConfig *linodego.FirewallCreateOptions, logger logr.Logger) (*linodego.Firewall, error) {
-	var linodeFW *linodego.Firewall
-	var err error
-	switch fwScope.LinodeFirewall.Spec.FirewallID {
-	case nil:
-		logger.Info(fmt.Sprintf("Creating firewall %s", fwScope.LinodeFirewall.Name))
-		linodeFW, err = fwScope.LinodeClient.CreateFirewall(ctx, *fwConfig)
-		// Handle the edge case where API did create the firewall eventually after timing out on the client side
-		if linodego.ErrHasStatus(err, http.StatusBadRequest) && strings.Contains(err.Error(), "Label must be unique") {
-			logger.Error(err, "Failed to create firewall, received [400 BadRequest] response.")
+func createFirewall(ctx context.Context, fwScope *scope.FirewallScope, fwConfig *linodego.FirewallRules, logger logr.Logger) (*linodego.Firewall, error) {
+	logger.Info(fmt.Sprintf("Creating firewall %s", fwScope.LinodeFirewall.Name))
+	opts := linodego.FirewallCreateOptions{
+		Label: fwScope.LinodeFirewall.Name,
+		Rules: linodego.FirewallRulesCreateOptions{
+			Inbound:        fwConfig.Inbound,
+			InboundPolicy:  fwConfig.InboundPolicy,
+			Outbound:       fwConfig.Outbound,
+			OutboundPolicy: fwConfig.OutboundPolicy,
+		},
+	}
+	linodeFW, err := fwScope.LinodeClient.CreateFirewall(ctx, opts)
+	// Handle the edge case where API did create the firewall eventually after timing out on the client side
+	if linodego.ErrHasStatus(err, http.StatusBadRequest) && strings.Contains(err.Error(), "Label must be unique") {
+		logger.Error(err, "Failed to create firewall, received [400 BadRequest] response.")
 
-			// check if instance already exists
-			listFilter := util.Filter{Label: fwScope.LinodeFirewall.Name}
-			filter, errFilter := listFilter.String()
-			if errFilter != nil {
-				logger.Error(err, "Failed to create filter to list firewall")
-				return nil, err
-			}
-			firewalls, listErr := fwScope.LinodeClient.ListFirewalls(ctx, linodego.NewListOptions(1, filter))
-			if listErr != nil {
-				return nil, listErr
-			}
-			if len(firewalls) > 0 {
-				linodeFW = &firewalls[0]
-			}
-		} else if err != nil {
-			logger.Info("Failed to create firewall", "error", err.Error())
+		// check if instance already exists
+		listFilter := util.Filter{Label: fwScope.LinodeFirewall.Name}
+		filter, errFilter := listFilter.String()
+		if errFilter != nil {
+			logger.Error(errFilter, "Failed to create filter to list firewall")
+			return nil, errFilter
+		}
+		firewalls, listErr := fwScope.LinodeClient.ListFirewalls(ctx, linodego.NewListOptions(1, filter))
+		if listErr != nil {
+			return nil, listErr
+		}
+		if len(firewalls) > 0 {
+			linodeFW = &firewalls[0]
+		}
+	} else if err != nil {
+		logger.Info("Failed to create firewall", "error", err.Error())
 
-			return nil, err
-		}
-		if linodeFW == nil {
-			return nil, errNilFirewall
-		}
-		fwScope.LinodeFirewall.Spec.FirewallID = util.Pointer(linodeFW.ID)
-	default:
-		logger.Info(fmt.Sprintf("Updating firewall %s", fwScope.LinodeFirewall.Name))
-		linodeFW, err = fwScope.LinodeClient.GetFirewall(ctx, *fwScope.LinodeFirewall.Spec.FirewallID)
-		if err != nil {
-			logger.Info("Failed to get firewall", "error", err.Error())
+		return nil, err
+	}
+	if linodeFW == nil {
+		return nil, errNilFirewall
+	}
+	fwScope.LinodeFirewall.Spec.FirewallID = util.Pointer(linodeFW.ID)
 
-			return nil, err
-		}
-		if linodeFW == nil {
-			return nil, errNilFirewall
-		}
-		if _, err = fwScope.LinodeClient.UpdateFirewallRules(ctx, linodeFW.ID, fwConfig.Rules); err != nil {
-			logger.Info("Failed to update firewall", "error", err.Error())
+	return linodeFW, nil
+}
 
-			return nil, err
-		}
+func updateFirewall(ctx context.Context, fwScope *scope.FirewallScope, fwConfig *linodego.FirewallRules, logger logr.Logger) (*linodego.Firewall, error) {
+	logger.Info(fmt.Sprintf("Updating firewall %s", fwScope.LinodeFirewall.Name))
+	linodeFW, err := fwScope.LinodeClient.GetFirewall(ctx, *fwScope.LinodeFirewall.Spec.FirewallID)
+	if err != nil {
+		logger.Info("Failed to get firewall", "error", err.Error())
+
+		return nil, err
+	}
+	if linodeFW == nil {
+		return nil, errNilFirewall
+	}
+	opts := linodego.FirewallRulesUpdateOptions{
+		Inbound:        fwConfig.Inbound,
+		InboundPolicy:  fwConfig.InboundPolicy,
+		Outbound:       fwConfig.Outbound,
+		OutboundPolicy: fwConfig.OutboundPolicy,
+	}
+	if _, err = fwScope.LinodeClient.UpdateFirewallRules(ctx, linodeFW.ID, opts); err != nil {
+		logger.Info("Failed to update firewall rules", "error", err.Error())
+
+		return nil, err
 	}
 	return linodeFW, nil
 }
@@ -270,36 +290,33 @@ func filterDuplicates(ipv4s, ipv6s []string) (filteredIPv4s, filteredIPv6s []str
 }
 
 // processRule handles a single inbound/outbound rule
-func processRule(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, log logr.Logger, rule infrav1alpha2.FirewallRuleSpec, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
+func processRule(
+	ctx context.Context,
+	k8sClient clients.K8sClient,
+	firewall *infrav1alpha2.LinodeFirewall,
+	log logr.Logger,
+	fwRuleSpec infrav1alpha2.FirewallRuleSpec,
+	ruleType string,
+	rules *linodego.FirewallRules,
+) (*linodego.FirewallRules, error) {
 	ruleIPv4s := make([]string, 0)
 	ruleIPv6s := make([]string, 0)
-	if rule.Addresses != nil {
-		ipv4s, ipv6s := processAddresses(rule.Addresses)
+	if fwRuleSpec.Addresses != nil {
+		ipv4s, ipv6s := processAddresses(fwRuleSpec.Addresses)
 		ruleIPv4s = append(ruleIPv4s, ipv4s...)
 		ruleIPv6s = append(ruleIPv6s, ipv6s...)
 	}
-	if rule.AddressSetRefs != nil {
-		ipv4s, ipv6s, err := processAddressSetRefs(ctx, k8sClient, firewall, rule.AddressSetRefs, log)
+	if fwRuleSpec.AddressSetRefs != nil {
+		ipv4s, ipv6s, err := processAddressSetRefs(ctx, k8sClient, firewall, fwRuleSpec.AddressSetRefs, log)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		ruleIPv4s = append(ruleIPv4s, ipv4s...)
 		ruleIPv6s = append(ruleIPv6s, ipv6s...)
 	}
 	ruleIPv4s, ruleIPv6s = filterDuplicates(ruleIPv4s, ruleIPv6s)
 
-	ruleLabel := formatRuleLabel(rule.Action, rule.Label)
-
-	switch ruleType {
-	case ruleTypeInbound:
-		processIPRules(ruleIPv4s, rule, ruleLabel, linodego.IPTypeIPv4, &createOpts.Rules.Inbound)
-		processIPRules(ruleIPv6s, rule, ruleLabel, linodego.IPTypeIPv6, &createOpts.Rules.Inbound)
-	case ruleTypeOutbound:
-		processIPRules(ruleIPv4s, rule, ruleLabel, linodego.IPTypeIPv4, &createOpts.Rules.Outbound)
-		processIPRules(ruleIPv6s, rule, ruleLabel, linodego.IPTypeIPv6, &createOpts.Rules.Outbound)
-	}
-
-	return nil
+	return processIPRules(ruleIPv4s, ruleIPv6s, fwRuleSpec, rules, ruleType), nil
 }
 
 // processAddresses extracts and transforms IPv4 and IPv6 addresses
@@ -378,48 +395,78 @@ func formatRuleLabel(prefix, label string) string {
 }
 
 // processIPRules processes IP rules and adds them to the rules slice
-func processIPRules(ips []string, rule infrav1alpha2.FirewallRuleSpec, ruleLabel string, ipType linodego.InstanceIPType, rules *[]linodego.FirewallRule) {
+func processIPRules(ipv4s, ipv6s []string, fwRuleSpec infrav1alpha2.FirewallRuleSpec, rules *linodego.FirewallRules, ruleType string) *linodego.FirewallRules {
 	// Initialize rules if nil
-	if *rules == nil {
-		*rules = make([]linodego.FirewallRule, 0)
+	if rules == nil {
+		rules = &linodego.FirewallRules{}
 	}
 
 	// If no IPs, return early
-	if len(ips) == 0 {
-		return
+	if len(ipv4s) == 0 && len(ipv6s) == 0 {
+		return rules
 	}
 
-	ipchunks := chunkIPs(ips)
-	//nolint:exhaustive // This function only handles explicit IPv4 and IPv6 types; other types like IPv6 Pool/Range are not relevant here.
-	switch ipType {
-	case linodego.IPTypeIPv4:
-		for i, chunk := range ipchunks {
-			*rules = append(*rules, linodego.FirewallRule{
-				Action:      rule.Action,
+	ipv4chunks := chunkIPs(ipv4s)
+	ipv6chunks := chunkIPs(ipv6s)
+	ruleLabel := formatRuleLabel(fwRuleSpec.Action, fwRuleSpec.Label)
+
+	switch ruleType {
+	case ruleTypeInbound:
+		for i, chunk := range ipv4chunks {
+			rules.Inbound = append(rules.Inbound, linodego.FirewallRuleInbound{
+				Action:      fwRuleSpec.Action,
 				Label:       ruleLabel,
-				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    rule.Protocol,
-				Ports:       rule.Ports,
-				Addresses:   linodego.NetworkAddresses{IPv4: &chunk},
+				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, fwRuleSpec.Label),
+				Protocol:    fwRuleSpec.Protocol,
+				Ports:       fwRuleSpec.Ports,
+				Addresses:   linodego.NetworkAddresses{IPv4: chunk},
 			})
 		}
-	case linodego.IPTypeIPv6:
-		for i, chunk := range ipchunks {
-			*rules = append(*rules, linodego.FirewallRule{
-				Action:      rule.Action,
+		for i, chunk := range ipv6chunks {
+			rules.Inbound = append(rules.Inbound, linodego.FirewallRuleInbound{
+				Action:      fwRuleSpec.Action,
 				Label:       ruleLabel,
-				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, rule.Label),
-				Protocol:    rule.Protocol,
-				Ports:       rule.Ports,
-				Addresses:   linodego.NetworkAddresses{IPv6: &chunk},
+				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, fwRuleSpec.Label),
+				Protocol:    fwRuleSpec.Protocol,
+				Ports:       fwRuleSpec.Ports,
+				Addresses:   linodego.NetworkAddresses{IPv6: chunk},
 			})
 		}
-	default:
-		return
+	case ruleTypeOutbound:
+		for i, chunk := range ipv4chunks {
+			rules.Outbound = append(rules.Outbound, linodego.FirewallRuleOutbound{
+				Action:      fwRuleSpec.Action,
+				Label:       ruleLabel,
+				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, fwRuleSpec.Label),
+				Protocol:    fwRuleSpec.Protocol,
+				Ports:       fwRuleSpec.Ports,
+				Addresses:   linodego.NetworkAddresses{IPv4: chunk},
+			})
+		}
+		for i, chunk := range ipv6chunks {
+			rules.Outbound = append(rules.Outbound, linodego.FirewallRuleOutbound{
+				Action:      fwRuleSpec.Action,
+				Label:       ruleLabel,
+				Description: fmt.Sprintf("Rule %d, Created by CAPL: %s", i, fwRuleSpec.Label),
+				Protocol:    fwRuleSpec.Protocol,
+				Ports:       fwRuleSpec.Ports,
+				Addresses:   linodego.NetworkAddresses{IPv6: chunk},
+			})
+		}
 	}
+
+	return rules
 }
 
-func processFirewallRule(ctx context.Context, k8sClient clients.K8sClient, firewall *infrav1alpha2.LinodeFirewall, log logr.Logger, ruleRef *corev1.ObjectReference, ruleType string, createOpts *linodego.FirewallCreateOptions) error {
+func processFirewallRule(
+	ctx context.Context,
+	k8sClient clients.K8sClient,
+	firewall *infrav1alpha2.LinodeFirewall,
+	log logr.Logger,
+	ruleRef *corev1.ObjectReference,
+	ruleType string,
+	rules *linodego.FirewallRules,
+) (*linodego.FirewallRules, error) {
 	rule := &infrav1alpha2.FirewallRule{}
 	if ruleRef.Namespace == "" {
 		ruleRef.Namespace = firewall.Namespace
@@ -427,64 +474,63 @@ func processFirewallRule(ctx context.Context, k8sClient clients.K8sClient, firew
 	if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ruleRef.Namespace, Name: ruleRef.Name}, rule); err != nil {
 		log.Error(err, "failed to get FirewallRule", "namespace", ruleRef.Namespace, "name", ruleRef.Name)
 
-		return err
+		return nil, err
 	}
-	if err := processRule(ctx, k8sClient, firewall, log, rule.Spec, ruleType, createOpts); err != nil {
-		return err
-	}
-
-	return nil
+	return processRule(ctx, k8sClient, firewall, log, rule.Spec, ruleType, rules)
 }
 
 // processACL uses the CAPL LinodeFirewall representation to build out the inbound
 // and outbound rules for a linode Cloud Firewall
-func processACL(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, firewall *infrav1alpha2.LinodeFirewall) (*linodego.FirewallCreateOptions, error) {
-	createOpts := &linodego.FirewallCreateOptions{
-		Label: firewall.Name,
-	}
+func processACL(ctx context.Context, k8sClient clients.K8sClient, log logr.Logger, firewall *infrav1alpha2.LinodeFirewall) (*linodego.FirewallRules, error) {
+	rules := &linodego.FirewallRules{}
+	var err error
 
 	// Process inbound rules
 	for _, rule := range firewall.Spec.InboundRules {
-		if err := processRule(ctx, k8sClient, firewall, log, rule, ruleTypeInbound, createOpts); err != nil {
+		rules, err = processRule(ctx, k8sClient, firewall, log, rule, ruleTypeInbound, rules)
+		if err != nil {
 			return nil, err
 		}
 	}
 	for _, ruleRef := range firewall.Spec.InboundRuleRefs {
-		if err := processFirewallRule(ctx, k8sClient, firewall, log, ruleRef, ruleTypeInbound, createOpts); err != nil {
+		rules, err = processFirewallRule(ctx, k8sClient, firewall, log, ruleRef, ruleTypeInbound, rules)
+		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Set inbound policy
 	if firewall.Spec.InboundPolicy == "" {
-		createOpts.Rules.InboundPolicy = "ACCEPT"
+		rules.InboundPolicy = "ACCEPT"
 	} else {
-		createOpts.Rules.InboundPolicy = firewall.Spec.InboundPolicy
+		rules.InboundPolicy = firewall.Spec.InboundPolicy
 	}
 
 	// Process outbound rules
 	for _, rule := range firewall.Spec.OutboundRules {
-		if err := processRule(ctx, k8sClient, firewall, log, rule, ruleTypeOutbound, createOpts); err != nil {
+		rules, err = processRule(ctx, k8sClient, firewall, log, rule, ruleTypeOutbound, rules)
+		if err != nil {
 			return nil, err
 		}
 	}
 	for _, ruleRef := range firewall.Spec.OutboundRuleRefs {
-		if err := processFirewallRule(ctx, k8sClient, firewall, log, ruleRef, ruleTypeOutbound, createOpts); err != nil {
+		rules, err = processFirewallRule(ctx, k8sClient, firewall, log, ruleRef, ruleTypeOutbound, rules)
+		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Set outbound policy
 	if firewall.Spec.OutboundPolicy == "" {
-		createOpts.Rules.OutboundPolicy = "ACCEPT"
+		rules.OutboundPolicy = "ACCEPT"
 	} else {
-		createOpts.Rules.OutboundPolicy = firewall.Spec.OutboundPolicy
+		rules.OutboundPolicy = firewall.Spec.OutboundPolicy
 	}
 
 	// Check rule count
-	if len(createOpts.Rules.Inbound)+len(createOpts.Rules.Outbound) > maxRulesPerFirewall {
+	if len(rules.Inbound)+len(rules.Outbound) > maxRulesPerFirewall {
 		return nil, errTooManyIPs
 	}
 
-	return createOpts, nil
+	return rules, nil
 }

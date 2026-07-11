@@ -77,7 +77,6 @@
       "matchManagers": ["github-actions"],
       "matchPackageNames": [
         "dorny/paths-filter",
-        "jetify-com/devbox-install-action",
         "codecov/codecov-action",
         "actions/upload-artifact",
       ]
@@ -145,12 +144,5 @@
       ],
       enabled: false,
     },
-    {
-      "groupName": "devbox",
-      "groupSlug": "devbox",
-      "matchDatasources": [
-        "devbox",
-      ]
-    }
   ]
 }

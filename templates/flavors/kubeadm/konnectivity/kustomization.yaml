@@ -82,7 +82,7 @@ patches:
               - fromEntities:
                   - cluster
               - fromCIDR:
-                  - 10.0.0.0/8
+                  - ${VPC_NETWORK_CIDR:=10.0.0.0/8}
                   - 192.168.128.0/17
           ---
           apiVersion: "cilium.io/v2"
@@ -96,7 +96,7 @@ patches:
               - fromEntities:
                   - cluster
               - fromCIDR:
-                  - 10.0.0.0/8
+                  - ${VPC_NETWORK_CIDR:=10.0.0.0/8}
               - fromEntities:
                   - all
                 toPorts:

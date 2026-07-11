@@ -11,13 +11,13 @@ package mock
 
 import (
 	context "context"
+	http "net/http"
 	reflect "reflect"
 
 	dns "github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	s3 "github.com/aws/aws-sdk-go-v2/service/s3"
-	resty "github.com/go-resty/resty/v2"
-	linodego "github.com/linode/linodego"
+	linodego "github.com/linode/linodego/v2"
 	gomock "go.uber.org/mock/gomock"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -65,17 +65,17 @@ func (mr *MockLinodeClientMockRecorder) AssignPlacementGroupLinodes(ctx, id, opt
 }
 
 // BootInstance mocks base method.
-func (m *MockLinodeClient) BootInstance(ctx context.Context, linodeID, configID int) error {
+func (m *MockLinodeClient) BootInstance(ctx context.Context, linodeID int, copts linodego.InstanceBootOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BootInstance", ctx, linodeID, configID)
+	ret := m.ctrl.Call(m, "BootInstance", ctx, linodeID, copts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BootInstance indicates an expected call of BootInstance.
-func (mr *MockLinodeClientMockRecorder) BootInstance(ctx, linodeID, configID any) *gomock.Call {
+func (mr *MockLinodeClientMockRecorder) BootInstance(ctx, linodeID, copts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BootInstance", reflect.TypeOf((*MockLinodeClient)(nil).BootInstance), ctx, linodeID, configID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BootInstance", reflect.TypeOf((*MockLinodeClient)(nil).BootInstance), ctx, linodeID, copts)
 }
 
 // CreateDomainRecord mocks base method.
@@ -443,10 +443,10 @@ func (mr *MockLinodeClientMockRecorder) GetFirewallDevice(ctx, firewallID, devic
 }
 
 // GetFirewallRules mocks base method.
-func (m *MockLinodeClient) GetFirewallRules(ctx context.Context, firewallID int) (*linodego.FirewallRuleSet, error) {
+func (m *MockLinodeClient) GetFirewallRules(ctx context.Context, firewallID int) (*linodego.FirewallRules, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFirewallRules", ctx, firewallID)
-	ret0, _ := ret[0].(*linodego.FirewallRuleSet)
+	ret0, _ := ret[0].(*linodego.FirewallRules)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -485,21 +485,6 @@ func (m *MockLinodeClient) GetInstance(ctx context.Context, linodeID int) (*lino
 func (mr *MockLinodeClientMockRecorder) GetInstance(ctx, linodeID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstance", reflect.TypeOf((*MockLinodeClient)(nil).GetInstance), ctx, linodeID)
-}
-
-// GetInstanceDisk mocks base method.
-func (m *MockLinodeClient) GetInstanceDisk(ctx context.Context, linodeID, diskID int) (*linodego.InstanceDisk, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInstanceDisk", ctx, linodeID, diskID)
-	ret0, _ := ret[0].(*linodego.InstanceDisk)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetInstanceDisk indicates an expected call of GetInstanceDisk.
-func (mr *MockLinodeClientMockRecorder) GetInstanceDisk(ctx, linodeID, diskID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceDisk", reflect.TypeOf((*MockLinodeClient)(nil).GetInstanceDisk), ctx, linodeID, diskID)
 }
 
 // GetInstanceIPAddresses mocks base method.
@@ -833,7 +818,7 @@ func (mr *MockLinodeClientMockRecorder) ListVPCs(ctx, opts any) *gomock.Call {
 }
 
 // OnAfterResponse mocks base method.
-func (m_2 *MockLinodeClient) OnAfterResponse(m func(*resty.Response) error) {
+func (m_2 *MockLinodeClient) OnAfterResponse(m func(*http.Response) error) {
 	m_2.ctrl.T.Helper()
 	m_2.ctrl.Call(m_2, "OnAfterResponse", m)
 }
@@ -842,20 +827,6 @@ func (m_2 *MockLinodeClient) OnAfterResponse(m func(*resty.Response) error) {
 func (mr *MockLinodeClientMockRecorder) OnAfterResponse(m any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnAfterResponse", reflect.TypeOf((*MockLinodeClient)(nil).OnAfterResponse), m)
-}
-
-// ResizeInstanceDisk mocks base method.
-func (m *MockLinodeClient) ResizeInstanceDisk(ctx context.Context, linodeID, diskID, size int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResizeInstanceDisk", ctx, linodeID, diskID, size)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ResizeInstanceDisk indicates an expected call of ResizeInstanceDisk.
-func (mr *MockLinodeClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
 }
 
 // SetToken mocks base method.
@@ -918,10 +889,10 @@ func (mr *MockLinodeClientMockRecorder) UpdateFirewall(ctx, firewallID, opts any
 }
 
 // UpdateFirewallRules mocks base method.
-func (m *MockLinodeClient) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRuleSet) (*linodego.FirewallRuleSet, error) {
+func (m *MockLinodeClient) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRulesUpdateOptions) (*linodego.FirewallRules, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateFirewallRules", ctx, firewallID, rules)
-	ret0, _ := ret[0].(*linodego.FirewallRuleSet)
+	ret0, _ := ret[0].(*linodego.FirewallRules)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -1004,6 +975,21 @@ func (m *MockLinodeClient) UpdatePlacementGroup(ctx context.Context, id int, opt
 func (mr *MockLinodeClientMockRecorder) UpdatePlacementGroup(ctx, id, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePlacementGroup", reflect.TypeOf((*MockLinodeClient)(nil).UpdatePlacementGroup), ctx, id, options)
+}
+
+// UpdateVPC mocks base method.
+func (m *MockLinodeClient) UpdateVPC(ctx context.Context, vpcID int, opts linodego.VPCUpdateOptions) (*linodego.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVPC", ctx, vpcID, opts)
+	ret0, _ := ret[0].(*linodego.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateVPC indicates an expected call of UpdateVPC.
+func (mr *MockLinodeClientMockRecorder) UpdateVPC(ctx, vpcID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVPC", reflect.TypeOf((*MockLinodeClient)(nil).UpdateVPC), ctx, vpcID, opts)
 }
 
 // MockAkamClient is a mock of AkamClient interface.
@@ -1193,17 +1179,17 @@ func (m *MockLinodeInstanceClient) EXPECT() *MockLinodeInstanceClientMockRecorde
 }
 
 // BootInstance mocks base method.
-func (m *MockLinodeInstanceClient) BootInstance(ctx context.Context, linodeID, configID int) error {
+func (m *MockLinodeInstanceClient) BootInstance(ctx context.Context, linodeID int, copts linodego.InstanceBootOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BootInstance", ctx, linodeID, configID)
+	ret := m.ctrl.Call(m, "BootInstance", ctx, linodeID, copts)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // BootInstance indicates an expected call of BootInstance.
-func (mr *MockLinodeInstanceClientMockRecorder) BootInstance(ctx, linodeID, configID any) *gomock.Call {
+func (mr *MockLinodeInstanceClientMockRecorder) BootInstance(ctx, linodeID, copts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BootInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).BootInstance), ctx, linodeID, configID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BootInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).BootInstance), ctx, linodeID, copts)
 }
 
 // CreateInstance mocks base method.
@@ -1278,21 +1264,6 @@ func (m *MockLinodeInstanceClient) GetInstance(ctx context.Context, linodeID int
 func (mr *MockLinodeInstanceClientMockRecorder) GetInstance(ctx, linodeID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstance", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetInstance), ctx, linodeID)
-}
-
-// GetInstanceDisk mocks base method.
-func (m *MockLinodeInstanceClient) GetInstanceDisk(ctx context.Context, linodeID, diskID int) (*linodego.InstanceDisk, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInstanceDisk", ctx, linodeID, diskID)
-	ret0, _ := ret[0].(*linodego.InstanceDisk)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetInstanceDisk indicates an expected call of GetInstanceDisk.
-func (mr *MockLinodeInstanceClientMockRecorder) GetInstanceDisk(ctx, linodeID, diskID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).GetInstanceDisk), ctx, linodeID, diskID)
 }
 
 // GetInstanceIPAddresses mocks base method.
@@ -1383,20 +1354,6 @@ func (m *MockLinodeInstanceClient) ListInstances(ctx context.Context, opts *lino
 func (mr *MockLinodeInstanceClientMockRecorder) ListInstances(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstances", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ListInstances), ctx, opts)
-}
-
-// ResizeInstanceDisk mocks base method.
-func (m *MockLinodeInstanceClient) ResizeInstanceDisk(ctx context.Context, linodeID, diskID, size int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResizeInstanceDisk", ctx, linodeID, diskID, size)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ResizeInstanceDisk indicates an expected call of ResizeInstanceDisk.
-func (mr *MockLinodeInstanceClientMockRecorder) ResizeInstanceDisk(ctx, linodeID, diskID, size any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResizeInstanceDisk", reflect.TypeOf((*MockLinodeInstanceClient)(nil).ResizeInstanceDisk), ctx, linodeID, diskID, size)
 }
 
 // UpdateInstance mocks base method.
@@ -1554,6 +1511,21 @@ func (m *MockLinodeVPCClient) ListVPCs(ctx context.Context, opts *linodego.ListO
 func (mr *MockLinodeVPCClientMockRecorder) ListVPCs(ctx, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVPCs", reflect.TypeOf((*MockLinodeVPCClient)(nil).ListVPCs), ctx, opts)
+}
+
+// UpdateVPC mocks base method.
+func (m *MockLinodeVPCClient) UpdateVPC(ctx context.Context, vpcID int, opts linodego.VPCUpdateOptions) (*linodego.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVPC", ctx, vpcID, opts)
+	ret0, _ := ret[0].(*linodego.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateVPC indicates an expected call of UpdateVPC.
+func (mr *MockLinodeVPCClientMockRecorder) UpdateVPC(ctx, vpcID, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVPC", reflect.TypeOf((*MockLinodeVPCClient)(nil).UpdateVPC), ctx, vpcID, opts)
 }
 
 // MockLinodeNodeBalancerClient is a mock of LinodeNodeBalancerClient interface.
@@ -2178,10 +2150,10 @@ func (mr *MockLinodeFirewallClientMockRecorder) GetFirewallDevice(ctx, firewallI
 }
 
 // GetFirewallRules mocks base method.
-func (m *MockLinodeFirewallClient) GetFirewallRules(ctx context.Context, firewallID int) (*linodego.FirewallRuleSet, error) {
+func (m *MockLinodeFirewallClient) GetFirewallRules(ctx context.Context, firewallID int) (*linodego.FirewallRules, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFirewallRules", ctx, firewallID)
-	ret0, _ := ret[0].(*linodego.FirewallRuleSet)
+	ret0, _ := ret[0].(*linodego.FirewallRules)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -2223,10 +2195,10 @@ func (mr *MockLinodeFirewallClientMockRecorder) UpdateFirewall(ctx, firewallID, 
 }
 
 // UpdateFirewallRules mocks base method.
-func (m *MockLinodeFirewallClient) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRuleSet) (*linodego.FirewallRuleSet, error) {
+func (m *MockLinodeFirewallClient) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRulesUpdateOptions) (*linodego.FirewallRules, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateFirewallRules", ctx, firewallID, rules)
-	ret0, _ := ret[0].(*linodego.FirewallRuleSet)
+	ret0, _ := ret[0].(*linodego.FirewallRules)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

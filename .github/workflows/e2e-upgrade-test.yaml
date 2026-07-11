@@ -89,11 +89,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      - name: Set up Mise
+        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
         with:
-          go-version-file: 'go.mod'
-          check-latest: true
+          install_args: go
 
       - name: Create IPv4-only kind network
         run: |
@@ -113,12 +112,12 @@ jobs:
           LINODE_MACHINE_TYPE: g6-standard-2
           CLUSTERCTL_CONFIG: /home/runner/work/cluster-api-provider-linode/cluster-api-provider-linode/e2e/gha-clusterctl-config.yaml
           E2E_FLAGS: --assert-timeout 20m0s
-        run: make test-upgrade
+        run: mise run test-upgrade
 
       - name: cleanup stale clusters
         if: ${{ always() }}
-        run: make clean-child-clusters
+        run: mise run clean-child-clusters
 
       - name: cleanup kind mgmt cluster
         if: ${{ always() }}
-        run: make clean-kind-cluster
+        run: mise run clean-kind-cluster

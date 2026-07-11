@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -669,7 +669,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightConfigure(ctx context.Contex
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightBoot(ctx context.Context, instanceID int, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
-	if err := machineScope.LinodeClient.BootInstance(ctx, instanceID, 0); err != nil && !strings.HasSuffix(err.Error(), "already booted.") {
+	if err := machineScope.LinodeClient.BootInstance(ctx, instanceID, linodego.InstanceBootOptions{}); err != nil && !strings.HasSuffix(err.Error(), "already booted.") {
 		logger.Error(err, "Failed to boot instance")
 		if reconciler.HasStaleCondition(machineScope.LinodeMachine.GetCondition(ConditionPreflightBootTriggered),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
@@ -776,7 +776,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	// update the tags if needed
 	machineTags := getTags(machineScope, linodeInstance.Tags)
 	if !slices.Equal(machineTags, linodeInstance.Tags) {
-		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: &machineTags})
+		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: machineTags})
 		if err != nil {
 			logger.Error(err, "Failed to update tags for Linode instance")
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil

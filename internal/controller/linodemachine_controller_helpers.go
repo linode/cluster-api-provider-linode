@@ -32,7 +32,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -66,6 +66,14 @@ var (
 	errNoPublicIPv4Addrs      = errors.New("no public ipv4 addresses set")
 	errNoPublicIPv6Addrs      = errors.New("no public IPv6 address set")
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
+
+	// We have to account for the default swap in Linodes when calculating the root disk size.
+	// While we don't actually use swap in any of our flavors (we set swapoff), we can't
+	// explicitly set to swap to 0 for any created Linodes because it adds a 90 second hang on
+	// cloud-init while it waits for swap regardless of the storage configuration.
+	// This value only gets used if LinodeMachine.Spec.DataDisks.SDB isn't set
+	// (swap is by default on /dev/sdb for created Linodes)
+	defaultSwapDiskSize = int(resource.NewScaledQuantity(512, resource.Mega).ScaledValue(resource.Mega)) //nolint:mnd // already explained
 )
 
 func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
@@ -79,7 +87,7 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 	return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 }
 
-func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) {
+func fillCreateConfig(ctx context.Context, createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) error {
 	// This will only be empty if no interfaces or linodeInterfaces were specified in the LinodeMachine spec.
 	// In that case we default to legacy interfaces.
 	switch createConfig.InterfaceGeneration {
@@ -115,9 +123,22 @@ func fillCreateConfig(createConfig *linodego.InstanceCreateOptions, machineScope
 	if createConfig.Image == "" {
 		createConfig.Image = reconciler.DefaultMachineControllerLinodeImage
 	}
-	if createConfig.RootPass == "" {
+
+	//  You can now omit the root pass entirely during instance creation
+	// as long as you supply at least one SSH key.
+	if createConfig.RootPass == "" && len(createConfig.AuthorizedKeys) == 0 {
 		createConfig.RootPass = uuid.NewString()
 	}
+
+	// dynamically calculate root disk size unless an explicit OS disk is being set
+	diskSize, err := calculateRootDisk(ctx, machineScope)
+	if err != nil {
+		return err
+	}
+	if diskSize != nil {
+		createConfig.BootSize = diskSize
+	}
+	return nil
 }
 
 func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzipCompressionEnabled bool, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
@@ -135,7 +156,9 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 		return nil, err
 	}
 
-	fillCreateConfig(createConfig, machineScope)
+	if err := fillCreateConfig(ctx, createConfig, machineScope); err != nil {
+		return nil, err
+	}
 
 	// Configure VPC interface if needed
 	if err := configureVPCInterface(ctx, machineScope, createConfig, logger); err != nil {
@@ -535,7 +558,7 @@ func getVlanLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machi
 	}
 
 	return &linodego.LinodeInterfaceCreateOptions{
-		VLAN: &linodego.VLANInterface{
+		VLAN: &linodego.VLANInterfaceCreateOptions{
 			VLANLabel:   machineScope.Cluster.Name,
 			IPAMAddress: ptr.To(fmt.Sprintf(vlanIPFormat, ip)),
 		},
@@ -626,7 +649,7 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		Purpose:  linodego.InterfacePurposeVPC,
 		Primary:  true,
 		SubnetID: &subnetID,
-		IPv4: &linodego.VPCIPv4{
+		IPv4: &linodego.VPCIPv4CreateOptions{
 			NAT1To1: ptr.To("any"),
 		},
 	}
@@ -688,7 +711,7 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 		VPC: &linodego.VPCInterfaceCreateOptions{
 			SubnetID: subnetID,
 			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-				Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
+				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
 					NAT1To1Address: ptr.To("auto"),
 					Address:        ptr.To("auto"),
@@ -773,7 +796,7 @@ func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *
 		VPC: &linodego.VPCInterfaceCreateOptions{
 			SubnetID: subnetID,
 			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-				Addresses: &[]linodego.VPCInterfaceIPv4AddressCreateOptions{{
+				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
 					Primary:        ptr.To(true),
 					NAT1To1Address: ptr.To("auto"),
 					Address:        ptr.To("auto"),
@@ -841,7 +864,7 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 		Purpose:  linodego.InterfacePurposeVPC,
 		Primary:  true,
 		SubnetID: &subnetID,
-		IPv4: &linodego.VPCIPv4{
+		IPv4: &linodego.VPCIPv4CreateOptions{
 			NAT1To1: ptr.To("any"),
 		},
 	}
@@ -921,14 +944,14 @@ func getVPCLinodeInterfaceIPv6Config(machineScope *scope.MachineScope, numIPv6Ra
 	}
 
 	if machineScope.LinodeMachine.Spec.IPv6Options.EnableSLAAC != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableSLAAC {
-		intfOpts.SLAAC = &[]linodego.VPCInterfaceIPv6SLAACCreateOptions{
+		intfOpts.SLAAC = []linodego.VPCInterfaceIPv6SLAACCreateOptions{
 			{
 				Range: defaultNodeIPv6CIDRRange,
 			},
 		}
 	}
 	if machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges {
-		intfOpts.Ranges = &[]linodego.VPCInterfaceIPv6RangeCreateOptions{
+		intfOpts.Ranges = []linodego.VPCInterfaceIPv6RangeCreateOptions{
 			{
 				Range: defaultNodeIPv6CIDRRange,
 			},
@@ -956,7 +979,7 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 			if iface.VLAN.IPAMAddress != nil {
 				ipamAddress = iface.VLAN.IPAMAddress
 			}
-			ifaceCreateOpts.VLAN = &linodego.VLANInterface{
+			ifaceCreateOpts.VLAN = &linodego.VLANInterfaceCreateOptions{
 				VLANLabel:   vlanLabel,
 				IPAMAddress: ipamAddress,
 			}
@@ -971,14 +994,14 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 		}
 		// Handle Default Route
 		if iface.DefaultRouteLegacy != nil {
-			ifaceCreateOpts.DefaultRoute = &linodego.InterfaceDefaultRoute{
+			ifaceCreateOpts.DefaultRoute = &linodego.InterfaceDefaultRouteCreateOptions{
 				IPv4: iface.DefaultRouteLegacy.IPv4,
 				IPv6: iface.DefaultRouteLegacy.IPv6,
 			}
 		}
 		// in the case of both DefaultRoute and DefaultRouteLegacy being set, use the non-legacy field's value
 		if iface.DefaultRoute != nil {
-			ifaceCreateOpts.DefaultRoute = &linodego.InterfaceDefaultRoute{
+			ifaceCreateOpts.DefaultRoute = &linodego.InterfaceDefaultRouteCreateOptions{
 				IPv4: iface.DefaultRoute.IPv4,
 				IPv6: iface.DefaultRoute.IPv6,
 			}
@@ -989,7 +1012,7 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 			firewallID = iface.FirewallID
 		}
 		if firewallID != nil {
-			ifaceCreateOpts.FirewallID = ptr.To(firewallID)
+			ifaceCreateOpts.FirewallID = firewallID
 		}
 		// createOpts is now fully populated with the interface options
 		linodeInterfaces[idx] = ifaceCreateOpts
@@ -1065,12 +1088,12 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 	return &linodego.VPCInterfaceCreateOptions{
 		SubnetID: subnetID,
 		IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-			Addresses: &ipv4Addrs,
-			Ranges:    &ipv4Ranges,
+			Addresses: ipv4Addrs,
+			Ranges:    ipv4Ranges,
 		},
 		IPv6: &linodego.VPCInterfaceIPv6CreateOptions{
-			SLAAC:    &ipv6SLAAC,
-			Ranges:   &ipv6Ranges,
+			SLAAC:    ipv6SLAAC,
+			Ranges:   ipv6Ranges,
 			IsPublic: &ipv6IsPublic,
 		},
 	}
@@ -1099,10 +1122,10 @@ func constructLinodeInterfacePublic(iface infrav1alpha2.LinodeInterfaceCreateOpt
 	}
 	return &linodego.PublicInterfaceCreateOptions{
 		IPv4: &linodego.PublicInterfaceIPv4CreateOptions{
-			Addresses: &ipv4Addrs,
+			Addresses: ipv4Addrs,
 		},
 		IPv6: &linodego.PublicInterfaceIPv6CreateOptions{
-			Ranges: &ipv6Ranges,
+			Ranges: ipv6Ranges,
 		},
 	}
 }
@@ -1146,7 +1169,7 @@ func linodeMachineSpecToInstanceCreateConfig(machineSpec infrav1alpha2.LinodeMac
 				if iface.IPv4.NAT1To1 != "" {
 					NAT1to1 = &iface.IPv4.NAT1To1
 				}
-				interfaces[idx].IPv4 = &linodego.VPCIPv4{
+				interfaces[idx].IPv4 = &linodego.VPCIPv4CreateOptions{
 					VPC:     iface.IPv4.VPC,
 					NAT1To1: NAT1to1,
 				}
@@ -1290,9 +1313,6 @@ func configureDisks(ctx context.Context, logger logr.Logger, machineScope *scope
 		return nil
 	}
 
-	if err := resizeRootDisk(ctx, logger, machineScope, linodeInstanceID); err != nil {
-		return err
-	}
 	if !reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightAdditionalDisksCreated)) {
 		if err := createDisks(ctx, logger, machineScope, linodeInstanceID); err != nil {
 			return err
@@ -1381,94 +1401,23 @@ func configureDisk(ctx context.Context, logger logr.Logger, machineScope *scope.
 	return nil
 }
 
-func resizeRootDisk(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
-	if reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightRootDiskResized)) {
-		return nil
-	}
-
-	instanceConfig, err := getDefaultInstanceConfig(ctx, machineScope, linodeInstanceID)
-	if err != nil {
-		logger.Error(err, "Failed to get default instance configuration")
-
-		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:    ConditionPreflightRootDiskResized,
-			Status:  metav1.ConditionFalse,
-			Reason:  util.CreateError,
-			Message: err.Error(),
-		})
-		return err
-	}
-
-	if instanceConfig.Devices.SDA == nil {
-		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:    ConditionPreflightRootDiskResized,
-			Status:  metav1.ConditionFalse,
-			Reason:  util.CreateError,
-			Message: "root disk not yet ready",
-		})
-
-		return errors.New("root disk not yet ready")
-	}
-
-	rootDiskID := instanceConfig.Devices.SDA.DiskID
-
-	// carve out space for the etcd disk
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightRootDiskResizing)) {
-		rootDisk, err := machineScope.LinodeClient.GetInstanceDisk(ctx, linodeInstanceID, rootDiskID)
-		if err != nil {
-			logger.Error(err, "Failed to get root disk for instance")
-
-			machineScope.LinodeMachine.SetCondition(metav1.Condition{
-				Type:    ConditionPreflightRootDiskResizing,
-				Status:  metav1.ConditionFalse,
-				Reason:  util.CreateError,
-				Message: err.Error(),
-			})
-
-			return err
-		}
-		// dynamically calculate root disk size unless an explicit OS disk is being set
-		diskSize := calculateRootDisk(machineScope, rootDisk)
-
-		if err := machineScope.LinodeClient.ResizeInstanceDisk(ctx, linodeInstanceID, rootDiskID, diskSize); err != nil {
-			machineScope.LinodeMachine.SetCondition(metav1.Condition{
-				Type:    ConditionPreflightRootDiskResizing,
-				Status:  metav1.ConditionFalse,
-				Reason:  util.CreateError,
-				Message: err.Error(),
-			})
-			return err
-		}
-		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:   ConditionPreflightRootDiskResizing,
-			Status: metav1.ConditionTrue,
-			Reason: "RootDiskResizing",
-		})
-	}
-
-	machineScope.LinodeMachine.DeleteCondition(ConditionPreflightRootDiskResizing)
-	machineScope.LinodeMachine.SetCondition(metav1.Condition{
-		Type:   ConditionPreflightRootDiskResized,
-		Status: metav1.ConditionTrue,
-		Reason: "RootDiskResized",
-	})
-
-	return nil
-}
-
-func calculateRootDisk(machineScope *scope.MachineScope, rootDisk *linodego.InstanceDisk) int {
+func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (*int, error) {
 	additionalDiskSize := 0
-	// If the user has specified an OS disk, use it's size.
+	// If the user has specified an OS disk, use its size.
 	if machineScope.LinodeMachine.Spec.OSDisk != nil {
-		return int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))
+		return ptr.To(int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))), nil
 	}
-	// If no DataDisks are specified, use the default root disk size.
+	// If no DataDisks are specified, omit the size
 	if machineScope.LinodeMachine.Spec.DataDisks == nil {
-		return rootDisk.Size
+		return nil, nil //nolint:nilnil // we want to let the API default the size if there are no other disks to make room for
 	}
+
 	// If DataDisks are specified, calculate the size of the additional disk + root disk for resizing.
 	if machineScope.LinodeMachine.Spec.DataDisks.SDB != nil {
 		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDB.Size.ScaledValue(resource.Mega))
+	} else {
+		// account for the 512 MB default swap disk
+		additionalDiskSize += defaultSwapDiskSize
 	}
 	if machineScope.LinodeMachine.Spec.DataDisks.SDC != nil {
 		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDC.Size.ScaledValue(resource.Mega))
@@ -1488,8 +1437,13 @@ func calculateRootDisk(machineScope *scope.MachineScope, rootDisk *linodego.Inst
 	if machineScope.LinodeMachine.Spec.DataDisks.SDH != nil {
 		additionalDiskSize += int(machineScope.LinodeMachine.Spec.DataDisks.SDH.Size.ScaledValue(resource.Mega))
 	}
-	diskSize := rootDisk.Size - additionalDiskSize
-	return diskSize
+	planType, err := machineScope.LinodeClient.GetType(ctx, machineScope.LinodeMachine.Spec.Type)
+	if err != nil {
+		return nil, err
+	}
+	diskSize := planType.Disk - additionalDiskSize
+
+	return ptr.To(diskSize), nil
 }
 
 func updateInstanceConfigProfile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
@@ -1638,7 +1592,7 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 
 	// If using LinodeInterfaces that needs to know about the firewall ID
 	for i := range createConfig.LinodeInterfaces {
-		createConfig.LinodeInterfaces[i].FirewallID = ptr.To(ptr.To(fwID))
+		createConfig.LinodeInterfaces[i].FirewallID = ptr.To(fwID)
 	}
 
 	return nil

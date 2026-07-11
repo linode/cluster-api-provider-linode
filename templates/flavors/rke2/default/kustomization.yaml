@@ -49,7 +49,7 @@ patches:
         value: |
           routeController:
             vpcName: ${VPC_NAME:=${CLUSTER_NAME}}
-            clusterCIDR: 10.0.0.0/8
+            clusterCIDR: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
             configureCloudRoutes: true
           secretRef:
             name: "linode-token-region"

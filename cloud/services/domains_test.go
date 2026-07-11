@@ -3,10 +3,11 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -1119,6 +1120,136 @@ func TestAddIPToDNS(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnsureLinodeDNSDeletesRecordForDeletingCAPIMachine(t *testing.T) {
+	t.Parallel()
+
+	clusterScope := &scope.ClusterScope{
+		Cluster: &clusterv1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-cluster",
+				UID:  "test-uid",
+			},
+		},
+		LinodeCluster: &infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-cluster",
+				UID:  "test-uid",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType:    "dns",
+					DNSRootDomain:       "lkedevs.net",
+					DNSUniqueIdentifier: "test-hash",
+				},
+			},
+		},
+		LinodeMachines: infrav1alpha2.LinodeMachineList{
+			Items: []infrav1alpha2.LinodeMachine{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "deleting-machine",
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: "cluster.x-k8s.io/v1beta1",
+							Kind:       "Machine",
+							Name:       "deleting-machine",
+							UID:        "deleting-machine-uid",
+						}},
+					},
+					Status: infrav1alpha2.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{{
+							Type:    clusterv1.MachineExternalIP,
+							Address: "10.10.10.10",
+						}},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "active-machine",
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: "cluster.x-k8s.io/v1beta1",
+							Kind:       "Machine",
+							Name:       "active-machine",
+							UID:        "active-machine-uid",
+						}},
+					},
+					Status: infrav1alpha2.LinodeMachineStatus{
+						Addresses: []clusterv1.MachineAddress{{
+							Type:    clusterv1.MachineExternalIP,
+							Address: "10.20.20.20",
+						}},
+					},
+				},
+			},
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockDNSClient := mock.NewMockLinodeClient(ctrl)
+	clusterScope.LinodeDomainsClient = mockDNSClient
+	mockDNSClient.EXPECT().ListDomains(gomock.Any(), gomock.Any()).Return([]linodego.Domain{{
+		ID:     1,
+		Domain: "lkedevs.net",
+	}}, nil)
+	mockDNSClient.EXPECT().ListDomainRecords(gomock.Any(), 1, gomock.Any()).DoAndReturn(
+		func(_ context.Context, _ int, opts *linodego.ListOptions) ([]linodego.DomainRecord, error) {
+			if strings.Contains(opts.Filter, `"name":"test-cluster-test-hash"`) && !strings.Contains(opts.Filter, `"target"`) {
+				return []linodego.DomainRecord{
+					{
+						ID:     100,
+						Type:   linodego.RecordTypeA,
+						Name:   "test-cluster-test-hash",
+						Target: "10.10.10.10",
+					},
+					{
+						ID:     101,
+						Type:   linodego.RecordTypeA,
+						Name:   "test-cluster-test-hash",
+						Target: "10.20.20.20",
+					},
+					{
+						ID:     102,
+						Type:   linodego.RecordTypeTXT,
+						Name:   "test-cluster-test-hash",
+						Target: "test-cluster",
+					},
+				}, nil
+			}
+			return []linodego.DomainRecord{{ID: 101}}, nil
+		}).AnyTimes()
+	mockDNSClient.EXPECT().DeleteDomainRecord(gomock.Any(), 1, 100).Return(nil)
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+	clusterScope.Client = mockK8sClient
+	mockK8sClient.EXPECT().Scheme().Return(nil).AnyTimes()
+	mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, key client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
+			machine, ok := obj.(*clusterv1.Machine)
+			if !ok {
+				return nil
+			}
+
+			machine.Name = key.Name
+			machine.Namespace = key.Namespace
+			switch key.Name {
+			case "deleting-machine":
+				deletionTime := metav1.Now()
+				machine.DeletionTimestamp = &deletionTime
+				machine.UID = "deleting-machine-uid"
+			case "active-machine":
+				machine.UID = "active-machine-uid"
+				machine.Status.Conditions = []metav1.Condition{{
+					Type:   clusterv1.ReadyCondition,
+					Status: metav1.ConditionTrue,
+				}}
+			}
+			return nil
+		}).AnyTimes()
+
+	require.NoError(t, EnsureDNSEntries(t.Context(), clusterScope, "create"))
 }
 
 func TestDeleteIPFromDNS(t *testing.T) {

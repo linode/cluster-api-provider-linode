@@ -11,7 +11,7 @@ import (
 
 	_sourceClients "github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -62,14 +62,14 @@ func (_d LinodeClientWithTracing) AssignPlacementGroupLinodes(ctx context.Contex
 }
 
 // BootInstance implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int, configID int) (err error) {
+func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int, copts linodego.InstanceBootOptions) (err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.BootInstance")
 	defer func() {
 		if _d._spanDecorator != nil {
 			_d._spanDecorator(_span, map[string]interface{}{
 				"ctx":      ctx,
 				"linodeID": linodeID,
-				"configID": configID}, map[string]interface{}{
+				"copts":    copts}, map[string]interface{}{
 				"err": err})
 		}
 
@@ -83,7 +83,7 @@ func (_d LinodeClientWithTracing) BootInstance(ctx context.Context, linodeID int
 
 		_span.End()
 	}()
-	return _d.LinodeClient.BootInstance(ctx, linodeID, configID)
+	return _d.LinodeClient.BootInstance(ctx, linodeID, copts)
 }
 
 // CreateDomainRecord implements _sourceClients.LinodeClient
@@ -714,7 +714,7 @@ func (_d LinodeClientWithTracing) GetFirewallDevice(ctx context.Context, firewal
 }
 
 // GetFirewallRules implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) GetFirewallRules(ctx context.Context, firewallID int) (fp1 *linodego.FirewallRuleSet, err error) {
+func (_d LinodeClientWithTracing) GetFirewallRules(ctx context.Context, firewallID int) (fp1 *linodego.FirewallRules, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetFirewallRules")
 	defer func() {
 		if _d._spanDecorator != nil {
@@ -786,32 +786,6 @@ func (_d LinodeClientWithTracing) GetInstance(ctx context.Context, linodeID int)
 		_span.End()
 	}()
 	return _d.LinodeClient.GetInstance(ctx, linodeID)
-}
-
-// GetInstanceDisk implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) GetInstanceDisk(ctx context.Context, linodeID int, diskID int) (ip1 *linodego.InstanceDisk, err error) {
-	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetInstanceDisk")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":      ctx,
-				"linodeID": linodeID,
-				"diskID":   diskID}, map[string]interface{}{
-				"ip1": ip1,
-				"err": err})
-		}
-
-		if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.GetInstanceDisk(ctx, linodeID, diskID)
 }
 
 // GetInstanceIPAddresses implements _sourceClients.LinodeClient
@@ -1375,32 +1349,6 @@ func (_d LinodeClientWithTracing) ListVPCs(ctx context.Context, opts *linodego.L
 	return _d.LinodeClient.ListVPCs(ctx, opts)
 }
 
-// ResizeInstanceDisk implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) ResizeInstanceDisk(ctx context.Context, linodeID int, diskID int, size int) (err error) {
-	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ResizeInstanceDisk")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":      ctx,
-				"linodeID": linodeID,
-				"diskID":   diskID,
-				"size":     size}, map[string]interface{}{
-				"err": err})
-		}
-
-		if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.ResizeInstanceDisk(ctx, linodeID, diskID, size)
-}
-
 // UnassignPlacementGroupLinodes implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) UnassignPlacementGroupLinodes(ctx context.Context, id int, options linodego.PlacementGroupUnAssignOptions) (pp1 *linodego.PlacementGroup, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UnassignPlacementGroupLinodes")
@@ -1481,7 +1429,7 @@ func (_d LinodeClientWithTracing) UpdateFirewall(ctx context.Context, firewallID
 }
 
 // UpdateFirewallRules implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRuleSet) (fp1 *linodego.FirewallRuleSet, err error) {
+func (_d LinodeClientWithTracing) UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRulesUpdateOptions) (fp1 *linodego.FirewallRules, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateFirewallRules")
 	defer func() {
 		if _d._spanDecorator != nil {
@@ -1635,4 +1583,30 @@ func (_d LinodeClientWithTracing) UpdatePlacementGroup(ctx context.Context, id i
 		_span.End()
 	}()
 	return _d.LinodeClient.UpdatePlacementGroup(ctx, id, options)
+}
+
+// UpdateVPC implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) UpdateVPC(ctx context.Context, vpcID int, opts linodego.VPCUpdateOptions) (vp1 *linodego.VPC, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.UpdateVPC")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":   ctx,
+				"vpcID": vpcID,
+				"opts":  opts}, map[string]interface{}{
+				"vp1": vp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.UpdateVPC(ctx, vpcID, opts)
 }

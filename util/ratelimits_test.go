@@ -18,12 +18,11 @@ package util
 
 import (
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/go-resty/resty/v2"
 )
 
 func TestGetPostReqCounter(t *testing.T) {
@@ -118,7 +117,7 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  *PostRequestCounter
-		args    *resty.Response
+		args    *http.Response
 		wantErr bool
 	}{
 		{
@@ -127,8 +126,8 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
-			args: &resty.Response{
-				Request: &resty.Request{
+			args: &http.Response{
+				Request: &http.Request{
 					Method: http.MethodGet,
 				},
 			},
@@ -140,10 +139,10 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
-			args: &resty.Response{
-				Request: &resty.Request{
+			args: &http.Response{
+				Request: &http.Request{
 					Method: http.MethodPost,
-					URL:    "/v4/vpc/ips",
+					URL:    &url.URL{Path: "/v4/vpc/ips"},
 				},
 			},
 			wantErr: false,
@@ -154,10 +153,10 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
-			args: &resty.Response{
-				Request: &resty.Request{
+			args: &http.Response{
+				Request: &http.Request{
 					Method: http.MethodPost,
-					URL:    "/v4/linode/instances",
+					URL:    &url.URL{Path: "/v4/linode/instances"},
 				},
 			},
 			wantErr: true,
@@ -168,14 +167,12 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
-			args: &resty.Response{
-				Request: &resty.Request{
+			args: &http.Response{
+				Request: &http.Request{
 					Method: http.MethodPost,
-					URL:    "/v4/linode/instances",
+					URL:    &url.URL{Path: "/v4/linode/instances"},
 				},
-				RawResponse: &http.Response{
-					Header: http.Header{"X-Ratelimit-Remaining": []string{"5"}},
-				},
+				Header: http.Header{"X-Ratelimit-Remaining": []string{"5"}},
 			},
 			wantErr: true,
 		},
@@ -185,14 +182,12 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
-			args: &resty.Response{
-				Request: &resty.Request{
+			args: &http.Response{
+				Request: &http.Request{
 					Method: http.MethodPost,
-					URL:    "/v4/linode/instances",
+					URL:    &url.URL{Path: "/v4/linode/instances"},
 				},
-				RawResponse: &http.Response{
-					Header: http.Header{"X-Ratelimit-Remaining": []string{"5"}, "X-Ratelimit-Reset": []string{"10"}},
-				},
+				Header: http.Header{"X-Ratelimit-Remaining": []string{"5"}, "X-Ratelimit-Reset": []string{"10"}},
 			},
 			wantErr: false,
 		},
@@ -202,14 +197,12 @@ func TestPostRequestCounter_ApiResponseRatelimitCounter(t *testing.T) {
 				ReqRemaining: 4,
 				RefreshTime:  now,
 			},
-			args: &resty.Response{
-				Request: &resty.Request{
+			args: &http.Response{
+				Request: &http.Request{
 					Method: http.MethodPost,
-					URL:    "/v4/linode/instances",
+					URL:    &url.URL{Path: "/v4/linode/instances"},
 				},
-				RawResponse: &http.Response{
-					Header: http.Header{"X-Ratelimit-Remaining": []string{"4"}, "X-Ratelimit-Reset": []string{strconv.Itoa(int(time.Now().Unix()) + 100)}},
-				},
+				Header: http.Header{"X-Ratelimit-Remaining": []string{"4"}, "X-Ratelimit-Reset": []string{strconv.Itoa(int(time.Now().Unix()) + 100)}},
 			},
 			wantErr: false,
 		},

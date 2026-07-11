@@ -22,7 +22,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +48,7 @@ func TestValidateLinodeObjectStorageBucketSpec(t *testing.T) {
 			},
 		}
 		region            = linodego.Region{ID: "mock-region"}
-		capabilities      = []string{linodego.CapabilityObjectStorage}
+		capabilities      = []string{string(linodego.CapabilityObjectStorage)}
 		capabilities_zero = []string{}
 	)
 

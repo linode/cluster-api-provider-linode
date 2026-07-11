@@ -49,11 +49,11 @@ Example: `scope.NewClusterScope()` combines `LinodeCluster` + CAPI `Cluster` res
 ## Development Workflows
 
 ### Build & Test Commands
-- `make generate` - Regenerate CRDs and mocks after API changes
-- `make test` - Run unit tests with mocked clients
-- `make e2e E2E_SELECTOR=quick` - Run specific E2E tests using Chainsaw
-- `make lint` - Run golangci-lint with project-specific rules
-- `make build` - Build the controller manager binary
+- `mise run generate` - Regenerate CRDs and mocks after API changes
+- `mise run test` - Run unit tests with mocked clients
+- `mise run e2e E2E_SELECTOR=quick` - Run specific E2E tests using Chainsaw
+- `mise run lint` - Run golangci-lint with project-specific rules
+- `mise run build` - Build the controller manager binary
 
 ### Adding New Resources
 1. Define API types in `api/v1alpha2/` with proper validation markers
@@ -61,7 +61,7 @@ Example: `scope.NewClusterScope()` combines `LinodeCluster` + CAPI `Cluster` res
 3. Add scope in `cloud/scope/` for client management
 4. Add validation webhook in `internal/webhook/v1alpha2/`
 5. Add cloud services in `cloud/services/` if needed
-6. Run `make generate` to update CRDs and mocks
+6. Run `mise run generate` to update CRDs and mocks
 7. Add E2E tests in `e2e/<resource>-controller/`
 
 ### Testing Patterns
@@ -200,5 +200,5 @@ Standard OpenTelemetry environment variables are supported via `autoexport` pack
 - Use `kubectl describe` on resources to see status conditions and events
 - E2E test failures often indicate webhook validation or API compatibility issues
 - Enable debug logging with `CAPL_DEBUG=true` for detailed tracing
-- Validate CRDs are current with `make generate` after API changes
-- Generate local-release whenever making changes to the /templates directory. Use command `make local-release` to generate the release files.
+- Validate CRDs are current with `mise run generate` after API changes
+- Generate local-release whenever making changes to the /templates directory. Use command `mise run local-release` to generate the release files.

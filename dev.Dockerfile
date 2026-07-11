@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.25 as builder
+FROM golang:1.26 as builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION
@@ -32,11 +32,11 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
-WORKDIR /
-COPY --from=builder /workspace/manager .
+WORKDIR /ko-app
+COPY --from=builder /workspace/manager cmd
 USER 65532:65532
 
 # By default disable traces exporter
 ENV OTEL_TRACES_EXPORTER=none
 
-ENTRYPOINT ["/manager"]
+ENTRYPOINT ["/ko-app/cmd"]

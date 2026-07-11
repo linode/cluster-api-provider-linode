@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -56,7 +56,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 			},
 		}
 		region                                    = linodego.Region{ID: "test"}
-		capabilities                              = []string{linodego.CapabilityLinodeInterfaces}
+		capabilities                              = []string{string(linodego.CapabilityLinodeInterfaces)}
 		disk                                      = infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 		disk_zero                                 = infrav1alpha2.InstanceDisk{Size: *resource.NewQuantity(0, resource.BinarySI)}
 		plan                                      = linodego.LinodeType{Disk: 2 * int(disk.Size.ScaledValue(resource.Mega))}

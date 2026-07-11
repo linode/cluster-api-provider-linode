@@ -166,15 +166,15 @@ if debug == "true":
     docker_build_with_restart(
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
-        dockerfile_contents="""FROM golang:1.22
+        dockerfile_contents="""FROM golang:1.26
         RUN go install github.com/go-delve/delve/cmd/dlv@latest
-        COPY bin/manager /manager
+        COPY bin/manager /ko-app/cmd
         WORKDIR /""",
         only=("bin/manager"),
         build_args={"VERSION": os.getenv("VERSION", "")},
-        entrypoint="$GOPATH/bin/dlv --listen=:40000 --continue --accept-multiclient --api-version=2 --headless=true exec /manager",
+        entrypoint="$GOPATH/bin/dlv --listen=:40000 --continue --accept-multiclient --api-version=2 --headless=true exec /ko-app/cmd",
         live_update=[
-            sync("./bin/manager", "/manager"),
+            sync("./bin/manager", "/ko-app/cmd"),
         ],
     )
     capl_deps.append("capl-compile")
@@ -218,7 +218,8 @@ if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":
     docker_build(
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
-        only=("Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
+        dockerfile="dev.Dockerfile",
+        only=("dev.Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
         "./api", "./clients", "./cloud", "./cmd", "./internal", "./observability", "./util", "./version"),
         build_args={"VERSION": os.getenv("VERSION", "")},
     )

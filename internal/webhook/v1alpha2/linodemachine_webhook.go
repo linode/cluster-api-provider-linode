@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/linode/linodego"
+	"github.com/linode/linodego/v2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -55,8 +55,11 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, machine *in
 	spec := machine.Spec
 	linodemachinelog.Info("validate create", "name", machine.Name)
 
-	skipAPIValidation, linodeClient := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
 		machine.Name, machine.GetNamespace(), linodemachinelog)
+	if err != nil {
+		return admission.Warnings{}, err
+	}
 
 	var errs field.ErrorList
 	if err := validateLabelLength(machine.GetName(), field.NewPath("metadata").Child("name")); err != nil {
