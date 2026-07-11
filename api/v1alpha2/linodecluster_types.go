@@ -219,6 +219,7 @@ type NetworkSpec struct {
 	NodeBalancerID *int `json:"nodeBalancerID,omitempty"`
 
 	// nodeBalancerFirewallID is the id of NodeBalancer Firewall.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional
 	NodeBalancerFirewallID *int `json:"nodeBalancerFirewallID,omitempty"`
 
