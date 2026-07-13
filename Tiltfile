@@ -32,7 +32,7 @@ if os.getenv("USE_CAPI_OPERATOR", "false") == "true":
         flags=[
           "--create-namespace",
           "--wait",
-          "--version=0.14.0",
+          "--version=0.27.0",
         ],
         resource_deps=["capi-operator-repo", "cert-manager"],
         labels=["CAPI"],
@@ -108,7 +108,7 @@ else:
     local_resource(
         'capi-controller-manager',
         cmd="EXP_CLUSTER_RESOURCE_SET=true CLUSTER_TOPOLOGY=true EXP_KUBEADM_BOOTSTRAP_FORMAT_IGNITION=true clusterctl init --addon helm --core cluster-api:${capi_version} --bootstrap kubeadm:${capi_version},k3s:${k3s_version},rke2:${rke2_version} --control-plane kubeadm:${capi_version},k3s:${k3s_version},rke2:${rke2_version} --config ./hack/clusterctl.yaml",
-        env={'capi_version': os.getenv("CAPI_VERSION", "v1.11.1"), 'k3s_version': os.getenv("K3S_VERSION", "v0.3.0"), 'rke2_version': os.getenv("RKE2_VERSION", "v0.20.1")},
+        env={'capi_version': os.getenv("CAPI_VERSION", "v1.13.3"), 'k3s_version': os.getenv("K3S_VERSION", "v0.4.0"), 'rke2_version': os.getenv("RKE2_VERSION", "v0.25.0")},
     )
 
 capl_resources = [
