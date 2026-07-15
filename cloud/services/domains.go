@@ -270,8 +270,8 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	})
 }
 
-func createAkamaiEntry(ctx context.Context, client clients.AkamClient, dnsEntry DNSOptions, fqdn, rootDomain string) error {
-	return client.CreateRecord(
+func createAkamaiEntry(ctx context.Context, akamClient clients.AkamClient, dnsEntry DNSOptions, fqdn, rootDomain string) error {
+	return akamClient.CreateRecord(
 		ctx,
 		dns.CreateRecordRequest{
 			Record: &dns.RecordBody{
@@ -371,7 +371,7 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machi
 	isReady, err := isCapiMachineReady(ctx, capiMachine, cscope.Client)
 	if err != nil {
 		logger.Error(err, "failed to determine if linode machine is ready, will not requeue")
-		return nil, nil //nolint:nilnil requeueing will not fix it
+		return nil, nil
 	}
 	if !firstMachine && !isReady {
 		// always process the first linodeMachine, and add its IP to the DNS entries.
