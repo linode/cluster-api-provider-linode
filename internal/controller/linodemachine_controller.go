@@ -62,8 +62,6 @@ const (
 	ConditionPreflightLinodeFirewallReady       = "PreflightLinodeFirewallReady"
 	ConditionPreflightMetadataSupportConfigured = "PreflightMetadataSupportConfigured"
 	ConditionPreflightCreated                   = "PreflightCreated"
-	ConditionPreflightRootDiskResizing          = "PreflightRootDiskResizing"
-	ConditionPreflightRootDiskResized           = "PreflightRootDiskResized"
 	ConditionPreflightAdditionalDisksCreated    = "PreflightAdditionalDisksCreated"
 	ConditionPreflightConfigured                = "PreflightConfigured"
 	ConditionPreflightBootTriggered             = "PreflightBootTriggered"

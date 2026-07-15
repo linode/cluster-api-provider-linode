@@ -15,9 +15,12 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego/v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kcpv1beta2 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta2"
 	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/collections"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
@@ -327,16 +330,29 @@ func removeElement(stringList []string, elemToRemove string) []string {
 	return stringList
 }
 
-func isCapiMachineReady(capiMachine *v1beta2.Machine) bool {
+func isCapiMachineReady(ctx context.Context, capiMachine *v1beta2.Machine, k8sClient client.Client) (bool, error) {
+	ref := metav1.GetControllerOf(capiMachine)
+	if ref == nil || ref.Kind != "KubeadmControlPlane" {
+		// not owned by a KCP, fall back to just checking the Machine Ready condition
+		for _, condition := range capiMachine.Status.Conditions {
+			if condition.Type == v1beta2.ReadyCondition {
+				return condition.Status == metav1.ConditionTrue, nil
+			}
+		}
+		return false, nil
+	}
+	kcp := &kcpv1beta2.KubeadmControlPlane{}
+	if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: capiMachine.Namespace, Name: ref.Name}, kcp); err != nil {
+		return false, err
+	}
 	// Don't assume we have MachineHealthCheck conditions to check.
 	// Instead, use the CAPI upstream filter to check the machine does not have unhealthy control plane components.
 	// (See https://github.com/kubernetes-sigs/cluster-api/blob/v1.13.4/util/collections/machine_filters.go#L171-L174)
 	// This saves us from having to check the several conditions ourselves.
-	//
-	// NOTE: We assume etcd is not externally managed / don't configure that on the ControlPlane resource (KCP, RKE2ControlPlane, KThreesControlPlane).
-	// We might want to configure that in the future via LinodeCluster.Spec and check that field here.
+	// If etcd is not externally managed, check the etcd component health too.
+	isEtcdManagedExternally := kcp.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.External.IsDefined()
 	return len(collections.FromMachines(capiMachine).
-		Filter(collections.HasUnhealthyControlPlaneComponents(true))) == 0
+		Filter(collections.HasUnhealthyControlPlaneComponents(!isEtcdManagedExternally))) == 0, nil
 }
 
 func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string, firstMachine bool) ([]DNSOptions, error) {
@@ -351,10 +367,15 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machi
 		return nil, nil
 	}
 
-	if !firstMachine && !isCapiMachineReady(capiMachine) {
+	logger := logr.FromContextOrDiscard(ctx)
+	isReady, err := isCapiMachineReady(ctx, capiMachine, cscope.Client)
+	if err != nil {
+		logger.Error(err, "failed to determine if linode machine is ready, will not requeue")
+		return nil, nil //nolint:nilnil requeueing will not fix it
+	}
+	if !firstMachine && !isReady {
 		// always process the first linodeMachine, and add its IP to the DNS entries.
 		// For other linodeMachine, only process them if the CAPI machine is ready
-		logger := logr.FromContextOrDiscard(ctx)
 		logger.Info("skipping DNS entry creation for LinodeMachine as the CAPI machine is not ready", "LinodeMachine", machine.Name)
 		// If not ready, return an error so we can requeue and try again later.
 		return nil, util.ErrReconcileAgain
