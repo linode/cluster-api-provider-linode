@@ -15,9 +15,9 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/v12/pkg/dns"
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/collections"
 
 	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
@@ -328,12 +328,15 @@ func removeElement(stringList []string, elemToRemove string) []string {
 }
 
 func isCapiMachineReady(capiMachine *v1beta2.Machine) bool {
-	for _, condition := range capiMachine.Status.Conditions {
-		if condition.Type == v1beta2.ReadyCondition {
-			return condition.Status == metav1.ConditionTrue
-		}
-	}
-	return false
+	// Don't assume we have MachineHealthCheck conditions to check.
+	// Instead, use the CAPI upstream filter to check the machine does not have unhealthy control plane components.
+	// (See https://github.com/kubernetes-sigs/cluster-api/blob/v1.13.4/util/collections/machine_filters.go#L171-L174)
+	// This saves us from having to check the several conditions ourselves.
+	//
+	// NOTE: We assume etcd is not externally managed / don't configure that on the ControlPlane resource (KCP, RKE2ControlPlane, KThreesControlPlane).
+	// We might want to configure that in the future via LinodeCluster.Spec and check that field here.
+	return len(collections.FromMachines(capiMachine).
+		Filter(collections.HasUnhealthyControlPlaneComponents(true))) == 0
 }
 
 func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string, firstMachine bool) ([]DNSOptions, error) {
