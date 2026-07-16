@@ -335,7 +335,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			if testcase.expectedError != nil {
 				require.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			if testcase.name == "Failure if Machine control plane components are unhealthy (etcd)" {
 				// set everything to healthy and make sure it succeeds
@@ -343,7 +343,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 					unhealthyStatus.Conditions[i].Status = metav1.ConditionTrue
 				}
 				mockAkamClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				assert.NoError(t, EnsureDNSEntries(t.Context(), testcase.clusterScope, "create"))
+				require.NoError(t, EnsureDNSEntries(t.Context(), testcase.clusterScope, "create"))
 			}
 		})
 	}
