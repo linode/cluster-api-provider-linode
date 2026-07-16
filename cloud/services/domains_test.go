@@ -24,6 +24,35 @@ import (
 	"github.com/linode/cluster-api-provider-linode/util"
 )
 
+var unhealthyStatus = &clusterv1.MachineStatus{
+	Conditions: []metav1.Condition{
+		{
+			Type:   kcpv1beta2.KubeadmControlPlaneMachineAPIServerPodHealthyCondition,
+			Status: metav1.ConditionTrue,
+		},
+		{
+			Type:   kcpv1beta2.KubeadmControlPlaneMachineControllerManagerPodHealthyCondition,
+			Status: metav1.ConditionTrue,
+		},
+		{
+			Type:   kcpv1beta2.KubeadmControlPlaneMachineSchedulerPodHealthyCondition,
+			Status: metav1.ConditionTrue,
+		},
+		{
+			Type:   kcpv1beta2.KubeadmControlPlaneMachineEtcdPodHealthyCondition,
+			Status: metav1.ConditionTrue,
+		},
+		{
+			Type:   kcpv1beta2.KubeadmControlPlaneMachineEtcdMemberHealthyCondition,
+			Status: metav1.ConditionFalse,
+		},
+		{
+			Type:   clusterv1.ReadyCondition,
+			Status: metav1.ConditionTrue,
+		},
+	},
+}
+
 func TestAddIPToEdgeDNS(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -200,34 +229,7 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 					UID:        "test-kcp-uid",
 					Controller: ptr.To(true),
 				}}
-				machineStatus := &clusterv1.MachineStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   kcpv1beta2.KubeadmControlPlaneMachineAPIServerPodHealthyCondition,
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   kcpv1beta2.KubeadmControlPlaneMachineControllerManagerPodHealthyCondition,
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   kcpv1beta2.KubeadmControlPlaneMachineSchedulerPodHealthyCondition,
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   kcpv1beta2.KubeadmControlPlaneMachineEtcdPodHealthyCondition,
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   kcpv1beta2.KubeadmControlPlaneMachineEtcdMemberHealthyCondition,
-							Status: metav1.ConditionFalse,
-						},
-						{
-							Type:   clusterv1.ReadyCondition,
-							Status: metav1.ConditionTrue,
-						},
-					},
-				}
+				machineStatus := unhealthyStatus
 				mockCAPIMachine(mockK8sClient, machineOwnerReferences, machineStatus)
 				kcp := &kcpv1beta2.KubeadmControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -321,9 +323,9 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockAkamClient := mock.NewMockAkamClient(ctrl)
-			testcase.clusterScope.AkamaiDomainsClient = MockAkamClient
-			testcase.expects(MockAkamClient)
+			mockAkamClient := mock.NewMockAkamClient(ctrl)
+			testcase.clusterScope.AkamaiDomainsClient = mockAkamClient
+			testcase.expects(mockAkamClient)
 
 			MockK8sClient := mock.NewMockK8sClient(ctrl)
 			testcase.clusterScope.Client = MockK8sClient
@@ -334,6 +336,14 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 				require.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
 				assert.NoError(t, err)
+			}
+			if testcase.name == "Failure if Machine control plane components are unhealthy (etcd)" {
+				// set everything to healthy and make sure it succeeds
+				for i := range unhealthyStatus.Conditions {
+					unhealthyStatus.Conditions[i].Status = metav1.ConditionTrue
+				}
+				mockAkamClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				assert.NoError(t, EnsureDNSEntries(t.Context(), testcase.clusterScope, "create"))
 			}
 		})
 	}
