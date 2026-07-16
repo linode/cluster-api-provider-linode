@@ -6,9 +6,7 @@ metadata:
   name: k3s-capl-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
-#    all:
     k3s:
-#    flavors:
 spec:
   bindings:
     # A short identifier for the E2E test run
@@ -34,7 +32,7 @@ spec:
               - name: CLUSTERCTL_CONFIG
                 value: (env('CLUSTERCTL_CONFIG'))
               - name: KUBERNETES_VERSION
-                value: (env('KUBERNETES_VERSION') || 'v1.33.4')
+                value: (env('KUBERNETES_VERSION') || 'v1.36.2')
             content: |
               set -e
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \

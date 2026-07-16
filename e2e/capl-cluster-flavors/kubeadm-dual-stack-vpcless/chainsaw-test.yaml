@@ -2,15 +2,37 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: rke2-capl-cluster
-  # Labels to allow the test to be triggered based on selector flag
+  creationTimestamp: null
+  name: dualstack-capl-cluster
   labels:
-    rke2:
+    all:
+    kubeadm-dualstack:
+    flavors:
 spec:
+  catch:
+    - script:
+        env:
+          - name: TARGET_API
+            value: api.linode.com
+          - name: TARGET_API_VERSION
+            value: v4
+          - name: URI
+            value: images
+          - name: LINODE_REGION
+            value: (env('LINODE_REGION'))
+        content: |
+          set -e
+          # Get the latest version on Alpha channel.
+          # NOTE: This can be changed to Beta or Stable when Akamai support will come on these channels.
+          IMAGE_ID=$(cat image-id)
+          curl --request DELETE \
+            --url "https://${TARGET_API}/${TARGET_API_VERSION}/${URI}/${IMAGE_ID}" \
+            --header "Authorization: Bearer ${LINODE_TOKEN}" \
+            --header "accept: application/json"
   bindings:
     # A short identifier for the E2E test run
     - name: run
-      value: (join('-', ['e2e', 'rke2', random('[0-9a-z]{5}')]))
+      value: (join('-', ['e2e', 'dualstack', random('[0-9a-z]{5}')]))
     - name: cluster
       # Format the cluster name
       value: (trim((truncate(($run), `29`)), '-'))
@@ -34,17 +56,19 @@ spec:
                 value: (env('KUBERNETES_VERSION') || 'v1.36.2')
             content: |
               set -e
+              export FLATCAR_IMAGE_NAME=$(cat image-id)
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
-              --flavor rke2 --kubernetes-version ${KUBERNETES_VERSION}+rke2r1 \
+              --kubernetes-version ${KUBERNETES_VERSION} \
               --infrastructure local-linode:v0.0.0 \
               --control-plane-machine-count 1 --worker-machine-count 1 \
-              --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > rke2-cluster.yaml
+              --flavor kubeadm-dual-stack-vpcless \
+              --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > dualstack-cluster.yaml
             check:
               ($error == null): true
     - name: Apply generated cluster yaml
       try:
         - apply:
-            file: rke2-cluster.yaml
+            file: dualstack-cluster.yaml
         - assert:
             file: assert-child-cluster-resources.yaml
       catch:
@@ -59,7 +83,10 @@ spec:
             kind: MachineDeployment
         - describe:
             apiVersion: controlplane.cluster.x-k8s.io/v1beta2
-            kind: RKE2ControlPlane
+            kind: KubeadmControlPlane
+        - describe:
+            apiVersion: addons.cluster.x-k8s.io/v1alpha1
+            kind: HelmReleaseProxy
     - name: Check if the linodes are created
       try:
         - script:
@@ -95,28 +122,28 @@ spec:
                 value: (env('CLUSTERCTL_CONFIG'))
             content: |
               set -e
-              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > rke2-kubeconfig.yaml
+              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > dualstack-cluster-kubeconfig.yaml
             check:
               ($error == null): true
     - clusters:
-        rke2:
-          kubeconfig: ./rke2-kubeconfig.yaml
+        dualstack-cluster:
+          kubeconfig: ./dualstack-cluster-kubeconfig.yaml
       name: Check child cluster resources
       try:
         - assert:
-            cluster: rke2
+            cluster: dualstack-cluster
             file: assert-child-cluster-deployments.yaml
         - assert:
-            cluster: rke2
+            cluster: dualstack-cluster
             file: assert-child-cluster-daemonsets.yaml
       catch:
         - describe:
-            cluster: rke2
+            cluster: dualstack-cluster
             apiVersion: apps/v1
             kind: Deployment
             namespace: kube-system
         - describe:
-            cluster: rke2
+            cluster: dualstack-cluster
             apiVersion: apps/v1
             kind: DaemonSet
             namespace: kube-system
@@ -128,7 +155,7 @@ spec:
               kind: Cluster
               name: ($cluster)
         - error:
-            file: check-child-cluster-vpc-and-firewall-deleted.yaml
+            file: check-child-cluster-deleted.yaml
     - name: Check if the linodes are deleted
       try:
         - script:
@@ -156,7 +183,7 @@ spec:
       try:
         - script:
             content: |
-              rm -f rke2-cluster.yaml
-              rm -f rke2-kubeconfig.yaml
+              rm -f dualstack-cluster.yaml
+              rm -f dualstack-cluster-kubeconfig.yaml
             check:
               ($error == null): true
