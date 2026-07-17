@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	b64 "encoding/base64"
+	"errors"
 	"fmt"
 	"slices"
 	"testing"
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
@@ -198,7 +200,10 @@ func TestSetUserData(t *testing.T) {
 				Spec: infrav1alpha2.LinodeMachineSpec{Region: "us-ord", Image: "linode/ubuntu22.04"},
 			}, LinodeCluster: &infrav1alpha2.LinodeCluster{
 				Spec: infrav1alpha2.LinodeClusterSpec{
-					ObjectStore: &infrav1alpha2.ObjectStore{CredentialsRef: corev1.SecretReference{Name: "fake"}},
+					ObjectStore: &infrav1alpha2.ObjectStore{
+						CredentialsRef:          corev1.SecretReference{Name: "first"},
+						SecondaryCredentialsRef: &corev1.SecretReference{Name: "second"},
+					},
 				},
 			}},
 			createConfig: &linodego.InstanceCreateOptions{},
@@ -223,7 +228,7 @@ https://object.bucket.example.com
 				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 					cred := corev1.Secret{
 						Data: map[string][]byte{
-							"bucket":          []byte("fake"),
+							"bucket":          []byte("first"),
 							"bucket_endpoint": []byte("fake.example.com"),
 							"endpoint":        []byte("example.com"),
 							"access":          []byte("fake"),
@@ -233,6 +238,19 @@ https://object.bucket.example.com
 					*obj = cred
 					return nil
 				})
+				kMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+					cred := corev1.Secret{
+						Data: map[string][]byte{
+							"bucket":   []byte("second"),
+							"endpoint": []byte("example.com"),
+							"access":   []byte("fake"),
+							"secret":   []byte("fake"),
+						},
+					}
+					*obj = cred
+					return nil
+				})
+				s3Mock.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("first endpoint unavailable"))
 				s3Mock.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
 				s3PresignedMock.EXPECT().PresignGetObject(gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{URL: "https://object.bucket.example.com"}, nil)
 			},
@@ -329,8 +347,9 @@ https://object.bucket.example.com
 			mockS3PresignClient := mock.NewMockS3PresignClient(ctrl)
 			testcase.machineScope.LinodeClient = mockClient
 			testcase.machineScope.Client = mockK8sClient
-			testcase.machineScope.S3Client = mockS3Client
-			testcase.machineScope.S3PresignClient = mockS3PresignClient
+			testcase.machineScope.S3Clients = func(context.Context, *corev1.Secret) (clients.S3Client, clients.S3PresignClient, error) {
+				return mockS3Client, mockS3PresignClient, nil
+			}
 			testcase.expects(mockClient, mockK8sClient, mockS3Client, mockS3PresignClient)
 			logger := testr.New(t)
 

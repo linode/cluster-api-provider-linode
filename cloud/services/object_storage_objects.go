@@ -5,31 +5,54 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 )
+
+const objectStoreAttemptTimeout = 30 * time.Second
 
 func validateObjectScopeParams(mscope *scope.MachineScope) error {
 	if mscope == nil {
 		return errors.New("nil machine scope")
 	}
 
-	if mscope.S3Client == nil {
-		return errors.New("nil S3 client")
+	if mscope.Client == nil {
+		return errors.New("nil Kubernetes client")
 	}
-
-	if mscope.LinodeCluster.Spec.ObjectStore == nil {
+	if mscope.LinodeCluster == nil || mscope.LinodeCluster.Spec.ObjectStore == nil {
 		return errors.New("nil cluster object store")
+	}
+	if mscope.LinodeMachine == nil {
+		return errors.New("nil LinodeMachine")
 	}
 
 	return nil
+}
+
+// objectStoreRefs returns the ordered credentials references to try: the primary,
+// then the optional secondary, each defaulted to the cluster namespace when unset.
+func objectStoreRefs(mscope *scope.MachineScope) []corev1.SecretReference {
+	objectStore := mscope.LinodeCluster.Spec.ObjectStore
+	refs := []corev1.SecretReference{objectStore.CredentialsRef}
+	if objectStore.SecondaryCredentialsRef != nil {
+		refs = append(refs, *objectStore.SecondaryCredentialsRef)
+	}
+	for i := range refs {
+		if refs[i].Namespace == "" {
+			refs[i].Namespace = mscope.LinodeCluster.Namespace
+		}
+	}
+	return refs
 }
 
 func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte) (string, error) {
@@ -40,18 +63,51 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte) 
 		return "", errors.New("empty data")
 	}
 
-	bucket, err := mscope.GetBucketName(ctx)
-	if err != nil {
-		return "", err
-	}
-	if bucket == "" {
-		return "", errors.New("missing bucket name")
-	}
-
 	// Key by UUID for shared buckets.
 	key := string(mscope.LinodeMachine.UID)
+	var attemptErrs []error
+	for _, ref := range objectStoreRefs(mscope) {
+		if err := ctx.Err(); err != nil {
+			return "", fmt.Errorf("object store upload cancelled: %w", err)
+		}
 
-	if _, err := mscope.S3Client.PutObject(ctx, &s3.PutObjectInput{
+		url, err := createObjectWithCredentials(ctx, mscope, ref, data, key)
+		if err == nil {
+			return url, nil
+		}
+		qualifiedErr := fmt.Errorf("object store credentials %s/%s: %w", ref.Namespace, ref.Name, err)
+		attemptErrs = append(attemptErrs, qualifiedErr)
+		log.FromContext(ctx).Error(err, "Object Store attempt failed", "secretReference", ref.Namespace+"/"+ref.Name)
+	}
+
+	return "", fmt.Errorf("all Object Store attempts failed: %w", errors.Join(attemptErrs...))
+}
+
+func createObjectWithCredentials(
+	ctx context.Context,
+	mscope *scope.MachineScope,
+	ref corev1.SecretReference,
+	data []byte,
+	key string,
+) (string, error) {
+	attemptCtx, cancel := context.WithTimeout(ctx, objectStoreAttemptTimeout)
+	defer cancel()
+
+	credentials, err := mscope.GetObjectStoreCredentials(attemptCtx, ref)
+	if err != nil {
+		return "", fmt.Errorf("load credentials: %w", err)
+	}
+
+	s3Client, presignClient, err := mscope.S3Clients(attemptCtx, credentials)
+	if err == nil && (s3Client == nil || presignClient == nil) {
+		err = errors.New("S3 client builder returned nil client")
+	}
+	if err != nil {
+		return "", fmt.Errorf("create clients: %w", err)
+	}
+
+	bucket := string(credentials.Data["bucket"])
+	if _, err = s3Client.PutObject(attemptCtx, &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   s3manager.ReadSeekCloser(bytes.NewReader(data)),
@@ -65,19 +121,28 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte) 
 			opts.Expires = mscope.LinodeCluster.Spec.ObjectStore.PresignedURLDuration.Duration
 		})
 	}
-
-	req, err := mscope.S3PresignClient.PresignGetObject(
-		ctx,
-		&s3.GetObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		},
-		opts...)
-	if err != nil {
-		return "", fmt.Errorf("generate presigned url: %w", err)
+	req, err := presignClient.PresignGetObject(attemptCtx, &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	}, opts...)
+	switch {
+	case err != nil:
+		err = fmt.Errorf("generate presigned URL: %w", err)
+	case req == nil || req.URL == "":
+		err = errors.New("empty presigned URL")
+	default:
+		return req.URL, nil
 	}
-
-	return req.URL, nil
+	// Best-effort cleanup of the upload we can't hand out. Reuses attemptCtx:
+	// presigning is a local operation, so the timeout budget is effectively
+	// untouched by the time we get here. A leftover object is transient anyway —
+	// it is keyed by the machine UID, so a later reconcile overwrites it and
+	// deleteBootstrapData removes it on teardown.
+	if cleanupErr := deleteObject(attemptCtx, s3Client, bucket, key); cleanupErr != nil {
+		log.FromContext(ctx).Error(cleanupErr, "Failed to clean up Object Store upload after presign failure", "secretReference", ref.Namespace+"/"+ref.Name)
+		err = errors.Join(err, fmt.Errorf("cleanup after presign failure: %w", cleanupErr))
+	}
+	return "", err
 }
 
 func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
@@ -85,58 +150,93 @@ func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
 		return err
 	}
 
-	bucket, err := mscope.GetBucketName(ctx)
-	if err != nil {
-		return err
-	}
-	if bucket == "" {
-		return errors.New("missing bucket name")
-	}
-
 	// Key by UUID for shared buckets.
 	key := string(mscope.LinodeMachine.UID)
+	var attemptErrs []error
+	for _, ref := range objectStoreRefs(mscope) {
+		if err := deleteObjectWithCredentials(ctx, mscope, ref, key); err != nil {
+			attemptErrs = append(attemptErrs, fmt.Errorf("object store credentials %s/%s: %w", ref.Namespace, ref.Name, err))
+			log.FromContext(ctx).Error(err, "Object Store cleanup attempt failed", "secretReference", ref.Namespace+"/"+ref.Name)
+		}
+	}
+	return errors.Join(attemptErrs...)
+}
 
-	_, err = mscope.S3Client.HeadObject(
-		ctx,
-		&s3.HeadObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		})
+func deleteObjectWithCredentials(
+	ctx context.Context,
+	mscope *scope.MachineScope,
+	ref corev1.SecretReference,
+	key string,
+) error {
+	attemptCtx, cancel := context.WithTimeout(ctx, objectStoreAttemptTimeout)
+	defer cancel()
+
+	credentials, err := mscope.GetObjectStoreCredentials(attemptCtx, ref)
 	if err != nil {
-		var (
-			ae  smithy.APIError
-			bne *s3types.NoSuchBucket
-			kne *s3types.NoSuchKey
-			nf  *s3types.NotFound
-		)
+		return fmt.Errorf("load credentials: %w", err)
+	}
+
+	s3Client, _, err := mscope.S3Clients(attemptCtx, credentials)
+	if err == nil && s3Client == nil {
+		err = errors.New("S3 client builder returned nil client")
+	}
+	if err != nil {
+		return fmt.Errorf("create clients: %w", err)
+	}
+
+	return deleteObject(attemptCtx, s3Client, string(credentials.Data["bucket"]), key)
+}
+
+func deleteObject(ctx context.Context, s3Client clients.S3Client, bucket, key string) error {
+	_, err := s3Client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		var apiErr smithy.APIError
 		switch {
 		// In the case that the IAM policy does not have sufficient permissions to get the object, we will attempt to
 		// delete it anyway for backwards compatibility reasons.
-		case errors.As(err, &ae) && ae.ErrorCode() == "Forbidden":
+		case errors.As(err, &apiErr) && apiErr.ErrorCode() == "Forbidden":
 			break
-		// Specified bucket does not exist.
-		case errors.As(err, &bne):
-			return nil
-		// Specified key does not exist.
-		case errors.As(err, &kne):
-			return nil
-		// Object not found.
-		case errors.As(err, &nf):
+		case isObjectMissingError(err):
 			return nil
 		default:
 			return fmt.Errorf("delete object: %w", err)
 		}
 	}
 
-	if _, err = mscope.S3Client.DeleteObject(ctx,
+	if _, err = s3Client.DeleteObject(ctx,
 		&s3.DeleteObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(key),
 		}); err != nil {
+		if isObjectMissingError(err) {
+			return nil
+		}
 		return fmt.Errorf("delete object: %w", err)
 	}
 
 	return nil
+}
+
+func isObjectMissingError(err error) bool {
+	var (
+		bucketMissing *s3types.NoSuchBucket
+		keyMissing    *s3types.NoSuchKey
+		notFound      *s3types.NotFound
+		apiErr        smithy.APIError
+	)
+	if errors.As(err, &bucketMissing) || errors.As(err, &keyMissing) || errors.As(err, &notFound) {
+		return true
+	}
+	if errors.As(err, &apiErr) {
+		switch apiErr.ErrorCode() {
+		case "NoSuchBucket", "NoSuchKey", "NotFound", "404":
+			return true
+		}
+	}
+	return false
 }
 
 // PurgeAllObjects wipes out all versions and delete markers for versioned objects.

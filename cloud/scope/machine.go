@@ -24,17 +24,20 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client          clients.K8sClient
-	S3Client        clients.S3Client
-	S3PresignClient clients.S3PresignClient
-	PatchHelper     *patch.Helper
-	Cluster         *clusterv1.Cluster
-	Machine         *clusterv1.Machine
-	TokenHash       string
-	LinodeClient    clients.LinodeClient
-	LinodeCluster   *infrav1alpha2.LinodeCluster
-	LinodeMachine   *infrav1alpha2.LinodeMachine
+	Client        clients.K8sClient
+	S3Clients     S3ClientBuilder
+	PatchHelper   *patch.Helper
+	Cluster       *clusterv1.Cluster
+	Machine       *clusterv1.Machine
+	TokenHash     string
+	LinodeClient  clients.LinodeClient
+	LinodeCluster *infrav1alpha2.LinodeCluster
+	LinodeMachine *infrav1alpha2.LinodeMachine
 }
+
+// requiredObjectStoreCredentialKeys are the Secret keys a Cluster Object Store
+// credentials secret must carry to be usable for bootstrap uploads.
+var requiredObjectStoreCredentialKeys = []string{"bucket", "endpoint", "access", "secret"}
 
 func validateMachineScopeParams(params MachineScopeParams) error {
 	if params.Cluster == nil {
@@ -62,27 +65,21 @@ func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, param
 		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
-	s3client, s3PresignClient, err := CreateS3Clients(ctx, params.Client, *params.LinodeCluster)
-	if err != nil {
-		return nil, fmt.Errorf("create s3 clients: %w", err)
-	}
-
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	return &MachineScope{
-		Client:          params.Client,
-		S3Client:        s3client,
-		S3PresignClient: s3PresignClient,
-		PatchHelper:     helper,
-		Cluster:         params.Cluster,
-		Machine:         params.Machine,
-		TokenHash:       GetHash(linodeClientConfig.Token),
-		LinodeClient:    linodeClient,
-		LinodeCluster:   params.LinodeCluster,
-		LinodeMachine:   params.LinodeMachine,
+		Client:        params.Client,
+		S3Clients:     CreateS3Clients,
+		PatchHelper:   helper,
+		Cluster:       params.Cluster,
+		Machine:       params.Machine,
+		TokenHash:     GetHash(linodeClientConfig.Token),
+		LinodeClient:  linodeClient,
+		LinodeCluster: params.LinodeCluster,
+		LinodeMachine: params.LinodeMachine,
 	}, nil
 }
 
@@ -138,17 +135,19 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 	return value, nil
 }
 
-func (m *MachineScope) GetBucketName(ctx context.Context) (string, error) {
-	if m.LinodeCluster.Spec.ObjectStore == nil {
-		return "", errors.New("no cluster object store")
-	}
-
-	name, err := getCredentialDataFromRef(ctx, m.Client, m.LinodeCluster.Spec.ObjectStore.CredentialsRef, m.LinodeCluster.GetNamespace(), "bucket")
+func (m *MachineScope) GetObjectStoreCredentials(ctx context.Context, ref corev1.SecretReference) (*corev1.Secret, error) {
+	secret, err := getCredentials(ctx, m.Client, ref, m.LinodeCluster.GetNamespace())
 	if err != nil {
-		return "", fmt.Errorf("get bucket name: %w", err)
+		return nil, err
 	}
 
-	return string(name), nil
+	for _, key := range requiredObjectStoreCredentialKeys {
+		if len(secret.Data[key]) == 0 {
+			return nil, fmt.Errorf("credentials secret %s/%s has empty or missing %s", secret.Namespace, secret.Name, key)
+		}
+	}
+
+	return secret, nil
 }
 
 func (s *MachineScope) AddCredentialsRefFinalizer(ctx context.Context) error {
