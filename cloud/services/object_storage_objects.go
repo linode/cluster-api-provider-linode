@@ -29,6 +29,9 @@ func validateObjectScopeParams(mscope *scope.MachineScope) error {
 	if mscope.Client == nil {
 		return errors.New("nil Kubernetes client")
 	}
+	if mscope.S3Clients == nil {
+		return errors.New("nil S3 client builder")
+	}
 	if mscope.LinodeCluster == nil || mscope.LinodeCluster.Spec.ObjectStore == nil {
 		return errors.New("nil cluster object store")
 	}
@@ -65,8 +68,9 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte) 
 
 	// Key by UUID for shared buckets.
 	key := string(mscope.LinodeMachine.UID)
-	var attemptErrs []error
-	for _, ref := range objectStoreRefs(mscope) {
+	refs := objectStoreRefs(mscope)
+	attemptErrs := make([]error, 0, len(refs))
+	for _, ref := range refs {
 		if err := ctx.Err(); err != nil {
 			return "", fmt.Errorf("object store upload cancelled: %w", err)
 		}
@@ -152,8 +156,9 @@ func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
 
 	// Key by UUID for shared buckets.
 	key := string(mscope.LinodeMachine.UID)
-	var attemptErrs []error
-	for _, ref := range objectStoreRefs(mscope) {
+	refs := objectStoreRefs(mscope)
+	attemptErrs := make([]error, 0, len(refs))
+	for _, ref := range refs {
 		if err := deleteObjectWithCredentials(ctx, mscope, ref, key); err != nil {
 			attemptErrs = append(attemptErrs, fmt.Errorf("object store credentials %s/%s: %w", ref.Namespace, ref.Name, err))
 			log.FromContext(ctx).Error(err, "Object Store cleanup attempt failed", "secretReference", ref.Namespace+"/"+ref.Name)

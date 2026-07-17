@@ -49,6 +49,17 @@ func TestCreateObject(t *testing.T) {
 						[]byte("fake"))
 					assert.ErrorContains(t, err, "nil Kubernetes client")
 				}),
+				Result("nil S3 client builder", func(ctx context.Context, mck Mock) {
+					_, err := CreateObject(ctx, &scope.MachineScope{
+						Client: mck.K8sClient,
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							Spec: infrav1alpha2.LinodeClusterSpec{
+								ObjectStore: &infrav1alpha2.ObjectStore{
+									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{},
+					}, []byte("fake"))
+					assert.ErrorContains(t, err, "nil S3 client builder")
+				}),
 				Result("nil cluster object store", func(ctx context.Context, mck Mock) {
 					_, err := CreateObject(ctx, &scope.MachineScope{
 						Client: mck.K8sClient, S3Clients: testS3Factory(mck.S3Client, mck.S3PresignClient), LinodeCluster: &infrav1alpha2.LinodeCluster{},
@@ -215,6 +226,17 @@ func TestDeleteObject(t *testing.T) {
 									CredentialsRef: corev1.SecretReference{Name: "fake"}}}}})
 					assert.Error(t, err)
 				}),
+				Result("nil S3 client builder", func(ctx context.Context, mck Mock) {
+					err := DeleteObject(ctx, &scope.MachineScope{
+						Client: mck.K8sClient,
+						LinodeCluster: &infrav1alpha2.LinodeCluster{
+							Spec: infrav1alpha2.LinodeClusterSpec{
+								ObjectStore: &infrav1alpha2.ObjectStore{
+									CredentialsRef: corev1.SecretReference{Name: "fake"}}}},
+						LinodeMachine: &infrav1alpha2.LinodeMachine{},
+					})
+					assert.ErrorContains(t, err, "nil S3 client builder")
+				}),
 				Result("nil cluster object store", func(ctx context.Context, mck Mock) {
 					err := DeleteObject(ctx, &scope.MachineScope{
 						Client:        mck.K8sClient,
@@ -230,7 +252,8 @@ func TestDeleteObject(t *testing.T) {
 					}),
 					Result("error", func(ctx context.Context, mck Mock) {
 						err := DeleteObject(ctx, &scope.MachineScope{
-							Client: mck.K8sClient,
+							Client:    mck.K8sClient,
+							S3Clients: testS3Factory(mck.S3Client, mck.S3PresignClient),
 							LinodeCluster: &infrav1alpha2.LinodeCluster{
 								Spec: infrav1alpha2.LinodeClusterSpec{
 									ObjectStore: &infrav1alpha2.ObjectStore{
