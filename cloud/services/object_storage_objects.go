@@ -103,11 +103,14 @@ func createObjectWithCredentials(
 	}
 
 	s3Client, presignClient, err := mscope.S3Clients(attemptCtx, credentials)
-	if err == nil && (s3Client == nil || presignClient == nil) {
-		err = errors.New("S3 client builder returned nil client")
-	}
 	if err != nil {
 		return "", fmt.Errorf("create clients: %w", err)
+	}
+	if s3Client == nil {
+		return "", errors.New("create clients: S3 client builder returned nil S3 client")
+	}
+	if presignClient == nil {
+		return "", errors.New("create clients: S3 client builder returned nil presign client")
 	}
 
 	bucket := string(credentials.Data["bucket"])
