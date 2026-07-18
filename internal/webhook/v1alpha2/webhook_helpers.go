@@ -30,10 +30,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 const (
@@ -79,36 +79,6 @@ func validateLinodeType(ctx context.Context, linodegoclient clients.LinodeClient
 	return plan, nil
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
-	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
-	if err != nil {
-		return nil, err
-	}
-	rawData, ok := credSecret.Data["apiToken"]
-	if !ok {
-		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", "apiToken", credentialsRef.Namespace, credentialsRef.Name)
-	}
-
-	return rawData, nil
-}
-
-func getCredentials(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
-	secretRef := client.ObjectKey{
-		Name:      credentialsRef.Name,
-		Namespace: credentialsRef.Namespace,
-	}
-	if secretRef.Namespace == "" {
-		secretRef.Namespace = defaultNamespace
-	}
-
-	var credSecret corev1.Secret
-	if err := crClient.Get(ctx, secretRef, &credSecret); err != nil {
-		return nil, fmt.Errorf("get credentials secret %s/%s: %w", secretRef.Namespace, secretRef.Name, err)
-	}
-
-	return &credSecret, nil
-}
-
 // setupClientWithCredentials configures a Linode client with credentials the LINODE_TOKEN env variable or
 // a secret reference if it is provided
 // Returns (skipAPIValidation, client) - skipAPIValidation will be true if credentials cannot be found
@@ -128,7 +98,7 @@ func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient,
 	apiToken := []byte(os.Getenv("LINODE_TOKEN"))
 	if credRef != nil {
 		credName = credRef.Name
-		apiToken, err = getCredentialDataFromRef(ctx, crClient, *credRef, namespace)
+		apiToken, err = util.GetCredentialDataFromRef(ctx, crClient, *credRef, namespace, "apiToken")
 	}
 
 	if err == nil {

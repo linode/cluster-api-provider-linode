@@ -18,6 +18,7 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 type ObjectStorageKeyScopeParams struct {
@@ -175,7 +176,7 @@ func (s *ObjectStorageKeyScope) ShouldRotateKey() bool {
 func (s *ObjectStorageKeyScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
 	if s.Key.Spec.CredentialsRef != nil {
 		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.Key.Spec.CredentialsRef, s.Key.GetNamespace(), "apiToken")
+		apiToken, err := util.GetCredentialDataFromRef(ctx, s.Client, *s.Key.Spec.CredentialsRef, s.Key.GetNamespace(), "apiToken")
 		if err != nil {
 			return fmt.Errorf("credentials from secret ref: %w", err)
 		}

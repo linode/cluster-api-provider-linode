@@ -104,7 +104,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Success - Validate getCredentialDataFromRef() return some apiKey Data and we create a valid ClusterScope",
+			name: "Success - Credentials ref returns API token and creates a valid ObjectStorageBucketScope",
 			args: args{
 				apiKey: "apikey",
 				params: ObjectStorageBucketScopeParams{
@@ -163,7 +163,7 @@ func TestNewObjectStorageBucketScope(t *testing.T) {
 			},
 		},
 		{
-			name: "Error - Using getCredentialDataFromRef(), func returns an error. Unable to create a valid ObjectStorageBucketScope",
+			name: "Error - Credentials lookup fails and ObjectStorageBucketScope creation fails",
 			args: args{
 				apiKey: "test-key",
 				params: ObjectStorageBucketScopeParams{

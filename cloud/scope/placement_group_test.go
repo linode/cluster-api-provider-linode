@@ -415,7 +415,7 @@ func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
 		expectedError        error
 	}{
 		{
-			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data",
+			name: "Success - Credentials ref returns API token",
 			LinodePlacementGroup: &infrav1alpha2.LinodePlacementGroup{
 				Spec: infrav1alpha2.LinodePlacementGroupSpec{
 					CredentialsRef: &corev1.SecretReference{
