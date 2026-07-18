@@ -184,9 +184,6 @@ spec:
                             description: nodeBalancerFirewallID is the id of NodeBalancer
                               Firewall.
                             type: integer
-                            x-kubernetes-validations:
-                            - message: Value is immutable
-                              rule: self == oldSelf
                           nodeBalancerID:
                             description: nodeBalancerID is the id of NodeBalancer.
                             type: integer
