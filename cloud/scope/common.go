@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
 	"github.com/linode/cluster-api-provider-linode/version"
@@ -118,46 +117,32 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (clients.LinodeClie
 	), nil
 }
 
-func CreateS3Clients(ctx context.Context, crClient clients.K8sClient, cluster infrav1alpha2.LinodeCluster) (clients.S3Client, clients.S3PresignClient, error) {
-	var (
-		configOpts = []func(*awsconfig.LoadOptions) error{
-			awsconfig.WithRegion("auto"),
-			awsconfig.WithRequestChecksumCalculation(aws.RequestChecksumCalculationWhenRequired),
-			awsconfig.WithResponseChecksumValidation(aws.ResponseChecksumValidationWhenRequired),
-		}
+// S3ClientBuilder constructs S3 clients from an Object Store credentials secret.
+// CreateS3Clients is the production implementation; tests substitute a fake.
+type S3ClientBuilder func(context.Context, *corev1.Secret) (clients.S3Client, clients.S3PresignClient, error)
 
-		clientOpts = []func(*s3.Options){}
+func CreateS3Clients(ctx context.Context, objectStoreCredentials *corev1.Secret) (clients.S3Client, clients.S3PresignClient, error) {
+	config, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion("auto"),
+		awsconfig.WithRequestChecksumCalculation(aws.RequestChecksumCalculationWhenRequired),
+		awsconfig.WithResponseChecksumValidation(aws.ResponseChecksumValidationWhenRequired),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			string(objectStoreCredentials.Data["access"]),
+			string(objectStoreCredentials.Data["secret"]),
+			"",
+		)),
 	)
-
-	// If we have a cluster object store bucket, get its configuration.
-	if cluster.Spec.ObjectStore != nil {
-		objSecret, err := getCredentials(ctx, crClient, cluster.Spec.ObjectStore.CredentialsRef, cluster.GetNamespace())
-		if err == nil {
-			var (
-				access   = string(objSecret.Data["access"])
-				secret   = string(objSecret.Data["secret"])
-				endpoint = string(objSecret.Data["endpoint"])
-			)
-
-			configOpts = append(configOpts, awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(access, secret, "")))
-			clientOpts = append(clientOpts, func(opts *s3.Options) {
-				opts.BaseEndpoint = aws.String(endpoint)
-				opts.UsePathStyle = strings.EqualFold(os.Getenv("LINODE_OBJECT_STORAGE_USE_PATH_STYLE"), "true")
-			})
-		}
-	}
-
-	config, err := awsconfig.LoadDefaultConfig(ctx, configOpts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load s3 config: %w", err)
 	}
 
-	var (
-		s3Client        = s3.NewFromConfig(config, clientOpts...)
-		s3PresignClient = s3.NewPresignClient(s3Client, func(opts *s3.PresignOptions) {
-			opts.Expires = defaultObjectStorageSignedUrlExpiry
-		})
-	)
+	s3Client := s3.NewFromConfig(config, func(opts *s3.Options) {
+		opts.BaseEndpoint = aws.String(string(objectStoreCredentials.Data["endpoint"]))
+		opts.UsePathStyle = strings.EqualFold(os.Getenv("LINODE_OBJECT_STORAGE_USE_PATH_STYLE"), "true")
+	})
+	s3PresignClient := s3.NewPresignClient(s3Client, func(opts *s3.PresignOptions) {
+		opts.Expires = defaultObjectStorageSignedUrlExpiry
+	})
 
 	return s3Client, s3PresignClient, nil
 }

@@ -282,6 +282,12 @@ type ObjectStore struct {
 	// credentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store.
 	// +optional
 	CredentialsRef corev1.SecretReference `json:"credentialsRef,omitempty"`
+
+	// secondaryCredentialsRef is an optional reference to a Secret that contains credentials for a secondary
+	// Cluster Object Store. It is used only when the primary Object Store cannot upload bootstrap data and
+	// generate a non-empty presigned URL.
+	// +optional
+	SecondaryCredentialsRef *corev1.SecretReference `json:"secondaryCredentialsRef,omitempty"`
 }
 
 // +kubebuilder:object:root=true
