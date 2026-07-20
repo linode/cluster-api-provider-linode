@@ -474,15 +474,15 @@ func objectStoreSecret(name, namespace, bucket string) *corev1.Secret {
 // stubSecretLookups wires a mock K8s client to serve the given secrets by name,
 // returning a not-found error for anything else.
 func stubSecretLookups(k8s *mock.MockK8sClient, secrets ...*corev1.Secret) {
-	byName := make(map[string]*corev1.Secret, len(secrets))
+	byRef := make(map[string]*corev1.Secret, len(secrets))
 	for _, secret := range secrets {
-		byName[secret.Name] = secret
+		byRef[secret.Namespace+"/"+secret.Name] = secret
 	}
 	k8s.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(
 		func(_ context.Context, key client.ObjectKey, obj *corev1.Secret, _ ...client.GetOption) error {
-			secret, ok := byName[key.Name]
+			secret, ok := byRef[key.Namespace+"/"+key.Name]
 			if !ok {
-				return fmt.Errorf("secret %q not found", key.Name)
+				return fmt.Errorf("secret %q/%q not found", key.Namespace, key.Name)
 			}
 			*obj = *secret
 			return nil
@@ -535,8 +535,18 @@ func TestCreateObjectFallbackOutcomes(t *testing.T) {
 		{
 			name: "primary success skips secondary",
 			configurePrimary: func(s3Client *mock.MockS3Client, presign *mock.MockS3PresignClient) {
-				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
-				presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{URL: "https://first.example.com"}, nil)
+				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+						assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return &s3.PutObjectOutput{}, nil
+					})
+				presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.GetObjectInput, _ ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error) {
+						assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return &awssigner.PresignedHTTPRequest{URL: "https://first.example.com"}, nil
+					})
 			},
 			wantURL:   "https://first.example.com",
 			wantCalls: []string{firstBucket},
@@ -544,11 +554,26 @@ func TestCreateObjectFallbackOutcomes(t *testing.T) {
 		{
 			name: "primary put failure falls back to secondary",
 			configurePrimary: func(s3Client *mock.MockS3Client, _ *mock.MockS3PresignClient) {
-				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("endpoint unavailable"))
+				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+						assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, errors.New("endpoint unavailable")
+					})
 			},
 			configureSecondary: func(s3Client *mock.MockS3Client, presign *mock.MockS3PresignClient) {
-				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
-				presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{URL: "https://second.example.com"}, nil)
+				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+						assert.Equal(t, "second-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return &s3.PutObjectOutput{}, nil
+					})
+				presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.GetObjectInput, _ ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error) {
+						assert.Equal(t, "second-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return &awssigner.PresignedHTTPRequest{URL: "https://second.example.com"}, nil
+					})
 			},
 			wantURL:   "https://second.example.com",
 			wantCalls: []string{firstBucket, "second-bucket"},
@@ -556,13 +581,38 @@ func TestCreateObjectFallbackOutcomes(t *testing.T) {
 		{
 			name: "primary presign error falls back to secondary",
 			configurePrimary: func(s3Client *mock.MockS3Client, presign *mock.MockS3PresignClient) {
-				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
-				presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("presign failed"))
-				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &types.NoSuchKey{})
+				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+						assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return &s3.PutObjectOutput{}, nil
+					})
+				presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.GetObjectInput, _ ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error) {
+						assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, errors.New("presign failed")
+					})
+				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+						assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, &types.NoSuchKey{}
+					})
 			},
 			configureSecondary: func(s3Client *mock.MockS3Client, presign *mock.MockS3PresignClient) {
-				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
-				presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{URL: "https://second.example.com"}, nil)
+				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+						assert.Equal(t, "second-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return &s3.PutObjectOutput{}, nil
+					})
+				presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.GetObjectInput, _ ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error) {
+						assert.Equal(t, "second-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return &awssigner.PresignedHTTPRequest{URL: "https://second.example.com"}, nil
+					})
 			},
 			wantURL:   "https://second.example.com",
 			wantCalls: []string{firstBucket, "second-bucket"},
@@ -825,11 +875,26 @@ func TestDeleteObjectFallback(t *testing.T) {
 		{
 			name: "both references fail and errors are joined",
 			configurePrimary: func(s3Client *mock.MockS3Client) {
-				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("network unavailable"))
+				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+						assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, errors.New("network unavailable")
+					})
 			},
 			configureSecondary: func(s3Client *mock.MockS3Client) {
-				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{Code: "Forbidden", Message: "forbidden"})
-				s3Client.EXPECT().DeleteObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("service unavailable"))
+				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+						assert.Equal(t, "secondary-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, &smithy.GenericAPIError{Code: "Forbidden", Message: "forbidden"}
+					})
+				s3Client.EXPECT().DeleteObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.DeleteObjectInput, _ ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
+						assert.Equal(t, "secondary-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, errors.New("service unavailable")
+					})
 			},
 			wantErrContains: []string{"network unavailable", "service unavailable"},
 			wantAttempted:   []string{"primary-bucket", "secondary-bucket"},
@@ -837,18 +902,38 @@ func TestDeleteObjectFallback(t *testing.T) {
 		{
 			name: "primary only tolerates a missing object",
 			configurePrimary: func(s3Client *mock.MockS3Client) {
-				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.HeadObjectOutput{}, nil)
-				s3Client.EXPECT().DeleteObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &types.NotFound{})
+				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+						assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return &s3.HeadObjectOutput{}, nil
+					})
+				s3Client.EXPECT().DeleteObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.DeleteObjectInput, _ ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
+						assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, &types.NotFound{}
+					})
 			},
 			wantAttempted: []string{"primary-bucket"},
 		},
 		{
 			name: "both references tolerate missing objects",
 			configurePrimary: func(s3Client *mock.MockS3Client) {
-				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &types.NoSuchBucket{})
+				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+						assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, &types.NoSuchBucket{}
+					})
 			},
 			configureSecondary: func(s3Client *mock.MockS3Client) {
-				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &types.NoSuchKey{})
+				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+						assert.Equal(t, "secondary-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, &types.NoSuchKey{}
+					})
 			},
 			wantAttempted: []string{"primary-bucket", "secondary-bucket"},
 		},
