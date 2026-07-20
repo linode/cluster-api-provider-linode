@@ -13,6 +13,7 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 type ObjectStorageBucketScopeParams struct {
@@ -53,7 +54,7 @@ func NewObjectStorageBucketScope(ctx context.Context, linodeClientConfig ClientC
 	// Override the controller credentials with ones from the Cluster's Secret reference (if supplied).
 	if params.Bucket.Spec.CredentialsRef != nil {
 		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, params.Client, *params.Bucket.Spec.CredentialsRef, params.Bucket.GetNamespace(), "apiToken")
+		apiToken, err := util.GetCredentialDataFromRef(ctx, params.Client, *params.Bucket.Spec.CredentialsRef, params.Bucket.GetNamespace(), "apiToken")
 		if err != nil {
 			return nil, fmt.Errorf("credentials from secret ref: %w", err)
 		}

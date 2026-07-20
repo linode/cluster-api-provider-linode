@@ -25,6 +25,7 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 // FirewallScope defines the basic context for an actuator to operate upon.
@@ -127,7 +128,7 @@ func (s *FirewallScope) RemoveCredentialsRefFinalizer(ctx context.Context) error
 func (s *FirewallScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
 	if s.LinodeFirewall.Spec.CredentialsRef != nil {
 		// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(), "apiToken")
+		apiToken, err := util.GetCredentialDataFromRef(ctx, s.Client, *s.LinodeFirewall.Spec.CredentialsRef, s.LinodeFirewall.GetNamespace(), "apiToken")
 		if err != nil {
 			return fmt.Errorf("credentials from secret ref: %w", err)
 		}
