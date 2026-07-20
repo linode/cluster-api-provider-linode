@@ -140,15 +140,6 @@ func createObjectWithCredentials(
 	default:
 		return req.URL, nil
 	}
-	// Best-effort cleanup of the upload we can't hand out. Reuses attemptCtx:
-	// presigning is a local operation, so the timeout budget is effectively
-	// untouched by the time we get here. A leftover object is transient anyway —
-	// it is keyed by the machine UID, so a later reconcile overwrites it and
-	// deleteBootstrapData removes it on teardown.
-	if cleanupErr := deleteObject(attemptCtx, s3Client, bucket, key); cleanupErr != nil {
-		log.FromContext(ctx).Error(cleanupErr, "Failed to clean up Object Store upload after presign failure", "secretReference", ref.Namespace+"/"+ref.Name)
-		err = errors.Join(err, fmt.Errorf("cleanup after presign failure: %w", cleanupErr))
-	}
 	return "", err
 }
 

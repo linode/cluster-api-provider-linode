@@ -157,7 +157,6 @@ func TestCreateObject(t *testing.T) {
 					})
 					mck.S3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
 					mck.S3PresignClient.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("fail"))
-					mck.S3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &types.NoSuchKey{})
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					_, err := CreateObject(ctx, &scope.MachineScope{
@@ -593,12 +592,6 @@ func TestCreateObjectFallbackOutcomes(t *testing.T) {
 						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
 						return nil, errors.New("presign failed")
 					})
-				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
-						assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
-						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
-						return nil, &types.NoSuchKey{}
-					})
 			},
 			configureSecondary: func(s3Client *mock.MockS3Client, presign *mock.MockS3PresignClient) {
 				s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
@@ -740,32 +733,44 @@ func TestCreateObjectPrimaryFailuresUseSecondary(t *testing.T) {
 	}
 }
 
-func TestCreateObjectPresignFailureCleansUpAndFallsThrough(t *testing.T) {
+func TestCreateObjectPresignFailureFallsThroughWithoutCleanup(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
 
-	cleanupCalls := 0
 	first := mock.NewMockS3Client(ctrl)
-	first.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
-	first.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.HeadObjectOutput{}, nil)
-	first.EXPECT().DeleteObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(context.Context, *s3.DeleteObjectInput, ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
-			cleanupCalls++
-			return nil, errors.New("best-effort cleanup failed")
+	first.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, input *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+			assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
+			assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+			return &s3.PutObjectOutput{}, nil
 		})
 	firstPresign := mock.NewMockS3PresignClient(ctrl)
-	firstPresign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{}, nil)
+	firstPresign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, input *s3.GetObjectInput, _ ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error) {
+			assert.Equal(t, firstBucket, aws.ToString(input.Bucket))
+			assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+			return &awssigner.PresignedHTTPRequest{}, nil
+		})
 
 	second := mock.NewMockS3Client(ctrl)
-	second.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
+	second.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, input *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+			assert.Equal(t, "second-bucket", aws.ToString(input.Bucket))
+			assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+			return &s3.PutObjectOutput{}, nil
+		})
 	secondPresign := mock.NewMockS3PresignClient(ctrl)
-	secondPresign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&awssigner.PresignedHTTPRequest{URL: "https://second.example.com"}, nil)
+	secondPresign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, input *s3.GetObjectInput, _ ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error) {
+			assert.Equal(t, "second-bucket", aws.ToString(input.Bucket))
+			assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+			return &awssigner.PresignedHTTPRequest{URL: "https://second.example.com"}, nil
+		})
 
 	factory := func(_ context.Context, credentials *corev1.Secret) (clients.S3Client, clients.S3PresignClient, error) {
 		if string(credentials.Data["bucket"]) == firstBucket {
 			return first, firstPresign, nil
 		}
-		assert.Equal(t, 1, cleanupCalls, "primary upload must be cleaned up before the secondary attempt")
 		return second, secondPresign, nil
 	}
 
@@ -783,7 +788,6 @@ func TestCreateObjectPresignFailureCleansUpAndFallsThrough(t *testing.T) {
 	url, err := CreateObject(t.Context(), mscope, []byte("bootstrap"))
 	require.NoError(t, err)
 	assert.Equal(t, "https://second.example.com", url)
-	assert.Equal(t, 1, cleanupCalls)
 }
 
 func TestCreateObjectPresignedURLDurationAndJoinedErrors(t *testing.T) {
@@ -794,8 +798,6 @@ func TestCreateObjectPresignedURLDurationAndJoinedErrors(t *testing.T) {
 	newClient := func(bucket string) stubClients {
 		s3Client := mock.NewMockS3Client(ctrl)
 		s3Client.EXPECT().PutObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.PutObjectOutput{}, nil)
-		s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.HeadObjectOutput{}, nil)
-		s3Client.EXPECT().DeleteObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.DeleteObjectOutput{}, nil)
 		presign := mock.NewMockS3PresignClient(ctrl)
 		presign.EXPECT().PresignGetObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 			func(_ context.Context, _ *s3.GetObjectInput, optFns ...func(*s3.PresignOptions)) (*awssigner.PresignedHTTPRequest, error) {
