@@ -179,7 +179,7 @@ Cluster templates in `templates/flavors/` define different configurations (VPC v
 
 ### Backup & Storage
 - `OBJ_BUCKET_REGION`: Object storage region for etcd backups (e.g., `us-ord`)
-- `ETCDBR_IMAGE`: Custom etcd backup/restore controller image
+- `ETCDBR_IMAGE`: Optional override for the etcd backup/restore controller image (defaults to the official gardener `etcdbrctl` image)
 - `SSE_KEY`: Server-side encryption key for object storage
 
 ### E2E Testing
