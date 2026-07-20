@@ -368,7 +368,7 @@ func TestDeleteObject(t *testing.T) {
 							*obj = secret
 							return nil
 						})
-						mck.S3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &types.NoSuchKey{})
+						mck.S3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{Code: "NoSuchKey", Message: "missing key"})
 					})),
 					Path(Call("delete object (no such bucket)", func(ctx context.Context, mck Mock) {
 						mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -381,7 +381,7 @@ func TestDeleteObject(t *testing.T) {
 							*obj = secret
 							return nil
 						})
-						mck.S3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &types.NoSuchBucket{})
+						mck.S3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{Code: "NoSuchBucket", Message: "missing bucket"})
 					})),
 					Path(Call("delete object (not found)", func(ctx context.Context, mck Mock) {
 						mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -394,7 +394,7 @@ func TestDeleteObject(t *testing.T) {
 							*obj = secret
 							return nil
 						})
-						mck.S3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &types.NotFound{})
+						mck.S3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, &smithy.GenericAPIError{Code: "NotFound", Message: "not found"})
 					})),
 					Path(Call("delete object", func(ctx context.Context, mck Mock) {
 						mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Secret, opts ...client.GetOption) error {
@@ -914,7 +914,7 @@ func TestDeleteObjectFallback(t *testing.T) {
 					func(_ context.Context, input *s3.DeleteObjectInput, _ ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
 						assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
 						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
-						return nil, &types.NotFound{}
+						return nil, &smithy.GenericAPIError{Code: "NotFound", Message: "not found"}
 					})
 			},
 			wantAttempted: []string{"primary-bucket"},
@@ -926,7 +926,7 @@ func TestDeleteObjectFallback(t *testing.T) {
 					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
 						assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
 						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
-						return nil, &types.NoSuchBucket{}
+						return nil, &smithy.GenericAPIError{Code: "NoSuchBucket", Message: "missing bucket"}
 					})
 			},
 			configureSecondary: func(s3Client *mock.MockS3Client) {
@@ -934,10 +934,23 @@ func TestDeleteObjectFallback(t *testing.T) {
 					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
 						assert.Equal(t, "secondary-bucket", aws.ToString(input.Bucket))
 						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
-						return nil, &types.NoSuchKey{}
+						return nil, &smithy.GenericAPIError{Code: "NoSuchKey", Message: "missing key"}
 					})
 			},
 			wantAttempted: []string{"primary-bucket", "secondary-bucket"},
+		},
+		{
+			name: "generic 404 propagates",
+			configurePrimary: func(s3Client *mock.MockS3Client) {
+				s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+						assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
+						assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+						return nil, &smithy.GenericAPIError{Code: "404", Message: "not found"}
+					})
+			},
+			wantErrContains: []string{"404"},
+			wantAttempted:   []string{"primary-bucket"},
 		},
 	}
 
@@ -982,6 +995,35 @@ func TestDeleteObjectFallback(t *testing.T) {
 				}
 			}
 			assert.Equal(t, test.wantAttempted, attempted)
+		})
+	}
+}
+
+func TestDeleteObjectGenericMissingCodes(t *testing.T) {
+	t.Parallel()
+	for _, code := range []string{"NoSuchBucket", "NoSuchKey", "NotFound"} {
+		code := code
+		t.Run(code, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			s3Client := mock.NewMockS3Client(ctrl)
+			s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, input *s3.HeadObjectInput, _ ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+					assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
+					assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+					return &s3.HeadObjectOutput{}, nil
+				})
+			s3Client.EXPECT().DeleteObject(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, input *s3.DeleteObjectInput, _ ...func(*s3.Options)) (*s3.DeleteObjectOutput, error) {
+					assert.Equal(t, "primary-bucket", aws.ToString(input.Bucket))
+					assert.Equal(t, "machine-uid", aws.ToString(input.Key))
+					return nil, &smithy.GenericAPIError{Code: code, Message: "missing"}
+				})
+			k8s := mock.NewMockK8sClient(ctrl)
+			stubSecretLookups(k8s, objectStoreSecret("primary", "cluster-ns", "primary-bucket"))
+			mscope := fallbackMachineScope(testS3Factory(s3Client, nil), k8s, &infrav1alpha2.ObjectStore{
+				CredentialsRef: corev1.SecretReference{Name: "primary"},
+			})
+			require.NoError(t, DeleteObject(t.Context(), mscope))
 		})
 	}
 }

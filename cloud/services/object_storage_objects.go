@@ -220,20 +220,13 @@ func deleteObject(ctx context.Context, s3Client clients.S3Client, bucket, key st
 }
 
 func isObjectMissingError(err error) bool {
-	var (
-		bucketMissing *s3types.NoSuchBucket
-		keyMissing    *s3types.NoSuchKey
-		notFound      *s3types.NotFound
-		apiErr        smithy.APIError
-	)
-	if errors.As(err, &bucketMissing) || errors.As(err, &keyMissing) || errors.As(err, &notFound) {
-		return true
+	var apiErr smithy.APIError
+	if !errors.As(err, &apiErr) {
+		return false
 	}
-	if errors.As(err, &apiErr) {
-		switch apiErr.ErrorCode() {
-		case "NoSuchBucket", "NoSuchKey", "NotFound", "404":
-			return true
-		}
+	switch apiErr.ErrorCode() {
+	case "NoSuchBucket", "NoSuchKey", "NotFound":
+		return true
 	}
 	return false
 }
