@@ -79,8 +79,7 @@ func CreateObject(ctx context.Context, mscope *scope.MachineScope, data []byte) 
 		if err == nil {
 			return url, nil
 		}
-		qualifiedErr := fmt.Errorf("object store credentials %s/%s: %w", ref.Namespace, ref.Name, err)
-		attemptErrs = append(attemptErrs, qualifiedErr)
+		attemptErrs = append(attemptErrs, fmt.Errorf("object store credentials %s/%s: %w", ref.Namespace, ref.Name, err))
 		log.FromContext(ctx).Error(err, "Object Store attempt failed", "secretReference", ref.Namespace+"/"+ref.Name)
 	}
 
@@ -114,7 +113,7 @@ func createObjectWithCredentials(
 	}
 
 	bucket := string(credentials.Data["bucket"])
-	if _, err = s3Client.PutObject(attemptCtx, &s3.PutObjectInput{
+	if _, err := s3Client.PutObject(attemptCtx, &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 		Body:   s3manager.ReadSeekCloser(bytes.NewReader(data)),
@@ -132,15 +131,13 @@ func createObjectWithCredentials(
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	}, opts...)
-	switch {
-	case err != nil:
-		err = fmt.Errorf("generate presigned URL: %w", err)
-	case req == nil || req.URL == "":
-		err = errors.New("empty presigned URL")
-	default:
-		return req.URL, nil
+	if err != nil {
+		return "", fmt.Errorf("generate presigned URL: %w", err)
 	}
-	return "", err
+	if req == nil || req.URL == "" {
+		return "", errors.New("empty presigned URL")
+	}
+	return req.URL, nil
 }
 
 func DeleteObject(ctx context.Context, mscope *scope.MachineScope) error {
@@ -176,11 +173,11 @@ func deleteObjectWithCredentials(
 	}
 
 	s3Client, _, err := mscope.S3Clients(attemptCtx, credentials)
-	if err == nil && s3Client == nil {
-		err = errors.New("S3 client builder returned nil client")
-	}
 	if err != nil {
 		return fmt.Errorf("create clients: %w", err)
+	}
+	if s3Client == nil {
+		return errors.New("create clients: S3 client builder returned nil client")
 	}
 
 	return deleteObject(attemptCtx, s3Client, string(credentials.Data["bucket"]), key)
@@ -205,7 +202,7 @@ func deleteObject(ctx context.Context, s3Client clients.S3Client, bucket, key st
 		}
 	}
 
-	if _, err = s3Client.DeleteObject(ctx,
+	if _, err := s3Client.DeleteObject(ctx,
 		&s3.DeleteObjectInput{
 			Bucket: aws.String(bucket),
 			Key:    aws.String(key),

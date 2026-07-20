@@ -121,38 +121,28 @@ func CreateLinodeClient(config ClientConfig, opts ...Option) (clients.LinodeClie
 // CreateS3Clients is the production implementation; tests substitute a fake.
 type S3ClientBuilder func(context.Context, *corev1.Secret) (clients.S3Client, clients.S3PresignClient, error)
 
-var _ S3ClientBuilder = CreateS3Clients
-
 func CreateS3Clients(ctx context.Context, objectStoreCredentials *corev1.Secret) (clients.S3Client, clients.S3PresignClient, error) {
-	var (
-		configOpts = []func(*awsconfig.LoadOptions) error{
-			awsconfig.WithRegion("auto"),
-			awsconfig.WithRequestChecksumCalculation(aws.RequestChecksumCalculationWhenRequired),
-			awsconfig.WithResponseChecksumValidation(aws.ResponseChecksumValidationWhenRequired),
-			awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
-				string(objectStoreCredentials.Data["access"]),
-				string(objectStoreCredentials.Data["secret"]),
-				"",
-			)),
-		}
-
-		clientOpts = []func(*s3.Options){func(opts *s3.Options) {
-			opts.BaseEndpoint = aws.String(string(objectStoreCredentials.Data["endpoint"]))
-			opts.UsePathStyle = strings.EqualFold(os.Getenv("LINODE_OBJECT_STORAGE_USE_PATH_STYLE"), "true")
-		}}
+	config, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion("auto"),
+		awsconfig.WithRequestChecksumCalculation(aws.RequestChecksumCalculationWhenRequired),
+		awsconfig.WithResponseChecksumValidation(aws.ResponseChecksumValidationWhenRequired),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			string(objectStoreCredentials.Data["access"]),
+			string(objectStoreCredentials.Data["secret"]),
+			"",
+		)),
 	)
-
-	config, err := awsconfig.LoadDefaultConfig(ctx, configOpts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("load s3 config: %w", err)
 	}
 
-	var (
-		s3Client        = s3.NewFromConfig(config, clientOpts...)
-		s3PresignClient = s3.NewPresignClient(s3Client, func(opts *s3.PresignOptions) {
-			opts.Expires = defaultObjectStorageSignedUrlExpiry
-		})
-	)
+	s3Client := s3.NewFromConfig(config, func(opts *s3.Options) {
+		opts.BaseEndpoint = aws.String(string(objectStoreCredentials.Data["endpoint"]))
+		opts.UsePathStyle = strings.EqualFold(os.Getenv("LINODE_OBJECT_STORAGE_USE_PATH_STYLE"), "true")
+	})
+	s3PresignClient := s3.NewPresignClient(s3Client, func(opts *s3.PresignOptions) {
+		opts.Expires = defaultObjectStorageSignedUrlExpiry
+	})
 
 	return s3Client, s3PresignClient, nil
 }

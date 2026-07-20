@@ -35,10 +35,6 @@ type MachineScope struct {
 	LinodeMachine *infrav1alpha2.LinodeMachine
 }
 
-// requiredObjectStoreCredentialKeys are the Secret keys a Cluster Object Store
-// credentials secret must carry to be usable for bootstrap uploads.
-var requiredObjectStoreCredentialKeys = []string{"bucket", "endpoint", "access", "secret"}
-
 func validateMachineScopeParams(params MachineScopeParams) error {
 	if params.Cluster == nil {
 		return errors.New("cluster is required when creating a MachineScope")
@@ -56,7 +52,7 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(ctx context.Context, linodeClientConfig ClientConfig, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(_ context.Context, linodeClientConfig ClientConfig, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
 	}
@@ -141,7 +137,7 @@ func (m *MachineScope) GetObjectStoreCredentials(ctx context.Context, ref corev1
 		return nil, err
 	}
 
-	for _, key := range requiredObjectStoreCredentialKeys {
+	for _, key := range [...]string{"bucket", "endpoint", "access", "secret"} {
 		if len(secret.Data[key]) == 0 {
 			return nil, fmt.Errorf("credentials secret %s/%s has empty or missing %s", secret.Namespace, secret.Name, key)
 		}
