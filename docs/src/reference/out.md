@@ -1248,6 +1248,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `presignedURLDuration` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#duration-v1-meta)_ | presignedURLDuration defines the duration for which presigned URLs are valid.<br /><br />This is used to generate presigned URLs for S3 Bucket objects, which are used by<br />control-plane and worker nodes to fetch bootstrap data. |  |  |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for accessing the Cluster Object Store. |  |  |
+| `secondaryCredentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | secondaryCredentialsRef is an optional reference to a Secret that contains credentials for a secondary<br />Cluster Object Store. It is used only when the primary Object Store cannot upload bootstrap data and<br />generate a non-empty presigned URL. |  |  |
 
 
 #### PublicInterfaceCreateOptions

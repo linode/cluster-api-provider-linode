@@ -105,3 +105,19 @@ infrastructure Linode via one of the following services:
 | [Metadata](https://techdocs.akamai.com/cloud-computing/docs/overview-of-the-metadata-service) | [65535 bytes](https://techdocs.akamai.com/linode-api/reference/post-linode-instance)       |
 
 These data limits are bypassed when the Cluster Object Store feature is enabled.
+
+An optional `secondaryCredentialsRef` can reference credentials for one secondary Object Store. CAPL tries the primary
+`credentialsRef` first and uses the secondary only when it cannot upload the bootstrap payload and generate a non-empty
+presigned URL with the primary. The instance Metadata still contains exactly one native cloud-init `#include` URL. This
+fallback only covers failures CAPL observes while preparing the bootstrap data; it does not provide failover after the
+selected URL has been handed to the instance.
+
+```yaml
+spec:
+  objectStore:
+    presignedURLDuration: 24h
+    credentialsRef:
+      name: cluster-object-store-primary
+    secondaryCredentialsRef:
+      name: cluster-object-store-secondary
+```
