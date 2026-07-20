@@ -953,6 +953,7 @@ func TestDeleteObjectGenericMissingCodes(t *testing.T) {
 	t.Parallel()
 	for _, code := range []string{"NoSuchBucket", "NoSuchKey", "NotFound"} {
 		t.Run(code, func(t *testing.T) {
+			t.Parallel()
 			ctrl := gomock.NewController(t)
 			s3Client := mock.NewMockS3Client(ctrl)
 			s3Client.EXPECT().HeadObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.HeadObjectOutput{}, nil)

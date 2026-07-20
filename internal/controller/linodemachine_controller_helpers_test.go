@@ -332,7 +332,7 @@ func TestSetUserData(t *testing.T) {
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, testcase.wantMetadata, testcase.createConfig.Metadata)
 			}
 		})
