@@ -35,7 +35,7 @@ spec:
             content: |
               set -e
 
-              curl -s \
+              curl -fsS \
                 -X POST \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 -H "Content-Type: application/json" \
@@ -100,9 +100,9 @@ spec:
             content: |
               set -e
 
-              export KEY_ID=$(kubectl -n $NAMESPACE get lobjkey $OBJ_KEY -ojson | jq '.status.accessKeyRef')
+              export KEY_ID=$(kubectl -n "$NAMESPACE" get lobjkey "$OBJ_KEY" -ojson | jq -er '.status.accessKeyRef')
 
-              curl -s \
+              curl -fsS \
                 -X DELETE \
                 -H "Authorization: Bearer $LINODE_TOKEN" \
                 "https://api.linode.com/v4beta/object-storage/keys/$KEY_ID"
