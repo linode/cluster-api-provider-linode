@@ -1,0 +1,133 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cluster-object-store-fallback
+  labels:
+    all:
+    linodemachine:
+spec:
+  bindings:
+    - name: run
+      value: (join('-', ['cluster-obj-fallback', random('[0-9a-z]{5}')]))
+    - name: cluster
+      value: (trim((truncate(($run), `29`)), '-'))
+    - name: key
+      value: (trim((truncate((join('-', [($cluster)])), `52`)), '-'))
+    - name: key_secret
+      value: (concat(($key), '-obj-key'))
+    - name: primary_secret
+      value: (concat(($cluster), '-primary-obj-key'))
+  template: true
+  steps:
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create bucket
+      try:
+        - script:
+            env:
+              - name: URI
+                value: object-storage/buckets
+              - name: BUCKET_LABEL
+                value: ($key)
+            content: |
+              set -e
+
+              curl -s \
+                -X POST \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "{\"label\":\"$BUCKET_LABEL\",\"region\":\"us-sea\"}" \
+                "https://api.linode.com/v4beta/$URI"
+            check:
+              ($error): ~
+    - name: Create LinodeObjectStorageKey
+      try:
+        - apply:
+            file: create-linodeobjectstoragekey.yaml
+        - assert:
+            file: assert-key-and-secret.yaml
+    - name: Create invalid primary Object Storage credentials
+      try:
+        - apply:
+            file: create-invalid-primary-secret.yaml
+    - name: Create Cluster resource
+      try:
+        - apply:
+            file: create-cluster.yaml
+    - name: Generate dummy cloud-config data
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -eu
+              LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 102400 > chonk.txt
+              kubectl -n "$NAMESPACE" create secret generic chonk-secret --from-file=chonk.txt
+            check:
+              ($error): ~
+    - name: Create LinodeMachine
+      try:
+        - apply:
+            file: create-linodemachine.yaml
+        - assert:
+            file: assert-linodemachine.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+        - describe:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+            kind: KubeadmControlPlane
+    - name: Delete Cluster resource
+      try:
+        - delete:
+            ref:
+              apiVersion: cluster.x-k8s.io/v1beta2
+              kind: Cluster
+              name: ($cluster)
+        - error:
+            file: check-linodemachine-deletion.yaml
+    - name: Delete LinodeObjectStorageKey
+      try:
+        - script:
+            env:
+              - name: OBJ_KEY
+                value: ($key)
+            content: |
+              set -e
+
+              export KEY_ID=$(kubectl -n $NAMESPACE get lobjkey $OBJ_KEY -ojson | jq '.status.accessKeyRef')
+
+              curl -s \
+                -X DELETE \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                "https://api.linode.com/v4beta/object-storage/keys/$KEY_ID"
+            check:
+              ($error): ~
+    - name: Delete bucket
+      try:
+        - script:
+            env:
+              - name: BUCKET_LABEL
+                value: ($key)
+            content: |
+              set -e
+
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                -X DELETE \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                "https://api.linode.com/v4beta/object-storage/buckets/us-sea/$BUCKET_LABEL")
+
+              case "$STATUS" in
+                2*) ;;
+                *)
+                  echo "bucket deletion failed with HTTP status $STATUS"
+                  exit 1
+                  ;;
+              esac
+            check:
+              ($error): ~
