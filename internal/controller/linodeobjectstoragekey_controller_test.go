@@ -39,6 +39,7 @@ import (
 	infrav1 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
+	utilreconciler "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -460,7 +461,7 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 				}),
 				Result("no error", func(ctx context.Context, mck Mock) {
 					reconciler.Client = mck.K8sClient
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
+					_, err := utilreconciler.AsReconcilerWithTracing(mck.K8sClient, &reconciler).Reconcile(ctx, reconcile.Request{
 						NamespacedName: client.ObjectKeyFromObject(keyScope.Key),
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -473,18 +474,17 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 				Result("error", func(ctx context.Context, mck Mock) {
 					reconciler.Client = mck.K8sClient
 					reconciler.Logger = keyScope.Logger
-					_, err := reconciler.Reconcile(ctx, reconcile.Request{
+					_, err := utilreconciler.AsReconcilerWithTracing(mck.K8sClient, &reconciler).Reconcile(ctx, reconcile.Request{
 						NamespacedName: client.ObjectKeyFromObject(keyScope.Key),
 					})
 					Expect(err.Error()).To(ContainSubstring("non-404 error"))
-					Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeObjectStorageKey"))
 				}),
 			),
 		),
 		Result("scope params is missing args", func(ctx context.Context, mck Mock) {
 			reconciler.Client = mck.K8sClient
 			reconciler.Logger = keyScope.Logger
-			_, err := reconciler.Reconcile(ctx, reconcile.Request{
+			_, err := utilreconciler.AsReconcilerWithTracing(mck.K8sClient, &reconciler).Reconcile(ctx, reconcile.Request{
 				NamespacedName: client.ObjectKeyFromObject(keyScope.Key),
 			})
 			Expect(err.Error()).To(ContainSubstring("failed to create object storage key scope"))

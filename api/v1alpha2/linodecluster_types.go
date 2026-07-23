@@ -127,11 +127,35 @@ func (lc *LinodeCluster) GetConditions() []metav1.Condition {
 			lc.Status.Conditions[i].Reason = DefaultConditionReason
 		}
 	}
+
 	return lc.Status.Conditions
 }
 
 func (lc *LinodeCluster) SetConditions(conditions []metav1.Condition) {
 	lc.Status.Conditions = conditions
+}
+
+func (lc *LinodeCluster) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
+	for i := range lc.Status.Conditions {
+		if lc.Status.Conditions[i].Type == cond.Type {
+			lc.Status.Conditions[i] = cond
+			return
+		}
+	}
+	lc.Status.Conditions = append(lc.Status.Conditions, cond)
+}
+
+func (lc *LinodeCluster) GetCondition(condType string) *metav1.Condition {
+	for i := range lc.Status.Conditions {
+		if lc.Status.Conditions[i].Type == condType {
+			return &lc.Status.Conditions[i]
+		}
+	}
+
+	return nil
 }
 
 // We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api

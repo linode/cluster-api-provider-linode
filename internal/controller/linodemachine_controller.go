@@ -945,7 +945,7 @@ func (r *LinodeMachineReconciler) SetupWithManager(mgr ctrl.Manager, options crc
 		).
 		// we care about reconciling on metadata updates for LinodeMachines because the OwnerRef for the Machine is needed
 		WithEventFilter(predicate.And(
-			predicates.ResourceNotPausedAndHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
+			predicates.ResourceHasFilterLabel(mgr.GetScheme(), mgr.GetLogger(), r.WatchFilterValue),
 			predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
 				oldObject, okOld := e.ObjectOld.(*infrav1alpha2.LinodeMachine)
 				newObject, okNew := e.ObjectNew.(*infrav1alpha2.LinodeMachine)

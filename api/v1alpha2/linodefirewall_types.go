@@ -157,11 +157,35 @@ func (lfw *LinodeFirewall) GetConditions() []metav1.Condition {
 			lfw.Status.Conditions[i].Reason = DefaultConditionReason
 		}
 	}
+
 	return lfw.Status.Conditions
 }
 
 func (lfw *LinodeFirewall) SetConditions(conditions []metav1.Condition) {
 	lfw.Status.Conditions = conditions
+}
+
+func (lfw *LinodeFirewall) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
+	for i := range lfw.Status.Conditions {
+		if lfw.Status.Conditions[i].Type == cond.Type {
+			lfw.Status.Conditions[i] = cond
+			return
+		}
+	}
+	lfw.Status.Conditions = append(lfw.Status.Conditions, cond)
+}
+
+func (lfw *LinodeFirewall) GetCondition(condType string) *metav1.Condition {
+	for i := range lfw.Status.Conditions {
+		if lfw.Status.Conditions[i].Type == condType {
+			return &lfw.Status.Conditions[i]
+		}
+	}
+
+	return nil
 }
 
 // We need V1Beta2Conditions helpers to be able to use the conditions package from cluster-api

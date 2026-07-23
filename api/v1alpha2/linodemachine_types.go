@@ -558,11 +558,35 @@ func (lm *LinodeMachine) GetConditions() []metav1.Condition {
 			lm.Status.Conditions[i].Reason = DefaultConditionReason
 		}
 	}
+
 	return lm.Status.Conditions
 }
 
 func (lm *LinodeMachine) SetConditions(conditions []metav1.Condition) {
 	lm.Status.Conditions = conditions
+}
+
+func (lm *LinodeMachine) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
+	for i := range lm.Status.Conditions {
+		if lm.Status.Conditions[i].Type == cond.Type {
+			lm.Status.Conditions[i] = cond
+			return
+		}
+	}
+	lm.Status.Conditions = append(lm.Status.Conditions, cond)
+}
+
+func (lm *LinodeMachine) GetCondition(condType string) *metav1.Condition {
+	for i := range lm.Status.Conditions {
+		if lm.Status.Conditions[i].Type == condType {
+			return &lm.Status.Conditions[i]
+		}
+	}
+
+	return nil
 }
 
 func (lm *LinodeMachine) GetV1Beta2Conditions() []metav1.Condition {

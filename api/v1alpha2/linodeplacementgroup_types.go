@@ -140,11 +140,35 @@ func (lpg *LinodePlacementGroup) GetConditions() []metav1.Condition {
 			lpg.Status.Conditions[i].Reason = DefaultConditionReason
 		}
 	}
+
 	return lpg.Status.Conditions
 }
 
 func (lpg *LinodePlacementGroup) SetConditions(conditions []metav1.Condition) {
 	lpg.Status.Conditions = conditions
+}
+
+func (lpg *LinodePlacementGroup) SetCondition(cond metav1.Condition) {
+	if cond.LastTransitionTime.IsZero() {
+		cond.LastTransitionTime = metav1.Now()
+	}
+	for i := range lpg.Status.Conditions {
+		if lpg.Status.Conditions[i].Type == cond.Type {
+			lpg.Status.Conditions[i] = cond
+			return
+		}
+	}
+	lpg.Status.Conditions = append(lpg.Status.Conditions, cond)
+}
+
+func (lpg *LinodePlacementGroup) GetCondition(condType string) *metav1.Condition {
+	for i := range lpg.Status.Conditions {
+		if lpg.Status.Conditions[i].Type == condType {
+			return &lpg.Status.Conditions[i]
+		}
+	}
+
+	return nil
 }
 
 func (lpg *LinodePlacementGroup) GetV1Beta2Conditions() []metav1.Condition {
