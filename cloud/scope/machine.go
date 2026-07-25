@@ -133,7 +133,7 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 }
 
 func (m *MachineScope) GetObjectStoreCredentials(ctx context.Context, ref corev1.SecretReference) (*corev1.Secret, error) {
-	name, err := util.GetCredentialDataFromRef(ctx, m.Client, ref, m.LinodeCluster.GetNamespace(), "bucket")
+	name, err := util.GetCredentials(ctx, m.Client, ref, m.LinodeCluster.GetNamespace())
 	if err != nil {
 		return nil, err
 	}
