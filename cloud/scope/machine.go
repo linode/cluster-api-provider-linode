@@ -133,15 +133,11 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 }
 
 func (m *MachineScope) GetObjectStoreCredentials(ctx context.Context, ref corev1.SecretReference) (*corev1.Secret, error) {
-	secret, err := getCredentials(ctx, m.Client, ref, m.LinodeCluster.GetNamespace())
+	name, err := util.GetCredentialDataFromRef(ctx, m.Client, ref, m.LinodeCluster.GetNamespace(), "bucket")
 	if err != nil {
 		return nil, err
 	}
 
-	name, err := util.GetCredentialDataFromRef(ctx, m.Client, m.LinodeCluster.Spec.ObjectStore.CredentialsRef, m.LinodeCluster.GetNamespace(), "bucket")
-
-	if err != nil {
-		return "", fmt.Errorf("get bucket name: %w", err)
 	for _, key := range [...]string{"bucket", "endpoint", "access", "secret"} {
 		if len(secret.Data[key]) == 0 {
 			return nil, fmt.Errorf("credentials secret %s/%s has empty or missing %s", secret.Namespace, secret.Name, key)
