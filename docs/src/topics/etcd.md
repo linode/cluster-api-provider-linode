@@ -27,16 +27,13 @@ Users can also enable SSE (Server-side encryption) by passing a SSE AES-256 Key 
 [here](https://github.com/linode/cluster-api-provider-linode/blob/main/templates/addons/etcd-backup-restore/etcd-backup-restore.yaml)
 on the pod can be controlled during the provisioning process.
 
-```admonish warning
-This is currently under development and will be available for use once the upstream [PR](https://github.com/gardener/etcd-backup-restore/pull/719) is merged and an official image is made available
-```
-
 For eg:
 ```sh
 export CLUSTER_NAME=test
 export OBJ_BUCKET_REGION=us-ord
-export ETCDBR_IMAGE=docker.io/username/your-custom-image:version
 export SSE_KEY=cdQdZ3PrKgm5vmqxeqwQCuAWJ7pPVyHg
+# Optional: override the default official etcd-backup-restore image
+# export ETCDBR_IMAGE=europe-docker.pkg.dev/gardener-project/releases/gardener/etcdbrctl:v0.36.3
 clusterctl generate cluster $CLUSTER_NAME \
   --kubernetes-version v1.33.4 \
   --infrastructure linode-linode \

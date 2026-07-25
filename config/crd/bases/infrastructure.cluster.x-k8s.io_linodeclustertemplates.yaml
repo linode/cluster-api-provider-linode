@@ -274,6 +274,22 @@ spec:
                               This is used to generate presigned URLs for S3 Bucket objects, which are used by
                               control-plane and worker nodes to fetch bootstrap data.
                             type: string
+                          secondaryCredentialsRef:
+                            description: |-
+                              secondaryCredentialsRef is an optional reference to a Secret that contains credentials for a secondary
+                              Cluster Object Store. It is used only when the primary Object Store cannot upload bootstrap data and
+                              generate a non-empty presigned URL.
+                            properties:
+                              name:
+                                description: name is unique within a namespace to
+                                  reference a secret resource.
+                                type: string
+                              namespace:
+                                description: namespace defines the space within which
+                                  the secret name must be unique.
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
                         type: object
                       region:
                         description: region the LinodeCluster lives in.
