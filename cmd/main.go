@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	kcpv1beta2 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta2"
 	capi "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
@@ -94,6 +95,7 @@ type flagVars struct {
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(capi.AddToScheme(scheme))
+	utilruntime.Must(kcpv1beta2.AddToScheme(scheme))
 	utilruntime.Must(infrastructurev1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }

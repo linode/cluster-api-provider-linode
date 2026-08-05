@@ -370,8 +370,7 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machi
 	logger := logr.FromContextOrDiscard(ctx)
 	isReady, err := isCapiMachineReady(ctx, capiMachine, cscope.Client)
 	if err != nil {
-		logger.Error(err, "failed to determine if linode machine is ready, will not requeue")
-		return nil, nil
+		return nil, fmt.Errorf("failed to determine if linode machine %s is ready: %w", machine.Name, err)
 	}
 	if !firstMachine && !isReady {
 		// always process the first linodeMachine, and add its IP to the DNS entries.
