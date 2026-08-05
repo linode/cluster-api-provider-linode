@@ -36,6 +36,7 @@ on:
           - linodevpc
           - linodeplacementgroup
           - linodefirewall
+          - dns
           - all
       e2e-flags:
         type: string
@@ -82,6 +83,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.github_token }}
       LINODE_TOKEN: ${{ secrets.LINODE_TOKEN }}
+      LINODE_DNS_TOKEN: ${{ secrets.LINODE_DNS_TOKEN }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
