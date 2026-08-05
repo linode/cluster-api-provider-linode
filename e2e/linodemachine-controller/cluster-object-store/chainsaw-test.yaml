@@ -50,6 +50,16 @@ spec:
       try:
         - apply:
             file: create-linodeobjectstoragekey.yaml
+        - script:
+            env:
+              - name: KEY
+                value: ($key)
+            content: |
+              set -eu
+
+              kubectl -n "$NAMESPACE" wait --for=jsonpath='{.status.ready}'=true "lobjkey/$KEY" --timeout=10m
+            check:
+              ($error): ~
         - assert:
             file: assert-key-and-secret.yaml
       catch:
