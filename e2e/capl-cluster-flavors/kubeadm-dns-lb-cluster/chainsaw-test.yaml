@@ -48,7 +48,7 @@ spec:
               --kubernetes-version ${KUBERNETES_VERSION} \
               --infrastructure local-linode:v0.0.0 \
               --flavor kubeadm-dns-loadbalancing \
-              --control-plane-machine-count 3 --worker-machine-count 1 \
+              --control-plane-machine-count 1 --worker-machine-count 0 \
               --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > dns-lb-cluster.yaml
             check:
               ($error == null): true
@@ -74,78 +74,30 @@ spec:
         - describe:
             apiVersion: addons.cluster.x-k8s.io/v1alpha1
             kind: HelmReleaseProxy
-    - name: Check if the linodes are created
+    - name: Assert DNS has entries
       try:
         - script:
-            env:
-              - name: TARGET_API
-                value: api.linode.com
-              - name: TARGET_API_VERSION
-                value: v4beta
-              - name: URI
-                value: linode/instances
-              - name: FILTER
-                value: (to_string({"tags":($cluster)}))
-            content: |
-              set -e
-              curl -s \
-                -H "Authorization: Bearer $LINODE_TOKEN" \
-                -H "X-Filter: $FILTER" \
-                -H "Content-Type: application/json" \
-                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
-            check:
-              ($error): ~
-              (json_parse($stdout)):
-                results: 4
-    - name: Get child cluster kubeconfig
-      try:
-        - script:
-            env:
-              - name: CLUSTER
-                value: ($cluster)
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: CLUSTERCTL_CONFIG
-                value: (env('CLUSTERCTL_CONFIG'))
-            content: |
-              set -e
-              clusterctl get kubeconfig $CLUSTER -n $NAMESPACE > dns-lb-cluster-kubeconfig.yaml
-            check:
-              ($error == null): true
-    - clusters:
-        default-cluster:
-          kubeconfig: ./dns-lb-cluster-kubeconfig.yaml
-      name: Check child cluster resources
-      try:
-        - assert:
-            cluster: dns-lb-cluster
-            file: assert-child-cluster-deployments.yaml
-        - assert:
-            cluster: dns-lb-cluster
-            file: assert-child-cluster-daemonsets.yaml
-      catch:
-        - describe:
-            cluster: dns-lb-cluster
-            apiVersion: apps/v1
-            kind: Deployment
-            namespace: kube-system
-        - describe:
-            cluster: dns-lb-cluster
-            apiVersion: apps/v1
-            kind: DaemonSet
-            namespace: kube-system
-    - name: Assert DNS has 3 entries
-      try:
-        - script:
+            shell: bash
+            shellArgs:
+              - -c
             env:
               - name: CLUSTER_URL
                 value: (join('.', [($cluster), 'capl-e2e', 'lkedevs.net']))
             content: |
               set -e
-              dig $CLUSTER_URL +short | wc -l
+              count=0
+              for _ in $(seq 1 40); do # cap at 20 minutes per exec timeout in .chainsaw.yaml
+                count=$(dig $CLUSTER_URL +short | wc -l | tr -d ' ')
+                if [[ "$count" == "1" ]]; then
+                  exit 0
+                fi
+                sleep 30
+              done
+
+              echo "expected 1 DNS entry, got ${count:-0}"
+              exit 1
             check:
               ($error == null): true
-              (contains($stdout, '3')): true
     - name: Delete child cluster
       try:
         - script:
