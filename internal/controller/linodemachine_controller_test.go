@@ -655,7 +655,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				After(getImage).
 				DoAndReturn(func(_, _ any) (*linodego.Instance, error) {
 					time.Sleep(time.Microsecond)
-					return nil, errors.New("time is up")
+					return nil, linodego.NewError(linodego.Error{Code: http.StatusRequestTimeout, Message: "time is up"})
 				})
 			mockLinodeClient.EXPECT().
 				OnAfterResponse(gomock.Any()).
@@ -1939,7 +1939,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						Expect(err).To(HaveOccurred())
 						Expect(mck.Logs()).To(ContainSubstring("Failed to parse instance ID from provider ID"))
 					})),
-					Path(Result("update requeues on get error", func(ctx context.Context, mck Mock) {
+					Path(Result("update requeues on retryable get error", func(ctx context.Context, mck Mock) {
 						linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
 						linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
 						mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).
@@ -1948,6 +1948,15 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
+					})),
+					Path(Result("update does not requeue on nonretryable get error", func(ctx context.Context, mck Mock) {
+						linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
+						linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+						mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).
+							Return(nil, &linodego.Error{Code: http.StatusNotFound})
+						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.IsZero()).To(BeTrue())
 					})),
 				),
 			),
