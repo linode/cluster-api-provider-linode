@@ -42,13 +42,15 @@ spec:
                 value: ''
               - name: DNS_SUBDOMAIN_OVERRIDE
                 value: (join('.', [($cluster), 'capl-e2e']))
+              - name: CONTROL_PLANE_MACHINE_COUNT
+                value: (env('CONTROL_PLANE_MACHINE_COUNT')) # 1 or 3
             content: |
               set -e
               clusterctl generate cluster $CLUSTER -n $NAMESPACE \
               --kubernetes-version ${KUBERNETES_VERSION} \
               --infrastructure local-linode:v0.0.0 \
               --flavor kubeadm-dns-loadbalancing \
-              --control-plane-machine-count 1 --worker-machine-count 0 \
+              --control-plane-machine-count ${CONTROL_PLANE_MACHINE_COUNT:-1} --worker-machine-count 0 \
               --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > dns-lb-cluster.yaml
             check:
               ($error == null): true
@@ -83,18 +85,20 @@ spec:
             env:
               - name: CLUSTER_URL
                 value: (join('.', [($cluster), 'capl-e2e', 'lkedevs.net']))
+              - name: CONTROL_PLANE_MACHINE_COUNT
+                value: (env('CONTROL_PLANE_MACHINE_COUNT')) # 1 or 3
             content: |
               set -e
               count=0
               for _ in $(seq 1 40); do # cap at 20 minutes per exec timeout in .chainsaw.yaml
                 count=$(dig $CLUSTER_URL +short | wc -l | tr -d ' ')
-                if [[ "$count" == "1" ]]; then
+                if [[ "$count" == "${CONTROL_PLANE_MACHINE_COUNT:-1}" ]]; then
                   exit 0
                 fi
                 sleep 30
               done
 
-              echo "expected 1 DNS entry, got ${count:-0}"
+              echo "expected ${CONTROL_PLANE_MACHINE_COUNT:-1} records, got ${count:-0}"
               exit 1
             check:
               ($error == null): true
