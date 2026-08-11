@@ -1,0 +1,169 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  creationTimestamp: null
+  name: dns-lb-cluster
+  # Labels to allow the test to be triggered based on selector flag
+  labels:
+    all:
+    dns:
+spec:
+  bindings:
+    # A short identifier for the E2E test run
+    - name: run
+      value: (join('-', ['e2e', 'dns-lb', random('[0-9a-z]{5}')]))
+    - name: cluster
+      # Format the cluster name
+      # linode firewall has limit of max 32 chars, so we truncate the cluster name to 29 chars
+      # for firewall named as <cluster>-nb
+      value: (trim((truncate(($run), `29`)), '-'))
+  template: true
+  steps:
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Generate cluster using clusterctl
+      try:
+        - script:
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+              - name: KUBERNETES_VERSION
+                value: (env('KUBERNETES_VERSION') || 'v1.36.2')
+              - name: DNS_ROOT_DOMAIN
+                value: 'lkedevs.net'
+              - name: DNS_UNIQUE_ID
+                value: ''
+              - name: DNS_SUBDOMAIN_OVERRIDE
+                value: (join('.', [($cluster), 'capl-e2e']))
+              - name: CONTROL_PLANE_MACHINE_COUNT
+                value: (env('CONTROL_PLANE_MACHINE_COUNT')) # 1 or 3
+            content: |
+              set -e
+              clusterctl generate cluster $CLUSTER -n $NAMESPACE \
+              --kubernetes-version ${KUBERNETES_VERSION} \
+              --infrastructure local-linode:v0.0.0 \
+              --flavor kubeadm-dns-loadbalancing \
+              --control-plane-machine-count ${CONTROL_PLANE_MACHINE_COUNT:-1} --worker-machine-count 0 \
+              --config ${CLUSTERCTL_CONFIG:=${HOME}/.cluster-api/clusterctl.yaml} > dns-lb-cluster.yaml
+            check:
+              ($error == null): true
+    - name: Apply generated cluster yaml
+      try:
+        - apply:
+            file: dns-lb-cluster.yaml
+        - assert:
+            file: assert-child-cluster-resources.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta2
+            kind: Machine
+        - describe:
+            apiVersion: cluster.x-k8s.io/v1beta2
+            kind: MachineDeployment
+        - describe:
+            apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+            kind: KubeadmControlPlane
+        - describe:
+            apiVersion: addons.cluster.x-k8s.io/v1alpha1
+            kind: HelmReleaseProxy
+    - name: Assert DNS has entries
+      try:
+        - script:
+            shell: bash
+            shellArgs:
+              - -c
+            env:
+              - name: CLUSTER_URL
+                value: (join('.', [($cluster), 'capl-e2e', 'lkedevs.net']))
+              - name: CONTROL_PLANE_MACHINE_COUNT
+                value: (env('CONTROL_PLANE_MACHINE_COUNT')) # 1 or 3
+            content: |
+              set -e
+              count=0
+              for _ in $(seq 1 40); do # cap at 20 minutes per exec timeout in .chainsaw.yaml
+                count=$(dig $CLUSTER_URL +short | wc -l | tr -d ' ')
+                if [[ "$count" == "${CONTROL_PLANE_MACHINE_COUNT:-1}" ]]; then
+                  exit 0
+                fi
+                sleep 30
+              done
+
+              echo "expected ${CONTROL_PLANE_MACHINE_COUNT:-1} records, got ${count:-0}"
+              exit 1
+            check:
+              ($error == null): true
+    - name: Delete child cluster
+      try:
+        - script:
+            shell: bash
+            shellArgs:
+              - -c
+            env:
+              - name: CLUSTER
+                value: ($cluster)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CLUSTERCTL_CONFIG
+                value: (env('CLUSTERCTL_CONFIG'))
+              - name: SKIP_DELETE
+                value: (env('SKIP_CUSTOM_DELETE'))
+            content: |
+              set -e
+              if [[ -n "$SKIP_DELETE" ]]; then
+                echo "Skipping deletion of child cluster"
+                exit 0
+              fi
+              kubectl delete cluster $CLUSTER -n $NAMESPACE --timeout=120s || { echo "deletion failed!"; exit 1; }
+            check:
+              ($error == null): true
+              (contains($stdout, 'deletion failed')): false
+    - name: Check if the linodes are deleted
+      try:
+        - script:
+            shell: bash
+            shellArgs:
+              - -c
+            env:
+              - name: TARGET_API
+                value: api.linode.com
+              - name: TARGET_API_VERSION
+                value: v4beta
+              - name: URI
+                value: linode/instances
+              - name: FILTER
+                value: (to_string({"tags":($cluster)}))
+              - name: SKIP_DELETE
+                value: (env('SKIP_CUSTOM_DELETE'))
+            content: |
+              set -e
+              if [[ -n "$SKIP_DELETE" ]]; then
+                echo {\"results\":0}
+                exit 0
+              fi
+              curl -s \
+                -H "Authorization: Bearer $LINODE_TOKEN" \
+                -H "X-Filter: $FILTER" \
+                -H "Content-Type: application/json" \
+                "https://$TARGET_API/$TARGET_API_VERSION/$URI"
+            check:
+              ($error): ~
+              (json_parse($stdout)):
+                results: 0
+    - name: Delete generated child cluster manifest yaml
+      try:
+        - script:
+            content: |
+              rm -f dns-lb-cluster.yaml
+              rm -f dns-lb-cluster-kubeconfig.yaml
+            check:
+              ($error == null): true

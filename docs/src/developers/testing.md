@@ -237,9 +237,11 @@ There are other selectors you can use to invoke specfic tests. Please look at th
 | Linode Machine Controller        | `linodemachine` |
 | Linode Obj Controller            | `linodeobj`     | 
 | Linode Obj Key Controller        | `linodeobjkey`  | 
-| Linode VPC Controller            | `linodevpc`     | 
+| Linode VPC Controller            | `linodevpc`     |
+| DNS                              | `dns`           |
 
 *Note: For any flavor e2e tests, please set the required env variables*
+*e.g. for DNS: `CONTROL_PLANE_MACHINE_COUNT=3 chainsaw test e2e --selector dns`*
 
 ### Adding Tests
 1. Create a new directory under the controller you are testing with the naming scheme of `e2e/${COMPONENT}/${TEST_NAME}`

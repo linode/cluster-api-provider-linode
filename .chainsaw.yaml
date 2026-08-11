@@ -9,4 +9,4 @@ spec:
     cleanup: 5m0s
     delete: 5m0s
     error: 5m0s
-    exec: 5m0s
+    exec: 20m0s # specifically for the DNS e2e test which is SLOW
