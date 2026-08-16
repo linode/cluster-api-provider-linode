@@ -416,7 +416,7 @@ func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 		expectedError error
 	}{
 		{
-			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data and we create a valid ClusterScope",
+			name: "Success - Credentials ref returns API token and creates a valid VPCScope",
 			LinodeVPC: &infrav1alpha2.LinodeVPC{
 				Spec: infrav1alpha2.LinodeVPCSpec{
 					CredentialsRef: &corev1.SecretReference{

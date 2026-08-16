@@ -27,6 +27,7 @@ import (
 
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
+	"github.com/linode/cluster-api-provider-linode/util"
 	"github.com/linode/cluster-api-provider-linode/version"
 )
 
@@ -162,21 +163,8 @@ func setUpEdgeDNSInterface() (dnsInterface dns.DNS, err error) {
 	return dns.Client(sess), nil
 }
 
-func getCredentialDataFromRef(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, key string) ([]byte, error) {
-	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
-	if err != nil {
-		return nil, err
-	}
-	rawData, ok := credSecret.Data[key]
-	if !ok {
-		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", key, credentialsRef.Namespace, credentialsRef.Name)
-	}
-
-	return rawData, nil
-}
-
 func addCredentialsFinalizer(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
-	secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
+	secret, err := util.GetCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return err
 	}
@@ -189,7 +177,7 @@ func addCredentialsFinalizer(ctx context.Context, crClient clients.K8sClient, cr
 }
 
 func removeCredentialsFinalizer(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace, finalizer string) error {
-	secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
+	secret, err := util.GetCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return client.IgnoreNotFound(err)
 	}
@@ -199,23 +187,6 @@ func removeCredentialsFinalizer(ctx context.Context, crClient clients.K8sClient,
 		return fmt.Errorf("remove finalizer from credentials secret %s/%s: %w", secret.Namespace, secret.Name, err)
 	}
 	return nil
-}
-
-func getCredentials(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
-	secretRef := client.ObjectKey{
-		Name:      credentialsRef.Name,
-		Namespace: credentialsRef.Namespace,
-	}
-	if secretRef.Namespace == "" {
-		secretRef.Namespace = defaultNamespace
-	}
-
-	var credSecret corev1.Secret
-	if err := crClient.Get(ctx, secretRef, &credSecret); err != nil {
-		return nil, fmt.Errorf("get credentials secret %s/%s: %w", secretRef.Namespace, secretRef.Name, err)
-	}
-
-	return &credSecret, nil
 }
 
 // toFinalizer converts an object into a valid finalizer key representation

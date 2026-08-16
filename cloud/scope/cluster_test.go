@@ -399,7 +399,7 @@ func TestClusterSetCredentialRefTokenForLinodeClients(t *testing.T) {
 		expectedError error
 	}{
 		{
-			name: "Success - Validate getCredentialDataFromRef() returns some apiKey data",
+			name: "Success - Credentials ref returns API token",
 			fields: fields{
 				Cluster:           &clusterv1.Cluster{},
 				LinodeMachineList: infrav1alpha2.LinodeMachineList{},

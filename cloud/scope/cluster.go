@@ -27,6 +27,7 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 // ClusterScopeParams defines the input parameters used to create a new Scope.
@@ -140,12 +141,12 @@ func (s *ClusterScope) RemoveCredentialsRefFinalizer(ctx context.Context) error 
 
 func (s *ClusterScope) SetCredentialRefTokenForLinodeClients(ctx context.Context) error {
 	if s.LinodeCluster.Spec.CredentialsRef != nil {
-		apiToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "apiToken")
+		apiToken, err := util.GetCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "apiToken")
 		if err != nil {
 			return fmt.Errorf("credentials from secret ref: %w", err)
 		}
 		s.LinodeClient = s.LinodeClient.SetToken(string(apiToken))
-		dnsToken, err := getCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "dnsToken")
+		dnsToken, err := util.GetCredentialDataFromRef(ctx, s.Client, *s.LinodeCluster.Spec.CredentialsRef, s.LinodeCluster.GetNamespace(), "dnsToken")
 		if err != nil || len(dnsToken) == 0 {
 			dnsToken = apiToken
 		}
