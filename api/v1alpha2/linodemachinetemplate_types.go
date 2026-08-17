@@ -55,6 +55,11 @@ type LinodeMachineTemplateResource struct {
 	Spec LinodeMachineSpec `json:"spec,omitempty,omitzero"`
 }
 
+const (
+	ErrLinodeInterfacesNotAllowed = "Linode Interfaces are not allowed on this account (interfaces_for_new_linodes=legacy_config_only)"
+	ErrLegacyInterfacesNotAllowed = "Legacy Configuration Profile interfaces are not allowed on this account (interfaces_for_new_linodes=linode_only)"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:storageversion
 // +kubebuilder:resource:path=linodemachinetemplates,scope=Namespaced,categories=cluster-api,shortName=lmt
