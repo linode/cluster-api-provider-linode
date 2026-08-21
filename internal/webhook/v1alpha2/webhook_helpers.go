@@ -44,6 +44,9 @@ const (
 	// maxLabelLength is the maximum length for a Linode resource label
 	maxLabelLength    = 32
 	labelLengthDetail = "must be between 3 and 32 characters"
+
+	ErrLinodeInterfacesNotAllowed = "Linode Interfaces are not allowed on this account (interfaces_for_new_linodes=legacy_config_only)"
+	ErrLegacyInterfacesNotAllowed = "Legacy Configuration Profile interfaces are not allowed on this account (interfaces_for_new_linodes=linode_only)"
 )
 
 func validateLabelLength(label string, path *field.Path) *field.Error {
@@ -148,4 +151,33 @@ func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient,
 	// The caller should handle validation with the default client
 	logger.Error(err, "failed getting credentials from secret ref", "name", resourceName)
 	return false, linodeClient, nil
+}
+
+// validateInterfaceAccountSettings checks a customer's account settings to ensure that
+// the requested interface type is permitted.
+//   - usesLegacyInterfaces: true when the machine spec has Interfaces set
+//   - usesLinodeInterfaces: true when the machine spec has LinodeInterfaces set
+//
+// Returns a field.Error when the requested type is not allowed, or nil when everything is fine.
+func validateInterfaceAccountSettings(ctx context.Context, linodegoclient clients.LinodeClient, usesLegacyInterfaces bool, usesLinodeInterfaces bool, path *field.Path) (*field.Error, error) {
+	if !usesLegacyInterfaces && !usesLinodeInterfaces {
+		return nil, nil
+	}
+
+	accountSettings, err := linodegoclient.GetAccountSettings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get customer account settings: %w", err)
+	}
+
+	setting := accountSettings.InterfacesForNewLinodes
+
+	if usesLinodeInterfaces && setting == linodego.LegacyConfigOnly {
+		return field.Forbidden(path.Child("linodeInterfaces"), ErrLinodeInterfacesNotAllowed), nil
+	}
+
+	if usesLegacyInterfaces && setting == linodego.LinodeOnly {
+		return field.Forbidden(path.Child("legacyConfiguration"), ErrLegacyInterfacesNotAllowed), nil
+	}
+
+	return nil, nil
 }

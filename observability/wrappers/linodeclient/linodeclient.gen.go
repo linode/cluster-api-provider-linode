@@ -662,6 +662,30 @@ func (_d LinodeClientWithTracing) DeleteVPCSubnet(ctx context.Context, vpcID int
 	return _d.LinodeClient.DeleteVPCSubnet(ctx, vpcID, subnetID)
 }
 
+// GetAccountSettings implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) GetAccountSettings(ctx context.Context) (ap1 *linodego.AccountSettings, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetAccountSettings")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx": ctx}, map[string]interface{}{
+				"ap1": ap1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.GetAccountSettings(ctx)
+}
+
 // GetFirewall implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetFirewall(ctx context.Context, firewallID int) (fp1 *linodego.Firewall, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetFirewall")
