@@ -24,6 +24,7 @@ type LinodeClient interface {
 	LinodeFirewallClient
 	LinodeTokenClient
 	LinodeInterfacesClient
+	LinodeAccountSettingsClient
 
 	OnAfterResponse(m func(response *http.Response) error)
 }
@@ -131,6 +132,11 @@ type LinodeFirewallClient interface {
 type LinodeInterfacesClient interface {
 	ListInterfaces(ctx context.Context, linodeID int, opts *linodego.ListOptions) ([]linodego.LinodeInterface, error)
 	ListInterfaceFirewalls(ctx context.Context, linodeID int, interfaceID int, opts *linodego.ListOptions) ([]linodego.Firewall, error)
+}
+
+// LinodeAccountSettingsClient defines the methods that interact with account settings.
+type LinodeAccountSettingsClient interface {
+	GetAccountSettings(ctx context.Context) (*linodego.AccountSettings, error)
 }
 
 type K8sClient interface {

@@ -412,6 +412,21 @@ func (mr *MockLinodeClientMockRecorder) DeleteVPCSubnet(ctx, vpcID, subnetID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVPCSubnet", reflect.TypeOf((*MockLinodeClient)(nil).DeleteVPCSubnet), ctx, vpcID, subnetID)
 }
 
+// GetAccountSettings mocks base method.
+func (m *MockLinodeClient) GetAccountSettings(ctx context.Context) (*linodego.AccountSettings, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountSettings", ctx)
+	ret0, _ := ret[0].(*linodego.AccountSettings)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccountSettings indicates an expected call of GetAccountSettings.
+func (mr *MockLinodeClientMockRecorder) GetAccountSettings(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountSettings", reflect.TypeOf((*MockLinodeClient)(nil).GetAccountSettings), ctx)
+}
+
 // GetFirewall mocks base method.
 func (m *MockLinodeClient) GetFirewall(ctx context.Context, firewallID int) (*linodego.Firewall, error) {
 	m.ctrl.T.Helper()
@@ -2261,6 +2276,45 @@ func (m *MockLinodeInterfacesClient) ListInterfaces(ctx context.Context, linodeI
 func (mr *MockLinodeInterfacesClientMockRecorder) ListInterfaces(ctx, linodeID, opts any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInterfaces", reflect.TypeOf((*MockLinodeInterfacesClient)(nil).ListInterfaces), ctx, linodeID, opts)
+}
+
+// MockLinodeAccountSettingsClient is a mock of LinodeAccountSettingsClient interface.
+type MockLinodeAccountSettingsClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockLinodeAccountSettingsClientMockRecorder
+	isgomock struct{}
+}
+
+// MockLinodeAccountSettingsClientMockRecorder is the mock recorder for MockLinodeAccountSettingsClient.
+type MockLinodeAccountSettingsClientMockRecorder struct {
+	mock *MockLinodeAccountSettingsClient
+}
+
+// NewMockLinodeAccountSettingsClient creates a new mock instance.
+func NewMockLinodeAccountSettingsClient(ctrl *gomock.Controller) *MockLinodeAccountSettingsClient {
+	mock := &MockLinodeAccountSettingsClient{ctrl: ctrl}
+	mock.recorder = &MockLinodeAccountSettingsClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockLinodeAccountSettingsClient) EXPECT() *MockLinodeAccountSettingsClientMockRecorder {
+	return m.recorder
+}
+
+// GetAccountSettings mocks base method.
+func (m *MockLinodeAccountSettingsClient) GetAccountSettings(ctx context.Context) (*linodego.AccountSettings, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAccountSettings", ctx)
+	ret0, _ := ret[0].(*linodego.AccountSettings)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAccountSettings indicates an expected call of GetAccountSettings.
+func (mr *MockLinodeAccountSettingsClientMockRecorder) GetAccountSettings(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountSettings", reflect.TypeOf((*MockLinodeAccountSettingsClient)(nil).GetAccountSettings), ctx)
 }
 
 // MockK8sClient is a mock of K8sClient interface.

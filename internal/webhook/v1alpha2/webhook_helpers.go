@@ -32,6 +32,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	caplv1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
 )
@@ -148,4 +149,33 @@ func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient,
 	// The caller should handle validation with the default client
 	logger.Error(err, "failed getting credentials from secret ref", "name", resourceName)
 	return false, linodeClient, nil
+}
+
+// validateInterfaceAccountSettings checks a customer's account settings to ensure that
+// the requested interface type is permitted.
+//   - usesLegacyInterfaces: true when the machine spec has Interfaces set
+//   - usesLinodeInterfaces: true when the machine spec has LinodeInterfaces set
+//
+// Returns a field.Error when the requested type is not allowed, or nil when everything is fine.
+func validateInterfaceAccountSettings(ctx context.Context, linodegoclient clients.LinodeClient, usesLegacyInterfaces, usesLinodeInterfaces bool, path *field.Path) (*field.Error, error) {
+	if !usesLegacyInterfaces && !usesLinodeInterfaces {
+		return nil, nil //nolint:nilnil // nil, nil is the intended "nothing to validate" state
+	}
+
+	accountSettings, err := linodegoclient.GetAccountSettings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get customer account settings: %w", err)
+	}
+
+	setting := accountSettings.InterfacesForNewLinodes
+
+	if usesLinodeInterfaces && setting == linodego.LegacyConfigOnly {
+		return field.Forbidden(path.Child("linodeInterfaces"), caplv1alpha2.ErrLinodeInterfacesNotAllowed), nil
+	}
+
+	if usesLegacyInterfaces && setting == linodego.LinodeOnly {
+		return field.Forbidden(path.Child("legacyConfiguration"), caplv1alpha2.ErrLegacyInterfacesNotAllowed), nil
+	}
+
+	return nil, nil //nolint:nilnil // nil, nil is the intended "permitted, no error" state
 }
