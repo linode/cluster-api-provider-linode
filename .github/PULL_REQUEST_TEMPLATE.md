@@ -21,7 +21,6 @@ Fixes #
 **TODOs**:
 <!-- Put an "X" character inside the brackets of each completed task. Some may be optional depending on the PR. -->
 
-- [ ] squashed commits
 - [ ] includes documentation
 - [ ] adds unit tests
 - [ ] adds or updates e2e tests
