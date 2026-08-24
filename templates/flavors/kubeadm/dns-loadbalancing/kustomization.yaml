@@ -27,7 +27,6 @@ patches:
       group: infrastructure.cluster.x-k8s.io
       version: v1alpha2
       kind: LinodeFirewall
-      name: ${CLUSTER_NAME}
     patch: |-
       apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
       kind: LinodeFirewall
