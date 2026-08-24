@@ -50,8 +50,6 @@ jobs:
 
       - name: Set up Mise
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
-        with:
-          install_args: go ko
 
       - name: Login to Docker Hub
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
