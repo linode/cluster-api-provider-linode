@@ -90,7 +90,7 @@ spec:
             content: |
               set -e
               count=0
-              for _ in $(seq 1 40); do # cap at 20 minutes per exec timeout in .chainsaw.yaml
+              for _ in $(seq 1 10); do # cap at 5 minutes per exec timeout in .chainsaw.yaml
                 count=$(dig @ns1.linode.com. $CLUSTER_URL +short | wc -l | tr -d ' ')
                 if [[ "$count" == "${CONTROL_PLANE_MACHINE_COUNT:-1}" ]]; then
                   exit 0
