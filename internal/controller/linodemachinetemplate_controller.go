@@ -125,20 +125,33 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 		}
 
 		machinesFoundForTemplate = true
-		if !slices.Equal(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags, lmtScope.LinodeMachineTemplate.Status.Tags) {
-			err := lmtr.reconcileTags(ctx, lmtScope.LinodeMachineTemplate, &machine)
-			if err != nil {
-				lmtr.Logger.Error(err, "Failed to update tags on LinodeMachine", "template", lmtScope.LinodeMachineTemplate.Name, "machine", machine.Name)
-				outErr = errors.Join(outErr, err)
-				failureReason = "FailedToPatchLinodeMachine"
-				return ctrl.Result{}, outErr
-			}
+		helper, err := patch.NewHelper(&machine, lmtr.Client)
+		if err != nil {
+			lmtr.Logger.Error(err, "Failed to initialize patch helper", "template", lmtScope.LinodeMachineTemplate.Name, "machine", machine.Name)
+			outErr = errors.Join(outErr, err)
+			failureReason = "FailedToPatchLinodeMachine"
+			return ctrl.Result{}, outErr
+		}
+		patchMachine := false
+
+		if !slices.Equal(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags, machine.Spec.Tags) {
+			machine.Spec.Tags = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags
+			patchMachine = true
 		}
 
-		if lmtScope.LinodeMachineTemplate.Spec.Template.Spec.FirewallID != lmtScope.LinodeMachineTemplate.Status.FirewallID {
-			err := lmtr.reconcileFirewallID(ctx, lmtScope.LinodeMachineTemplate, &machine)
-			if err != nil {
-				lmtr.Logger.Error(err, "Failed to update FirewallID on LinodeMachine", "template", lmtScope.LinodeMachineTemplate.Name, "machine", machine.Name)
+		if lmtScope.LinodeMachineTemplate.Spec.Template.Spec.FirewallID != machine.Spec.FirewallID {
+			machine.Spec.FirewallID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.FirewallID
+			patchMachine = true
+		}
+
+		if lmtScope.LinodeMachineTemplate.Spec.Template.Spec.PlacementGroupID != machine.Spec.PlacementGroupID {
+			machine.Spec.PlacementGroupID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.PlacementGroupID
+			patchMachine = true
+		}
+
+		if patchMachine {
+			if err := helper.Patch(ctx, &machine); err != nil {
+				lmtr.Logger.Error(err, "Failed to patch linodeMachine", "template", lmtScope.LinodeMachineTemplate.Name, "machine", machine.Name)
 				outErr = errors.Join(outErr, err)
 				failureReason = "FailedToPatchLinodeMachine"
 				return ctrl.Result{}, outErr
@@ -155,38 +168,12 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 	if outErr == nil {
 		lmtScope.LinodeMachineTemplate.Status.Tags = slices.Clone(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags)
 		lmtScope.LinodeMachineTemplate.Status.FirewallID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.FirewallID
+		lmtScope.LinodeMachineTemplate.Status.PlacementGroupID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.PlacementGroupID
 		lmtr.Logger.Info("Successfully reconciled LinodeMachineTemplate", "name", lmtScope.LinodeMachineTemplate.Name)
 	} else {
 		lmtr.Logger.Error(outErr, "Error in reconciling LinodeMachineTemplate, retrying..", "name", lmtScope.LinodeMachineTemplate.Name)
 	}
 	return ctrl.Result{}, outErr
-}
-
-func (lmtr *LinodeMachineTemplateReconciler) reconcileTags(ctx context.Context, lmt *infrav1alpha2.LinodeMachineTemplate, machine *infrav1alpha2.LinodeMachine) error {
-	helper, err := patch.NewHelper(machine, lmtr.Client)
-	if err != nil {
-		return fmt.Errorf("failed to init patch helper: %w", err)
-	}
-
-	machine.Spec.Tags = lmt.Spec.Template.Spec.Tags
-	if err := helper.Patch(ctx, machine); err != nil {
-		return fmt.Errorf("failed to patch LinodeMachine %s with new tags: %w", machine.Name, err)
-	}
-	lmtr.Logger.Info("Patched LinodeMachine with new tags", "machine", machine.Name, "tags", lmt.Spec.Template.Spec.Tags)
-
-	return nil
-}
-
-func (lmtr *LinodeMachineTemplateReconciler) reconcileFirewallID(ctx context.Context, lmt *infrav1alpha2.LinodeMachineTemplate, machine *infrav1alpha2.LinodeMachine) error {
-	helper, err := patch.NewHelper(machine, lmtr.Client)
-	if err != nil {
-		return fmt.Errorf("failed to init patch helper: %w", err)
-	}
-	machine.Spec.FirewallID = lmt.Spec.Template.Spec.FirewallID
-	if err := helper.Patch(ctx, machine); err != nil {
-		return fmt.Errorf("failed to patch LinodeMachine %s with new firewallID: %w", machine.Name, err)
-	}
-	return nil
 }
 
 func (lmtr *LinodeMachineTemplateReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {

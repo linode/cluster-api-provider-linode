@@ -813,6 +813,12 @@ spec:
                         required:
                         - size
                         type: object
+                      placementGroupID:
+                        description: |-
+                          placementGroupID is the ID of an existing placement group to associate with the Linode instance.
+                          It takes precedence over placementGroupRef when both are set.
+                        minimum: 1
+                        type: integer
                       placementGroupRef:
                         description: placementGroupRef is a reference to a placement
                           group object. This makes the linode to be launched in that
@@ -1030,6 +1036,10 @@ spec:
                 x-kubernetes-list-type: map
               firewallID:
                 description: firewallID that is currently applied to the LinodeMachineTemplate.
+                type: integer
+              placementGroupID:
+                description: placementGroupID that is currently associated with the
+                  LinodeMachineTemplate
                 type: integer
               tags:
                 description: tags that are currently applied to the LinodeMachineTemplate.

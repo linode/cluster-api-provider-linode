@@ -154,6 +154,12 @@ type LinodeMachineSpec struct {
 	// +optional
 	PlacementGroupRef *corev1.ObjectReference `json:"placementGroupRef,omitempty"`
 
+	// placementGroupID is the ID of an existing placement group to associate with the Linode instance.
+	// It takes precedence over placementGroupRef when both are set.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	PlacementGroupID int `json:"placementGroupID,omitempty"`
+
 	// firewallRef is a reference to a firewall object. This makes the linode use the specified firewall.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +optional

@@ -173,7 +173,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 	}
 
 	// Configure placement group if needed
-	if machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
+	if machineScope.LinodeMachine.Spec.PlacementGroupID != 0 || machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
 		if err := configurePlacementGroup(ctx, machineScope, createConfig, logger); err != nil {
 			return nil, err
 		}
@@ -1558,6 +1558,13 @@ func configureVlanInterface(ctx context.Context, machineScope *scope.MachineScop
 
 // configurePlacementGroup adds placement group configuration
 func configurePlacementGroup(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	if machineScope.LinodeMachine.Spec.PlacementGroupID != 0 {
+		createConfig.PlacementGroup = &linodego.InstanceCreatePlacementGroupOptions{
+			ID: machineScope.LinodeMachine.Spec.PlacementGroupID,
+		}
+		return nil
+	}
+
 	pgID, err := getPlacementGroupID(ctx, machineScope, logger)
 	if err != nil {
 		logger.Error(err, "Failed to get Placement Group config")

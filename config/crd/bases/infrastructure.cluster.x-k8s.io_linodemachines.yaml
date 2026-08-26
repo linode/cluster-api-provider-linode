@@ -792,6 +792,12 @@ spec:
                 required:
                 - size
                 type: object
+              placementGroupID:
+                description: |-
+                  placementGroupID is the ID of an existing placement group to associate with the Linode instance.
+                  It takes precedence over placementGroupRef when both are set.
+                minimum: 1
+                type: integer
               placementGroupRef:
                 description: placementGroupRef is a reference to a placement group
                   object. This makes the linode to be launched in that specific group.

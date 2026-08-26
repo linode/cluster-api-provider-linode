@@ -149,6 +149,7 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				Region: "us-ord",
 				Type:   "g6-standard-1",
+				Tags:   []string{"test-tag1"},
 			},
 		},
 		{
@@ -173,8 +174,9 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				},
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				Region: "us-ord",
-				Type:   "g6-standard-1",
+				Region:     "us-ord",
+				Type:       "g6-standard-1",
+				FirewallID: 67890,
 			},
 		},
 	}

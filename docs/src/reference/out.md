@@ -701,6 +701,7 @@ _Appears in:_
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials<br />to use for provisioning this machine. If not supplied then these<br />credentials will be used in-order:<br />  1. LinodeMachine<br />  2. Owner LinodeCluster<br />  3. Controller |  | Optional: \{\} <br /> |
 | `configuration` _[InstanceConfiguration](#instanceconfiguration)_ | configuration is the Akamai instance configuration OS,<br />if not specified, this defaults to the default configuration associated to the instance. |  | Optional: \{\} <br /> |
 | `placementGroupRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | placementGroupRef is a reference to a placement group object. This makes the linode to be launched in that specific group. |  | Optional: \{\} <br /> |
+| `placementGroupID` _integer_ | placementGroupID is the ID of an existing placement group to associate with the Linode instance.<br />It takes precedence over placementGroupRef when both are set. |  | Minimum: 1 <br />Optional: \{\} <br /> |
 | `firewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | firewallRef is a reference to a firewall object. This makes the linode use the specified firewall. |  | Optional: \{\} <br /> |
 | `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a LinodeVPC resource. If specified, this takes precedence over<br />the cluster-level VPC configuration for multi-region support. |  | Optional: \{\} <br /> |
 | `vpcID` _integer_ | vpcID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  | Optional: \{\} <br /> |
@@ -823,6 +824,7 @@ _Appears in:_
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeMachineTemplate |  | Optional: \{\} <br /> |
 | `tags` _string array_ | tags that are currently applied to the LinodeMachineTemplate. |  | Optional: \{\} <br /> |
 | `firewallID` _integer_ | firewallID that is currently applied to the LinodeMachineTemplate. |  | Optional: \{\} <br /> |
+| `placementGroupID` _integer_ | placementGroupID that is currently associated with the LinodeMachineTemplate |  | Optional: \{\} <br /> |
 
 
 #### LinodeNBPortConfig
