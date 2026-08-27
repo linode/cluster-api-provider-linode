@@ -1,0 +1,51 @@
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: ($cluster)
+spec:
+  controlPlaneRef:
+    apiGroup: controlplane.cluster.x-k8s.io
+    kind: KubeadmControlPlane
+    name: ($cluster)
+  infrastructureRef:
+    apiGroup: infrastructure.cluster.x-k8s.io
+    kind: LinodeCluster
+    name: ($cluster)
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeCluster
+metadata:
+  name: ($cluster)
+spec:
+  region: us-sea
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+kind: KubeadmControlPlane
+metadata:
+  name: ($cluster)
+spec:
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      controllerManager:
+        extraArgs:
+          - name: cloud-provider
+            value: external
+  machineTemplate:
+    spec:
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: LinodeMachineTemplate
+        name: ($cluster)
+  replicas: 1
+  version: 1.33.4
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: ($cluster)
+spec:
+  template:
+    spec:
+      region: us-sea
+      type: g6-nanode-1

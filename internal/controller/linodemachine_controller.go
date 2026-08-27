@@ -836,15 +836,6 @@ func (r *LinodeMachineReconciler) reconcilePlacementGroup(ctx context.Context, l
 	}
 
 	logger.Error(err, "Failed to assign placement group linode", "linodeID", linodeInstance.ID, "placementGroupID", desiredPlacementGroupID)
-	if currentPlacementGroupID == 0 {
-		return err
-	}
-
-	if _, rollbackErr := machineScope.LinodeClient.AssignPlacementGroupLinodes(ctx, currentPlacementGroupID, linodego.PlacementGroupAssignOptions{Linodes: []int{linodeInstance.ID}}); rollbackErr != nil {
-		logger.Error(rollbackErr, "Failed to restore original placement group", "linodeID", linodeInstance.ID, "placementGroupID", currentPlacementGroupID)
-		return errors.Join(err, rollbackErr)
-	}
-
 	return err
 }
 

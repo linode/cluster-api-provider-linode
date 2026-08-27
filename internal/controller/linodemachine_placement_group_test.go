@@ -32,7 +32,6 @@ func TestReconcilePlacementGroup(t *testing.T) {
 		expectedAssignGroupID   int
 		unassignErr             error
 		assignErr               error
-		rollbackErr             error
 	}{
 		{name: "no placement group"},
 		{name: "already assigned", desiredID: 10, currentID: 10},
@@ -48,10 +47,19 @@ func TestReconcilePlacementGroup(t *testing.T) {
 			},
 			currentID: 10,
 		},
+		{
+			name:      "direct ID takes precedence over placement group reference",
+			desiredID: 10,
+			placementGroupRef: &infrav1alpha2.LinodePlacementGroup{
+				ObjectMeta: metav1.ObjectMeta{Name: "managed", Namespace: "default"},
+				Spec:       infrav1alpha2.LinodePlacementGroupSpec{PGID: ptr.To(20)},
+				Status:     infrav1alpha2.LinodePlacementGroupStatus{Ready: true},
+			},
+			currentID: 10,
+		},
 		{name: "returns unassign error", desiredID: 10, currentID: 5, expectedUnassignGroupID: 5, unassignErr: errors.New("unassign failed")},
 		{name: "returns assign error", desiredID: 10, expectedAssignGroupID: 10, assignErr: errors.New("assign failed")},
-		{name: "restores original group after move fails", desiredID: 10, currentID: 5, expectedUnassignGroupID: 5, expectedAssignGroupID: 10, assignErr: errors.New("assign failed")},
-		{name: "returns assignment and rollback errors", desiredID: 10, currentID: 5, expectedUnassignGroupID: 5, expectedAssignGroupID: 10, assignErr: errors.New("assign failed"), rollbackErr: errors.New("rollback failed")},
+		{name: "returns assign error after unassigning original group", desiredID: 10, currentID: 5, expectedUnassignGroupID: 5, expectedAssignGroupID: 10, assignErr: errors.New("assign failed")},
 	}
 
 	for _, tt := range tests {
@@ -101,13 +109,6 @@ func TestReconcilePlacementGroup(t *testing.T) {
 				).Return(nil, tt.assignErr)
 				if unassignCall != nil {
 					assignCall.After(unassignCall)
-				}
-				if tt.assignErr != nil && tt.currentID != 0 {
-					linodeClient.EXPECT().AssignPlacementGroupLinodes(
-						gomock.Any(),
-						tt.currentID,
-						linodego.PlacementGroupAssignOptions{Linodes: []int{100}},
-					).Return(nil, tt.rollbackErr).After(assignCall)
 				}
 			}
 
