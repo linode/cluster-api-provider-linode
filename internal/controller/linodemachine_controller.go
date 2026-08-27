@@ -786,8 +786,8 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		return res, err
 	}
 
-	if res, err := r.reconcilePlacementGroup(ctx, logger, machineScope, linodeInstance); err != nil || !res.IsZero() {
-		return res, err
+	if err := r.reconcilePlacementGroup(ctx, logger, machineScope, linodeInstance); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Clean up bootstrap data after instance creation.
@@ -800,13 +800,13 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	return ctrl.Result{}, nil
 }
 
-func (r *LinodeMachineReconciler) reconcilePlacementGroup(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstance *linodego.Instance) (ctrl.Result, error) {
+func (r *LinodeMachineReconciler) reconcilePlacementGroup(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstance *linodego.Instance) error {
 	desiredPlacementGroupID := machineScope.LinodeMachine.Spec.PlacementGroupID
 	if desiredPlacementGroupID == 0 && machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
 		var err error
 		desiredPlacementGroupID, err = getPlacementGroupID(ctx, machineScope, logger)
 		if err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
 	}
 
@@ -816,30 +816,36 @@ func (r *LinodeMachineReconciler) reconcilePlacementGroup(ctx context.Context, l
 	}
 
 	if desiredPlacementGroupID == currentPlacementGroupID {
-		return ctrl.Result{}, nil
+		return nil
 	}
 
 	if currentPlacementGroupID != 0 {
 		if _, err := machineScope.LinodeClient.UnassignPlacementGroupLinodes(ctx, currentPlacementGroupID, linodego.PlacementGroupUnAssignOptions{Linodes: []int{linodeInstance.ID}}); err != nil {
 			logger.Error(err, "Failed to unassign placement group linode", "linodeID", linodeInstance.ID, "placementGroupID", currentPlacementGroupID)
-			return ctrl.Result{}, err
+			return err
 		}
 	}
 
-	if desiredPlacementGroupID != 0 {
-		if _, err := machineScope.LinodeClient.AssignPlacementGroupLinodes(ctx, desiredPlacementGroupID, linodego.PlacementGroupAssignOptions{Linodes: []int{linodeInstance.ID}}); err != nil {
-			logger.Error(err, "Failed to assign placement group linode", "linodeID", linodeInstance.ID, "placementGroupID", desiredPlacementGroupID)
-			if currentPlacementGroupID != 0 {
-				if _, rollbackErr := machineScope.LinodeClient.AssignPlacementGroupLinodes(ctx, currentPlacementGroupID, linodego.PlacementGroupAssignOptions{Linodes: []int{linodeInstance.ID}}); rollbackErr != nil {
-					logger.Error(rollbackErr, "Failed to restore original placement group", "linodeID", linodeInstance.ID, "placementGroupID", currentPlacementGroupID)
-					return ctrl.Result{}, errors.Join(err, rollbackErr)
-				}
-			}
-			return ctrl.Result{}, err
-		}
+	if desiredPlacementGroupID == 0 {
+		return nil
 	}
 
-	return ctrl.Result{}, nil
+	_, err := machineScope.LinodeClient.AssignPlacementGroupLinodes(ctx, desiredPlacementGroupID, linodego.PlacementGroupAssignOptions{Linodes: []int{linodeInstance.ID}})
+	if err == nil {
+		return nil
+	}
+
+	logger.Error(err, "Failed to assign placement group linode", "linodeID", linodeInstance.ID, "placementGroupID", desiredPlacementGroupID)
+	if currentPlacementGroupID == 0 {
+		return err
+	}
+
+	if _, rollbackErr := machineScope.LinodeClient.AssignPlacementGroupLinodes(ctx, currentPlacementGroupID, linodego.PlacementGroupAssignOptions{Linodes: []int{linodeInstance.ID}}); rollbackErr != nil {
+		logger.Error(rollbackErr, "Failed to restore original placement group", "linodeID", linodeInstance.ID, "placementGroupID", currentPlacementGroupID)
+		return errors.Join(err, rollbackErr)
+	}
+
+	return err
 }
 
 func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {

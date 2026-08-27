@@ -111,7 +111,7 @@ func TestReconcilePlacementGroup(t *testing.T) {
 				}
 			}
 
-			_, err := (&LinodeMachineReconciler{}).reconcilePlacementGroup(context.Background(), logr.Discard(), machineScope, instance)
+			err := (&LinodeMachineReconciler{}).reconcilePlacementGroup(context.Background(), logr.Discard(), machineScope, instance)
 			if tt.unassignErr != nil || tt.assignErr != nil {
 				require.Error(t, err)
 			} else {

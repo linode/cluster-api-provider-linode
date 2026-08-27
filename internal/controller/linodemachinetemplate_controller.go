@@ -164,16 +164,12 @@ func (lmtr *LinodeMachineTemplateReconciler) reconcile(ctx context.Context, lmtS
 		return ctrl.Result{}, nil
 	}
 
-	// update the LMT status if all the linodeMachines are successfully updated.
-	if outErr == nil {
-		lmtScope.LinodeMachineTemplate.Status.Tags = slices.Clone(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags)
-		lmtScope.LinodeMachineTemplate.Status.FirewallID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.FirewallID
-		lmtScope.LinodeMachineTemplate.Status.PlacementGroupID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.PlacementGroupID
-		lmtr.Logger.Info("Successfully reconciled LinodeMachineTemplate", "name", lmtScope.LinodeMachineTemplate.Name)
-	} else {
-		lmtr.Logger.Error(outErr, "Error in reconciling LinodeMachineTemplate, retrying..", "name", lmtScope.LinodeMachineTemplate.Name)
-	}
-	return ctrl.Result{}, outErr
+	lmtScope.LinodeMachineTemplate.Status.Tags = slices.Clone(lmtScope.LinodeMachineTemplate.Spec.Template.Spec.Tags)
+	lmtScope.LinodeMachineTemplate.Status.FirewallID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.FirewallID
+	lmtScope.LinodeMachineTemplate.Status.PlacementGroupID = lmtScope.LinodeMachineTemplate.Spec.Template.Spec.PlacementGroupID
+	lmtr.Logger.Info("Successfully reconciled LinodeMachineTemplate", "name", lmtScope.LinodeMachineTemplate.Name)
+
+	return ctrl.Result{}, nil
 }
 
 func (lmtr *LinodeMachineTemplateReconciler) SetupWithManager(mgr ctrl.Manager, options crcontroller.Options) error {
