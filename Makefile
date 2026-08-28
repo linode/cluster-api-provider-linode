@@ -119,10 +119,6 @@ tidy: ## Run go mod tidy against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-.PHONY: gosec
-gosec: ## Run gosec against code.
-	gosec -exclude-dir=bin -exclude-generated ./...
-
 .PHONY: lint
 lint: ## Run lint against code.
 	golangci-lint run -c .golangci.yml

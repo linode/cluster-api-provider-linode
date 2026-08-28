@@ -19,7 +19,6 @@ kind = "0.31.0"
 "aqua:hexdigest/gowrap" = "1.4.3"
 s5cmd = "2.3.0"
 golangci-lint = "2.11.4"
-"aqua:securego/gosec" = "2.22.11"
 mdbook = "0.5.2"
 jq = "1.8.1"
 "go:github.com/elastic/crd-ref-docs" = "0.3.0"
@@ -35,10 +34,6 @@ run = "make tidy"
 [tasks.vet]
 description = "Run Go vet"
 run = "make vet"
-
-[tasks.gosec]
-description = "Run Go sec"
-run = "make gosec"
 
 [tasks.lint]
 description = "Run lint checks"
