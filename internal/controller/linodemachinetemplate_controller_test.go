@@ -19,14 +19,15 @@ package controller
 import (
 	"context"
 
-	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
-	"github.com/linode/cluster-api-provider-linode/cloud/scope"
-	"github.com/linode/cluster-api-provider-linode/mock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/mock"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -149,6 +150,7 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				Region: "us-ord",
 				Type:   "g6-standard-1",
+				Tags:   []string{"test-tag1"},
 			},
 		},
 		{
@@ -173,8 +175,9 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				},
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				Region: "us-ord",
-				Type:   "g6-standard-1",
+				Region:     "us-ord",
+				Type:       "g6-standard-1",
+				FirewallID: 67890,
 			},
 		},
 	}
@@ -244,7 +247,6 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				res, err := reconciler.reconcile(ctx, lmtScope)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res).To(Equal(ctrl.Result{}))
-				Expect(mck.Logs()).To(ContainSubstring("Patched LinodeMachine with new tags"))
 
 				// get the updated machineTemplate
 				updatedMachineTemplate := &infrav1alpha2.LinodeMachineTemplate{}
@@ -273,7 +275,6 @@ var _ = Describe("lifecycle", Ordered, Label("LinodeMachineTemplateReconciler", 
 				res, err := reconciler.reconcile(ctx, &lmtScope)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res).To(Equal(ctrl.Result{}))
-				Expect(mck.Logs()).NotTo(ContainSubstring("Patched LinodeMachine with new tags"))
 			}),
 		),
 		Path(

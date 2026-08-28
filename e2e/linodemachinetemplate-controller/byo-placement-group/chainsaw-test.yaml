@@ -1,0 +1,111 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: byo-placement-group
+  labels:
+    all:
+    linodemachine:
+    linodeplacementgroup:
+spec:
+  bindings:
+    - name: run
+      value: (join('-', ['e2e', 'byo-pg', random('[0-9a-z]{5}')]))
+    - name: cluster
+      value: (trim((truncate(($run), `29`)), '-'))
+    - name: placementgroup
+      value: (trim((truncate((join('-', [($run), 'pg'])), `63`)), '-'))
+  template: true
+  steps:
+    - name: Check if CAPI provider resources exist
+      try:
+        - assert:
+            file: assert-capi-resources.yaml
+    - name: Create bring-your-own placement group
+      try:
+        - apply:
+            file: create-placementgroup.yaml
+        - assert:
+            file: assert-placementgroup.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodePlacementGroup
+    - name: Create cluster without a placement group
+      try:
+        - apply:
+            file: create-cluster.yaml
+        - assert:
+            file: assert-linodemachine.yaml
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachine
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 250
+    - name: Assign the running machine using the placement group ID
+      try:
+        - script:
+            env:
+              - name: CLUSTER_NAME
+                value: ($cluster)
+              - name: PLACEMENT_GROUP_NAME
+                value: ($placementgroup)
+              - name: NAMESPACE
+                value: ($namespace)
+            shell: bash
+            shellArgs:
+              - -c
+            content: |
+              set -eu
+
+              PLACEMENT_GROUP_ID=$(kubectl get linodeplacementgroup "$PLACEMENT_GROUP_NAME" -n "$NAMESPACE" -o jsonpath='{.spec.pgID}')
+              test -n "$PLACEMENT_GROUP_ID"
+
+              kubectl patch linodemachinetemplate "$CLUSTER_NAME" -n "$NAMESPACE" --type merge \
+                -p "{\"spec\":{\"template\":{\"spec\":{\"placementGroupID\":$PLACEMENT_GROUP_ID}}}}"
+              RETRY_DELAY=5
+              RESPONSE=""
+              for _ in $(seq 1 36); do
+                MACHINE_JSON=$(kubectl get linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER_NAME" -o json)
+                MACHINE_PLACEMENT_GROUP_ID=$(echo "$MACHINE_JSON" | jq -r '.items[0].spec.placementGroupID // empty')
+                TEMPLATE_PLACEMENT_GROUP_ID=$(kubectl get linodemachinetemplate -n "$NAMESPACE" "$CLUSTER_NAME" -o jsonpath='{.status.placementGroupID}')
+                INSTANCE_ID=$(echo "$MACHINE_JSON" | jq -r '.items[0].spec.providerID // empty' | sed 's#linode://##')
+
+                RESPONSE=$(curl -sS \
+                  -H "Authorization: Bearer $LINODE_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  "https://api.linode.com/v4beta/placement/groups/$PLACEMENT_GROUP_ID")
+
+                if [ "$MACHINE_PLACEMENT_GROUP_ID" = "$PLACEMENT_GROUP_ID" ] && \
+                   [ "$TEMPLATE_PLACEMENT_GROUP_ID" = "$PLACEMENT_GROUP_ID" ] && \
+                   echo "$RESPONSE" | jq -e --argjson instanceID "$INSTANCE_ID" \
+                     '.members | any(.linode_id == $instanceID)' >/dev/null; then
+                  exit 0
+                fi
+                sleep "$RETRY_DELAY"
+              done
+              echo "$MACHINE_JSON"
+              echo "$RESPONSE"
+              exit 1
+            check:
+              ($error): ~
+      catch:
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachineTemplate
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodeMachine
+        - describe:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+            kind: LinodePlacementGroup
+        - podLogs:
+            namespace: capl-system
+            selector: control-plane=controller-manager
+            tail: 250

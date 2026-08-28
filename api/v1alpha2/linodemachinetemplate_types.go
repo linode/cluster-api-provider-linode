@@ -46,6 +46,10 @@ type LinodeMachineTemplateStatus struct {
 	// firewallID that is currently applied to the LinodeMachineTemplate.
 	// +optional
 	FirewallID int `json:"firewallID,omitempty"`
+
+	// placementGroupID that is currently associated with the LinodeMachineTemplate
+	// +optional
+	PlacementGroupID int `json:"placementGroupID,omitempty"`
 }
 
 // LinodeMachineTemplateResource describes the data needed to create a LinodeMachine from a template.

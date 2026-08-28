@@ -786,6 +786,10 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		return res, err
 	}
 
+	if err := r.reconcilePlacementGroup(ctx, logger, machineScope, linodeInstance); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Clean up bootstrap data after instance creation.
 	if linodeInstance.Status == linodego.InstanceRunning && machineScope.Machine.Status.Phase == "Running" {
 		if err := deleteBootstrapData(ctx, machineScope); err != nil {
@@ -794,6 +798,45 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *LinodeMachineReconciler) reconcilePlacementGroup(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstance *linodego.Instance) error {
+	desiredPlacementGroupID := machineScope.LinodeMachine.Spec.PlacementGroupID
+	if desiredPlacementGroupID == 0 && machineScope.LinodeMachine.Spec.PlacementGroupRef != nil {
+		var err error
+		desiredPlacementGroupID, err = getPlacementGroupID(ctx, machineScope, logger)
+		if err != nil {
+			return err
+		}
+	}
+
+	currentPlacementGroupID := 0
+	if linodeInstance.PlacementGroup != nil {
+		currentPlacementGroupID = linodeInstance.PlacementGroup.ID
+	}
+
+	if desiredPlacementGroupID == currentPlacementGroupID {
+		return nil
+	}
+
+	if currentPlacementGroupID != 0 {
+		if _, err := machineScope.LinodeClient.UnassignPlacementGroupLinodes(ctx, currentPlacementGroupID, linodego.PlacementGroupUnAssignOptions{Linodes: []int{linodeInstance.ID}}); err != nil {
+			logger.Error(err, "Failed to unassign placement group linode", "linodeID", linodeInstance.ID, "placementGroupID", currentPlacementGroupID)
+			return err
+		}
+	}
+
+	if desiredPlacementGroupID == 0 {
+		return nil
+	}
+
+	_, err := machineScope.LinodeClient.AssignPlacementGroupLinodes(ctx, desiredPlacementGroupID, linodego.PlacementGroupAssignOptions{Linodes: []int{linodeInstance.ID}})
+	if err == nil {
+		return nil
+	}
+
+	logger.Error(err, "Failed to assign placement group linode", "linodeID", linodeInstance.ID, "placementGroupID", desiredPlacementGroupID)
+	return err
 }
 
 func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
