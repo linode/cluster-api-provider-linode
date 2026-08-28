@@ -160,12 +160,7 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	if clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID != nil {
 		firewallID := *clusterScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID
 		logger.Info("Using direct NodeBalancerFirewallID", "firewallID", firewallID)
-		firewall, err := clusterScope.LinodeClient.GetFirewall(ctx, firewallID)
-		if err != nil {
-			logger.Error(err, "Failed to fetch Linode Firewall from the Linode API")
-			return nil, err
-		}
-		createConfig.FirewallID = firewall.ID
+		createConfig.FirewallID = firewallID
 	} else if clusterScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
 		// Only use NodeBalancerFirewallRef if no direct ID is provided
 		firewallID, err := getFirewallID(ctx, clusterScope, logger)
