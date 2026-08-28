@@ -144,5 +144,10 @@
       ],
       enabled: false,
     },
+    {
+      "description": "Group development toolchain bumps from mise.toml.",
+      "matchManagers": ["mise"],
+      "groupName": "mise tools",
+    }
   ]
 }
