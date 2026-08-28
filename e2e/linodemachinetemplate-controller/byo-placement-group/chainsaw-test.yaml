@@ -69,11 +69,8 @@ spec:
 
               kubectl patch linodemachinetemplate "$CLUSTER_NAME" -n "$NAMESPACE" --type merge \
                 -p "{\"spec\":{\"template\":{\"spec\":{\"placementGroupID\":$PLACEMENT_GROUP_ID}}}}"
-
-              MAX_RETRIES=36
               RETRY_DELAY=5
-              ATTEMPT=1
-
+              RESPONSE=""
               for _ in $(seq 1 36); do
                 MACHINE_JSON=$(kubectl get linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER_NAME" -o json)
                 MACHINE_PLACEMENT_GROUP_ID=$(echo "$MACHINE_JSON" | jq -r '.items[0].spec.placementGroupID // empty')
@@ -89,18 +86,13 @@ spec:
                    [ "$TEMPLATE_PLACEMENT_GROUP_ID" = "$PLACEMENT_GROUP_ID" ] && \
                    echo "$RESPONSE" | jq -e --argjson instanceID "$INSTANCE_ID" \
                      '.members | any(.linode_id == $instanceID)' >/dev/null; then
-                  break
+                  exit 0
                 fi
-
-                if [ "$ATTEMPT" -ge "$MAX_RETRIES" ]; then
-                  echo "$MACHINE_JSON"
-                  echo "$RESPONSE"
-                  exit 1
-                fi
-
-                ATTEMPT=$((ATTEMPT + 1))
                 sleep "$RETRY_DELAY"
               done
+              echo "$MACHINE_JSON"
+              echo "$RESPONSE"
+              exit 1
             check:
               ($error): ~
       catch:
