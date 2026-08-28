@@ -13,19 +13,3 @@ metadata:
   namespace: capl-system
 status:
   availableReplicas: 1
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: capi-kubeadm-bootstrap-controller-manager
-  namespace: capi-kubeadm-bootstrap-system
-status:
-  availableReplicas: 1
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: capi-kubeadm-control-plane-controller-manager
-  namespace: capi-kubeadm-control-plane-system
-status:
-  availableReplicas: 1

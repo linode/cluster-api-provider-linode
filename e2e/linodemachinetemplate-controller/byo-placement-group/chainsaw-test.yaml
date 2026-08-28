@@ -56,13 +56,15 @@ spec:
                 value: ($cluster)
               - name: PLACEMENT_GROUP_NAME
                 value: ($placementgroup)
+              - name: NAMESPACE
+                value: ($namespace)
             content: |
               set -eu
 
-              PLACEMENT_GROUP_ID=$(kubectl get linodeplacementgroup "$PLACEMENT_GROUP_NAME" -o jsonpath='{.spec.pgID}')
+              PLACEMENT_GROUP_ID=$(kubectl get linodeplacementgroup "$PLACEMENT_GROUP_NAME" -n "$NAMESPACE" -o jsonpath='{.spec.pgID}')
               test -n "$PLACEMENT_GROUP_ID"
 
-              kubectl patch linodemachinetemplate "$CLUSTER_NAME" --type merge \
+              kubectl patch linodemachinetemplate "$CLUSTER_NAME" -n "$NAMESPACE" --type merge \
                 -p "{\"spec\":{\"template\":{\"spec\":{\"placementGroupID\":$PLACEMENT_GROUP_ID}}}}"
 
               MAX_RETRIES=36
@@ -70,9 +72,9 @@ spec:
               ATTEMPT=1
 
               while true; do
-                MACHINE_JSON=$(kubectl get linodemachine -l "cluster.x-k8s.io/cluster-name=$CLUSTER_NAME" -o json)
+                MACHINE_JSON=$(kubectl get linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER_NAME" -o json)
                 MACHINE_PLACEMENT_GROUP_ID=$(echo "$MACHINE_JSON" | jq -r '.items[0].spec.placementGroupID // empty')
-                TEMPLATE_PLACEMENT_GROUP_ID=$(kubectl get linodemachinetemplate "$CLUSTER_NAME" -o jsonpath='{.status.placementGroupID}')
+                TEMPLATE_PLACEMENT_GROUP_ID=$(kubectl get linodemachinetemplate -n "$NAMESPACE" "$CLUSTER_NAME" -o jsonpath='{.status.placementGroupID}')
                 INSTANCE_ID=$(echo "$MACHINE_JSON" | jq -r '.items[0].spec.providerID // empty' | sed 's#linode://##')
 
                 RESPONSE=$(curl -sS \
