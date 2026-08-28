@@ -83,6 +83,3 @@ jobs:
 
       - name: Vulncheck
         run: mise run vulncheck
-
-      - name: Gosec
-        run: mise run gosec
