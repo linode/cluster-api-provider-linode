@@ -58,6 +58,9 @@ spec:
                 value: ($placementgroup)
               - name: NAMESPACE
                 value: ($namespace)
+            shell: bash
+            shellArgs:
+              - -c
             content: |
               set -eu
 
@@ -71,7 +74,7 @@ spec:
               RETRY_DELAY=5
               ATTEMPT=1
 
-              while true; do
+              for _ in $(seq 1 36); do
                 MACHINE_JSON=$(kubectl get linodemachine -n "$NAMESPACE" -l "cluster.x-k8s.io/cluster-name=$CLUSTER_NAME" -o json)
                 MACHINE_PLACEMENT_GROUP_ID=$(echo "$MACHINE_JSON" | jq -r '.items[0].spec.placementGroupID // empty')
                 TEMPLATE_PLACEMENT_GROUP_ID=$(kubectl get linodemachinetemplate -n "$NAMESPACE" "$CLUSTER_NAME" -o jsonpath='{.status.placementGroupID}')
