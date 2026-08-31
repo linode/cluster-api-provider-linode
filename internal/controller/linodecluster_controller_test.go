@@ -373,7 +373,7 @@ var _ = Describe("pause handling", Label("cluster", "pause"), func() {
 				Namespace: defaultNamespace,
 			},
 			Spec: clusterv1.ClusterSpec{
-				Paused: ptr.To(true),
+				Paused: new(true),
 			},
 		}
 		linodeCluster := &infrav1alpha2.LinodeCluster{
@@ -604,7 +604,7 @@ var _ = Describe("cluster-delete", Ordered, Label("cluster", "cluster-delete"), 
 			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeMachineSpec{
-			ProviderID: ptr.To("linode://123"),
+			ProviderID: new("linode://123"),
 		},
 		Status: infrav1alpha2.LinodeMachineStatus{
 			Addresses: []clusterv1.MachineAddress{},
@@ -770,7 +770,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 		Spec: infrav1alpha2.LinodeMachineSpec{
 			Region:     "us-ord",
 			Type:       "g6-standard-1",
-			ProviderID: ptr.To("linode://123"),
+			ProviderID: new("linode://123"),
 		},
 		Status: infrav1alpha2.LinodeMachineStatus{
 			Addresses: []clusterv1.MachineAddress{},
@@ -877,7 +877,7 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 			ControlPlaneEndpoint: clusterv1.APIEndpoint{
 				Port: 6443,
 			},
-			VPCID: ptr.To(12345),
+			VPCID: new(12345),
 		},
 	}
 
@@ -928,9 +928,9 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 					mck.LinodeClient.EXPECT().CreateNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(&linodego.NodeBalancer{
 							ID:     12345,
-							Label:  ptr.To("test-nodebalancer"),
+							Label:  new("test-nodebalancer"),
 							Region: "us-ord",
-							IPv4:   ptr.To("192.168.1.2"),
+							IPv4:   new("192.168.1.2"),
 						}, nil).
 						AnyTimes()
 
@@ -938,9 +938,9 @@ var _ = Describe("cluster-with-direct-vpcid", Ordered, Label("cluster", "direct-
 					mck.LinodeClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).
 						Return(&linodego.NodeBalancer{
 							ID:     12345,
-							Label:  ptr.To("test-nodebalancer"),
+							Label:  new("test-nodebalancer"),
 							Region: "us-ord",
-							IPv4:   ptr.To("192.168.1.2"),
+							IPv4:   new("192.168.1.2"),
 						}, nil).
 						AnyTimes()
 

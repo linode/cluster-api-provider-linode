@@ -244,7 +244,7 @@ var _ = Describe("pause handling", Label("placementgroup", "pause"), func() {
 				Namespace: defaultNamespace,
 			},
 			Spec: clusterv1.ClusterSpec{
-				Paused: ptr.To(true),
+				Paused: new(true),
 			},
 		}
 		placementGroup := &infrav1alpha2.LinodePlacementGroup{

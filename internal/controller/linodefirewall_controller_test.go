@@ -348,7 +348,7 @@ var _ = Describe("pause handling", Label("firewalls", "pause"), func() {
 				Namespace: defaultNamespace,
 			},
 			Spec: clusterv1.ClusterSpec{
-				Paused: ptr.To(true),
+				Paused: new(true),
 			},
 		}
 		firewall := &infrav1alpha2.LinodeFirewall{

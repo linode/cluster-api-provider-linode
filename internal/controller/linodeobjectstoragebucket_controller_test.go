@@ -220,7 +220,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(&linodego.ObjectStorageBucketAccess{
 							ACL:         linodego.ACLPrivate,
-							CorsEnabled: ptr.To(true),
+							CorsEnabled: new(true),
 						}, nil)
 					mck.LinodeClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(errors.New("bucket access options update error"))
@@ -243,7 +243,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(&linodego.ObjectStorageBucketAccess{
 							ACL:         linodego.ACLPrivate,
-							CorsEnabled: ptr.To(true),
+							CorsEnabled: new(true),
 						}, nil)
 					mck.LinodeClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(nil)

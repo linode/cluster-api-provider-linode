@@ -989,7 +989,7 @@ func TestDeleteAllObjectVersionsAndDeleteMarkers(t *testing.T) {
 			Path(
 				Call("with an object", func(ctx context.Context, mck Mock) {
 					mck.S3Client.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectVersionsOutput{
-						Name: ptr.To("test"),
+						Name: new("test"),
 						Versions: []types.ObjectVersion{
 							{
 								IsLatest:  aws.Bool(true),
@@ -1009,7 +1009,7 @@ func TestDeleteAllObjectVersionsAndDeleteMarkers(t *testing.T) {
 			Path(
 				Call("with versions and delete markers", func(ctx context.Context, mck Mock) {
 					mck.S3Client.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectVersionsOutput{
-						Name: ptr.To("test"),
+						Name: new("test"),
 						Versions: []types.ObjectVersion{
 							{
 								IsLatest:  aws.Bool(false),

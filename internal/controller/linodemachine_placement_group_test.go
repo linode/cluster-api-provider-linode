@@ -42,7 +42,7 @@ func TestReconcilePlacementGroup(t *testing.T) {
 			name: "resolves placement group reference",
 			placementGroupRef: &infrav1alpha2.LinodePlacementGroup{
 				ObjectMeta: metav1.ObjectMeta{Name: "managed", Namespace: "default"},
-				Spec:       infrav1alpha2.LinodePlacementGroupSpec{PGID: ptr.To(10)},
+				Spec:       infrav1alpha2.LinodePlacementGroupSpec{PGID: new(10)},
 				Status:     infrav1alpha2.LinodePlacementGroupStatus{Ready: true},
 			},
 			currentID: 10,
@@ -52,7 +52,7 @@ func TestReconcilePlacementGroup(t *testing.T) {
 			desiredID: 10,
 			placementGroupRef: &infrav1alpha2.LinodePlacementGroup{
 				ObjectMeta: metav1.ObjectMeta{Name: "managed", Namespace: "default"},
-				Spec:       infrav1alpha2.LinodePlacementGroupSpec{PGID: ptr.To(20)},
+				Spec:       infrav1alpha2.LinodePlacementGroupSpec{PGID: new(20)},
 				Status:     infrav1alpha2.LinodePlacementGroupStatus{Ready: true},
 			},
 			currentID: 10,

@@ -54,7 +54,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					IPv4Range:   []string{"10.0.0.0/8"},
 					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
 						{
-							Range: ptr.To("2001:db8::/52"),
+							Range: new("2001:db8::/52"),
 						},
 					},
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
@@ -62,7 +62,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 							Label: "subnet",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
-									Range: ptr.To("2001:db8:1::/56"),
+									Range: new("2001:db8:1::/56"),
 								},
 							},
 							IPv4: "10.1.2.0/24",
@@ -78,7 +78,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 						Label: "subnet",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
-								Range: ptr.To("2001:db8:1::/56"),
+								Range: new("2001:db8:1::/56"),
 							},
 						},
 						IPv4: "10.1.2.0/24",
@@ -86,12 +86,12 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 				},
 				IPv6: []linodego.VPCCreateOptionsIPv6{
 					{
-						Range: ptr.To("2001:db8::/52"),
+						Range: new("2001:db8::/52"),
 					},
 				},
 				IPv4: []linodego.VPCCreateOptionsIPv4{
 					{
-						Range: ptr.To("10.0.0.0/8"),
+						Range: new("10.0.0.0/8"),
 					},
 				},
 			},
@@ -104,7 +104,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Region:      "region",
 					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
 						{
-							Range: ptr.To("2001:db8::/52"),
+							Range: new("2001:db8::/52"),
 						},
 					},
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
@@ -112,7 +112,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 							Label: "subnet",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
-									Range: ptr.To("2001:db8:1::/56"),
+									Range: new("2001:db8:1::/56"),
 								},
 							},
 						},
@@ -127,14 +127,14 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 						Label: "subnet",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
-								Range: ptr.To("2001:db8:1::/56"),
+								Range: new("2001:db8:1::/56"),
 							},
 						},
 					},
 				},
 				IPv6: []linodego.VPCCreateOptionsIPv6{
 					{
-						Range: ptr.To("2001:db8::/52"),
+						Range: new("2001:db8::/52"),
 					},
 				},
 			},
@@ -147,8 +147,8 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Region:      "region",
 					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
 						{
-							Range:                 ptr.To("2001:db8::/52"),
-							AllocationClassLegacy: ptr.To("myclass_legacy"),
+							Range:                 new("2001:db8::/52"),
+							AllocationClassLegacy: new("myclass_legacy"),
 						},
 					},
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
@@ -156,7 +156,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 							Label: "subnet",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
-									Range: ptr.To("2001:db8:1::/56"),
+									Range: new("2001:db8:1::/56"),
 								},
 							},
 						},
@@ -171,15 +171,15 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 						Label: "subnet",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
-								Range: ptr.To("2001:db8:1::/56"),
+								Range: new("2001:db8:1::/56"),
 							},
 						},
 					},
 				},
 				IPv6: []linodego.VPCCreateOptionsIPv6{
 					{
-						Range:           ptr.To("2001:db8::/52"),
-						AllocationClass: ptr.To("myclass_legacy"),
+						Range:           new("2001:db8::/52"),
+						AllocationClass: new("myclass_legacy"),
 					},
 				},
 			},
@@ -192,8 +192,8 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Region:      "region",
 					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
 						{
-							Range:           ptr.To("2001:db8::/52"),
-							AllocationClass: ptr.To("myclass"),
+							Range:           new("2001:db8::/52"),
+							AllocationClass: new("myclass"),
 						},
 					},
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
@@ -201,7 +201,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 							Label: "subnet",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
-									Range: ptr.To("2001:db8:1::/56"),
+									Range: new("2001:db8:1::/56"),
 								},
 							},
 						},
@@ -216,15 +216,15 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 						Label: "subnet",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
-								Range: ptr.To("2001:db8:1::/56"),
+								Range: new("2001:db8:1::/56"),
 							},
 						},
 					},
 				},
 				IPv6: []linodego.VPCCreateOptionsIPv6{
 					{
-						Range:           ptr.To("2001:db8::/52"),
-						AllocationClass: ptr.To("myclass"),
+						Range:           new("2001:db8::/52"),
+						AllocationClass: new("myclass"),
 					},
 				},
 			},
@@ -237,9 +237,9 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 					Region:      "region",
 					IPv6Range: []infrav1alpha2.VPCCreateOptionsIPv6{
 						{
-							Range:                 ptr.To("2001:db8::/52"),
-							AllocationClass:       ptr.To("myclass"),
-							AllocationClassLegacy: ptr.To("myclass_legacy"),
+							Range:                 new("2001:db8::/52"),
+							AllocationClass:       new("myclass"),
+							AllocationClassLegacy: new("myclass_legacy"),
 						},
 					},
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
@@ -247,7 +247,7 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 							Label: "subnet",
 							IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{
 								{
-									Range: ptr.To("2001:db8:1::/56"),
+									Range: new("2001:db8:1::/56"),
 								},
 							},
 						},
@@ -262,15 +262,15 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 						Label: "subnet",
 						IPv6: []linodego.VPCSubnetCreateOptionsIPv6{
 							{
-								Range: ptr.To("2001:db8:1::/56"),
+								Range: new("2001:db8:1::/56"),
 							},
 						},
 					},
 				},
 				IPv6: []linodego.VPCCreateOptionsIPv6{
 					{
-						Range:           ptr.To("2001:db8::/52"),
-						AllocationClass: ptr.To("myclass"),
+						Range:           new("2001:db8::/52"),
+						AllocationClass: new("myclass"),
 					},
 				},
 			},

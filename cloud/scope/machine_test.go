@@ -303,7 +303,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 				Machine: &clusterv1.Machine{
 					Spec: clusterv1.MachineSpec{
 						Bootstrap: clusterv1.Bootstrap{
-							DataSecretName: ptr.To("test-data"),
+							DataSecretName: new("test-data"),
 						},
 					},
 				},
@@ -344,7 +344,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 				Machine: &clusterv1.Machine{
 					Spec: clusterv1.MachineSpec{
 						Bootstrap: clusterv1.Bootstrap{
-							DataSecretName: ptr.To("test-data"),
+							DataSecretName: new("test-data"),
 						},
 					},
 				},

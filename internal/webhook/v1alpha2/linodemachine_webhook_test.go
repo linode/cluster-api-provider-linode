@@ -253,7 +253,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
-					machine.Spec.PrivateIP = ptr.To(true)
+					machine.Spec.PrivateIP = new(true)
 					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, "Linode Interfaces do not support private IPs")
@@ -481,7 +481,7 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				Region: "us-ord",
 				Type:   "g6-standard-1",
-				VPCID:  ptr.To(12345),
+				VPCID:  new(12345),
 				VPCRef: &corev1.ObjectReference{
 					Namespace: "example",
 					Name:      "example",
@@ -497,7 +497,7 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 			Spec: infrav1alpha2.LinodeMachineSpec{
 				Region: "us-ord",
 				Type:   "g6-standard-1",
-				VPCID:  ptr.To(12345),
+				VPCID:  new(12345),
 			},
 		}
 		validMachineWithVPCRef = &infrav1alpha2.LinodeMachine{

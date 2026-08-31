@@ -58,7 +58,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				}, nil)
 				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
 					ACL:         linodego.ACLPrivate,
-					CorsEnabled: ptr.To(true),
+					CorsEnabled: new(true),
 				}, nil)
 			},
 		},
@@ -142,7 +142,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				}, nil)
 				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
 					ACL:         linodego.ACLPrivate,
-					CorsEnabled: ptr.To(true),
+					CorsEnabled: new(true),
 				}, nil)
 				mockClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -165,7 +165,7 @@ func TestEnsureObjectStorageBucket(t *testing.T) {
 				}, nil)
 				mockClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).Return(&linodego.ObjectStorageBucketAccess{
 					ACL:         linodego.ACLPrivate,
-					CorsEnabled: ptr.To(true),
+					CorsEnabled: new(true),
 				}, nil)
 				mockClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error in updating object storage bucket"))
 			},

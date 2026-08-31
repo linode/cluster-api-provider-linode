@@ -122,7 +122,7 @@ func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient,
 		return false, nil, err
 	}
 	linodeClient := linodeclient.NewLinodeClientWithTracing(
-		ptr.To(newClient),
+		new(newClient),
 		linodeclient.DefaultDecorator(),
 	)
 	credName := ""

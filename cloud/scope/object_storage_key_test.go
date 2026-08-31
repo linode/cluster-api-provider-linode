@@ -577,10 +577,10 @@ func TestShouldRotateKey(t *testing.T) {
 	assert.False(t, (&ObjectStorageKeyScope{
 		Key: &infrav1alpha2.LinodeObjectStorageKey{
 			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-				KeyGeneration: ptr.To(0),
+				KeyGeneration: new(0),
 			},
 			Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-				LastKeyGeneration: ptr.To(0),
+				LastKeyGeneration: new(0),
 			},
 		},
 	}).ShouldRotateKey())
@@ -588,10 +588,10 @@ func TestShouldRotateKey(t *testing.T) {
 	assert.True(t, (&ObjectStorageKeyScope{
 		Key: &infrav1alpha2.LinodeObjectStorageKey{
 			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-				KeyGeneration: ptr.To(1),
+				KeyGeneration: new(1),
 			},
 			Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-				LastKeyGeneration: ptr.To(0),
+				LastKeyGeneration: new(0),
 			},
 		},
 	}).ShouldRotateKey())
