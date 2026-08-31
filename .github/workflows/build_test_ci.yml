@@ -31,14 +31,27 @@ jobs:
           allowed-endpoints: >
             api.github.com:443
             github.com:443
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Checkout (push/workflow_dispatch only)
+        if: github.event_name != 'pull_request_target'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: filter
         with:
-          filters: .github/filters.yml
+          filters: |
+            src:
+              - '!**/**.md'
+            kubeadm:
+              - templates/flavors/kubeadm/default/*
+              - e2e/capl-cluster-flavors/kubeadm-capl-cluster/*
+            kubeadm-flatcar:
+             - templates/flavors/kubeadm/flatcar/*
+             - e2e/capl-cluster-flavors/kubeadm-flatcar-vpcless-capl-cluster/*
+            cluster-pause:
+              - e2e/cluster-pause/*
 
   go-test:
     environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
@@ -68,10 +81,12 @@ jobs:
             mise-versions.jdx.dev:443
             tuf-repo-cdn.sigstore.dev:443
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # allowed because the job is gated on manual approval for fork PRs and splitting the workflow would be more complicated because Codecov needs to be able to comment on the PR itself for coverage reporting
+          allow-unsafe-pr-checkout: true
 
       - name: Set up Mise
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
