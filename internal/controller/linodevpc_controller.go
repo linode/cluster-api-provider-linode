@@ -147,14 +147,14 @@ func (r *LinodeVPCReconciler) reconcile(
 
 	vpcScope.LinodeVPC.Status.Ready = false
 	vpcScope.LinodeVPC.Status.FailureReason = nil
-	vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer("")
+	vpcScope.LinodeVPC.Status.FailureMessage = new("")
 
 	failureReason := infrav1alpha2.VPCStatusError("UnknownError")
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
-			vpcScope.LinodeVPC.Status.FailureReason = util.Pointer(failureReason)
-			vpcScope.LinodeVPC.Status.FailureMessage = util.Pointer(err.Error())
+			vpcScope.LinodeVPC.Status.FailureReason = new(failureReason)
+			vpcScope.LinodeVPC.Status.FailureMessage = new(err.Error())
 			vpcScope.LinodeVPC.SetCondition(metav1.Condition{
 				Type:    clusterv1.ReadyCondition,
 				Status:  metav1.ConditionFalse,

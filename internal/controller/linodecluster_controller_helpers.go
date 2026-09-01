@@ -262,7 +262,7 @@ func handleNBCreate(ctx context.Context, logger logr.Logger, clusterScope *scope
 		return err
 	}
 
-	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = util.Pointer(configs[0].ID)
+	clusterScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = new(configs[0].ID)
 	additionalPorts := make([]infrav1alpha2.LinodeNBPortConfig, 0)
 	for _, config := range configs[1:] {
 		portConfig := infrav1alpha2.LinodeNBPortConfig{

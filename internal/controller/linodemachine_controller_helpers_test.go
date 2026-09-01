@@ -27,7 +27,6 @@ import (
 	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
-	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
@@ -117,7 +116,7 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 			},
 		}},
 		BackupsEnabled: true,
-		PrivateIP:      util.Pointer(true),
+		PrivateIP:      new(true),
 	}
 
 	createConfig := linodeMachineSpecToInstanceCreateConfig(machineSpec, []string{"tag"})

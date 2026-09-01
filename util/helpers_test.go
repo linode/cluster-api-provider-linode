@@ -143,12 +143,12 @@ func TestGetInstanceID(t *testing.T) {
 		wantID:     -1,
 	}, {
 		name:       "invalid provider ID",
-		providerID: Pointer("linode://foobar"),
+		providerID: new("linode://foobar"),
 		wantErr:    true,
 		wantID:     -1,
 	}, {
 		name:       "valid",
-		providerID: Pointer("linode://12345"),
+		providerID: new("linode://12345"),
 		wantErr:    false,
 		wantID:     12345,
 	}}

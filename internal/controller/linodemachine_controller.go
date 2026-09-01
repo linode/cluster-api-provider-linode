@@ -183,8 +183,8 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 		if err != nil {
 			// Only set failure reason if the error is not retryable.
 			if linodego.ErrHasStatus(err, http.StatusBadRequest) {
-				machineScope.LinodeMachine.Status.FailureReason = util.Pointer(failureReason)
-				machineScope.LinodeMachine.Status.FailureMessage = util.Pointer(err.Error())
+				machineScope.LinodeMachine.Status.FailureReason = new(failureReason)
+				machineScope.LinodeMachine.Status.FailureMessage = new(err.Error())
 				machineScope.LinodeMachine.SetCondition(metav1.Condition{
 					Type:    clusterv1.ReadyCondition,
 					Status:  metav1.ConditionFalse,
@@ -342,7 +342,7 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		}
 	}
 	// Set the instance state to signal preflight process is done
-	machineScope.LinodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+	machineScope.LinodeMachine.Status.InstanceState = new(linodego.InstanceOffline)
 	return ctrl.Result{}, nil
 }
 
@@ -601,7 +601,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		Reason: "LinodeMachinePreflightCreated", // We have to set the reason to not fail object patching
 	})
 	// Set the provider ID since the instance is successfully created
-	machineScope.LinodeMachine.Spec.ProviderID = util.Pointer(fmt.Sprintf("linode://%d", linodeInstance.ID))
+	machineScope.LinodeMachine.Spec.ProviderID = new(fmt.Sprintf("linode://%d", linodeInstance.ID))
 	return ctrl.Result{}, nil
 }
 

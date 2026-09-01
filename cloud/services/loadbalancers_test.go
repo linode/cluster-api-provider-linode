@@ -20,7 +20,6 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
-	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 func TestEnsureNodeBalancer(t *testing.T) {
@@ -186,7 +185,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 						return fmt.Errorf("expected *infrav1alpha2.LinodeFirewall, got %T", obj)
 					}
 					// Set the FirewallID in the mock response
-					firewall.Spec.FirewallID = util.Pointer(5678)
+					firewall.Spec.FirewallID = new(5678)
 					return nil
 				})
 
@@ -194,19 +193,19 @@ func TestEnsureNodeBalancer(t *testing.T) {
 				mockClient.EXPECT().CreateNodeBalancer(
 					gomock.Any(),
 					gomock.Eq(linodego.NodeBalancerCreateOptions{
-						Label:      util.Pointer("test-cluster"),
+						Label:      new("test-cluster"),
 						Region:     "us-east",
 						Tags:       []string{"test-uid"},
 						FirewallID: 5678,
 					}),
 				).Return(&linodego.NodeBalancer{
 					ID:    1234,
-					Label: util.Pointer("test-cluster"),
+					Label: new("test-cluster"),
 				}, nil)
 			},
 			expectedNodeBalancer: &linodego.NodeBalancer{
 				ID:    1234,
-				Label: util.Pointer("test-cluster"),
+				Label: new("test-cluster"),
 			},
 			expectedError: nil,
 		},
@@ -221,25 +220,25 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Region: "us-east",
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerFirewallID: util.Pointer(5678),
+							NodeBalancerFirewallID: new(5678),
 						},
 					},
 				},
 			},
 			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
 				mockClient.EXPECT().CreateNodeBalancer(gomock.Any(), linodego.NodeBalancerCreateOptions{
-					Label:      util.Pointer("test-cluster"),
+					Label:      new("test-cluster"),
 					Region:     "us-east",
 					Tags:       []string{"test-uid"},
 					FirewallID: 5678,
 				}).Return(&linodego.NodeBalancer{
 					ID:    1234,
-					Label: util.Pointer("test-cluster"),
+					Label: new("test-cluster"),
 				}, nil)
 			},
 			expectedNodeBalancer: &linodego.NodeBalancer{
 				ID:    1234,
-				Label: util.Pointer("test-cluster"),
+				Label: new("test-cluster"),
 			},
 		},
 		{
@@ -312,7 +311,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 				mockClient.EXPECT().CreateNodeBalancer(
 					gomock.Any(),
 					gomock.Eq(linodego.NodeBalancerCreateOptions{
-						Label:  util.Pointer("test-cluster"),
+						Label:  new("test-cluster"),
 						Region: "us-east",
 						Tags:   []string{"test-uid"},
 						VPCs: []linodego.NodeBalancerVPCOptions{
@@ -324,12 +323,12 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					}),
 				).Return(&linodego.NodeBalancer{
 					ID:    1234,
-					Label: util.Pointer("test-cluster"),
+					Label: new("test-cluster"),
 				}, nil)
 			},
 			expectedNodeBalancer: &linodego.NodeBalancer{
 				ID:    1234,
-				Label: util.Pointer("test-cluster"),
+				Label: new("test-cluster"),
 			},
 		},
 		{
@@ -367,7 +366,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 				mockClient.EXPECT().CreateNodeBalancer(
 					gomock.Any(),
 					gomock.Eq(linodego.NodeBalancerCreateOptions{
-						Label:  util.Pointer("test-cluster"),
+						Label:  new("test-cluster"),
 						Region: "us-east",
 						Tags:   []string{"test-uid"},
 						VPCs: []linodego.NodeBalancerVPCOptions{
@@ -379,12 +378,12 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					}),
 				).Return(&linodego.NodeBalancer{
 					ID:    1234,
-					Label: util.Pointer("test-cluster"),
+					Label: new("test-cluster"),
 				}, nil)
 			},
 			expectedNodeBalancer: &linodego.NodeBalancer{
 				ID:    1234,
-				Label: util.Pointer("test-cluster"),
+				Label: new("test-cluster"),
 			},
 		},
 		{

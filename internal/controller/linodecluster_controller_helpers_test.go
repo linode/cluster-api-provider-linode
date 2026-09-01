@@ -376,8 +376,8 @@ func TestAddMachineToLB(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType:              lbTypeNB,
-							NodeBalancerID:                util.Pointer(12345),
-							ApiserverNodeBalancerConfigID: util.Pointer(67890),
+							NodeBalancerID:                new(12345),
+							ApiserverNodeBalancerConfigID: new(67890),
 						},
 					},
 				},
@@ -404,8 +404,8 @@ func TestAddMachineToLB(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							LoadBalancerType:              lbTypeNB,
-							NodeBalancerID:                util.Pointer(12345),
-							ApiserverNodeBalancerConfigID: util.Pointer(67890),
+							NodeBalancerID:                new(12345),
+							ApiserverNodeBalancerConfigID: new(67890),
 						},
 					},
 				},

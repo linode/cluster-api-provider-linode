@@ -136,7 +136,7 @@ func EnsureNodeBalancer(ctx context.Context, clusterScope *scope.ClusterScope, l
 	logger.Info(fmt.Sprintf("Creating NodeBalancer %s", clusterScope.LinodeCluster.Name))
 
 	createConfig := linodego.NodeBalancerCreateOptions{
-		Label:  util.Pointer(clusterScope.LinodeCluster.Name),
+		Label:  new(clusterScope.LinodeCluster.Name),
 		Region: clusterScope.LinodeCluster.Spec.Region,
 		Tags:   []string{string(clusterScope.LinodeCluster.UID)},
 	}

@@ -1618,7 +1618,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 				}),
 				OneOf(
 					Path(Result("create error", func(ctx context.Context, mck Mock) {
-						linodeMachine.Spec.ProviderID = util.Pointer("linode://foo")
+						linodeMachine.Spec.ProviderID = new("linode://foo")
 						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).To(HaveOccurred())
 						Expect(mck.Logs()).To(ContainSubstring("Failed to parse instance ID from provider ID"))
@@ -1839,7 +1839,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 			Region:     "us-ord",
 			Type:       nanodePlan,
 			Image:      rutil.DefaultMachineControllerLinodeImage,
-			ProviderID: util.Pointer("linode://11111"),
+			ProviderID: new("linode://11111"),
 		},
 	}
 	machineKey := client.ObjectKeyFromObject(linodeMachine)
@@ -1933,14 +1933,14 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				}),
 				OneOf(
 					Path(Result("update error", func(ctx context.Context, mck Mock) {
-						linodeMachine.Spec.ProviderID = util.Pointer("linode://foo")
+						linodeMachine.Spec.ProviderID = new("linode://foo")
 						_, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
 						Expect(err).To(HaveOccurred())
 						Expect(mck.Logs()).To(ContainSubstring("Failed to parse instance ID from provider ID"))
 					})),
 					Path(Result("update requeues on retryable get error", func(ctx context.Context, mck Mock) {
-						linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
-						linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+						linodeMachine.Spec.ProviderID = new("linode://11111")
+						linodeMachine.Status.InstanceState = new(linodego.InstanceOffline)
 						mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).
 							Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
@@ -1949,8 +1949,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 					})),
 					Path(Result("update does not requeue on nonretryable get error", func(ctx context.Context, mck Mock) {
-						linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
-						linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+						linodeMachine.Spec.ProviderID = new("linode://11111")
+						linodeMachine.Status.InstanceState = new(linodego.InstanceOffline)
 						mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).
 							Return(nil, &linodego.Error{Code: http.StatusNotFound})
 						res, err := reconciler.reconcile(ctx, mck.Logger(), mScope)
@@ -1968,14 +1968,14 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceProvisioning,
-							Updated: util.Pointer(time.Now()),
+							Updated: new(time.Now()),
 						}, nil)
 					mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 						[]linodego.Firewall{}, nil)
 				}),
 				Result("machine status updated", func(ctx context.Context, mck Mock) {
-					linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
-					linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceOffline)
+					linodeMachine.Spec.ProviderID = new("linode://11111")
+					linodeMachine.Status.InstanceState = new(linodego.InstanceOffline)
 					res, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceProvisioning))
@@ -1989,7 +1989,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceRunning,
-							Updated: util.Pointer(time.Now()),
+							Updated: new(time.Now()),
 						}, nil)
 					res, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
@@ -2006,7 +2006,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
@@ -2015,14 +2015,14 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 					[]linodego.Firewall{}, nil)
 			}),
 			Result("machine tag is updated", func(ctx context.Context, mck Mock) {
-				linodeMachine.Spec.ProviderID = util.Pointer("linode://11111")
-				linodeMachine.Status.InstanceState = util.Pointer(linodego.InstanceRunning)
+				linodeMachine.Spec.ProviderID = new("linode://11111")
+				linodeMachine.Status.InstanceState = new(linodego.InstanceRunning)
 				linodeMachine.Spec.Tags = []string{"test-tag"}
 				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
 				Expect(err).NotTo(HaveOccurred())
@@ -2038,7 +2038,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
@@ -2047,7 +2047,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 					[]linodego.Firewall{
@@ -2072,7 +2072,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
@@ -2081,7 +2081,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 					[]linodego.Firewall{
@@ -2107,7 +2107,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
@@ -2116,7 +2116,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 					[]linodego.Firewall{
@@ -2142,7 +2142,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
@@ -2151,7 +2151,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 					[]linodego.Firewall{}, nil)
@@ -2193,7 +2193,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 					&linodego.Instance{
@@ -2202,7 +2202,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						IPv6:    "fd00::",
 						Tags:    []string{"test-cluster-2", "test-tag"},
 						Status:  linodego.InstanceRunning,
-						Updated: util.Pointer(time.Now()),
+						Updated: new(time.Now()),
 					}, nil)
 				mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 					[]linodego.Firewall{}, nil)
@@ -2230,7 +2230,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceRunning,
-							Updated: util.Pointer(time.Now()),
+							Updated: new(time.Now()),
 						}, nil)
 					mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 						&linodego.Instance{
@@ -2239,7 +2239,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2", "test-tag"},
 							Status:  linodego.InstanceRunning,
-							Updated: util.Pointer(time.Now()),
+							Updated: new(time.Now()),
 						}, nil)
 					mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 						nil, &linodego.Error{Code: http.StatusInternalServerError})
@@ -2262,7 +2262,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2"},
 							Status:  linodego.InstanceRunning,
-							Updated: util.Pointer(time.Now()),
+							Updated: new(time.Now()),
 						}, nil)
 					mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
 						&linodego.Instance{
@@ -2271,7 +2271,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 							IPv6:    "fd00::",
 							Tags:    []string{"test-cluster-2", "test-tag"},
 							Status:  linodego.InstanceRunning,
-							Updated: util.Pointer(time.Now()),
+							Updated: new(time.Now()),
 						}, nil)
 					mck.LinodeClient.EXPECT().ListInstanceFirewalls(ctx, 11111, nil).Return(
 						[]linodego.Firewall{
@@ -2367,7 +2367,7 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 				OneOf(
 					Path(Result("delete error", func(ctx context.Context, mck Mock) {
 						tmpProviderID := linodeMachine.Spec.ProviderID
-						linodeMachine.Spec.ProviderID = util.Pointer("linode://foo")
+						linodeMachine.Spec.ProviderID = new("linode://foo")
 						_, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
 						Expect(err).To(HaveOccurred())
 						Expect(mck.Logs()).To(ContainSubstring("Failed to parse instance ID from provider ID"))

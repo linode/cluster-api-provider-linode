@@ -36,7 +36,6 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
-	"github.com/linode/cluster-api-provider-linode/util"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -133,7 +132,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 						Return(&linodego.ObjectStorageBucket{
 							Label:    "bucket",
 							Region:   obj.Spec.Region,
-							Created:  util.Pointer(time.Now()),
+							Created:  new(time.Now()),
 							Hostname: "hostname",
 						}, nil)
 				}),
@@ -196,7 +195,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 							Label:    "bucket",
 							Region:   obj.Spec.Region,
 							Hostname: "hostname",
-							Created:  util.Pointer(time.Now()),
+							Created:  new(time.Now()),
 						}, nil)
 					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(nil, errors.New("bucket access options fetch error"))
@@ -214,7 +213,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 							Label:    "bucket",
 							Region:   obj.Spec.Region,
 							Hostname: "hostname",
-							Created:  util.Pointer(time.Now()),
+							Created:  new(time.Now()),
 						}, nil)
 					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(&linodego.ObjectStorageBucketAccess{
@@ -237,7 +236,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 							Label:    "bucket",
 							Region:   obj.Spec.Region,
 							Hostname: "hostname",
-							Created:  util.Pointer(time.Now()),
+							Created:  new(time.Now()),
 						}, nil)
 					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(&linodego.ObjectStorageBucketAccess{

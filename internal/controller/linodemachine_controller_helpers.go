@@ -150,7 +150,7 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 		return nil, err
 	}
 
-	createConfig.Booted = util.Pointer(false)
+	createConfig.Booted = new(false)
 	if err := setUserData(ctx, machineScope, createConfig, gzipCompressionEnabled, logger); err != nil {
 		return nil, err
 	}

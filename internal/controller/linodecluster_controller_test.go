@@ -37,7 +37,6 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
-	"github.com/linode/cluster-api-provider-linode/util"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -47,7 +46,7 @@ import (
 
 var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecycle"), func() {
 	nodebalancerID := 1
-	nbConfigID := util.Pointer(3)
+	nbConfigID := new(3)
 	controlPlaneEndpointHost := "10.0.0.1"
 	controlPlaneEndpointPort := 6443
 	clusterName := "cluster-lifecycle"
@@ -94,7 +93,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 			Namespace: defaultNamespace,
 		},
 		Spec: infrav1alpha2.LinodeFirewallSpec{
-			FirewallID: util.Pointer(123), // Test firewall ID
+			FirewallID: new(123), // Test firewall ID
 			Enabled:    true,
 		},
 	}
@@ -191,7 +190,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				Call("direct firewall ID not found", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 					cScope.LinodeCluster.Spec.NodeBalancerFirewallRef = nil
-					cScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID = util.Pointer(9999)
+					cScope.LinodeCluster.Spec.Network.NodeBalancerFirewallID = new(9999)
 					mck.LinodeClient.EXPECT().GetFirewall(gomock.Any(), 9999).Return(nil, errors.New("firewall not found"))
 				}),
 				Result("preflight sets condition false", func(ctx context.Context, mck Mock) {
@@ -212,7 +211,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 
 					// Create and mark firewall as ready if using firewall ref
 					if cScope.LinodeCluster.Spec.NodeBalancerFirewallRef != nil {
-						linodeFirewall.Spec.FirewallID = util.Pointer(123)
+						linodeFirewall.Spec.FirewallID = new(123)
 						Expect(k8sClient.Update(ctx, &linodeFirewall)).To(Succeed())
 					}
 

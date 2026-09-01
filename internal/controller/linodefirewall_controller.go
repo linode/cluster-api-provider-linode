@@ -136,14 +136,14 @@ func (r *LinodeFirewallReconciler) reconcile(
 
 	fwScope.LinodeFirewall.Status.Ready = false
 	fwScope.LinodeFirewall.Status.FailureReason = nil
-	fwScope.LinodeFirewall.Status.FailureMessage = util.Pointer("")
+	fwScope.LinodeFirewall.Status.FailureMessage = new("")
 
 	failureReason := infrav1alpha2.FirewallStatusError("UnknownError")
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
-			fwScope.LinodeFirewall.Status.FailureReason = util.Pointer(failureReason)
-			fwScope.LinodeFirewall.Status.FailureMessage = util.Pointer(err.Error())
+			fwScope.LinodeFirewall.Status.FailureReason = new(failureReason)
+			fwScope.LinodeFirewall.Status.FailureMessage = new(err.Error())
 			fwScope.LinodeFirewall.SetCondition(metav1.Condition{
 				Type:    clusterv1.ReadyCondition,
 				Status:  metav1.ConditionFalse,

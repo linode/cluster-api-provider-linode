@@ -159,8 +159,8 @@ func (r *LinodeObjectStorageKeyReconciler) reconcile(ctx context.Context, keySco
 }
 
 func (r *LinodeObjectStorageKeyReconciler) setFailure(keyScope *scope.ObjectStorageKeyScope, failureReason, failureMessage string) {
-	keyScope.Key.Status.FailureMessage = util.Pointer(failureMessage)
-	keyScope.Key.Status.FailureReason = util.Pointer(failureReason)
+	keyScope.Key.Status.FailureMessage = new(failureMessage)
+	keyScope.Key.Status.FailureReason = new(failureReason)
 	keyScope.Key.SetCondition(metav1.Condition{
 		Type:    clusterv1.ReadyCondition,
 		Status:  metav1.ConditionFalse,

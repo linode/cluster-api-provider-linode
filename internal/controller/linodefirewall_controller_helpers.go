@@ -194,7 +194,7 @@ func createFirewall(ctx context.Context, fwScope *scope.FirewallScope, fwConfig 
 	if linodeFW == nil {
 		return nil, errNilFirewall
 	}
-	fwScope.LinodeFirewall.Spec.FirewallID = util.Pointer(linodeFW.ID)
+	fwScope.LinodeFirewall.Spec.FirewallID = new(linodeFW.ID)
 
 	return linodeFW, nil
 }

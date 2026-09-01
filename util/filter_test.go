@@ -11,7 +11,7 @@ func TestString(t *testing.T) {
 	}{{
 		name: "success ID",
 		filter: Filter{
-			ID:    Pointer(123),
+			ID:    new(123),
 			Label: "",
 			Tags:  nil,
 		},

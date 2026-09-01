@@ -21,11 +21,6 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 )
 
-// Pointer returns the pointer of any type
-func Pointer[T any](t T) *T {
-	return &t
-}
-
 // IgnoreLinodeAPIError returns the error except matches to status code
 func IgnoreLinodeAPIError(err error, codes ...int) error {
 	for _, code := range codes {
