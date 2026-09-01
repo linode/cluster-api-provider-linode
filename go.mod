@@ -25,7 +25,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/mock v0.6.0
-	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
+	go4.org/netipx v0.0.0-20260823151212-3075585bcbeb
 	golang.org/x/mod v0.40.0
 	k8s.io/api v0.35.3
 	k8s.io/apimachinery v0.35.3
