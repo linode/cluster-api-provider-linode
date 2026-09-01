@@ -126,6 +126,7 @@ type LinodeFirewallClient interface {
 	UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRulesUpdateOptions) (*linodego.FirewallRules, error)
 	DeleteFirewall(ctx context.Context, firewallID int) error
 	DeleteFirewallDevice(ctx context.Context, firewallID, deviceID int) error
+	CreateFirewallDevice(ctx context.Context, firewallID int, opts linodego.FirewallDeviceCreateOptions) (*linodego.FirewallDevice, error)
 }
 
 // LinodeInterfacesClient defines the methods that interact with Linode's Interfaces service.
