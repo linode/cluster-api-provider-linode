@@ -13,6 +13,7 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/util"
 )
 
 type MachineScopeParams struct {
@@ -132,7 +133,7 @@ func (m *MachineScope) GetBootstrapData(ctx context.Context) ([]byte, error) {
 }
 
 func (m *MachineScope) GetObjectStoreCredentials(ctx context.Context, ref corev1.SecretReference) (*corev1.Secret, error) {
-	secret, err := getCredentials(ctx, m.Client, ref, m.LinodeCluster.GetNamespace())
+	name, err := util.GetCredentials(ctx, m.Client, ref, m.LinodeCluster.GetNamespace())
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +183,7 @@ func (s *MachineScope) SetCredentialRefTokenForLinodeClients(ctx context.Context
 		defaultNamespace = s.LinodeCluster.GetNamespace()
 	}
 	// TODO: This key is hard-coded (for now) to match the externally-managed `manager-credentials` Secret.
-	apiToken, err := getCredentialDataFromRef(ctx, s.Client, *credentialRef, defaultNamespace, "apiToken")
+	apiToken, err := util.GetCredentialDataFromRef(ctx, s.Client, *credentialRef, defaultNamespace, "apiToken")
 	if err != nil {
 		return fmt.Errorf("credentials from secret ref: %w", err)
 	}

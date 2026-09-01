@@ -33,6 +33,7 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/mock"
+	"github.com/linode/cluster-api-provider-linode/util"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
@@ -180,7 +181,7 @@ func TestValidateLinodeClusterCreate(t *testing.T) {
 						}).AnyTimes()
 				}),
 				Result("valid", func(ctx context.Context, mck Mock) {
-					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefCluster.Spec.CredentialsRef, cluster.GetNamespace())
+					str, err := util.GetCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefCluster.Spec.CredentialsRef, cluster.GetNamespace(), "apiToken")
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
 				}),
