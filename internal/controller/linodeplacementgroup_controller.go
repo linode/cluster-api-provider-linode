@@ -142,14 +142,14 @@ func (r *LinodePlacementGroupReconciler) reconcile(
 
 	pgScope.LinodePlacementGroup.Status.Ready = false
 	pgScope.LinodePlacementGroup.Status.FailureReason = nil
-	pgScope.LinodePlacementGroup.Status.FailureMessage = util.Pointer("")
+	pgScope.LinodePlacementGroup.Status.FailureMessage = new("")
 
 	failureReason := infrav1alpha2.LinodePlacementGroupStatusError("UnknownError")
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
-			pgScope.LinodePlacementGroup.Status.FailureReason = util.Pointer(failureReason)
-			pgScope.LinodePlacementGroup.Status.FailureMessage = util.Pointer(err.Error())
+			pgScope.LinodePlacementGroup.Status.FailureReason = new(failureReason)
+			pgScope.LinodePlacementGroup.Status.FailureMessage = new(err.Error())
 
 			pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{
 				Type:    clusterv1.ReadyCondition,

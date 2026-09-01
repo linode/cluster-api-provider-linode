@@ -138,7 +138,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	res = ctrl.Result{}
 	clusterScope.LinodeCluster.Status.Ready = false
 	clusterScope.LinodeCluster.Status.FailureReason = nil
-	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer("")
+	clusterScope.LinodeCluster.Status.FailureMessage = new("")
 
 	// Always close the scope when exiting this function so we can persist any LinodeCluster changes.
 	defer func() {
@@ -426,8 +426,8 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 }
 
 func (r *LinodeClusterReconciler) setFailureReason(clusterScope *scope.ClusterScope, failureReason, failureMessage string) {
-	clusterScope.LinodeCluster.Status.FailureReason = util.Pointer(failureReason)
-	clusterScope.LinodeCluster.Status.FailureMessage = util.Pointer(failureMessage)
+	clusterScope.LinodeCluster.Status.FailureReason = new(failureReason)
+	clusterScope.LinodeCluster.Status.FailureMessage = new(failureMessage)
 
 	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:    clusterv1.ReadyCondition,

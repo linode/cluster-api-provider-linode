@@ -149,8 +149,8 @@ func (r *LinodeObjectStorageBucketReconciler) reconcile(ctx context.Context, bSc
 }
 
 func (r *LinodeObjectStorageBucketReconciler) setFailure(bScope *scope.ObjectStorageBucketScope, failureReason, failureMessage string) {
-	bScope.Bucket.Status.FailureMessage = util.Pointer(failureMessage)
-	bScope.Bucket.Status.FailureReason = util.Pointer(failureReason)
+	bScope.Bucket.Status.FailureMessage = new(failureMessage)
+	bScope.Bucket.Status.FailureReason = new(failureReason)
 	bScope.Bucket.SetCondition(metav1.Condition{
 		Type:    clusterv1.ReadyCondition,
 		Status:  metav1.ConditionFalse,
@@ -193,7 +193,7 @@ func (r *LinodeObjectStorageBucketReconciler) reconcileApply(ctx context.Context
 		return ctrl.Result{}, err
 	}
 
-	bScope.Bucket.Status.Hostname = util.Pointer(bucket.Hostname)
+	bScope.Bucket.Status.Hostname = new(bucket.Hostname)
 	bScope.Bucket.Status.CreationTime = &metav1.Time{Time: *bucket.Created}
 
 	bScope.Bucket.Status.Ready = true

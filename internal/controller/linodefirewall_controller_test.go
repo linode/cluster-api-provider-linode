@@ -36,7 +36,6 @@ import (
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
-	"github.com/linode/cluster-api-provider-linode/util"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
@@ -227,7 +226,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			),
 			Path(
 				Call("unable to update", func(ctx context.Context, mck Mock) {
-					linodeFW.Spec.FirewallID = util.Pointer(1)
+					linodeFW.Spec.FirewallID = new(1)
 					mck.LinodeClient.EXPECT().GetFirewall(ctx, 1).Return(&linodego.Firewall{
 						ID: 1,
 					}, nil)
@@ -268,7 +267,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 			),
 			Path(
 				Call("able to update", func(ctx context.Context, mck Mock) {
-					linodeFW.Spec.FirewallID = util.Pointer(1)
+					linodeFW.Spec.FirewallID = new(1)
 					ipv4s := []string{}
 					for idx := 0; idx < 256; idx++ {
 						ipv4s = append(ipv4s, fmt.Sprintf("192.168.%d.%d", idx, 0))

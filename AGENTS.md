@@ -99,8 +99,8 @@ func (r *Controller) reconcile(ctx context.Context, scope *ScopeType) (res ctrl.
     
     defer func() {
         if err != nil {
-            scope.Resource.Status.FailureReason = util.Pointer("ReconcileError")
-            scope.Resource.Status.FailureMessage = util.Pointer(err.Error())
+            scope.Resource.Status.FailureReason = new("ReconcileError")
+            scope.Resource.Status.FailureMessage = new(err.Error())
         }
         if patchErr := scope.Close(ctx); patchErr != nil {
             err = errors.Join(err, patchErr)
