@@ -137,6 +137,32 @@ func (_d LinodeClientWithTracing) CreateFirewall(ctx context.Context, opts linod
 	return _d.LinodeClient.CreateFirewall(ctx, opts)
 }
 
+// CreateFirewallDevice implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) CreateFirewallDevice(ctx context.Context, firewallID int, opts linodego.FirewallDeviceCreateOptions) (fp1 *linodego.FirewallDevice, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateFirewallDevice")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID,
+				"opts":       opts}, map[string]interface{}{
+				"fp1": fp1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.CreateFirewallDevice(ctx, firewallID, opts)
+}
+
 // CreateInstance implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) CreateInstance(ctx context.Context, opts linodego.InstanceCreateOptions) (ip1 *linodego.Instance, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.CreateInstance")
