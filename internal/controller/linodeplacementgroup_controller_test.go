@@ -25,7 +25,6 @@ import (
 	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/paused"
@@ -244,7 +243,7 @@ var _ = Describe("pause handling", Label("placementgroup", "pause"), func() {
 				Namespace: defaultNamespace,
 			},
 			Spec: clusterv1.ClusterSpec{
-				Paused: ptr.To(true),
+				Paused: new(true),
 			},
 		}
 		placementGroup := &infrav1alpha2.LinodePlacementGroup{

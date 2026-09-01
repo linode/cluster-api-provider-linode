@@ -37,7 +37,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -97,7 +96,7 @@ func fillCreateConfig(ctx context.Context, createConfig *linodego.InstanceCreate
 		if machineScope.LinodeMachine.Spec.NetworkHelper != nil {
 			createConfig.NetworkHelper = machineScope.LinodeMachine.Spec.NetworkHelper
 		} else {
-			createConfig.NetworkHelper = ptr.To(true)
+			createConfig.NetworkHelper = new(true)
 		}
 	case linodego.GenerationLegacyConfig:
 		createConfig.InterfaceGeneration = linodego.GenerationLegacyConfig
@@ -552,7 +551,7 @@ func getVlanLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machi
 
 	for i, netInterface := range interfaces {
 		if netInterface.VLAN != nil {
-			interfaces[i].VLAN.IPAMAddress = ptr.To(fmt.Sprintf(vlanIPFormat, ip))
+			interfaces[i].VLAN.IPAMAddress = new(fmt.Sprintf(vlanIPFormat, ip))
 			return nil, nil //nolint:nilnil // it is important we don't return an interface if a VLAN interface already exists
 		}
 	}
@@ -560,7 +559,7 @@ func getVlanLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machi
 	return &linodego.LinodeInterfaceCreateOptions{
 		VLAN: &linodego.VLANInterfaceCreateOptions{
 			VLANLabel:   machineScope.Cluster.Name,
-			IPAMAddress: ptr.To(fmt.Sprintf(vlanIPFormat, ip)),
+			IPAMAddress: new(fmt.Sprintf(vlanIPFormat, ip)),
 		},
 	}, nil
 }
@@ -650,7 +649,7 @@ func getVPCInterfaceConfig(ctx context.Context, machineScope *scope.MachineScope
 		Primary:  true,
 		SubnetID: &subnetID,
 		IPv4: &linodego.VPCIPv4CreateOptions{
-			NAT1To1: ptr.To("any"),
+			NAT1To1: new("any"),
 		},
 	}
 
@@ -712,9 +711,9 @@ func getVPCLinodeInterfaceConfig(ctx context.Context, machineScope *scope.Machin
 			SubnetID: subnetID,
 			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-					Primary:        ptr.To(true),
-					NAT1To1Address: ptr.To("auto"),
-					Address:        ptr.To("auto"),
+					Primary:        new(true),
+					NAT1To1Address: new("auto"),
+					Address:        new("auto"),
 				}},
 			},
 		},
@@ -797,9 +796,9 @@ func getVPCLinodeInterfaceConfigFromDirectID(ctx context.Context, machineScope *
 			SubnetID: subnetID,
 			IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 				Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-					Primary:        ptr.To(true),
-					NAT1To1Address: ptr.To("auto"),
-					Address:        ptr.To("auto"),
+					Primary:        new(true),
+					NAT1To1Address: new("auto"),
+					Address:        new("auto"),
 				}},
 			},
 		},
@@ -865,7 +864,7 @@ func getVPCInterfaceConfigFromDirectID(ctx context.Context, machineScope *scope.
 		Primary:  true,
 		SubnetID: &subnetID,
 		IPv4: &linodego.VPCIPv4CreateOptions{
-			NAT1To1: ptr.To("any"),
+			NAT1To1: new("any"),
 		},
 	}
 
@@ -917,7 +916,7 @@ func getMachineIPv6Config(machineScope *scope.MachineScope, numIPv6RangesInSubne
 	if machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges != nil && *machineScope.LinodeMachine.Spec.IPv6Options.EnableRanges {
 		intfOpts.Ranges = []linodego.InstanceConfigInterfaceCreateOptionsIPv6Range{
 			{
-				Range: ptr.To(defaultNodeIPv6CIDRRange),
+				Range: new(defaultNodeIPv6CIDRRange),
 			},
 		}
 	}
@@ -1038,7 +1037,7 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 				nat1To1addr = addr.NAT1To1Address
 			}
 			ipv4Addrs = append(ipv4Addrs, linodego.VPCInterfaceIPv4AddressCreateOptions{
-				Address:        ptr.To(addr.Address),
+				Address:        new(addr.Address),
 				Primary:        addr.Primary,
 				NAT1To1Address: nat1To1addr,
 			})
@@ -1052,9 +1051,9 @@ func constructLinodeInterfaceVPC(iface infrav1alpha2.LinodeInterfaceCreateOption
 		// If no IPv4 addresses are specified, we set a default NAT1To1 address to "any"
 		ipv4Addrs = []linodego.VPCInterfaceIPv4AddressCreateOptions{
 			{
-				Primary:        ptr.To(true),
-				NAT1To1Address: ptr.To("auto"),
-				Address:        ptr.To("auto"), // Default to auto-assigned address
+				Primary:        new(true),
+				NAT1To1Address: new("auto"),
+				Address:        new("auto"), // Default to auto-assigned address
 			},
 		}
 	}
@@ -1108,7 +1107,7 @@ func constructLinodeInterfacePublic(iface infrav1alpha2.LinodeInterfaceCreateOpt
 	if iface.Public.IPv4 != nil {
 		for _, addr := range iface.Public.IPv4.Addresses {
 			ipv4Addrs = append(ipv4Addrs, linodego.PublicInterfaceIPv4AddressCreateOptions{
-				Address: ptr.To(addr.Address),
+				Address: new(addr.Address),
 				Primary: addr.Primary,
 			})
 		}
@@ -1405,7 +1404,7 @@ func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (*
 	additionalDiskSize := 0
 	// If the user has specified an OS disk, use its size.
 	if machineScope.LinodeMachine.Spec.OSDisk != nil {
-		return ptr.To(int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))), nil
+		return new(int(machineScope.LinodeMachine.Spec.OSDisk.Size.ScaledValue(resource.Mega))), nil
 	}
 	// If no DataDisks are specified, omit the size
 	if machineScope.LinodeMachine.Spec.DataDisks == nil {
@@ -1443,7 +1442,7 @@ func calculateRootDisk(ctx context.Context, machineScope *scope.MachineScope) (*
 	}
 	diskSize := planType.Disk - additionalDiskSize
 
-	return ptr.To(diskSize), nil
+	return new(diskSize), nil
 }
 
 func updateInstanceConfigProfile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, linodeInstanceID int) error {
@@ -1599,7 +1598,7 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 
 	// If using LinodeInterfaces that needs to know about the firewall ID
 	for i := range createConfig.LinodeInterfaces {
-		createConfig.LinodeInterfaces[i].FirewallID = ptr.To(fwID)
+		createConfig.LinodeInterfaces[i].FirewallID = new(fwID)
 	}
 
 	return nil

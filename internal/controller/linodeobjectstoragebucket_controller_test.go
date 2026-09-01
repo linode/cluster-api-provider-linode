@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -220,7 +219,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(&linodego.ObjectStorageBucketAccess{
 							ACL:         linodego.ACLPrivate,
-							CorsEnabled: ptr.To(true),
+							CorsEnabled: new(true),
 						}, nil)
 					mck.LinodeClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(errors.New("bucket access options update error"))
@@ -243,7 +242,7 @@ var _ = Describe("lifecycle", Ordered, Label("bucket", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().GetObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(&linodego.ObjectStorageBucketAccess{
 							ACL:         linodego.ACLPrivate,
-							CorsEnabled: ptr.To(true),
+							CorsEnabled: new(true),
 						}, nil)
 					mck.LinodeClient.EXPECT().UpdateObjectStorageBucketAccess(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(nil)

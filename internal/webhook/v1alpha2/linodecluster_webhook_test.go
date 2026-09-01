@@ -28,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -53,7 +52,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 					AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 						{
 							Port:                 8132,
-							NodeBalancerConfigID: ptr.To(1234),
+							NodeBalancerConfigID: new(1234),
 						},
 					},
 				},
@@ -411,7 +410,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 			},
 			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				VPCID:  ptr.To(12345),
+				VPCID:  new(12345),
 				VPCRef: &corev1.ObjectReference{
 					Namespace: "example",
 					Name:      "example",
@@ -426,7 +425,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 			},
 			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
-				VPCID:  ptr.To(12345),
+				VPCID:  new(12345),
 			},
 		}
 		validClusterWithVPCRef = &infrav1alpha2.LinodeCluster{
@@ -505,7 +504,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
 				Network: infrav1alpha2.NetworkSpec{
-					NodeBalancerFirewallID: ptr.To(5678),
+					NodeBalancerFirewallID: new(5678),
 				},
 				NodeBalancerFirewallRef: &corev1.ObjectReference{
 					Namespace: "example",
@@ -522,7 +521,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "us-ord",
 				Network: infrav1alpha2.NetworkSpec{
-					NodeBalancerFirewallID: ptr.To(5678),
+					NodeBalancerFirewallID: new(5678),
 				},
 			},
 		}

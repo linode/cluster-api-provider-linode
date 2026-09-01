@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -75,11 +74,11 @@ func TestRotateObjectStorageKey(t *testing.T) {
 						Key: &infrav1alpha2.LinodeObjectStorageKey{
 							ObjectMeta: metav1.ObjectMeta{Name: "key"},
 							Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-								KeyGeneration: ptr.To(1),
+								KeyGeneration: new(1),
 							},
 							Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-								LastKeyGeneration: ptr.To(0),
-								AccessKeyRef:      ptr.To(0),
+								LastKeyGeneration: new(0),
+								AccessKeyRef:      new(0),
 							},
 						},
 					})
@@ -100,11 +99,11 @@ func TestRotateObjectStorageKey(t *testing.T) {
 						Key: &infrav1alpha2.LinodeObjectStorageKey{
 							ObjectMeta: metav1.ObjectMeta{Name: "key"},
 							Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-								KeyGeneration: ptr.To(1),
+								KeyGeneration: new(1),
 							},
 							Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-								LastKeyGeneration: ptr.To(0),
-								AccessKeyRef:      ptr.To(0),
+								LastKeyGeneration: new(0),
+								AccessKeyRef:      new(0),
 							},
 						},
 					})
@@ -123,7 +122,7 @@ func TestGetObjectStorageKey(t *testing.T) {
 
 	key := infrav1alpha2.LinodeObjectStorageKey{
 		Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-			AccessKeyRef: ptr.To(0),
+			AccessKeyRef: new(0),
 		},
 	}
 

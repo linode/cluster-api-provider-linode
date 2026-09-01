@@ -19,7 +19,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -989,7 +988,7 @@ func TestDeleteAllObjectVersionsAndDeleteMarkers(t *testing.T) {
 			Path(
 				Call("with an object", func(ctx context.Context, mck Mock) {
 					mck.S3Client.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectVersionsOutput{
-						Name: ptr.To("test"),
+						Name: new("test"),
 						Versions: []types.ObjectVersion{
 							{
 								IsLatest:  aws.Bool(true),
@@ -1009,7 +1008,7 @@ func TestDeleteAllObjectVersionsAndDeleteMarkers(t *testing.T) {
 			Path(
 				Call("with versions and delete markers", func(ctx context.Context, mck Mock) {
 					mck.S3Client.EXPECT().ListObjectVersions(gomock.Any(), gomock.Any(), gomock.Any()).Return(&s3.ListObjectVersionsOutput{
-						Name: ptr.To("test"),
+						Name: new("test"),
 						Versions: []types.ObjectVersion{
 							{
 								IsLatest:  aws.Bool(false),

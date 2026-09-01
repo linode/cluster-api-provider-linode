@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -278,7 +277,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
-					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/8", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("")}}}}
+					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/8", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: new("")}}}}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					for _, err := range errs {
 						require.Error(t, err)
@@ -321,10 +320,10 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
-						{Range: ptr.To("/48")},
-						{Range: ptr.To("/52")},
-						{Range: ptr.To("auto")},
-						{Range: ptr.To("2001:db8::/52")},
+						{Range: new("/48")},
+						{Range: new("/52")},
+						{Range: new("auto")},
+						{Range: new("2001:db8::/52")},
 					}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
@@ -339,10 +338,10 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
-						{Label: "foo", IPv4: "10.0.0.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/52")}}},
-						{Label: "bar", IPv4: "10.0.1.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("/64")}}},
-						{Label: "buzz", IPv4: "10.0.2.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("auto")}}},
-						{Label: "bazz", IPv4: "10.0.3.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: ptr.To("2001:db8::/56")}}},
+						{Label: "foo", IPv4: "10.0.0.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: new("/52")}}},
+						{Label: "bar", IPv4: "10.0.1.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: new("/64")}}},
+						{Label: "buzz", IPv4: "10.0.2.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: new("auto")}}},
+						{Label: "bazz", IPv4: "10.0.3.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: new("2001:db8::/56")}}},
 					}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					require.Empty(t, errs)
@@ -359,7 +358,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
-						{Range: ptr.To("48")},
+						{Range: new("48")},
 					}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					for _, err := range errs {
@@ -376,7 +375,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
-						{Range: ptr.To("/a48")},
+						{Range: new("/a48")},
 					}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					for _, err := range errs {
@@ -393,7 +392,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
-						{Range: ptr.To("/130")},
+						{Range: new("/130")},
 					}
 					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
 					for _, err := range errs {

@@ -23,7 +23,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/linode/linodego/v2"
-	"k8s.io/utils/ptr"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
@@ -87,7 +86,7 @@ func reconcileExistingVPC(ctx context.Context, vpcScope *scope.VPCScope, vpc *li
 		ipv4Ranges := make([]linodego.VPCUpdateOptionsIPv4, len(vpcScope.LinodeVPC.Spec.IPv4Range))
 		for idx, ipv4Range := range vpcScope.LinodeVPC.Spec.IPv4Range {
 			ipv4Ranges[idx] = linodego.VPCUpdateOptionsIPv4{
-				Range: ptr.To(ipv4Range),
+				Range: new(ipv4Range),
 			}
 		}
 		_, err := vpcScope.LinodeClient.UpdateVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID, linodego.VPCUpdateOptions{IPv4: ipv4Ranges})
@@ -227,7 +226,7 @@ func linodeVPCSpecToVPCCreateConfig(vpcSpec infrav1alpha2.LinodeVPCSpec) *linode
 		vpcIPv4 := make([]linodego.VPCCreateOptionsIPv4, len(vpcSpec.IPv4Range))
 		for idx, ipv4 := range vpcSpec.IPv4Range {
 			vpcIPv4[idx] = linodego.VPCCreateOptionsIPv4{
-				Range: ptr.To(ipv4),
+				Range: new(ipv4),
 			}
 		}
 		createOpts.IPv4 = vpcIPv4

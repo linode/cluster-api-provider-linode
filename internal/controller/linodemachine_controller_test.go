@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/events"
-	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/paused"
@@ -83,8 +82,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			},
 			Region: "us-east",
 			Network: infrav1alpha2.NetworkSpec{
-				NodeBalancerID:                ptr.To(1),
-				ApiserverNodeBalancerConfigID: ptr.To(2),
+				NodeBalancerID:                new(1),
+				ApiserverNodeBalancerConfigID: new(2),
 			},
 		},
 	}
@@ -110,7 +109,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret"),
+					DataSecretName: new("bootstrap-secret"),
 				},
 			},
 		}
@@ -177,7 +176,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				},
 				Spec: infrav1alpha2.LinodeFirewallSpec{
 					Enabled:    false,
-					FirewallID: ptr.To(1),
+					FirewallID: new(1),
 				},
 			}
 			Expect(k8sClient.Create(ctx, linodeFirewall)).To(Succeed())
@@ -208,7 +207,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				},
 				Spec: infrav1alpha2.LinodeFirewallSpec{
 					Enabled:    false,
-					FirewallID: ptr.To(1),
+					FirewallID: new(1),
 				},
 			}
 			Expect(k8sClient.Create(ctx, linodeFirewall)).To(Succeed())
@@ -316,7 +315,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				},
 				Spec: infrav1alpha2.LinodeVPCSpec{
 					Region: "us-ord",
-					VPCID:  ptr.To(1),
+					VPCID:  new(1),
 				},
 				Status: infrav1alpha2.LinodeVPCStatus{
 					Ready: false,
@@ -360,7 +359,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					Namespace: defaultNamespace,
 				},
 				Spec: infrav1alpha2.LinodeVPCSpec{
-					VPCID:  ptr.To(1),
+					VPCID:  new(1),
 					Region: "us-ord",
 					Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 						{
@@ -785,13 +784,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Return(nil, &linodego.Error{Code: http.StatusServiceUnavailable})
 			extraDisk := resource.MustParse("128Mi")
 			linodeMachine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{
-				SDB: ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")}),
-				SDC: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk2", Size: extraDisk}),
-				SDD: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk3", Size: extraDisk}),
-				SDE: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk4", Size: extraDisk}),
-				SDF: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk5", Size: extraDisk}),
-				SDG: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk6", Size: extraDisk}),
-				SDH: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk7", Size: extraDisk}),
+				SDB: new(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")}),
+				SDC: new(infrav1alpha2.InstanceDisk{Label: "disk2", Size: extraDisk}),
+				SDD: new(infrav1alpha2.InstanceDisk{Label: "disk3", Size: extraDisk}),
+				SDE: new(infrav1alpha2.InstanceDisk{Label: "disk4", Size: extraDisk}),
+				SDF: new(infrav1alpha2.InstanceDisk{Label: "disk5", Size: extraDisk}),
+				SDG: new(infrav1alpha2.InstanceDisk{Label: "disk6", Size: extraDisk}),
+				SDH: new(infrav1alpha2.InstanceDisk{Label: "disk7", Size: extraDisk}),
 			}
 			mScope := scope.MachineScope{
 				Client:        k8sClient,
@@ -815,13 +814,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
 			extraDisk := resource.MustParse("128Mi")
 			linodeMachine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{
-				SDB: ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")}),
-				SDC: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk2", Size: extraDisk}),
-				SDD: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk3", Size: extraDisk}),
-				SDE: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk4", Size: extraDisk}),
-				SDF: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk5", Size: extraDisk}),
-				SDG: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk6", Size: extraDisk}),
-				SDH: ptr.To(infrav1alpha2.InstanceDisk{Label: "disk7", Size: extraDisk}),
+				SDB: new(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")}),
+				SDC: new(infrav1alpha2.InstanceDisk{Label: "disk2", Size: extraDisk}),
+				SDD: new(infrav1alpha2.InstanceDisk{Label: "disk3", Size: extraDisk}),
+				SDE: new(infrav1alpha2.InstanceDisk{Label: "disk4", Size: extraDisk}),
+				SDF: new(infrav1alpha2.InstanceDisk{Label: "disk5", Size: extraDisk}),
+				SDG: new(infrav1alpha2.InstanceDisk{Label: "disk6", Size: extraDisk}),
+				SDH: new(infrav1alpha2.InstanceDisk{Label: "disk7", Size: extraDisk}),
 			}
 			extraDiskSize := int(extraDisk.ScaledValue(resource.Mega))
 
@@ -1023,7 +1022,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		It("in multiple calls when disks are delayed", func(ctx SpecContext) {
 			machine.Labels[clusterv1.MachineControlPlaneLabel] = "true"
-			linodeMachine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: ptr.To(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
+			linodeMachine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: new(infrav1alpha2.InstanceDisk{Label: "etcd-data", Size: resource.MustParse("10Gi")})}
 
 			mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
 			mockLinodeClient.EXPECT().
@@ -1144,7 +1143,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
 						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
-						VPC:     []linodego.VPCIP{{Address: ptr.To("10.0.0.2")}},
+						VPC:     []linodego.VPCIP{{Address: new("10.0.0.2")}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -1167,7 +1166,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 					IPv4: &linodego.InstanceIPv4Response{
 						Private: []linodego.InstanceIP{{Address: "192.168.0.2"}},
 						Public:  []linodego.InstanceIP{{Address: "172.0.0.2"}},
-						VPC:     []linodego.VPCIP{{Address: ptr.To("10.0.0.2")}},
+						VPC:     []linodego.VPCIP{{Address: new("10.0.0.2")}},
 					},
 					IPv6: &linodego.InstanceIPv6Response{
 						SLAAC: &linodego.InstanceIP{
@@ -1205,7 +1204,7 @@ var _ = Describe("pause handling", Label("machine", "pause"), func() {
 				Namespace: defaultNamespace,
 			},
 			Spec: clusterv1.ClusterSpec{
-				Paused: ptr.To(true),
+				Paused: new(true),
 				InfrastructureRef: clusterv1.ContractVersionedObjectReference{
 					Kind:     "LinodeCluster",
 					Name:     "pause-machine-linodecluster",
@@ -1236,7 +1235,7 @@ var _ = Describe("pause handling", Label("machine", "pause"), func() {
 			Spec: clusterv1.MachineSpec{
 				ClusterName: cluster.Name,
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("pause-machine-bootstrap"),
+					DataSecretName: new("pause-machine-bootstrap"),
 				},
 				InfrastructureRef: clusterv1.ContractVersionedObjectReference{
 					Kind:     "LinodeMachine",
@@ -1366,7 +1365,7 @@ var _ = Describe("createDNS", Label("machine", "createDNS"), func() {
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret"),
+					DataSecretName: new("bootstrap-secret"),
 				},
 			},
 		}
@@ -1528,7 +1527,7 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 		},
 		Spec: clusterv1.MachineSpec{
 			Bootstrap: clusterv1.Bootstrap{
-				DataSecretName: ptr.To("test-bootstrap-secret"),
+				DataSecretName: new("test-bootstrap-secret"),
 			},
 		},
 	}
@@ -1554,8 +1553,8 @@ var _ = Describe("machine-lifecycle", Ordered, Label("machine", "machine-lifecyc
 				Port: 6443,
 			},
 			Network: infrav1alpha2.NetworkSpec{
-				NodeBalancerID:                ptr.To(1),
-				ApiserverNodeBalancerConfigID: ptr.To(2),
+				NodeBalancerID:                new(1),
+				ApiserverNodeBalancerConfigID: new(2),
 			},
 		},
 	}
@@ -1851,7 +1850,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 		},
 		Spec: clusterv1.MachineSpec{
 			Bootstrap: clusterv1.Bootstrap{
-				DataSecretName: ptr.To("test-bootstrap-secret-2"),
+				DataSecretName: new("test-bootstrap-secret-2"),
 			},
 		},
 	}
@@ -1877,8 +1876,8 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 			},
 			Region: "us-east",
 			Network: infrav1alpha2.NetworkSpec{
-				NodeBalancerID:                ptr.To(1),
-				ApiserverNodeBalancerConfigID: ptr.To(2),
+				NodeBalancerID:                new(1),
+				ApiserverNodeBalancerConfigID: new(2),
 			},
 		},
 	}
@@ -2167,7 +2166,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						Namespace: namespace,
 					},
 					Spec: infrav1alpha2.LinodeFirewallSpec{
-						FirewallID: ptr.To(20),
+						FirewallID: new(20),
 						Enabled:    true,
 					},
 				}
@@ -2331,7 +2330,7 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 		},
 		Spec: clusterv1.MachineSpec{
 			Bootstrap: clusterv1.Bootstrap{
-				DataSecretName: ptr.To("test-bootstrap-secret"),
+				DataSecretName: new("test-bootstrap-secret"),
 			},
 		},
 	}
@@ -2452,7 +2451,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret"),
+					DataSecretName: new("bootstrap-secret"),
 				},
 			},
 		}
@@ -2464,7 +2463,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 				UID:       "5123122",
 			},
 			Spec: infrav1alpha2.LinodePlacementGroupSpec{
-				PGID:                 ptr.To(1),
+				PGID:                 new(1),
 				Region:               "us-ord",
 				PlacementGroupPolicy: "strict",
 				PlacementGroupType:   "anti_affinity:local",
@@ -2482,7 +2481,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 				UID:       "5123123",
 			},
 			Spec: infrav1alpha2.LinodeFirewallSpec{
-				FirewallID: ptr.To(2),
+				FirewallID: new(2),
 				Enabled:    true,
 			},
 			Status: infrav1alpha2.LinodeFirewallStatus{
@@ -2498,7 +2497,7 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				ProviderID: ptr.To("linode://0"),
+				ProviderID: new("linode://0"),
 				Type:       nanodePlan,
 				Image:      rutil.DefaultMachineControllerLinodeImage,
 				PlacementGroupRef: &corev1.ObjectReference{
@@ -2625,7 +2624,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret"),
+					DataSecretName: new("bootstrap-secret"),
 				},
 			},
 		}
@@ -2637,7 +2636,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				UID:       "5123122",
 			},
 			Spec: infrav1alpha2.LinodeVPCSpec{
-				VPCID:  ptr.To(1),
+				VPCID:  new(1),
 				Region: "us-ord",
 				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 					{
@@ -2691,7 +2690,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				ProviderID: ptr.To("linode://0"),
+				ProviderID: new("linode://0"),
 				Type:       nanodePlan,
 				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
 					{
@@ -2744,8 +2743,8 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			{
 				Purpose:  linodego.InterfacePurposeVPC,
 				Primary:  true,
-				SubnetID: ptr.To(1),
-				IPv4:     &linodego.VPCIPv4CreateOptions{NAT1To1: ptr.To("any")},
+				SubnetID: new(1),
+				IPv4:     &linodego.VPCIPv4CreateOptions{NAT1To1: new("any")},
 			},
 			{
 				Primary: true,
@@ -2760,7 +2759,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				ProviderID: ptr.To("linode://0"),
+				ProviderID: new("linode://0"),
 				Type:       nanodePlan,
 				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
 					{
@@ -2818,9 +2817,9 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			{
 				Purpose:  linodego.InterfacePurposeVPC,
 				Primary:  false,
-				SubnetID: ptr.To(1),
+				SubnetID: new(1),
 				IPv4: &linodego.VPCIPv4CreateOptions{
-					NAT1To1: ptr.To("any"),
+					NAT1To1: new("any"),
 				},
 			},
 			{
@@ -2836,7 +2835,7 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				ProviderID: ptr.To("linode://0"),
+				ProviderID: new("linode://0"),
 				Type:       nanodePlan,
 				Interfaces: []infrav1alpha2.InstanceConfigInterfaceCreateOptions{
 					{
@@ -2894,8 +2893,8 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 			{
 				Purpose:  linodego.InterfacePurposeVPC,
 				Primary:  true,
-				SubnetID: ptr.To(27),
-				IPv4:     &linodego.VPCIPv4CreateOptions{NAT1To1: ptr.To("any")},
+				SubnetID: new(27),
+				IPv4:     &linodego.VPCIPv4CreateOptions{NAT1To1: new("any")},
 			},
 			{
 				Primary: true,
@@ -2960,7 +2959,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret"),
+					DataSecretName: new("bootstrap-secret"),
 				},
 			},
 		}
@@ -2972,7 +2971,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				UID:       "5123122",
 			},
 			Spec: infrav1alpha2.LinodeVPCSpec{
-				VPCID:  ptr.To(1),
+				VPCID:  new(1),
 				Region: "us-ord",
 				Subnets: []infrav1alpha2.VPCSubnetCreateOptions{
 					{
@@ -3026,7 +3025,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				ProviderID:          ptr.To("linode://0"),
+				ProviderID:          new("linode://0"),
 				Type:                nanodePlan,
 				InterfaceGeneration: linodego.GenerationLinode,
 			},
@@ -3076,9 +3075,9 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 					SubnetID: 1,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: ptr.To("auto"),
-							Primary:        ptr.To(true),
-							Address:        ptr.To("auto"),
+							NAT1To1Address: new("auto"),
+							Primary:        new(true),
+							Address:        new("auto"),
 						}},
 					},
 				},
@@ -3093,7 +3092,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				ProviderID:          ptr.To("linode://0"),
+				ProviderID:          new("linode://0"),
 				Type:                nanodePlan,
 				InterfaceGeneration: linodego.GenerationLinode,
 			},
@@ -3143,9 +3142,9 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 					SubnetID: 1,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: ptr.To("auto"),
-							Primary:        ptr.To(true),
-							Address:        ptr.To("auto"),
+							NAT1To1Address: new("auto"),
+							Primary:        new(true),
+							Address:        new("auto"),
 						}},
 					},
 				},
@@ -3160,7 +3159,7 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				UID:       "12345",
 			},
 			Spec: infrav1alpha2.LinodeMachineSpec{
-				ProviderID:          ptr.To("linode://0"),
+				ProviderID:          new("linode://0"),
 				Type:                nanodePlan,
 				InterfaceGeneration: linodego.GenerationLinode,
 			},
@@ -3216,9 +3215,9 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 					SubnetID: 27,
 					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
 						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: ptr.To("auto"),
-							Primary:        ptr.To(true),
-							Address:        ptr.To("auto"),
+							NAT1To1Address: new("auto"),
+							Primary:        new(true),
+							Address:        new("auto"),
 						}},
 					},
 				},
@@ -3275,7 +3274,7 @@ var _ = Describe("machine in vlan", Label("machine", "vlan"), Ordered, func() {
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret"),
+					DataSecretName: new("bootstrap-secret"),
 				},
 			},
 		}
@@ -3462,7 +3461,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret"),
+					DataSecretName: new("bootstrap-secret"),
 				},
 			},
 		}
@@ -3560,7 +3559,7 @@ var _ = Describe("machine in vlan for new network interfaces", Label("machine", 
 			After(getAddrs).
 			Return([]linodego.LinodeInterface{{
 				VLAN: &linodego.VLANInterface{
-					IPAMAddress: ptr.To("10.0.0.2/11"),
+					IPAMAddress: new("10.0.0.2/11"),
 				},
 			}}, nil)
 
@@ -3613,7 +3612,7 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 				Type:   nanodePlan,
 				Image:  "linode/ubuntu22.04",
 				Region: "us-east",
-				VPCID:  ptr.To(12345),
+				VPCID:  new(12345),
 			},
 		}
 		machineKey = client.ObjectKeyFromObject(&linodeMachine)
@@ -3725,7 +3724,7 @@ var _ = Describe("create machine with direct VPCID", Label("machine", "VPCID"), 
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret-vpcid"),
+					DataSecretName: new("bootstrap-secret-vpcid"),
 				},
 			},
 		}
@@ -3805,7 +3804,7 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 				Type:                nanodePlan,
 				Image:               "linode/ubuntu22.04",
 				Region:              "us-east",
-				VPCID:               ptr.To(12345),
+				VPCID:               new(12345),
 				InterfaceGeneration: linodego.GenerationLinode,
 			},
 		}
@@ -3918,7 +3917,7 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 			},
 			Spec: clusterv1.MachineSpec{
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: ptr.To("bootstrap-secret-vpcid-new-network-interfaces"),
+					DataSecretName: new("bootstrap-secret-vpcid-new-network-interfaces"),
 				},
 			},
 		}
@@ -4092,7 +4091,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 	Describe("reconcilePreflightVPC", func() {
 		Context("when machine has direct VPCID and it exists with subnets", func() {
 			BeforeEach(func() {
-				machineScope.LinodeMachine.Spec.VPCID = ptr.To(123)
+				machineScope.LinodeMachine.Spec.VPCID = new(123)
 				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(123)).Return(&linodego.VPC{
 					ID:     123,
 					Label:  "test-vpc",
@@ -4119,7 +4118,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 
 		Context("when machine has direct VPCID but it does not exist", func() {
 			BeforeEach(func() {
-				machineScope.LinodeMachine.Spec.VPCID = ptr.To(123)
+				machineScope.LinodeMachine.Spec.VPCID = new(123)
 				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(123)).Return(nil, errors.New("VPC not found"))
 			})
 
@@ -4137,7 +4136,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 
 		Context("when cluster has direct VPCID and it exists with subnets", func() {
 			BeforeEach(func() {
-				machineScope.LinodeCluster.Spec.VPCID = ptr.To(456)
+				machineScope.LinodeCluster.Spec.VPCID = new(456)
 				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(456)).Return(&linodego.VPC{
 					ID:     456,
 					Label:  "test-vpc",
@@ -4164,7 +4163,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 
 		Context("when cluster has direct VPCID but it does not exist", func() {
 			BeforeEach(func() {
-				machineScope.LinodeCluster.Spec.VPCID = ptr.To(456)
+				machineScope.LinodeCluster.Spec.VPCID = new(456)
 				mockLinodeClient.EXPECT().GetVPC(gomock.Any(), gomock.Eq(456)).Return(nil, errors.New("VPC not found"))
 			})
 

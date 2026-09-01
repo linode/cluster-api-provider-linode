@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	caplv1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -122,7 +121,7 @@ func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient,
 		return false, nil, err
 	}
 	linodeClient := linodeclient.NewLinodeClientWithTracing(
-		ptr.To(newClient),
+		new(newClient),
 		linodeclient.DefaultDecorator(),
 	)
 	credName := ""

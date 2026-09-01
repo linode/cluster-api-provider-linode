@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -147,7 +146,7 @@ var _ = Describe("lifecycle", Ordered, Label("key", "key-lifecycle"), func() {
 			),
 		),
 		Call("keyGeneration is modified", func(ctx context.Context, _ Mock) {
-			key.Spec.KeyGeneration = ptr.To(1)
+			key.Spec.KeyGeneration = new(1)
 			Expect(k8sClient.Update(ctx, &key)).To(Succeed())
 		}),
 		OneOf(
@@ -489,9 +488,9 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					mck.K8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("error"))
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					keyScope.Key.Spec.KeyGeneration = ptr.To(1)
+					keyScope.Key.Spec.KeyGeneration = new(1)
 					keyScope.Key.Status.LastKeyGeneration = keyScope.Key.Spec.KeyGeneration
-					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
+					keyScope.Key.Status.AccessKeyRef = new(1)
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Client = mck.K8sClient
 					err := reconciler.reconcileApply(ctx, &keyScope)
@@ -514,9 +513,9 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					mck.K8sClient.EXPECT().Create(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("secret creation error"))
 				}),
 				Result("creation error", func(ctx context.Context, mck Mock) {
-					keyScope.Key.Spec.KeyGeneration = ptr.To(1)
+					keyScope.Key.Spec.KeyGeneration = new(1)
 					keyScope.Key.Status.LastKeyGeneration = keyScope.Key.Spec.KeyGeneration
-					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
+					keyScope.Key.Status.AccessKeyRef = new(1)
 
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Client = mck.K8sClient
@@ -530,9 +529,9 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme())
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					keyScope.Key.Spec.KeyGeneration = ptr.To(1)
+					keyScope.Key.Spec.KeyGeneration = new(1)
 					keyScope.Key.Status.LastKeyGeneration = keyScope.Key.Spec.KeyGeneration
-					keyScope.Key.Status.AccessKeyRef = ptr.To(1)
+					keyScope.Key.Status.AccessKeyRef = new(1)
 
 					keyScope.LinodeClient = mck.LinodeClient
 					keyScope.Client = mck.K8sClient
@@ -543,7 +542,7 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 			),
 		),
 		Once("finalizer is missing", func(ctx context.Context, _ Mock) {
-			keyScope.Key.Status.AccessKeyRef = ptr.To(1)
+			keyScope.Key.Status.AccessKeyRef = new(1)
 			keyScope.Key.Finalizers = []string{}
 		}),
 		Call("revoke key", func(ctx context.Context, mck Mock) {

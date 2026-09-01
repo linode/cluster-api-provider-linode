@@ -15,7 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	clusteraddonsv1 "sigs.k8s.io/cluster-api/api/addons/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -577,10 +576,10 @@ func TestShouldRotateKey(t *testing.T) {
 	assert.False(t, (&ObjectStorageKeyScope{
 		Key: &infrav1alpha2.LinodeObjectStorageKey{
 			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-				KeyGeneration: ptr.To(0),
+				KeyGeneration: new(0),
 			},
 			Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-				LastKeyGeneration: ptr.To(0),
+				LastKeyGeneration: new(0),
 			},
 		},
 	}).ShouldRotateKey())
@@ -588,10 +587,10 @@ func TestShouldRotateKey(t *testing.T) {
 	assert.True(t, (&ObjectStorageKeyScope{
 		Key: &infrav1alpha2.LinodeObjectStorageKey{
 			Spec: infrav1alpha2.LinodeObjectStorageKeySpec{
-				KeyGeneration: ptr.To(1),
+				KeyGeneration: new(1),
 			},
 			Status: infrav1alpha2.LinodeObjectStorageKeyStatus{
-				LastKeyGeneration: ptr.To(0),
+				LastKeyGeneration: new(0),
 			},
 		},
 	}).ShouldRotateKey())

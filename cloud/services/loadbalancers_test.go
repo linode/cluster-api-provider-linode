@@ -14,7 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,11 +42,11 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID: ptr.To(1234),
+							NodeBalancerID: new(1234),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 DefaultKonnectivityLBPort,
-									NodeBalancerConfigID: ptr.To(1234),
+									NodeBalancerConfigID: new(1234),
 								},
 							},
 						},
@@ -73,7 +72,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID: ptr.To(1234),
+							NodeBalancerID: new(1234),
 						},
 					},
 				},
@@ -81,13 +80,13 @@ func TestEnsureNodeBalancer(t *testing.T) {
 			expects: func(mockClient *mock.MockLinodeClient, mockK8sClient *mock.MockK8sClient) {
 				mockClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).Return(&linodego.NodeBalancer{
 					ID:    1234,
-					Label: ptr.To("test"),
+					Label: new("test"),
 					Tags:  []string{"test-uid"},
 				}, nil)
 			},
 			expectedNodeBalancer: &linodego.NodeBalancer{
 				ID:    1234,
-				Label: ptr.To("test"),
+				Label: new("test"),
 				Tags:  []string{"test-uid"},
 			},
 		},
@@ -101,7 +100,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID: ptr.To(1234),
+							NodeBalancerID: new(1234),
 						},
 					},
 				},
@@ -129,13 +128,13 @@ func TestEnsureNodeBalancer(t *testing.T) {
 				})
 				mockClient.EXPECT().ListNodeBalancers(gomock.Any(), gomock.Any()).Return([]linodego.NodeBalancer{{
 					ID:    1234,
-					Label: ptr.To("test"),
+					Label: new("test"),
 					Tags:  []string{"test-uid"},
 				}}, nil)
 			},
 			expectedNodeBalancer: &linodego.NodeBalancer{
 				ID:    1234,
-				Label: ptr.To("test"),
+				Label: new("test"),
 				Tags:  []string{"test-uid"},
 			},
 		},
@@ -344,7 +343,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Region: "us-east",
-						VPCID:  ptr.To(456),
+						VPCID:  new(456),
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
@@ -399,7 +398,7 @@ func TestEnsureNodeBalancer(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Region: "us-east",
-						VPCID:  ptr.To(789),
+						VPCID:  new(789),
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:            true,
 							NodeBalancerBackendIPv4Range: "10.0.0.0/24",
@@ -796,7 +795,7 @@ func TestGetSubnetIDWithVPCID(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
-						VPCID: ptr.To(123),
+						VPCID: new(123),
 					},
 				},
 			},
@@ -826,7 +825,7 @@ func TestGetSubnetIDWithVPCID(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
-						VPCID: ptr.To(123),
+						VPCID: new(123),
 						Network: infrav1alpha2.NetworkSpec{
 							SubnetName: "subnet-2",
 						},
@@ -859,7 +858,7 @@ func TestGetSubnetIDWithVPCID(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
-						VPCID: ptr.To(999),
+						VPCID: new(999),
 					},
 				},
 			},
@@ -877,7 +876,7 @@ func TestGetSubnetIDWithVPCID(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
-						VPCID: ptr.To(123),
+						VPCID: new(123),
 					},
 				},
 			},
@@ -898,7 +897,7 @@ func TestGetSubnetIDWithVPCID(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
-						VPCID: ptr.To(123),
+						VPCID: new(123),
 						Network: infrav1alpha2.NetworkSpec{
 							SubnetName: "non-existent-subnet",
 						},
@@ -968,8 +967,8 @@ func TestProcessAndCreateNodeBalancerNodes(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(123),
-							ApiserverNodeBalancerConfigID: ptr.To(456),
+							NodeBalancerID:                new(123),
+							ApiserverNodeBalancerConfigID: new(456),
 							ApiserverLoadBalancerPort:     6443,
 						},
 					},
@@ -1005,13 +1004,13 @@ func TestProcessAndCreateNodeBalancerNodes(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(123),
-							ApiserverNodeBalancerConfigID: ptr.To(456),
+							NodeBalancerID:                new(123),
+							ApiserverNodeBalancerConfigID: new(456),
 							ApiserverLoadBalancerPort:     6443,
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 8132,
-									NodeBalancerConfigID: ptr.To(789),
+									NodeBalancerConfigID: new(789),
 								},
 							},
 						},
@@ -1061,8 +1060,8 @@ func TestProcessAndCreateNodeBalancerNodes(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(123),
-							ApiserverNodeBalancerConfigID: ptr.To(456),
+							NodeBalancerID:                new(123),
+							ApiserverNodeBalancerConfigID: new(456),
 							ApiserverLoadBalancerPort:     6443,
 						},
 					},
@@ -1095,8 +1094,8 @@ func TestProcessAndCreateNodeBalancerNodes(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(123),
-							ApiserverNodeBalancerConfigID: ptr.To(456),
+							NodeBalancerID:                new(123),
+							ApiserverNodeBalancerConfigID: new(456),
 							ApiserverLoadBalancerPort:     6443,
 						},
 					},
@@ -1133,8 +1132,8 @@ func TestProcessAndCreateNodeBalancerNodes(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(123),
-							ApiserverNodeBalancerConfigID: ptr.To(456),
+							NodeBalancerID:                new(123),
+							ApiserverNodeBalancerConfigID: new(456),
 							ApiserverLoadBalancerPort:     6443,
 						},
 					},
@@ -1210,7 +1209,7 @@ func TestEnsureNodeBalancerConfigs(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID: ptr.To(1234),
+							NodeBalancerID: new(1234),
 						},
 					},
 				},
@@ -1245,8 +1244,8 @@ func TestEnsureNodeBalancerConfigs(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(2),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(2),
 						},
 						ControlPlaneEndpoint: clusterv1.APIEndpoint{
 							Host: "",
@@ -1287,12 +1286,12 @@ func TestEnsureNodeBalancerConfigs(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:            ptr.To(1234),
+							NodeBalancerID:            new(1234),
 							ApiserverLoadBalancerPort: 80,
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 90,
-									NodeBalancerConfigID: ptr.To(1234),
+									NodeBalancerConfigID: new(1234),
 								},
 							},
 						},
@@ -1343,11 +1342,11 @@ func TestEnsureNodeBalancerConfigs(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID: ptr.To(1234),
+							NodeBalancerID: new(1234),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 DefaultKonnectivityLBPort,
-									NodeBalancerConfigID: ptr.To(1234),
+									NodeBalancerConfigID: new(1234),
 								},
 							},
 						},
@@ -1386,11 +1385,11 @@ func TestEnsureNodeBalancerConfigs(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID: ptr.To(1234),
+							NodeBalancerID: new(1234),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 DefaultKonnectivityLBPort,
-									NodeBalancerConfigID: ptr.To(1234),
+									NodeBalancerConfigID: new(1234),
 								},
 							},
 						},
@@ -1435,8 +1434,8 @@ func TestEnsureNodeBalancerConfigs(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 						},
 					},
 				},
@@ -1497,7 +1496,7 @@ func TestAddNodeToNBConditions(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
+							NodeBalancerID:                new(1234),
 							ApiserverNodeBalancerConfigID: nil,
 							ApiserverLoadBalancerPort:     DefaultApiserverLBPort,
 						},
@@ -1511,8 +1510,8 @@ func TestAddNodeToNBConditions(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 						},
 					},
@@ -1534,8 +1533,8 @@ func TestAddNodeToNBConditions(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(1234),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(1234),
 							ApiserverLoadBalancerPort:     DefaultApiserverLBPort,
 						},
 					},
@@ -1548,8 +1547,8 @@ func TestAddNodeToNBConditions(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 						},
 					},
@@ -1615,12 +1614,12 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 DefaultKonnectivityLBPort,
-									NodeBalancerConfigID: ptr.To(1234),
+									NodeBalancerConfigID: new(1234),
 								},
 							},
 						},
@@ -1634,8 +1633,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 						},
 					},
@@ -1665,8 +1664,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 						},
 					},
 				},
@@ -1678,8 +1677,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 							Status: infrav1alpha2.LinodeMachineStatus{
 								Addresses: []clusterv1.MachineAddress{
@@ -1724,8 +1723,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						},
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:             true,
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
 						},
 					},
@@ -1738,8 +1737,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 							Status: infrav1alpha2.LinodeMachineStatus{
 								Addresses: []clusterv1.MachineAddress{
@@ -1798,8 +1797,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						},
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:             true,
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
 						},
 					},
@@ -1812,8 +1811,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 							Status: infrav1alpha2.LinodeMachineStatus{
 								Addresses: []clusterv1.MachineAddress{
@@ -1857,8 +1856,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 						},
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:             true,
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
 						},
 					},
@@ -1871,8 +1870,8 @@ func TestAddNodeToNBFullWorkflow(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 							Status: infrav1alpha2.LinodeMachineStatus{
 								Addresses: []clusterv1.MachineAddress{
@@ -1953,8 +1952,8 @@ func TestDeleteNodeFromNB(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 						},
 					},
@@ -1985,8 +1984,8 @@ func TestDeleteNodeFromNB(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 						},
 					},
@@ -1999,12 +1998,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 DefaultKonnectivityLBPort,
-									NodeBalancerConfigID: ptr.To(1234),
+									NodeBalancerConfigID: new(1234),
 								},
 							},
 						},
@@ -2030,8 +2029,8 @@ func TestDeleteNodeFromNB(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 						},
 					},
@@ -2044,8 +2043,8 @@ func TestDeleteNodeFromNB(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 						},
 					},
 				},
@@ -2069,8 +2068,8 @@ func TestDeleteNodeFromNB(t *testing.T) {
 								UID:  "test-uid",
 							},
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://123"),
-								InstanceID: ptr.To(123),
+								ProviderID: new("linode://123"),
+								InstanceID: new(123),
 							},
 						},
 					},
@@ -2083,12 +2082,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						ControlPlaneEndpoint: clusterv1.APIEndpoint{Host: "1.2.3.4"},
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 DefaultKonnectivityLBPort,
-									NodeBalancerConfigID: ptr.To(1234),
+									NodeBalancerConfigID: new(1234),
 								},
 							},
 						},
@@ -2117,12 +2116,12 @@ func TestDeleteNodeFromNB(t *testing.T) {
 							Port: 6443,
 						},
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 							AdditionalPorts: []infrav1alpha2.LinodeNBPortConfig{
 								{
 									Port:                 8132,
-									NodeBalancerConfigID: ptr.To(9000),
+									NodeBalancerConfigID: new(9000),
 								},
 							},
 						},
@@ -2132,7 +2131,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 					Items: []infrav1alpha2.LinodeMachine{
 						{
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("linode://12345"),
+								ProviderID: new("linode://12345"),
 							},
 						},
 					},
@@ -2173,8 +2172,8 @@ func TestDeleteNodeFromNB(t *testing.T) {
 							Port: 6443,
 						},
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 						},
 					},
 				},
@@ -2182,7 +2181,7 @@ func TestDeleteNodeFromNB(t *testing.T) {
 					Items: []infrav1alpha2.LinodeMachine{
 						{
 							Spec: infrav1alpha2.LinodeMachineSpec{
-								ProviderID: ptr.To("invalid-provider-id"), // Invalid provider ID - should be skipped
+								ProviderID: new("invalid-provider-id"), // Invalid provider ID - should be skipped
 							},
 						},
 					},
@@ -2209,8 +2208,8 @@ func TestDeleteNodeFromNB(t *testing.T) {
 							Port: 6443,
 						},
 						Network: infrav1alpha2.NetworkSpec{
-							NodeBalancerID:                ptr.To(1234),
-							ApiserverNodeBalancerConfigID: ptr.To(5678),
+							NodeBalancerID:                new(1234),
+							ApiserverNodeBalancerConfigID: new(5678),
 						},
 					},
 				},
@@ -2467,7 +2466,7 @@ func TestGetFirewallID(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *infrav1alpha2.LinodeFirewall, _ ...client.GetOption) error {
-					obj.Spec.FirewallID = ptr.To(123)
+					obj.Spec.FirewallID = new(123)
 					return nil
 				})
 			},
@@ -2498,7 +2497,7 @@ func TestGetFirewallID(t *testing.T) {
 					client.ObjectKey{Name: "test-firewall", Namespace: "default"},
 					gomock.Any(),
 				).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *infrav1alpha2.LinodeFirewall, _ ...client.GetOption) error {
-					obj.Spec.FirewallID = ptr.To(456)
+					obj.Spec.FirewallID = new(456)
 					return nil
 				})
 			},
@@ -2617,8 +2616,8 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:             true,
-							ApiserverNodeBalancerConfigID: ptr.To(222),
-							NodeBalancerID:                ptr.To(111),
+							ApiserverNodeBalancerConfigID: new(222),
+							NodeBalancerID:                new(111),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
 						},
 						VPCRef: &corev1.ObjectReference{
@@ -2689,8 +2688,8 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:             true,
-							ApiserverNodeBalancerConfigID: ptr.To(222),
-							NodeBalancerID:                ptr.To(111),
+							ApiserverNodeBalancerConfigID: new(222),
+							NodeBalancerID:                new(111),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
 						},
 						VPCRef: &corev1.ObjectReference{
@@ -2765,8 +2764,8 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:             true,
-							ApiserverNodeBalancerConfigID: ptr.To(222),
-							NodeBalancerID:                ptr.To(111),
+							ApiserverNodeBalancerConfigID: new(222),
+							NodeBalancerID:                new(111),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
 						},
 						VPCRef: &corev1.ObjectReference{
@@ -2805,8 +2804,8 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							ApiserverNodeBalancerConfigID: ptr.To(222),
-							NodeBalancerID:                ptr.To(111),
+							ApiserverNodeBalancerConfigID: new(222),
+							NodeBalancerID:                new(111),
 						},
 					},
 				},
@@ -2843,7 +2842,7 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							// ApiserverNodeBalancerConfigID intentionally nil
-							NodeBalancerID: ptr.To(111),
+							NodeBalancerID: new(111),
 						},
 					},
 				},
@@ -2875,8 +2874,8 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
 							EnableVPCBackends:             true,
-							ApiserverNodeBalancerConfigID: ptr.To(222),
-							NodeBalancerID:                ptr.To(111),
+							ApiserverNodeBalancerConfigID: new(222),
+							NodeBalancerID:                new(111),
 							NodeBalancerBackendIPv4Range:  "10.0.0.0/24",
 						},
 						VPCRef: &corev1.ObjectReference{
@@ -2937,8 +2936,8 @@ func TestAddNodeToNBWithVPC(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Network: infrav1alpha2.NetworkSpec{
-							ApiserverNodeBalancerConfigID: ptr.To(222),
-							NodeBalancerID:                ptr.To(111),
+							ApiserverNodeBalancerConfigID: new(222),
+							NodeBalancerID:                new(111),
 						},
 					},
 				},

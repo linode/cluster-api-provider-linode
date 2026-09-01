@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -60,15 +59,15 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 			},
 		},
 		LinodeInterfaces: []infrav1alpha2.LinodeInterfaceCreateOptions{{
-			FirewallID:       ptr.To(123),
-			FirewallIDLegacy: ptr.To(123),
+			FirewallID:       new(123),
+			FirewallIDLegacy: new(123),
 			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
-				IPv4: ptr.To(true),
-				IPv6: ptr.To(true),
+				IPv4: new(true),
+				IPv6: new(true),
 			},
 			DefaultRouteLegacy: &infrav1alpha2.InterfaceDefaultRoute{
-				IPv4: ptr.To(true),
-				IPv6: ptr.To(true),
+				IPv4: new(true),
+				IPv6: new(true),
 			},
 			Public: &infrav1alpha2.PublicInterfaceCreateOptions{
 				IPv4: &infrav1alpha2.PublicInterfaceIPv4CreateOptions{Addresses: []infrav1alpha2.PublicInterfaceIPv4AddressCreateOptions{{
@@ -80,17 +79,17 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 				}}},
 			},
 		}, {
-			FirewallID: ptr.To(123),
+			FirewallID: new(123),
 			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
-				IPv4: ptr.To(true),
-				IPv6: ptr.To(true),
+				IPv4: new(true),
+				IPv6: new(true),
 			},
 			VPC: &infrav1alpha2.VPCInterfaceCreateOptions{
 				IPv4: &infrav1alpha2.VPCInterfaceIPv4CreateOptions{Addresses: []infrav1alpha2.VPCInterfaceIPv4AddressCreateOptions{{
 					Address:              "1.2.3.4",
 					Primary:              nil,
-					NAT1To1Address:       ptr.To("true"),
-					NAT1To1AddressLegacy: ptr.To("true"),
+					NAT1To1Address:       new("true"),
+					NAT1To1AddressLegacy: new("true"),
 				}},
 					Ranges: []infrav1alpha2.VPCInterfaceIPv4RangeCreateOptions{{
 						Range: "1.2.3.4/32",
@@ -100,21 +99,21 @@ func TestLinodeMachineSpecToCreateInstanceConfig(t *testing.T) {
 					Ranges: []infrav1alpha2.VPCInterfaceIPv6RangeCreateOptions{{
 						Range: "1234:5678:90ab:cdef:1234:5678:90ab:cdef/64",
 					}},
-					IsPublic:       ptr.To(false),
-					IsPublicLegacy: ptr.To(false),
+					IsPublic:       new(false),
+					IsPublicLegacy: new(false),
 				},
 			},
 		}, {
-			FirewallID: ptr.To(123),
+			FirewallID: new(123),
 			DefaultRoute: &infrav1alpha2.InterfaceDefaultRoute{
-				IPv4: ptr.To(true),
-				IPv6: ptr.To(true),
+				IPv4: new(true),
+				IPv6: new(true),
 			},
 			VLAN: &infrav1alpha2.VLANInterface{
 				VLANLabel:         "test-label",
 				VLANLabelLegacy:   "test-label",
-				IPAMAddress:       ptr.To("address"),
-				IPAMAddressLegacy: ptr.To("address"),
+				IPAMAddress:       new("address"),
+				IPAMAddressLegacy: new("address"),
 			},
 		}},
 		BackupsEnabled: true,
@@ -142,7 +141,7 @@ func TestSetUserData(t *testing.T) {
 				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
 					Bootstrap: v1beta2.Bootstrap{
-						DataSecretName: ptr.To("test-data"),
+						DataSecretName: new("test-data"),
 					},
 					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
@@ -173,7 +172,7 @@ func TestSetUserData(t *testing.T) {
 				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
 					Bootstrap: v1beta2.Bootstrap{
-						DataSecretName: ptr.To("test-data"),
+						DataSecretName: new("test-data"),
 					},
 					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
@@ -264,7 +263,7 @@ func TestSetUserData(t *testing.T) {
 				Spec: v1beta2.MachineSpec{
 					ClusterName: "",
 					Bootstrap: v1beta2.Bootstrap{
-						DataSecretName: ptr.To("test-data"),
+						DataSecretName: new("test-data"),
 					},
 					InfrastructureRef: v1beta2.ContractVersionedObjectReference{},
 				},
@@ -573,7 +572,7 @@ func TestCreateDisks(t *testing.T) {
 			machineScope := &scope.MachineScope{
 				LinodeClient:  mockLinodeClient,
 				Client:        mockK8sClient,
-				LinodeMachine: &infrav1alpha2.LinodeMachine{Spec: infrav1alpha2.LinodeMachineSpec{DataDisks: testcase.instanceDisks, InstanceID: ptr.To(123)}},
+				LinodeMachine: &infrav1alpha2.LinodeMachine{Spec: infrav1alpha2.LinodeMachineSpec{DataDisks: testcase.instanceDisks, InstanceID: new(123)}},
 				LinodeCluster: &infrav1alpha2.LinodeCluster{Spec: infrav1alpha2.LinodeClusterSpec{}},
 			}
 			for device, id := range testcase.instanceDiskIDs {
@@ -1314,7 +1313,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 	}{
 		{
 			name:         "Success - VPCID on machine",
-			machineVPCID: ptr.To(123),
+			machineVPCID: new(123),
 			createConfig: &linodego.InstanceCreateOptions{
 				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
 			},
@@ -1339,7 +1338,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 		},
 		{
 			name:         "Success - VPCID on machine with new network interfaces",
-			machineVPCID: ptr.To(123),
+			machineVPCID: new(123),
 			createConfig: &linodego.InstanceCreateOptions{
 				LinodeInterfaces: []linodego.LinodeInterfaceCreateOptions{},
 			},
@@ -1364,7 +1363,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 		},
 		{
 			name:         "Success - VPCID on cluster",
-			clusterVPCID: ptr.To(123),
+			clusterVPCID: new(123),
 			createConfig: &linodego.InstanceCreateOptions{
 				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
 			},
@@ -1384,7 +1383,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 		},
 		{
 			name:         "Success - VPCID on cluster with new network interfaces",
-			clusterVPCID: ptr.To(123),
+			clusterVPCID: new(123),
 			createConfig: &linodego.InstanceCreateOptions{
 				LinodeInterfaces: []linodego.LinodeInterfaceCreateOptions{},
 			},
@@ -1414,7 +1413,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: subnetID,
@@ -1439,7 +1438,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: subnetID,
@@ -1476,7 +1475,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 		},
 		{
 			name:         "Error - VPCID on machine, VPC not found",
-			machineVPCID: ptr.To(999),
+			machineVPCID: new(999),
 			createConfig: &linodego.InstanceCreateOptions{
 				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
 			},
@@ -1488,7 +1487,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 		},
 		{
 			name:         "Error - VPCID on machine, VPC not found with new network interfaces",
-			machineVPCID: ptr.To(999),
+			machineVPCID: new(999),
 			createConfig: &linodego.InstanceCreateOptions{
 				LinodeInterfaces: []linodego.LinodeInterfaceCreateOptions{},
 			},
@@ -1500,7 +1499,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 		},
 		{
 			name:         "Error - VPCID on cluster, VPC not found",
-			clusterVPCID: ptr.To(999),
+			clusterVPCID: new(999),
 			createConfig: &linodego.InstanceCreateOptions{
 				Interfaces: []linodego.InstanceConfigInterfaceCreateOptions{},
 			},
@@ -1512,7 +1511,7 @@ func TestConfigureVPCInterface(t *testing.T) {
 		},
 		{
 			name:         "Error - VPCID on cluster, VPC not found with new network interfaces",
-			clusterVPCID: ptr.To(999),
+			clusterVPCID: new(999),
 			createConfig: &linodego.InstanceCreateOptions{
 				LinodeInterfaces: []linodego.LinodeInterfaceCreateOptions{},
 			},
@@ -1624,7 +1623,7 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					Namespace: "default", // Default namespace
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -1656,7 +1655,7 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					Namespace: "custom-namespace",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -1683,7 +1682,7 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -1717,7 +1716,7 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -1764,7 +1763,7 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = false
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					return nil
 				})
 			},
@@ -1784,7 +1783,7 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{}
 					return nil
 				})
@@ -1806,7 +1805,7 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -1850,8 +1849,8 @@ func TestGetVPCInterfaceConfig(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
 						IPv6Options: &infrav1alpha2.IPv6CreateOptions{
-							EnableSLAAC:  ptr.To(true),
-							IsPublicIPv6: ptr.To(true),
+							EnableSLAAC:  new(true),
+							IsPublicIPv6: new(true),
 						},
 					},
 				},
@@ -1906,7 +1905,7 @@ func TestGetVPCLinodeInterfaceConfig(t *testing.T) {
 					Namespace: "default", // Default namespace
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -1938,7 +1937,7 @@ func TestGetVPCLinodeInterfaceConfig(t *testing.T) {
 					Namespace: "custom-namespace",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -1965,7 +1964,7 @@ func TestGetVPCLinodeInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -1999,7 +1998,7 @@ func TestGetVPCLinodeInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -2046,7 +2045,7 @@ func TestGetVPCLinodeInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = false
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					return nil
 				})
 			},
@@ -2066,7 +2065,7 @@ func TestGetVPCLinodeInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{}
 					return nil
 				})
@@ -2088,7 +2087,7 @@ func TestGetVPCLinodeInterfaceConfig(t *testing.T) {
 					Namespace: "default",
 				}, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.ObjectKey, vpc *infrav1alpha2.LinodeVPC, _ ...client.GetOption) error {
 					vpc.Status.Ready = true
-					vpc.Spec.VPCID = ptr.To(123)
+					vpc.Spec.VPCID = new(123)
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{
 						{
 							SubnetID: 456,
@@ -2132,8 +2131,8 @@ func TestGetVPCLinodeInterfaceConfig(t *testing.T) {
 					},
 					Spec: infrav1alpha2.LinodeMachineSpec{
 						IPv6Options: &infrav1alpha2.IPv6CreateOptions{
-							EnableSLAAC:  ptr.To(true),
-							IsPublicIPv6: ptr.To(true),
+							EnableSLAAC:  new(true),
+							IsPublicIPv6: new(true),
 						},
 					},
 				},

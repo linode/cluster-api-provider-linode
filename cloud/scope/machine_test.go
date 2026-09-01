@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -303,7 +302,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 				Machine: &clusterv1.Machine{
 					Spec: clusterv1.MachineSpec{
 						Bootstrap: clusterv1.Bootstrap{
-							DataSecretName: ptr.To("test-data"),
+							DataSecretName: new("test-data"),
 						},
 					},
 				},
@@ -344,7 +343,7 @@ func TestMachineScopeGetBootstrapData(t *testing.T) {
 				Machine: &clusterv1.Machine{
 					Spec: clusterv1.MachineSpec{
 						Bootstrap: clusterv1.Bootstrap{
-							DataSecretName: ptr.To("test-data"),
+							DataSecretName: new("test-data"),
 						},
 					},
 				},
