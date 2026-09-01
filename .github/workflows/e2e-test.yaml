@@ -52,32 +52,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      # Expose matched filters as job 'src' output variable
-      paths: ${{ steps.filter.outputs.changes }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
-        with:
-          disable-sudo: true
-          egress-policy: block
-          allowed-endpoints: >
-            api.github.com:443
-            github.com:443
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
-        id: filter
-        with:
-          filters: .github/filters.yml
   e2e-test:
-    needs: changes
     name: ${{ format('{0}-e2e-tests', inputs.e2e-selector) }}
-    if: ${{contains(fromJSON(needs.changes.outputs.paths), 'src')}}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     env:
@@ -129,6 +105,8 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # allowed because the workflow call is gated on manual approval for fork PRs
+          allow-unsafe-pr-checkout: true
 
       - name: Set up Mise
         uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
