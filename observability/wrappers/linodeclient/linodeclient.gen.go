@@ -737,57 +737,6 @@ func (_d LinodeClientWithTracing) GetFirewall(ctx context.Context, firewallID in
 	return _d.LinodeClient.GetFirewall(ctx, firewallID)
 }
 
-// GetFirewallDevice implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) GetFirewallDevice(ctx context.Context, firewallID int, deviceID int) (fp1 *linodego.FirewallDevice, err error) {
-	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetFirewallDevice")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":        ctx,
-				"firewallID": firewallID,
-				"deviceID":   deviceID}, map[string]interface{}{
-				"fp1": fp1,
-				"err": err})
-		}
-
-		if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.GetFirewallDevice(ctx, firewallID, deviceID)
-}
-
-// GetFirewallRules implements _sourceClients.LinodeClient
-func (_d LinodeClientWithTracing) GetFirewallRules(ctx context.Context, firewallID int) (fp1 *linodego.FirewallRules, err error) {
-	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetFirewallRules")
-	defer func() {
-		if _d._spanDecorator != nil {
-			_d._spanDecorator(_span, map[string]interface{}{
-				"ctx":        ctx,
-				"firewallID": firewallID}, map[string]interface{}{
-				"fp1": fp1,
-				"err": err})
-		}
-
-		if err != nil {
-			_span.RecordError(err)
-			_span.SetAttributes(
-				attribute.String("event", "error"),
-				attribute.String("message", err.Error()),
-			)
-		}
-
-		_span.End()
-	}()
-	return _d.LinodeClient.GetFirewallRules(ctx, firewallID)
-}
-
 // GetImage implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) GetImage(ctx context.Context, imageID string) (ip1 *linodego.Image, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.GetImage")
