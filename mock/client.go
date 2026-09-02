@@ -697,6 +697,21 @@ func (mr *MockLinodeClientMockRecorder) ListDomains(ctx, opts any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDomains", reflect.TypeOf((*MockLinodeClient)(nil).ListDomains), ctx, opts)
 }
 
+// ListFirewallDevices mocks base method.
+func (m *MockLinodeClient) ListFirewallDevices(ctx context.Context, firewallID int, options *linodego.ListOptions) ([]linodego.FirewallDevice, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFirewallDevices", ctx, firewallID, options)
+	ret0, _ := ret[0].([]linodego.FirewallDevice)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFirewallDevices indicates an expected call of ListFirewallDevices.
+func (mr *MockLinodeClientMockRecorder) ListFirewallDevices(ctx, firewallID, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFirewallDevices", reflect.TypeOf((*MockLinodeClient)(nil).ListFirewallDevices), ctx, firewallID, options)
+}
+
 // ListFirewalls mocks base method.
 func (m *MockLinodeClient) ListFirewalls(ctx context.Context, options *linodego.ListOptions) ([]linodego.Firewall, error) {
 	m.ctrl.T.Helper()
@@ -2207,6 +2222,21 @@ func (m *MockLinodeFirewallClient) GetFirewallRules(ctx context.Context, firewal
 func (mr *MockLinodeFirewallClientMockRecorder) GetFirewallRules(ctx, firewallID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFirewallRules", reflect.TypeOf((*MockLinodeFirewallClient)(nil).GetFirewallRules), ctx, firewallID)
+}
+
+// ListFirewallDevices mocks base method.
+func (m *MockLinodeFirewallClient) ListFirewallDevices(ctx context.Context, firewallID int, options *linodego.ListOptions) ([]linodego.FirewallDevice, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFirewallDevices", ctx, firewallID, options)
+	ret0, _ := ret[0].([]linodego.FirewallDevice)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFirewallDevices indicates an expected call of ListFirewallDevices.
+func (mr *MockLinodeFirewallClientMockRecorder) ListFirewallDevices(ctx, firewallID, options any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFirewallDevices", reflect.TypeOf((*MockLinodeFirewallClient)(nil).ListFirewallDevices), ctx, firewallID, options)
 }
 
 // ListFirewalls mocks base method.

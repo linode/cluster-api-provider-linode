@@ -2094,7 +2094,17 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
 					FirewallIDs: []int{10}, // Update to firewall ID 10
 				}).Return(nil, nil)
-				mck.LinodeClient.EXPECT().DeleteFirewallDevice(ctx, 5, 200).Return(nil)
+				mck.LinodeClient.EXPECT().ListFirewallDevices(ctx, 5, nil).Return(
+					[]linodego.FirewallDevice{
+						{
+							ID: 999, // The FirewallDevice ID is distinct from the interface ID
+							Entity: linodego.FirewallDeviceEntity{
+								ID:   200,
+								Type: linodego.FirewallDeviceLinodeInterface,
+							},
+						},
+					}, nil)
+				mck.LinodeClient.EXPECT().DeleteFirewallDevice(ctx, 5, 999).Return(nil)
 				mck.LinodeClient.EXPECT().CreateFirewallDevice(ctx, 10, linodego.FirewallDeviceCreateOptions{
 					Type: linodego.FirewallDeviceLinodeInterface,
 					ID:   200,

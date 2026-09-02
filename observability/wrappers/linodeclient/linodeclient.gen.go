@@ -1142,6 +1142,32 @@ func (_d LinodeClientWithTracing) ListDomains(ctx context.Context, opts *linodeg
 	return _d.LinodeClient.ListDomains(ctx, opts)
 }
 
+// ListFirewallDevices implements _sourceClients.LinodeClient
+func (_d LinodeClientWithTracing) ListFirewallDevices(ctx context.Context, firewallID int, options *linodego.ListOptions) (fa1 []linodego.FirewallDevice, err error) {
+	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListFirewallDevices")
+	defer func() {
+		if _d._spanDecorator != nil {
+			_d._spanDecorator(_span, map[string]interface{}{
+				"ctx":        ctx,
+				"firewallID": firewallID,
+				"options":    options}, map[string]interface{}{
+				"fa1": fa1,
+				"err": err})
+		}
+
+		if err != nil {
+			_span.RecordError(err)
+			_span.SetAttributes(
+				attribute.String("event", "error"),
+				attribute.String("message", err.Error()),
+			)
+		}
+
+		_span.End()
+	}()
+	return _d.LinodeClient.ListFirewallDevices(ctx, firewallID, options)
+}
+
 // ListFirewalls implements _sourceClients.LinodeClient
 func (_d LinodeClientWithTracing) ListFirewalls(ctx context.Context, options *linodego.ListOptions) (fa1 []linodego.Firewall, err error) {
 	ctx, _span := tracing.Start(ctx, "_sourceClients.LinodeClient.ListFirewalls")
