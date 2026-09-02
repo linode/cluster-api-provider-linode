@@ -936,7 +936,7 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 	// if this is using Linode Interfaces, update the interface firewalls
 	if desiredFWID != 0 {
 		if err := r.reconcileLinodeInterfaceFirewalls(ctx, logger, machineScope, ifaceFWIDs, desiredFWID); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil //nolint:nilerr // error is logged and requeued, not returned
 		}
 	}
 
