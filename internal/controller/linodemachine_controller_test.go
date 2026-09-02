@@ -2094,8 +2094,10 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
 					FirewallIDs: []int{10}, // Update to firewall ID 10
 				}).Return(nil, nil)
+				mck.LinodeClient.EXPECT().DeleteFirewallDevice(ctx, 5, 200).Return(nil)
 				mck.LinodeClient.EXPECT().CreateFirewallDevice(ctx, 10, linodego.FirewallDeviceCreateOptions{
 					Type: linodego.FirewallDeviceLinodeInterface,
+					ID:   200,
 				}).Return(&linodego.FirewallDevice{}, nil)
 			}),
 			Result("linode interface firewall is updated", func(ctx context.Context, mck Mock) {
