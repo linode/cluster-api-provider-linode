@@ -2064,6 +2064,56 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 			}),
 		),
 		Path(
+			Call("linode interface firewall is updated", func(ctx context.Context, mck Mock) {
+				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2"},
+						Status:  linodego.InstanceRunning,
+						Updated: new(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstance(ctx, 11111, gomock.Any()).Return(
+					&linodego.Instance{
+						ID:      11111,
+						IPv4:    []net.IP{net.IPv4(192, 168, 0, 2)},
+						IPv6:    "fd00::",
+						Tags:    []string{"test-cluster-2", "test-tag"},
+						Status:  linodego.InstanceRunning,
+						Updated: new(time.Now()),
+					}, nil)
+				mck.LinodeClient.EXPECT().ListInterfaces(ctx, 11111, nil).Return(
+					[]linodego.LinodeInterface{
+						{ID: 200}, // Instance currently has a single Linode Interface
+					}, nil)
+				mck.LinodeClient.EXPECT().ListInterfaceFirewalls(ctx, 11111, 200, nil).Return(
+					[]linodego.Firewall{
+						{ID: 5}, // Interface currently has firewall ID 5 attached
+					}, nil)
+				mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
+					FirewallIDs: []int{10}, // Update to firewall ID 10
+				}).Return(nil, nil)
+				mck.LinodeClient.EXPECT().CreateFirewallDevice(ctx, 10, linodego.FirewallDeviceCreateOptions{
+					Type: linodego.FirewallDeviceLinodeInterface,
+				}).Return(&linodego.FirewallDevice{}, nil)
+			}),
+			Result("linode interface firewall is updated", func(ctx context.Context, mck Mock) {
+				linodeMachine.Spec.InterfaceGeneration = linodego.GenerationLinode
+				linodeMachine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
+				linodeMachine.Spec.FirewallID = 10 // Set new firewall ID
+				_, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
+				Expect(err).NotTo(HaveOccurred())
+
+				// Reset the interface fields so subsequent ordered specs aren't affected
+				// by the persisted LinodeMachine changes made in this test.
+				Expect(k8sClient.Get(ctx, machineKey, linodeMachine)).To(Succeed())
+				linodeMachine.Spec.InterfaceGeneration = ""
+				linodeMachine.Spec.LinodeInterfaces = nil
+				Expect(k8sClient.Update(ctx, linodeMachine)).To(Succeed())
+			}),
+		),
+		Path(
 			Call("machine firewall update applied when multiple firewall already attached", func(ctx context.Context, mck Mock) {
 				mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 					&linodego.Instance{
@@ -2218,6 +2268,12 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
 				Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
 				Expect(mck.Logs()).To(ContainSubstring("Failed to fetch LinodeFirewall"))
+
+				// Reset FirewallRef so subsequent ordered specs aren't affected by this
+				// nonexistent reference persisted on the LinodeMachine.
+				Expect(k8sClient.Get(ctx, machineKey, linodeMachine)).To(Succeed())
+				linodeMachine.Spec.FirewallRef = nil
+				Expect(k8sClient.Update(ctx, linodeMachine)).To(Succeed())
 			}),
 		),
 		OneOf(

@@ -839,40 +839,48 @@ func (r *LinodeMachineReconciler) reconcilePlacementGroup(ctx context.Context, l
 	return err
 }
 
-func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
-	var (
-		firewalls  []linodego.Firewall
-		ifaceFWIDs []int
-		err        error
-	)
+// listAttachedFirewallIDs returns the IDs of the firewalls currently attached to the Linode instance,
+// using the appropriate API depending on whether the instance uses Linode Interfaces or not.
+func (r *LinodeMachineReconciler) listAttachedFirewallIDs(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) ([]int, error) {
+	var firewalls []linodego.Firewall
+
 	// Get the instance's firewalls normally if this is not using the new linode interfaces,
 	// otherwise we have to get firewalls per linode interface
 	if machineScope.LinodeMachine.Spec.InterfaceGeneration == linodego.GenerationLinode {
 		interfaces, err := machineScope.LinodeClient.ListInterfaces(ctx, instanceID, nil)
 		if err != nil {
 			logger.Error(err, "Failed to list interfaces for Linode instance")
-			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
+			return nil, err
 		}
 		for _, iface := range interfaces {
 			ifaceFWs, err := machineScope.LinodeClient.ListInterfaceFirewalls(ctx, instanceID, iface.ID, nil)
 			if err != nil {
 				logger.Error(err, "Failed to list firewalls for Linode instance interface", "interfaceID", iface.ID)
-				return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
+				return nil, err
 			}
-			ifaceFWIDs = append(ifaceFWIDs, iface.ID)
 			firewalls = append(firewalls, ifaceFWs...)
 		}
 	} else {
+		var err error
 		firewalls, err = machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
 		if err != nil {
 			logger.Error(err, "Failed to list firewalls for Linode instance")
-			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
+			return nil, err
 		}
 	}
 
 	attachedFWIDs := make([]int, 0, len(firewalls))
 	for _, fw := range firewalls {
 		attachedFWIDs = append(attachedFWIDs, fw.ID)
+	}
+
+	return attachedFWIDs, nil
+}
+
+func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
+	attachedFWIDs, listErr := r.listAttachedFirewallIDs(ctx, logger, machineScope, instanceID)
+	if listErr != nil {
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil //nolint:nilerr // error is logged and requeued, not returned
 	}
 
 	desiredFWID := machineScope.LinodeMachine.Spec.FirewallID
@@ -885,11 +893,17 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 		desiredFWID = fwID
 	}
 
+	// a FirewallID of 0 means no firewall is desired.
+	desiredFWIDs := []int{}
+	if desiredFWID != 0 {
+		desiredFWIDs = []int{desiredFWID}
+	}
+
 	// update the firewallID if needed.
-	if !slices.Equal(attachedFWIDs, []int{desiredFWID}) {
+	if !slices.Equal(attachedFWIDs, desiredFWIDs) {
 		if _, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
 			linodego.InstanceFirewallUpdateOptions{
-				FirewallIDs: []int{desiredFWID},
+				FirewallIDs: desiredFWIDs,
 			},
 		); err != nil {
 			logger.Error(err, "Failed to update firewalls for Linode instance")
@@ -898,7 +912,7 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 	}
 
 	// if this is using Linode Interfaces, update the interface firewalls
-	if len(machineScope.LinodeMachine.Spec.LinodeInterfaces) > 0 && !slices.Contains(ifaceFWIDs, desiredFWID) {
+	if len(machineScope.LinodeMachine.Spec.LinodeInterfaces) > 0 && desiredFWID != 0 && !slices.Contains(attachedFWIDs, desiredFWID) {
 		if _, err := machineScope.LinodeClient.CreateFirewallDevice(ctx, desiredFWID,
 			linodego.FirewallDeviceCreateOptions{
 				Type: linodego.FirewallDeviceLinodeInterface,
