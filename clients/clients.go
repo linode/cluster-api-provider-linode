@@ -120,9 +120,7 @@ type LinodeFirewallClient interface {
 	CreateFirewall(ctx context.Context, opts linodego.FirewallCreateOptions) (*linodego.Firewall, error)
 	GetFirewall(ctx context.Context, firewallID int) (*linodego.Firewall, error)
 	ListFirewalls(ctx context.Context, options *linodego.ListOptions) ([]linodego.Firewall, error)
-	GetFirewallDevice(ctx context.Context, firewallID, deviceID int) (*linodego.FirewallDevice, error)
 	ListFirewallDevices(ctx context.Context, firewallID int, options *linodego.ListOptions) ([]linodego.FirewallDevice, error)
-	GetFirewallRules(ctx context.Context, firewallID int) (*linodego.FirewallRules, error)
 	UpdateFirewall(ctx context.Context, firewallID int, opts linodego.FirewallUpdateOptions) (*linodego.Firewall, error)
 	UpdateFirewallRules(ctx context.Context, firewallID int, rules linodego.FirewallRulesUpdateOptions) (*linodego.FirewallRules, error)
 	DeleteFirewall(ctx context.Context, firewallID int) error
