@@ -3069,16 +3069,18 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 		createOpts, err := newCreateConfig(ctx, &mScope, gzipCompressionFlag, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
-		Expect(createOpts.LinodeInterfaces).To(Equal([]linodego.LinodeInterfaceCreateOptions{
+		Expect(createOpts.LinodeInstanceInterfaces).To(Equal([]linodego.LinodeInstanceInterfaceCreateOptions{
 			{
-				VPC: &linodego.VPCInterfaceCreateOptions{
-					SubnetID: 1,
-					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: new("auto"),
-							Primary:        new(true),
-							Address:        new("auto"),
-						}},
+				LinodeInterfaceCreateOptions: linodego.LinodeInterfaceCreateOptions{
+					VPC: &linodego.VPCInterfaceCreateOptions{
+						SubnetID: 1,
+						IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
+							Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+								NAT1To1Address: new("auto"),
+								Primary:        new(true),
+								Address:        new("auto"),
+							}},
+						},
 					},
 				},
 			},
@@ -3136,16 +3138,18 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 		createOpts, err := newCreateConfig(ctx, &mScope, gzipCompressionFlag, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
-		Expect(createOpts.LinodeInterfaces).To(Equal([]linodego.LinodeInterfaceCreateOptions{
+		Expect(createOpts.LinodeInstanceInterfaces).To(Equal([]linodego.LinodeInstanceInterfaceCreateOptions{
 			{
-				VPC: &linodego.VPCInterfaceCreateOptions{
-					SubnetID: 1,
-					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: new("auto"),
-							Primary:        new(true),
-							Address:        new("auto"),
-						}},
+				LinodeInterfaceCreateOptions: linodego.LinodeInterfaceCreateOptions{
+					VPC: &linodego.VPCInterfaceCreateOptions{
+						SubnetID: 1,
+						IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
+							Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+								NAT1To1Address: new("auto"),
+								Primary:        new(true),
+								Address:        new("auto"),
+							}},
+						},
 					},
 				},
 			},
@@ -3209,16 +3213,18 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 		createOpts, err := newCreateConfig(ctx, &mScope, gzipCompressionFlag, logger)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createOpts).NotTo(BeNil())
-		Expect(createOpts.LinodeInterfaces).To(Equal([]linodego.LinodeInterfaceCreateOptions{
+		Expect(createOpts.LinodeInstanceInterfaces).To(Equal([]linodego.LinodeInstanceInterfaceCreateOptions{
 			{
-				VPC: &linodego.VPCInterfaceCreateOptions{
-					SubnetID: 27,
-					IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
-						Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
-							NAT1To1Address: new("auto"),
-							Primary:        new(true),
-							Address:        new("auto"),
-						}},
+				LinodeInterfaceCreateOptions: linodego.LinodeInterfaceCreateOptions{
+					VPC: &linodego.VPCInterfaceCreateOptions{
+						SubnetID: 27,
+						IPv4: &linodego.VPCInterfaceIPv4CreateOptions{
+							Addresses: []linodego.VPCInterfaceIPv4AddressCreateOptions{{
+								NAT1To1Address: new("auto"),
+								Primary:        new(true),
+								Address:        new("auto"),
+							}},
+						},
 					},
 				},
 			},
@@ -3860,9 +3866,9 @@ var _ = Describe("create machine with direct VPCID with new network interfaces",
 			CreateInstance(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ context.Context, opts linodego.InstanceCreateOptions) (*linodego.Instance, error) {
 				// Verify that the instance is created with the correct VPC interface
-				Expect(opts.LinodeInterfaces).To(HaveLen(1))
-				Expect(opts.LinodeInterfaces[0].VPC).ToNot(BeNil())
-				Expect(opts.LinodeInterfaces[0].VPC.SubnetID).To(Equal(1001))
+				Expect(opts.LinodeInstanceInterfaces).To(HaveLen(1))
+				Expect(opts.LinodeInstanceInterfaces[0].VPC).ToNot(BeNil())
+				Expect(opts.LinodeInstanceInterfaces[0].VPC.SubnetID).To(Equal(1001))
 
 				return &linodego.Instance{
 					ID:     12345,
