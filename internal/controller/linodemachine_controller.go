@@ -839,32 +839,40 @@ func (r *LinodeMachineReconciler) reconcilePlacementGroup(ctx context.Context, l
 	return err
 }
 
-func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
-	var (
-		firewalls []linodego.Firewall
-		err       error
-	)
+// listAttachedFirewallIDsAndIfaceIDs returns the IDs of the firewalls currently attached to the Linode instance
+// (flattened across all interfaces when using Linode Interfaces), and a map of interface ID to the IDs of the
+// firewalls currently attached to that specific interface (only populated when using Linode Interfaces).
+func (r *LinodeMachineReconciler) listAttachedFirewallIDsAndIfaceIDs(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (fwIDs []int, ifaceFWIDs map[int][]int, err error) {
+	var firewalls []linodego.Firewall
+
 	// Get the instance's firewalls normally if this is not using the new linode interfaces,
 	// otherwise we have to get firewalls per linode interface
 	if machineScope.LinodeMachine.Spec.InterfaceGeneration == linodego.GenerationLinode {
-		interfaces, err := machineScope.LinodeClient.ListInterfaces(ctx, instanceID, nil)
+		linodeInterfaces, err := machineScope.LinodeClient.ListInterfaces(ctx, instanceID, nil)
 		if err != nil {
 			logger.Error(err, "Failed to list interfaces for Linode instance")
-			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
+			return nil, nil, err
 		}
-		for _, iface := range interfaces {
+		ifaceFWIDs = make(map[int][]int, len(linodeInterfaces))
+		for _, iface := range linodeInterfaces {
 			ifaceFWs, err := machineScope.LinodeClient.ListInterfaceFirewalls(ctx, instanceID, iface.ID, nil)
 			if err != nil {
 				logger.Error(err, "Failed to list firewalls for Linode instance interface", "interfaceID", iface.ID)
-				return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
+				return nil, nil, err
 			}
+			ifaceFWIDList := make([]int, 0, len(ifaceFWs))
+			for _, fw := range ifaceFWs {
+				ifaceFWIDList = append(ifaceFWIDList, fw.ID)
+			}
+			ifaceFWIDs[iface.ID] = ifaceFWIDList
 			firewalls = append(firewalls, ifaceFWs...)
 		}
 	} else {
+		var err error
 		firewalls, err = machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
 		if err != nil {
 			logger.Error(err, "Failed to list firewalls for Linode instance")
-			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
+			return nil, nil, err
 		}
 	}
 
@@ -873,31 +881,113 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 		attachedFWIDs = append(attachedFWIDs, fw.ID)
 	}
 
-	desiredFWIDs := []int{}
-	if machineScope.LinodeMachine.Spec.FirewallID != 0 {
-		desiredFWIDs = []int{machineScope.LinodeMachine.Spec.FirewallID}
-	} else if machineScope.LinodeMachine.Spec.FirewallRef != nil {
+	return attachedFWIDs, ifaceFWIDs, nil
+}
+
+// findFirewallDeviceID looks up the FirewallDevice ID that associates the given Linode Interface with the given
+// firewall. It returns 0 if no such device exists.
+func (r *LinodeMachineReconciler) findFirewallDeviceID(ctx context.Context, machineScope *scope.MachineScope, firewallID, ifaceID int) (int, error) {
+	devices, err := machineScope.LinodeClient.ListFirewallDevices(ctx, firewallID, nil)
+	if err != nil {
+		return 0, err
+	}
+	for _, device := range devices {
+		if device.Entity.Type == linodego.FirewallDeviceLinodeInterface && device.Entity.ID == ifaceID {
+			return device.ID, nil
+		}
+	}
+	return 0, nil
+}
+
+func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
+	attachedFWIDs, ifaceFWIDs, listErr := r.listAttachedFirewallIDsAndIfaceIDs(ctx, logger, machineScope, instanceID)
+	if listErr != nil {
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil //nolint:nilerr // error is logged and requeued, not returned
+	}
+
+	desiredFWID := machineScope.LinodeMachine.Spec.FirewallID
+	if machineScope.LinodeMachine.Spec.FirewallRef != nil {
 		fwID, err := getFirewallID(ctx, machineScope, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get firewall ID from firewall ref")
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 		}
-		desiredFWIDs = []int{fwID}
+		desiredFWID = fwID
+	}
+
+	// a FirewallID of 0 means no firewall is desired.
+	desiredFWIDs := []int{}
+	if desiredFWID != 0 {
+		desiredFWIDs = []int{desiredFWID}
 	}
 
 	// update the firewallID if needed.
 	if !slices.Equal(attachedFWIDs, desiredFWIDs) {
-		_, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
+		if _, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
 			linodego.InstanceFirewallUpdateOptions{
 				FirewallIDs: desiredFWIDs,
 			},
-		)
-		if err != nil {
+		); err != nil {
 			logger.Error(err, "Failed to update firewalls for Linode instance")
 			return ctrl.Result{}, err
 		}
 	}
+
+	// if this is using Linode Interfaces, update the interface firewalls
+	if desiredFWID != 0 {
+		if err := r.reconcileLinodeInterfaceFirewalls(ctx, logger, machineScope, ifaceFWIDs, desiredFWID); err != nil {
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil //nolint:nilerr // error is logged and requeued, not returned
+		}
+	}
+
 	return ctrl.Result{}, nil
+}
+
+// reconcileLinodeInterfaceFirewalls ensures each Linode Interface is attached to the desired firewall,
+// cleaning up its device from any previously attached firewalls.
+func (r *LinodeMachineReconciler) reconcileLinodeInterfaceFirewalls(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, ifaceFWIDs map[int][]int, desiredFWID int) error {
+	for ifaceID, currentFWIDs := range ifaceFWIDs {
+		if slices.Contains(currentFWIDs, desiredFWID) {
+			// this interface is already attached to the desired firewall
+			continue
+		}
+
+		r.cleanupOldInterfaceFirewallDevices(ctx, logger, machineScope, ifaceID, currentFWIDs)
+
+		// on the desired firewall create the linode_interface device
+		if _, err := machineScope.LinodeClient.CreateFirewallDevice(ctx, desiredFWID,
+			linodego.FirewallDeviceCreateOptions{
+				Type: linodego.FirewallDeviceLinodeInterface,
+				ID:   ifaceID,
+			},
+		); err != nil {
+			logger.Error(err, "Failed to create firewall device for Linode instance", "fwID", desiredFWID, "ifaceID", ifaceID)
+			return err
+		}
+	}
+	return nil
+}
+
+// cleanupOldInterfaceFirewallDevices removes the given interface's firewall device from each of its
+// previously attached firewalls. Failures are logged but not treated as fatal since a stale device left
+// behind does not block progress and will be retried on the next reconcile.
+func (r *LinodeMachineReconciler) cleanupOldInterfaceFirewallDevices(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, ifaceID int, oldFWIDs []int) {
+	for _, fwID := range oldFWIDs {
+		deviceID, err := r.findFirewallDeviceID(ctx, machineScope, fwID, ifaceID)
+		if err != nil {
+			logger.Error(err, "Failed to list firewall devices for Linode firewall", "fwID", fwID, "ifaceID", ifaceID)
+			continue
+		}
+		if deviceID == 0 {
+			// no matching device found for this interface on this firewall; nothing to clean up
+			logger.Info("No matching firewall device for Linode firewall", "fwID", fwID)
+			continue
+		}
+
+		if err := utilerrors.FilterOut(machineScope.LinodeClient.DeleteFirewallDevice(ctx, fwID, deviceID), linodego.IsNotFound); err != nil {
+			logger.Error(err, "Failed to delete firewall device for Linode instance interface", "fwID", fwID, "ifaceID", ifaceID, "deviceID", deviceID)
+		}
+	}
 }
 
 func (r *LinodeMachineReconciler) reconcileDelete(
