@@ -102,7 +102,7 @@ type LinodeMachineReconciler struct {
 
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;watch;list
 // +kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines,verbs=get;watch;list
-// +kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets;,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
