@@ -774,8 +774,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 	// update the tags if needed
 	machineTags := getTags(machineScope, linodeInstance.Tags)
 	if !slices.Equal(machineTags, linodeInstance.Tags) {
-		_, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: machineTags})
-		if err != nil {
+		if _, err = machineScope.LinodeClient.UpdateInstance(ctx, instanceID, linodego.InstanceUpdateOptions{Tags: machineTags}); err != nil {
 			logger.Error(err, "Failed to update tags for Linode instance")
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 		}
@@ -847,7 +846,8 @@ func (r *LinodeMachineReconciler) listAttachedFirewallIDsAndIfaceIDs(ctx context
 
 	// Get the instance's firewalls normally if this is not using the new linode interfaces,
 	// otherwise we have to get firewalls per linode interface
-	if machineScope.LinodeMachine.Spec.InterfaceGeneration == linodego.GenerationLinode {
+	switch machineScope.LinodeMachine.Spec.InterfaceGeneration {
+	case linodego.GenerationLinode:
 		linodeInterfaces, err := machineScope.LinodeClient.ListInterfaces(ctx, instanceID, nil)
 		if err != nil {
 			logger.Error(err, "Failed to list interfaces for Linode instance")
@@ -867,7 +867,7 @@ func (r *LinodeMachineReconciler) listAttachedFirewallIDsAndIfaceIDs(ctx context
 			ifaceFWIDs[iface.ID] = ifaceFWIDList
 			firewalls = append(firewalls, ifaceFWs...)
 		}
-	} else {
+	case linodego.GenerationLegacyConfig:
 		var err error
 		firewalls, err = machineScope.LinodeClient.ListInstanceFirewalls(ctx, instanceID, nil)
 		if err != nil {
@@ -902,6 +902,7 @@ func (r *LinodeMachineReconciler) findFirewallDeviceID(ctx context.Context, mach
 func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope, instanceID int) (ctrl.Result, error) {
 	attachedFWIDs, ifaceFWIDs, listErr := r.listAttachedFirewallIDsAndIfaceIDs(ctx, logger, machineScope, instanceID)
 	if listErr != nil {
+		logger.Error(listErr, "Failed to list attached firewall IDs", "instanceID", instanceID)
 		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil //nolint:nilerr // error is logged and requeued, not returned
 	}
 
@@ -921,22 +922,26 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 		desiredFWIDs = []int{desiredFWID}
 	}
 
-	// update the firewallID if needed.
 	if !slices.Equal(attachedFWIDs, desiredFWIDs) {
-		if _, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
-			linodego.InstanceFirewallUpdateOptions{
-				FirewallIDs: desiredFWIDs,
-			},
-		); err != nil {
-			logger.Error(err, "Failed to update firewalls for Linode instance")
-			return ctrl.Result{}, err
-		}
-	}
-
-	// if this is using Linode Interfaces, update the interface firewalls
-	if desiredFWID != 0 {
-		if err := r.reconcileLinodeInterfaceFirewalls(ctx, logger, machineScope, ifaceFWIDs, desiredFWID); err != nil {
-			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil //nolint:nilerr // error is logged and requeued, not returned
+		switch machineScope.LinodeMachine.Spec.InterfaceGeneration {
+		case linodego.GenerationLegacyConfig:
+			if _, err := machineScope.LinodeClient.UpdateInstanceFirewalls(ctx, instanceID,
+				linodego.InstanceFirewallUpdateOptions{
+					FirewallIDs: desiredFWIDs,
+				},
+			); err != nil {
+				logger.Error(err, "Failed to update firewalls for Linode instance")
+				return ctrl.Result{}, err
+			}
+		case linodego.GenerationLinode:
+			if desiredFWID != 0 {
+				if err := r.reconcileLinodeInterfaceFirewalls(ctx, logger, machineScope, ifaceFWIDs, desiredFWID); err != nil {
+					return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil //nolint:nilerr // error is logged and requeued, not returned
+				}
+			}
+		default:
+			logger.Error(nil, "Invalid interface generation", "instanceID", instanceID)
+			return ctrl.Result{}, nil // do not requeue on invalid configuration
 		}
 	}
 
