@@ -903,7 +903,7 @@ func (r *LinodeMachineReconciler) reconcileFirewallID(ctx context.Context, logge
 	attachedFWIDs, ifaceFWIDs, listErr := r.listAttachedFirewallIDsAndIfaceIDs(ctx, logger, machineScope, instanceID)
 	if listErr != nil {
 		logger.Error(listErr, "Failed to list attached firewall IDs", "instanceID", instanceID)
-		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil //nolint:nilerr // error is logged and requeued, not returned
+		return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerWaitForRunningDelay)}, nil
 	}
 
 	desiredFWID := machineScope.LinodeMachine.Spec.FirewallID

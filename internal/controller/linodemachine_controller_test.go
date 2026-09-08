@@ -2091,9 +2091,6 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					[]linodego.Firewall{
 						{ID: 5}, // Interface currently has firewall ID 5 attached
 					}, nil)
-				mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
-					FirewallIDs: []int{10}, // Update to firewall ID 10
-				}).Return(nil, nil)
 				mck.LinodeClient.EXPECT().ListFirewallDevices(ctx, 5, nil).Return(
 					[]linodego.FirewallDevice{
 						{
@@ -2178,9 +2175,6 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						[]linodego.Firewall{
 							{ID: 5}, // Interface currently has firewall ID 5 attached
 						}, nil)
-					mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
-						FirewallIDs: []int{10}, // Update to firewall ID 10
-					}).Return(nil, nil)
 					mck.LinodeClient.EXPECT().ListFirewallDevices(ctx, 5, nil).Return(
 						nil, &linodego.Error{Code: http.StatusInternalServerError})
 					mck.LinodeClient.EXPECT().CreateFirewallDevice(ctx, 10, linodego.FirewallDeviceCreateOptions{
@@ -2200,9 +2194,6 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						[]linodego.Firewall{
 							{ID: 5}, // Interface currently has firewall ID 5 attached
 						}, nil)
-					mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
-						FirewallIDs: []int{10}, // Update to firewall ID 10
-					}).Return(nil, nil)
 					mck.LinodeClient.EXPECT().ListFirewallDevices(ctx, 5, nil).Return(
 						[]linodego.FirewallDevice{
 							{
@@ -2231,9 +2222,6 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						[]linodego.Firewall{
 							{ID: 5}, // Interface currently has firewall ID 5 attached
 						}, nil)
-					mck.LinodeClient.EXPECT().UpdateInstanceFirewalls(ctx, 11111, linodego.InstanceFirewallUpdateOptions{
-						FirewallIDs: []int{10}, // Update to firewall ID 10
-					}).Return(nil, nil)
 					mck.LinodeClient.EXPECT().ListFirewallDevices(ctx, 5, nil).Return(
 						nil, &linodego.Error{Code: http.StatusInternalServerError})
 					mck.LinodeClient.EXPECT().CreateFirewallDevice(ctx, 10, linodego.FirewallDeviceCreateOptions{
