@@ -31,7 +31,7 @@ jobs:
           mkdir mdbook
           curl -sSL https://github.com/rust-lang/mdbook/releases/download/v0.4.37/mdbook-v0.4.37-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
           curl -sSL  https://github.com/tommilligan/mdbook-admonish/releases/download/v1.15.0/mdbook-admonish-v1.15.0-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
-          echo `pwd`/mdbook >> $GITHUB_PATH
+          echo "$(pwd)/mdbook" >> "$GITHUB_PATH"
       - name: Build with mdBook
         run: |
           cd docs
