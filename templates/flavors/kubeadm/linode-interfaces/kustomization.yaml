@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../default
+patches:
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeCluster
+    patch: |-
+      - op: add
+        path: /spec/network/enableVPCBackends
+        value:
+          true
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/interfaces
+      - op: add
+        path: /spec/template/spec/privateIP
+        value:
+          false
+      - op: add
+        path: /spec/template/spec/vpcRef
+        value:
+          apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+          kind: LinodeVPC
+          name: ${CLUSTER_NAME}
+      - op: add
+        path: /spec/template/spec/linodeInterfaces
+        value:
+          - public:
+              ipv4:
+                addresses:
+                - address: auto
