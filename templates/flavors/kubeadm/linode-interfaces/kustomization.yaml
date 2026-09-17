@@ -24,6 +24,10 @@ patches:
         value:
           false
       - op: add
+        path: /spec/template/spec/interfaceGeneration
+        value:
+          linode
+      - op: add
         path: /spec/template/spec/vpcRef
         value:
           apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
