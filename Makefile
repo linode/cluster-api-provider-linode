@@ -5,7 +5,7 @@ REGISTRY            ?= docker.io/linode
 IMAGE_NAME          ?= cluster-api-provider-linode
 VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 IMAGE_TAGS          ?= $(VERSION)
-WITH_GOFLAGS        ?= "GOFLAGS=\"-ldflags=-X github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)\""
+WITH_GOFLAGS        ?= GOFLAGS=-ldflags=-X=github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)
 KO_DOCKER_REPO      ?= docker.io/linode/cluster-api-provider-linode
 KOCACHE ?= ~/.ko
 ENVTEST_K8S_VERSION := $(shell go list -m -f '{{.Version}}' k8s.io/client-go)
@@ -202,11 +202,11 @@ build: generate fmt vet ## Build manager binary.
 
 .PHONY: ko-build
 ko-build:
-	$(WITH_GO_FLAGS) KO_CACHE=KOCACHE$(KOCACHE) ko build --local -t $(IMAGE_TAGS) --bare github.com/linode/cluster-api-provider-linode/cmd
+	$(WITH_GOFLAGS) KO_CACHE=$(KOCACHE) ko build --local -t $(IMAGE_TAGS) --bare github.com/linode/cluster-api-provider-linode/cmd
 
 .PHONY: ko-publish
 ko-publish:
-	$(WITH_GO_FLAGS) KO_CACHE=KOCACHE$(KOCACHE) KO_DOCKER_REPO=$(KO_DOCKER_REPO) ko build -t $(IMAGE_TAGS) --bare github.com/linode/cluster-api-provider-linode/cmd
+	$(WITH_GOFLAGS) KO_CACHE=$(KOCACHE) KO_DOCKER_REPO=$(KO_DOCKER_REPO) ko build -t $(IMAGE_TAGS) --bare github.com/linode/cluster-api-provider-linode/cmd
 
 ## --------------------------------------
 ## Deployment
