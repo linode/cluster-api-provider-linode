@@ -220,7 +220,7 @@ endif
 
 .PHONY: tilt-cluster
 tilt-cluster:
-	ctltpl apply -f .tilt/ctlptl-config.yaml
+	ctlptl apply -f .tilt/ctlptl-config.yaml
 	tilt up
 
 ## --------------------------------------

@@ -624,6 +624,70 @@ spec:
                                       x-kubernetes-list-type: map
                                   type: object
                               type: object
+                            rdmaVPC:
+                              description: |-
+                                rdmaVPC attaches this interface entry to an RDMA VPC subnet.
+                                Set exactly one of vpc, public, vlan, or rdmaVPC per entry.
+                                firewallID is ignored for rdmaVPC entries — CAPL always injects firewall_id: -1.
+                                NOTE: RDMA VPC interfaces may not currently be available to all users.
+                              properties:
+                                subnetID:
+                                  description: |-
+                                    subnetID is the ID of the RDMA VPC subnet to attach.
+                                    Use when the subnet ID is known upfront. Mutually exclusive with vpcRef/subnetName.
+                                  type: integer
+                                subnetName:
+                                  description: |-
+                                    subnetName is the label of the subnet within the referenced LinodeVPC.
+                                    Required when vpcRef is set.
+                                  type: string
+                                vpcRef:
+                                  description: |-
+                                    vpcRef is a reference to a LinodeVPC resource with vpcType=rdma managed by CAPL.
+                                    CAPL resolves the subnet ID at reconcile time using subnetName.
+                                    Mutually exclusive with subnetID.
+                                  properties:
+                                    apiVersion:
+                                      description: API version of the referent.
+                                      type: string
+                                    fieldPath:
+                                      description: |-
+                                        If referring to a piece of an object instead of an entire object, this string
+                                        should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                                        For example, if the object reference is to a container within a pod, this would take on a value like:
+                                        "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                                        the event) or if no container name is specified "spec.containers[2]" (container with
+                                        index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                                        referencing a part of an object.
+                                      type: string
+                                    kind:
+                                      description: |-
+                                        Kind of the referent.
+                                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                                      type: string
+                                    name:
+                                      description: |-
+                                        Name of the referent.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                      type: string
+                                    namespace:
+                                      description: |-
+                                        Namespace of the referent.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                                      type: string
+                                    resourceVersion:
+                                      description: |-
+                                        Specific resourceVersion to which this reference is made, if any.
+                                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                                      type: string
+                                    uid:
+                                      description: |-
+                                        UID of the referent.
+                                        More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                                      type: string
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                              type: object
                             vlan:
                               description: vlan is the VLAN interface configuration
                                 for the interface.
@@ -878,6 +942,82 @@ spec:
                         description: providerID is the unique identifier as specified
                           by the cloud provider.
                         type: string
+                      rdmaVPC:
+                        description: |-
+                          rdmaVPC attaches one or more RDMA VPC subnets to this instance.
+                          Each subnet produces a separate rdma_vpc interface. Requires interfaceGeneration=linode.
+                          Exactly one of vpcID or vpcRef must be set, and exactly one of subnetIDs or subnetNames must be set.
+                        properties:
+                          subnetIDs:
+                            description: |-
+                              subnetIDs is a list of RDMA subnet IDs to attach. Used with vpcID.
+                              Each entry creates a separate rdma_vpc interface on the instance.
+                            items:
+                              type: integer
+                            type: array
+                            x-kubernetes-list-type: set
+                          subnetNames:
+                            description: |-
+                              subnetNames is a list of subnet labels to select from the referenced LinodeVPC. Used with vpcRef.
+                              Each entry creates a separate rdma_vpc interface on the instance.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: set
+                          vpcID:
+                            description: |-
+                              vpcID is the ID of an existing RDMA VPC in Linode.
+                              Mutually exclusive with vpcRef; use subnetIDs when this is set.
+                            type: integer
+                          vpcRef:
+                            description: |-
+                              vpcRef is a reference to a LinodeVPC resource with vpcType=rdma managed by CAPL.
+                              Mutually exclusive with vpcID; use subnetNames when this is set.
+                            properties:
+                              apiVersion:
+                                description: API version of the referent.
+                                type: string
+                              fieldPath:
+                                description: |-
+                                  If referring to a piece of an object instead of an entire object, this string
+                                  should contain a valid JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                                  For example, if the object reference is to a container within a pod, this would take on a value like:
+                                  "spec.containers{name}" (where "name" refers to the name of the container that triggered
+                                  the event) or if no container name is specified "spec.containers[2]" (container with
+                                  index 2 in this pod). This syntax is chosen only to have some well-defined way of
+                                  referencing a part of an object.
+                                type: string
+                              kind:
+                                description: |-
+                                  Kind of the referent.
+                                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+                                type: string
+                              name:
+                                description: |-
+                                  Name of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+                                type: string
+                              resourceVersion:
+                                description: |-
+                                  Specific resourceVersion to which this reference is made, if any.
+                                  More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency
+                                type: string
+                              uid:
+                                description: |-
+                                  UID of the referent.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                        type: object
+                        x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
                       region:
                         description: region is the Linode region to create the instance
                           in.

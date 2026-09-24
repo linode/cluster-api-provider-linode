@@ -1,0 +1,97 @@
+---
+# Pool layout:
+#   ${CLUSTER_NAME}-0  non-GPU workers   (base template, renamed by kustomization.yaml)
+#   ${CLUSTER_NAME}-1  GPU/RDMA workers 
+#
+# RDMA subnet IDs are resolved at reconcile time from the LinodeVPC created by rdmaVPC.yaml,
+# so no subnet IDs need to be known before applying.
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-1
+spec:
+  template:
+    spec:
+      firewallRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+        kind: LinodeFirewall
+        name: ${CLUSTER_NAME}
+      image: ${LINODE_OS:="linode/ubuntu24.04"}
+      interfaceGeneration: linode
+      # The regular cluster VPC interface is injected by configureVPCInterface at reconcile
+      # time using the cluster's vpcRef + SubnetName — no subnet ID needed here.
+      linodeInterfaces:
+        - rdmaVPC:
+            vpcRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ${CLUSTER_NAME}-rdma
+            subnetName: gpu-0
+        - rdmaVPC:
+            vpcRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ${CLUSTER_NAME}-rdma
+            subnetName: gpu-1
+        - rdmaVPC:
+            vpcRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ${CLUSTER_NAME}-rdma
+            subnetName: gpu-2
+        - rdmaVPC:
+            vpcRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ${CLUSTER_NAME}-rdma
+            subnetName: gpu-3
+        - rdmaVPC:
+            vpcRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ${CLUSTER_NAME}-rdma
+            subnetName: gpu-4
+        - rdmaVPC:
+            vpcRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ${CLUSTER_NAME}-rdma
+            subnetName: gpu-5
+        - rdmaVPC:
+            vpcRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ${CLUSTER_NAME}-rdma
+            subnetName: gpu-6
+        - rdmaVPC:
+            vpcRef:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeVPC
+              name: ${CLUSTER_NAME}-rdma
+            subnetName: gpu-7
+      region: ${LINODE_REGION}
+      type: ${RDMA_MACHINE_TYPE:=g3-gpu-rtxpro6000-blackwell-rdma-8}
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: MachineDeployment
+metadata:
+  name: ${CLUSTER_NAME}-1
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${RDMA_WORKER_MACHINE_COUNT:=1}
+  selector:
+    matchLabels: null
+  template:
+    spec:
+      bootstrap:
+        configRef:
+          apiGroup: bootstrap.cluster.x-k8s.io
+          kind: KubeadmConfigTemplate
+          name: ${CLUSTER_NAME}
+      clusterName: ${CLUSTER_NAME}
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: LinodeMachineTemplate
+        name: ${CLUSTER_NAME}-1
+      version: ${KUBERNETES_VERSION}
