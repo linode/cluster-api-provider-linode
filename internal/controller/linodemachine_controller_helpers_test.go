@@ -2826,7 +2826,10 @@ func TestConfigureFirewallWithRDMAVPCInterface(t *testing.T) {
 
 	mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: "test-firewall", Namespace: "default"}, gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-			linodeFirewall := obj.(*infrav1alpha2.LinodeFirewall)
+			linodeFirewall, ok := obj.(*infrav1alpha2.LinodeFirewall)
+			if !ok {
+				return fmt.Errorf("expected *LinodeFirewall, got %T", obj)
+			}
 			linodeFirewall.Spec.FirewallID = &firewallID
 			return nil
 		})
@@ -2910,7 +2913,10 @@ func TestResolveLinodeInterfaceRDMASubnetRefs(t *testing.T) {
 	// k8s Get is made.
 	mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: "rdma-vpc", Namespace: "default"}, gomock.Any()).
 		DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object, _ ...client.GetOption) error {
-			vpc := obj.(*infrav1alpha2.LinodeVPC)
+			vpc, ok := obj.(*infrav1alpha2.LinodeVPC)
+			if !ok {
+				return fmt.Errorf("expected *LinodeVPC, got %T", obj)
+			}
 			vpc.Status.Ready = true
 			vpc.Spec.VPCID = new(200)
 			vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{

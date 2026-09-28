@@ -202,7 +202,6 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 
 // configureVPCInterface handles all VPC configuration scenarios and adds the appropriate interface
 func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
-
 	// Check if there are existing Linode instance interfaces in the createConfig and skip adding a new one if necessary
 	if len(createConfig.LinodeInstanceInterfaces) > 0 {
 		for _, iface := range createConfig.LinodeInstanceInterfaces {
@@ -1627,7 +1626,7 @@ func resolveLinodeInterfaceRDMASubnetRefs(ctx context.Context, machineScope *sco
 	}
 	vpcCache := map[string]*cachedVPC{}
 
-	for i, iface := range resolved {
+	for idx, iface := range resolved {
 		if iface.RDMAVPC == nil || iface.RDMAVPC.VPCRef == nil {
 			continue
 		}
@@ -1640,7 +1639,7 @@ func resolveLinodeInterfaceRDMASubnetRefs(ctx context.Context, machineScope *sco
 			vpcCache[cacheKey] = entry
 		}
 		if entry.err != nil {
-			return nil, fmt.Errorf("linodeInterfaces[%d].rdmaVPC: failed to get VPC from ref: %w", i, entry.err)
+			return nil, fmt.Errorf("linodeInterfaces[%d].rdmaVPC: failed to get VPC from ref: %w", idx, entry.err)
 		}
 
 		subnetsByLabel := make(map[string]int, len(entry.vpc.Spec.Subnets))
@@ -1650,14 +1649,14 @@ func resolveLinodeInterfaceRDMASubnetRefs(ctx context.Context, machineScope *sco
 
 		subnetID, ok := subnetsByLabel[iface.RDMAVPC.SubnetName]
 		if !ok {
-			return nil, fmt.Errorf("linodeInterfaces[%d].rdmaVPC: subnet %q not found in VPC %q", i, iface.RDMAVPC.SubnetName, iface.RDMAVPC.VPCRef.Name)
+			return nil, fmt.Errorf("linodeInterfaces[%d].rdmaVPC: subnet %q not found in VPC %q", idx, iface.RDMAVPC.SubnetName, iface.RDMAVPC.VPCRef.Name)
 		}
 
 		rdmaSpec := *iface.RDMAVPC
 		rdmaSpec.SubnetID = &subnetID
 		rdmaSpec.VPCRef = nil
 		rdmaSpec.SubnetName = ""
-		resolved[i].RDMAVPC = &rdmaSpec
+		resolved[idx].RDMAVPC = &rdmaSpec
 	}
 
 	return resolved, nil
@@ -1711,7 +1710,6 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 		} else {
 			createConfig.LinodeInstanceInterfaces[i].FirewallID = new(fwID)
 		}
-
 	}
 
 	return nil
