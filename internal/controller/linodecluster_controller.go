@@ -389,7 +389,11 @@ func (r *LinodeClusterReconciler) reconcilePreflightLinodeVPCCheck(ctx context.C
 		},
 	}
 	if err := clusterScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
-		logger.Error(err, "Failed to fetch LinodeVPC")
+		if !apierrors.IsNotFound(err) {
+			logger.Error(err, "Failed to fetch LinodeVPC")
+		} else {
+			logger.Info("LinodeVPC not yet available", "vpc", client.ObjectKeyFromObject(&linodeVPC))
+		}
 		if reconciler.HasStaleCondition(clusterScope.LinodeCluster.GetCondition(ConditionPreflightLinodeVPCReady),
 			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultClusterControllerReconcileTimeout)) {
 			clusterScope.LinodeCluster.SetCondition(metav1.Condition{

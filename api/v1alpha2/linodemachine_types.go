@@ -176,13 +176,6 @@ type LinodeMachineSpec struct {
 	// +optional
 	VPCID *int `json:"vpcID,omitempty"`
 
-	// rdmaVPC attaches one or more RDMA VPC subnets to this instance.
-	// Each subnet produces a separate rdma_vpc interface. Requires interfaceGeneration=linode.
-	// Exactly one of vpcID or vpcRef must be set, and exactly one of subnetIDs or subnetNames must be set.
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
-	// +optional
-	RDMAVPC *RDMAVPCSpec `json:"rdmaVPC,omitempty"`
-
 	// ipv6Options defines the IPv6 options for the instance.
 	// If not specified, IPv6 ranges won't be allocated to instance.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
@@ -204,32 +197,6 @@ type LinodeMachineSpec struct {
 	// +kubebuilder:validation:Enum=legacy_config;linode
 	// +kubebuilder:default=legacy_config
 	InterfaceGeneration linodego.InterfaceGeneration `json:"interfaceGeneration,omitempty"`
-}
-
-// RDMAVPCSpec defines an RDMA VPC attachment for a LinodeMachine.
-// Each subnet in SubnetIDs or SubnetNames produces a separate rdma_vpc interface on the instance.
-type RDMAVPCSpec struct {
-	// vpcID is the ID of an existing RDMA VPC in Linode.
-	// Mutually exclusive with vpcRef; use subnetIDs when this is set.
-	// +optional
-	VPCID *int `json:"vpcID,omitempty"`
-
-	// vpcRef is a reference to a LinodeVPC resource with vpcType=rdma managed by CAPL.
-	// Mutually exclusive with vpcID; use subnetNames when this is set.
-	// +optional
-	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
-
-	// subnetIDs is a list of RDMA subnet IDs to attach. Used with vpcID.
-	// Each entry creates a separate rdma_vpc interface on the instance.
-	// +optional
-	// +listType=set
-	SubnetIDs []int `json:"subnetIDs,omitempty"`
-
-	// subnetNames is a list of subnet labels to select from the referenced LinodeVPC. Used with vpcRef.
-	// Each entry creates a separate rdma_vpc interface on the instance.
-	// +optional
-	// +listType=set
-	SubnetNames []string `json:"subnetNames,omitempty"`
 }
 
 // IPv6CreateOptions defines the IPv6 options for the instance.
@@ -384,8 +351,8 @@ type LinodeInterfaceCreateOptions struct {
 	VLAN *VLANInterface `json:"vlan,omitempty"`
 
 	// rdmaVPC attaches this interface entry to an RDMA VPC subnet.
-	// Set exactly one of vpc, public, vlan, or rdmaVPC per entry.
-	// firewallID is ignored for rdmaVPC entries — CAPL always injects firewall_id: -1.
+	// Mutually exclusive with vpc, public and vlan.
+	// firewallID is ignored for rdmaVPC entries
 	// NOTE: RDMA VPC interfaces may not currently be available to all users.
 	// +optional
 	RDMAVPC *RDMAVPCInterfaceSpec `json:"rdmaVPC,omitempty"`

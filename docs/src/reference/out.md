@@ -621,7 +621,7 @@ _Appears in:_
 | `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  | Optional: \{\} <br /> |
-| `rdmaVPC` _[RDMAVPCInterfaceSpec](#rdmavpcinterfacespec)_ | rdmaVPC attaches this interface entry to an RDMA VPC subnet.<br />Set exactly one of vpc, public, vlan, or rdmaVPC per entry.<br />firewallID is ignored for rdmaVPC entries — CAPL always injects firewall_id: -1.<br />NOTE: RDMA VPC interfaces may not currently be available to all users. |  | Optional: \{\} <br /> |
+| `rdmaVPC` _[RDMAVPCInterfaceSpec](#rdmavpcinterfacespec)_ | rdmaVPC attaches this interface entry to an RDMA VPC subnet.<br />Mutually exclusive with vpc, public and vlan.<br />firewallID is ignored for rdmaVPC entries<br />NOTE: RDMA VPC interfaces may not currently be available to all users. |  | Optional: \{\} <br /> |
 
 
 #### LinodeMachine
@@ -706,7 +706,6 @@ _Appears in:_
 | `firewallRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | firewallRef is a reference to a firewall object. This makes the linode use the specified firewall. |  | Optional: \{\} <br /> |
 | `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a LinodeVPC resource. If specified, this takes precedence over<br />the cluster-level VPC configuration for multi-region support. |  | Optional: \{\} <br /> |
 | `vpcID` _integer_ | vpcID is the ID of an existing VPC in Linode. This allows using a VPC that is not managed by CAPL. |  | Optional: \{\} <br /> |
-| `rdmaVPC` _[RDMAVPCSpec](#rdmavpcspec)_ | rdmaVPC attaches one or more RDMA VPC subnets to this instance.<br />Each subnet produces a separate rdma_vpc interface. Requires interfaceGeneration=linode.<br />Exactly one of vpcID or vpcRef must be set, and exactly one of subnetIDs or subnetNames must be set. |  | Optional: \{\} <br /> |
 | `ipv6Options` _[IPv6CreateOptions](#ipv6createoptions)_ | ipv6Options defines the IPv6 options for the instance.<br />If not specified, IPv6 ranges won't be allocated to instance. |  | Optional: \{\} <br /> |
 | `networkHelper` _boolean_ | networkHelper is an option usually enabled on account level. It helps configure networking automatically for instances.<br />You can use this to enable/disable the network helper for a specific instance.<br />For more information, see https://techdocs.akamai.com/cloud-computing/docs/automatically-configure-networking<br />Defaults to true. |  | Optional: \{\} <br /> |
 | `interfaceGeneration` _[InterfaceGeneration](#interfacegeneration)_ | interfaceGeneration is the generation of the interface to use for the cluster's<br />nodes in interface / linodeInterface are not specified for a LinodeMachine.<br />If not set, defaults to "legacy_config". | legacy_config | Enum: [legacy_config linode] <br />Optional: \{\} <br /> |
@@ -1387,26 +1386,6 @@ _Appears in:_
 | `subnetID` _integer_ | subnetID is the ID of the RDMA VPC subnet to attach.<br />Use when the subnet ID is known upfront. Mutually exclusive with vpcRef/subnetName. |  | Optional: \{\} <br /> |
 | `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a LinodeVPC resource with vpcType=rdma managed by CAPL.<br />CAPL resolves the subnet ID at reconcile time using subnetName.<br />Mutually exclusive with subnetID. |  | Optional: \{\} <br /> |
 | `subnetName` _string_ | subnetName is the label of the subnet within the referenced LinodeVPC.<br />Required when vpcRef is set. |  | Optional: \{\} <br /> |
-
-
-#### RDMAVPCSpec
-
-
-
-RDMAVPCSpec defines an RDMA VPC attachment for a LinodeMachine.
-Each subnet in SubnetIDs or SubnetNames produces a separate rdma_vpc interface on the instance.
-
-
-
-_Appears in:_
-- [LinodeMachineSpec](#linodemachinespec)
-
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `vpcID` _integer_ | vpcID is the ID of an existing RDMA VPC in Linode.<br />Mutually exclusive with vpcRef; use subnetIDs when this is set. |  | Optional: \{\} <br /> |
-| `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a LinodeVPC resource with vpcType=rdma managed by CAPL.<br />Mutually exclusive with vpcID; use subnetNames when this is set. |  | Optional: \{\} <br /> |
-| `subnetIDs` _integer array_ | subnetIDs is a list of RDMA subnet IDs to attach. Used with vpcID.<br />Each entry creates a separate rdma_vpc interface on the instance. |  | Optional: \{\} <br /> |
-| `subnetNames` _string array_ | subnetNames is a list of subnet labels to select from the referenced LinodeVPC. Used with vpcRef.<br />Each entry creates a separate rdma_vpc interface on the instance. |  | Optional: \{\} <br /> |
 
 
 #### VLANInterface
