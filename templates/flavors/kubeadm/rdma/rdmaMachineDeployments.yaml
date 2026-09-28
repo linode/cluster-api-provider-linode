@@ -1,7 +1,7 @@
 ---
 # Pool layout:
 #   ${CLUSTER_NAME}-0  non-GPU workers   (base template, renamed by kustomization.yaml)
-#   ${CLUSTER_NAME}-1  GPU/RDMA workers 
+#   ${CLUSTER_NAME}-1  GPU/RDMA workers
 #
 # RDMA subnet IDs are resolved at reconcile time from the LinodeVPC created by rdmaVPC.yaml,
 # so no subnet IDs need to be known before applying.
