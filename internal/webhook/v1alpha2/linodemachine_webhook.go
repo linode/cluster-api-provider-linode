@@ -55,6 +55,14 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, machine *in
 	spec := machine.Spec
 	linodemachinelog.Info("validate create", "name", machine.Name)
 
+	// Reject invalid names before building a client or making any Linode API calls,
+	// so a bad naming template can't cause a retry storm against the API.
+	if err := validateLabelLength(machine.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		return nil, apierrors.NewInvalid(
+			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeMachine"},
+			machine.Name, field.ErrorList{err})
+	}
+
 	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
 		machine.Name, machine.GetNamespace(), linodemachinelog)
 	if err != nil {
@@ -62,9 +70,6 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, machine *in
 	}
 
 	var errs field.ErrorList
-	if err := validateLabelLength(machine.GetName(), field.NewPath("metadata").Child("name")); err != nil {
-		errs = append(errs, err)
-	}
 	if err := r.validateLinodeMachineSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}

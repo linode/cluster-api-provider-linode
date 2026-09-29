@@ -52,6 +52,13 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 	spec := cluster.Spec
 	linodeclusterlog.Info("validate create", "name", cluster.Name)
 
+	// Reject invalid names before building a client or making any Linode API calls.
+	if err := validateLabelLength(cluster.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		return nil, apierrors.NewInvalid(
+			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeCluster"},
+			cluster.Name, field.ErrorList{err})
+	}
+
 	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
 		cluster.Name, cluster.GetNamespace(), linodeclusterlog)
 	if err != nil {
@@ -60,9 +67,6 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
-	if err := validateLabelLength(cluster.GetName(), field.NewPath("metadata").Child("name")); err != nil {
-		errs = append(errs, err)
-	}
 	if err := r.validateLinodeClusterSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}

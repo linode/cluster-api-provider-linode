@@ -59,6 +59,13 @@ type LinodePlacementGroupCustomValidator struct {
 func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context, pg *infrav1alpha2.LinodePlacementGroup) (admission.Warnings, error) {
 	linodeplacementgrouplog.Info("Validation for LinodePlacementGroup upon creation", "name", pg.GetName())
 
+	// Reject invalid names before building a client or making any Linode API calls.
+	if err := validateLabelLength(pg.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		return nil, apierrors.NewInvalid(
+			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodePlacementGroup"},
+			pg.Name, field.ErrorList{err})
+	}
+
 	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, v.Client, pg.Spec.CredentialsRef,
 		pg.Name, pg.GetNamespace(), linodeplacementgrouplog)
 	if err != nil {
@@ -66,9 +73,6 @@ func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context
 	}
 
 	var errs field.ErrorList
-	if err := validateLabelLength(pg.GetName(), field.NewPath("metadata").Child("name")); err != nil {
-		errs = append(errs, err)
-	}
 	if err := v.validateLinodePlacementGroupSpec(ctx, linodeClient, pg.Spec, pg.Name, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
