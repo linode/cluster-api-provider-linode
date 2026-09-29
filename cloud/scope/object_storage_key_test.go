@@ -155,7 +155,7 @@ func TestNewObjectStorageKeyScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewObjectStorageKeyScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewObjectStorageKeyScope(&mock.MockLinodeClient{}, testcase.args.params)
 
 			if testcase.expectedErr != nil {
 				assert.ErrorContains(t, err, testcase.expectedErr.Error())
@@ -215,8 +215,7 @@ func TestObjectStorageKeyAddFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			keyScope, err := NewObjectStorageKeyScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				ObjectStorageKeyScopeParams{
 					Client: mockK8sClient,
 					Key:    testcase.Key,
@@ -686,7 +685,7 @@ func TestObjectStorageKeySetCredentialRefTokenForLinodeClients(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			kscope, err := NewObjectStorageKeyScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			kscope, err := NewObjectStorageKeyScope(&mock.MockLinodeClient{}, testcase.args.params)
 
 			if err != nil {
 				t.Errorf("NewObjectStorageKeyScope() error = %v", err)

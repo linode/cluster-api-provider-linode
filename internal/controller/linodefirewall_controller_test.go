@@ -366,8 +366,8 @@ var _ = Describe("pause handling", Label("firewalls", "pause"), func() {
 		Expect(k8sClient.Create(ctx, firewall)).To(Succeed())
 
 		reconciler := &LinodeFirewallReconciler{
-			Client:             k8sClient,
-			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
+			Client:       k8sClient,
+			LinodeClient: &mock.MockLinodeClient{},
 		}
 
 		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(firewall)})

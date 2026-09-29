@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
 	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
@@ -53,6 +54,7 @@ import (
 // LinodePlacementGroupReconciler reconciles a LinodePlacementGroup object
 type LinodePlacementGroupReconciler struct {
 	client.Client
+	LinodeClient       clients.LinodeClient
 	Recorder           events.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
@@ -104,8 +106,7 @@ func (r *LinodePlacementGroupReconciler) Reconcile(ctx context.Context, req ctrl
 	}
 
 	pgScope, err := scope.NewPlacementGroupScope(
-		ctx,
-		r.LinodeClientConfig,
+		r.LinodeClient,
 		scope.PlacementGroupScopeParams{
 			Client:               r.TracedClient(),
 			LinodePlacementGroup: linodeplacementgroup,

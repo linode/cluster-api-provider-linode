@@ -141,7 +141,7 @@ func TestNewVPCScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewVPCScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewVPCScope(&mock.MockLinodeClient{}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -205,8 +205,7 @@ func TestVPCScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				VPCScopeParams{
 					Client:    mockK8sClient,
 					LinodeVPC: testcase.LinodeVPC,
@@ -299,8 +298,7 @@ func TestVPCAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				VPCScopeParams{
 					Client:    mockK8sClient,
 					LinodeVPC: testcase.LinodeVPC,
@@ -389,8 +387,7 @@ func TestVPCRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				VPCScopeParams{
 					Client:    mockK8sClient,
 					LinodeVPC: testcase.LinodeVPC,
@@ -476,8 +473,7 @@ func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				VPCScopeParams{
 					Client:    mockK8sClient,
 					LinodeVPC: testcase.LinodeVPC,

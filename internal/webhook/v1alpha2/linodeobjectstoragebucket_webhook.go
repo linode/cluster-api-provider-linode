@@ -37,9 +37,12 @@ import (
 var linodeobjectstoragebucketlog = logf.Log.WithName("linodeobjectstoragebucket-resource")
 
 // SetupLinodeObjectStorageBucketWebhookWithManager registers the webhook for LinodeObjectStorageBucket in the manager.
-func SetupLinodeObjectStorageBucketWebhookWithManager(mgr ctrl.Manager) error {
+func SetupLinodeObjectStorageBucketWebhookWithManager(mgr ctrl.Manager, linodeClient clients.LinodeClient) error {
 	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeObjectStorageBucket{}).
-		WithValidator(&LinodeObjectStorageBucketCustomValidator{Client: mgr.GetClient()}).
+		WithValidator(&LinodeObjectStorageBucketCustomValidator{
+			Client:       mgr.GetClient(),
+			LinodeClient: linodeClient,
+		}).
 		Complete()
 }
 
@@ -47,7 +50,8 @@ func SetupLinodeObjectStorageBucketWebhookWithManager(mgr ctrl.Manager) error {
 
 // LinodeObjectStorageBucketCustomValidator struct is responsible for validating the LinodeObjectStorageBucket resource
 type LinodeObjectStorageBucketCustomValidator struct {
-	Client client.Client
+	Client       client.Client
+	LinodeClient clients.LinodeClient
 }
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageBucket.
@@ -60,14 +64,8 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateCreate(ctx context.Co
 			bucket.Name, field.ErrorList{err})
 	}
 
-	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, v.Client, bucket.Spec.CredentialsRef,
-		bucket.Name, bucket.GetNamespace(), linodemachinelog)
-	if err != nil {
-		return admission.Warnings{}, err
-	}
-
 	var errs field.ErrorList
-	if err := v.validateLinodeObjectStorageBucketSpec(ctx, bucket, linodeClient, skipAPIValidation); err != nil {
+	if err := v.validateLinodeObjectStorageBucketSpec(ctx, bucket, v.LinodeClient); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -94,11 +92,8 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateDelete(_ context.Cont
 	return nil, nil
 }
 
-func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucketSpec(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, linodeClient clients.LinodeClient, skipAPIValidation bool) field.ErrorList {
+func (v *LinodeObjectStorageBucketCustomValidator) validateLinodeObjectStorageBucketSpec(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket, linodeClient clients.LinodeClient) field.ErrorList {
 	var errs field.ErrorList
-	if skipAPIValidation {
-		return errs
-	}
 	if err := validateRegion(ctx, linodeClient, bucket.Spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityObjectStorage); err != nil {
 		errs = append(errs, err)
 	}

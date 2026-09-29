@@ -63,7 +63,7 @@ func TestValidateLinodeObjectStorageBucketSpec(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "iad"
-					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, true))
+					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 			Path(
@@ -75,7 +75,7 @@ func TestValidateLinodeObjectStorageBucketSpec(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-iad"
-					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, true))
+					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 			Path(
@@ -87,7 +87,7 @@ func TestValidateLinodeObjectStorageBucketSpec(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-iad-1"
-					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, true))
+					assert.Nil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 		),
@@ -99,7 +99,7 @@ func TestValidateLinodeObjectStorageBucketSpec(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					bucket := bucket
 					bucket.Spec.Region = "us-1"
-					assert.NotNil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, false))
+					assert.NotNil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 			Path(
@@ -109,7 +109,7 @@ func TestValidateLinodeObjectStorageBucketSpec(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					assert.NotNil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient, false))
+					assert.NotNil(t, objvalidator.validateLinodeObjectStorageBucketSpec(ctx, &bucket, mck.LinodeClient))
 				}),
 			),
 		),

@@ -68,13 +68,17 @@ func mustParseIPSet(cidrs ...string) *netipx.IPSet {
 var linodevpclog = logf.Log.WithName("linodevpc-resource")
 
 type linodeVPCValidator struct {
-	Client client.Client
+	Client       client.Client
+	LinodeClient clients.LinodeClient
 }
 
 // SetupLinodeVPCWebhookWithManager will setup the manager to manage the webhooks
-func SetupLinodeVPCWebhookWithManager(mgr ctrl.Manager) error {
+func SetupLinodeVPCWebhookWithManager(mgr ctrl.Manager, linodeClient clients.LinodeClient) error {
 	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeVPC{}).
-		WithValidator(&linodeVPCValidator{Client: mgr.GetClient()}).
+		WithValidator(&linodeVPCValidator{
+			Client:       mgr.GetClient(),
+			LinodeClient: linodeClient,
+		}).
 		Complete()
 }
 
@@ -92,15 +96,9 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, vpc *infrav1alp
 			vpc.Name, field.ErrorList{err})
 	}
 
-	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
-		vpc.Name, vpc.GetNamespace(), linodevpclog)
-	if err != nil {
-		return admission.Warnings{}, err
-	}
-
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
-	if err := r.validateLinodeVPCSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
+	if err := r.validateLinodeVPCSpec(ctx, r.LinodeClient, spec); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -128,15 +126,11 @@ func (r *linodeVPCValidator) ValidateDelete(_ context.Context, vpc *infrav1alpha
 	return nil, nil
 }
 
-func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeVPCSpec, skipAPIValidation bool) field.ErrorList {
+func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeVPCSpec) field.ErrorList {
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityVPCs); err != nil {
-			errs = append(errs, err)
-		}
-	}
+	// Validate local fields first before making any API calls for validation
 	if err := r.validateLinodeVPCSubnets(spec); err != nil {
 		errs = slices.Concat(errs, err)
 	}
@@ -148,6 +142,10 @@ func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodecl
 		if rangeErr != nil {
 			errs = append(errs, rangeErr)
 		}
+	}
+
+	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityVPCs); err != nil {
+		errs = append(errs, err)
 	}
 
 	if len(errs) == 0 {

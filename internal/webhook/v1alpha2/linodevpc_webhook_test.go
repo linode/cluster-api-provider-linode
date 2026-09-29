@@ -72,7 +72,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -85,7 +85,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("success", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/24"}, {Label: "bar", IPv4: "10.0.1.0/24"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -96,7 +96,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, regionNotFoundError)
 					}
@@ -109,7 +109,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, vpcCapabilityError)
 					}
@@ -125,7 +125,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{IPv4: "10.0.0.0/8"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
 					}
@@ -141,7 +141,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "$", IPv4: "10.0.0.0/8"}}
 
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, InvalidSubnetLabelError)
 					}
@@ -156,7 +156,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "--", IPv4: "10.0.0.0/8"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
 					}
@@ -172,7 +172,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "IPv4 CIDR"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorSubnetRange)
 					}
@@ -187,7 +187,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "10.9.9.9/8"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorSubnetRangeNotIPv4)
 					}
@@ -202,7 +202,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "10.0.0.0/32"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorSubnetRangeInvalidPrefix)
 					}
@@ -218,7 +218,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "9.9.9.0/24"}}
 
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorSubnetRangeNotPrivate)
 					}
@@ -233,7 +233,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "192.168.128.0/24"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
 					}
@@ -248,7 +248,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "test", IPv4: "10.255.255.1/24"}, {Label: "test", IPv4: "10.255.255.0/24"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
 					}
@@ -263,7 +263,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/8"}, {Label: "bar", IPv4: "10.0.0.0/24"}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
 					}
@@ -278,7 +278,7 @@ func TestValidateLinodeVPC(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					vpc := vpc
 					vpc.Spec.Subnets = []infrav1alpha2.VPCSubnetCreateOptions{{Label: "foo", IPv4: "10.0.0.0/8", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: new("")}}}}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						require.Error(t, err)
 					}
@@ -325,7 +325,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 						{Range: new("auto")},
 						{Range: new("2001:db8::/52")},
 					}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -343,7 +343,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 						{Label: "buzz", IPv4: "10.0.2.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: new("auto")}}},
 						{Label: "bazz", IPv4: "10.0.3.0/24", IPv6Range: []infrav1alpha2.VPCSubnetCreateOptionsIPv6{{Range: new("2001:db8::/56")}}},
 					}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -360,7 +360,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
 						{Range: new("48")},
 					}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorIPv6RangeInvalid)
 					}
@@ -377,7 +377,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
 						{Range: new("/a48")},
 					}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorIPv6RangeInvalidChars)
 					}
@@ -394,7 +394,7 @@ func TestValidateVPCIPv6Ranges(t *testing.T) {
 					vpc.Spec.IPv6Range = []infrav1alpha2.VPCCreateOptionsIPv6{
 						{Range: new("/130")},
 					}
-					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeVPCSpec(ctx, mck.LinodeClient, vpc.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, ErrorIPv6RangeOutOfRange)
 					}
@@ -486,7 +486,7 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 						}).AnyTimes()
 				}),
 				Result("valid", func(ctx context.Context, mck Mock) {
-					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefVPC.Spec.CredentialsRef, vpc.GetNamespace())
+					str, err := getCredentialDataFromRef(t, ctx, mockK8sClient, *credentialsRefVPC.Spec.CredentialsRef, vpc.GetNamespace())
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
 				}),

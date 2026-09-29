@@ -68,7 +68,7 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.Name, SkipAPIValidation)
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.Name)
 					require.Empty(t, errs)
 				}),
 			),
@@ -78,7 +78,7 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
 			}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.Name, SkipAPIValidation)
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.Name)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, invalidRegionError)
 					}
@@ -89,7 +89,7 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(&region, nil).AnyTimes()
 			}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.Name, SkipAPIValidation)
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.Name)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, invalidRegionNoPGCapability)
 					}
@@ -106,7 +106,7 @@ func TestValidateLinodePlacementGroup(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					pg := pg
 					pg.Name = "a20_b!4"
-					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.Name, SkipAPIValidation)
+					errs := validator.validateLinodePlacementGroupSpec(ctx, mck.LinodeClient, pg.Spec, pg.Name)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, invalidPGLabelError)
 					}
@@ -194,7 +194,7 @@ func TestValidateCreateLinodePlacementGroup(t *testing.T) {
 						}).AnyTimes()
 				}),
 				Result("valid", func(ctx context.Context, mck Mock) {
-					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefPG.Spec.CredentialsRef, credentialsRefPG.GetNamespace())
+					str, err := getCredentialDataFromRef(t, ctx, mockK8sClient, *credentialsRefPG.Spec.CredentialsRef, credentialsRefPG.GetNamespace())
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
 				}),

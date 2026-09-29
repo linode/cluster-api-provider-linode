@@ -44,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
 	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
@@ -54,6 +55,7 @@ import (
 // LinodeVPCReconciler reconciles a LinodeVPC object
 type LinodeVPCReconciler struct {
 	client.Client
+	LinodeClient       clients.LinodeClient
 	Recorder           events.EventRecorder
 	LinodeClientConfig scope.ClientConfig
 	WatchFilterValue   string
@@ -110,8 +112,7 @@ func (r *LinodeVPCReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	vpcScope, err := scope.NewVPCScope(
-		ctx,
-		r.LinodeClientConfig,
+		r.LinodeClient,
 		scope.VPCScopeParams{
 			Client:    r.TracedClient(),
 			LinodeVPC: linodeVPC,

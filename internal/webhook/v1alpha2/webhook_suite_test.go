@@ -26,7 +26,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/mock"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,8 +58,6 @@ var (
 	k8sClient client.Client
 	testEnv   *envtest.Environment
 )
-
-var SkipAPIValidation = false
 
 const longName = "some-really-long-name-that-exceeds-the-63-character-limit-imposed-by-linode"
 
@@ -123,19 +124,19 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupLinodeClusterWebhookWithManager(mgr)
+	err = SetupLinodeClusterWebhookWithManager(mgr, &mock.MockLinodeClient{})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupLinodeMachineWebhookWithManager(mgr)
+	err = SetupLinodeMachineWebhookWithManager(mgr, &mock.MockLinodeClient{})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupLinodePlacementGroupWebhookWithManager(mgr)
+	err = SetupLinodePlacementGroupWebhookWithManager(mgr, &mock.MockLinodeClient{})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupLinodeVPCWebhookWithManager(mgr)
+	err = SetupLinodeVPCWebhookWithManager(mgr, &mock.MockLinodeClient{})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupLinodeObjectStorageBucketWebhookWithManager(mgr)
+	err = SetupLinodeObjectStorageBucketWebhookWithManager(mgr, &mock.MockLinodeClient{})
 	Expect(err).NotTo(HaveOccurred())
 
 	err = SetupLinodeObjectStorageKeyWebhookWithManager(mgr)
@@ -171,3 +172,35 @@ var _ = AfterSuite(func() {
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+func getCredentialDataFromRef(t *testing.T, ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
+	t.Helper()
+	credSecret, err := getCredentials(t, ctx, crClient, credentialsRef, defaultNamespace)
+	if err != nil {
+		return nil, err
+	}
+	rawData, ok := credSecret.Data["apiToken"]
+	if !ok {
+		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", "apiToken", credentialsRef.Namespace, credentialsRef.Name)
+	}
+
+	return rawData, nil
+}
+
+func getCredentials(t *testing.T, ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
+	t.Helper()
+	secretRef := client.ObjectKey{
+		Name:      credentialsRef.Name,
+		Namespace: credentialsRef.Namespace,
+	}
+	if secretRef.Namespace == "" {
+		secretRef.Namespace = defaultNamespace
+	}
+
+	var credSecret corev1.Secret
+	if err := crClient.Get(ctx, secretRef, &credSecret); err != nil {
+		return nil, fmt.Errorf("get credentials secret %s/%s: %w", secretRef.Namespace, secretRef.Name, err)
+	}
+
+	return &credSecret, nil
+}

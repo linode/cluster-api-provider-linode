@@ -38,13 +38,17 @@ import (
 var linodemachinelog = logf.Log.WithName("linodemachine-resource")
 
 type linodeMachineValidator struct {
-	Client client.Client
+	Client       client.Client
+	LinodeClient clients.LinodeClient
 }
 
 // SetupLinodeMachineWebhookWithManager registers the webhook for LinodeMachine in the manager.
-func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager) error {
+func SetupLinodeMachineWebhookWithManager(mgr ctrl.Manager, linodeClient clients.LinodeClient) error {
 	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeMachine{}).
-		WithValidator(&linodeMachineValidator{Client: mgr.GetClient()}).
+		WithValidator(&linodeMachineValidator{
+			Client:       mgr.GetClient(),
+			LinodeClient: linodeClient,
+		}).
 		Complete()
 }
 
@@ -63,14 +67,8 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, machine *in
 			machine.Name, field.ErrorList{err})
 	}
 
-	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
-		machine.Name, machine.GetNamespace(), linodemachinelog)
-	if err != nil {
-		return admission.Warnings{}, err
-	}
-
 	var errs field.ErrorList
-	if err := r.validateLinodeMachineSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
+	if err := r.validateLinodeMachineSpec(ctx, r.LinodeClient, spec); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -98,29 +96,10 @@ func (r *linodeMachineValidator) ValidateDelete(_ context.Context, machine *infr
 	return nil, nil
 }
 
-func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeMachineSpec, skipAPIValidation bool) field.ErrorList {
+func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeMachineSpec) field.ErrorList {
 	var errs field.ErrorList
 
-	if !skipAPIValidation { //nolint:nestif // too simple for switch
-		if spec.LinodeInterfaces != nil {
-			if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityLinodeInterfaces); err != nil {
-				errs = append(errs, err)
-			}
-		} else {
-			if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
-				errs = append(errs, err)
-			}
-		}
-
-		plan, err := validateLinodeType(ctx, linodeclient, spec.Type, field.NewPath("spec").Child("type"))
-		if err != nil {
-			errs = append(errs, err)
-		}
-		if err := r.validateLinodeMachineDisks(plan, spec); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
+	// Validate local fields first before making any API calls for validation
 	if spec.VPCID != nil && spec.VPCRef != nil {
 		errs = append(errs, &field.Error{
 			Field:  "spec.vpcID/spec.vpcRef",
@@ -141,6 +120,24 @@ func (r *linodeMachineValidator) validateLinodeMachineSpec(ctx context.Context, 
 			Type:   field.ErrorTypeInvalid,
 			Detail: "Cannot specify both FirewallID and FirewallRef",
 		})
+	}
+
+	if spec.LinodeInterfaces != nil {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityLinodeInterfaces); err != nil {
+			errs = append(errs, err)
+		}
+	} else {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	plan, err := validateLinodeType(ctx, linodeclient, spec.Type, field.NewPath("spec").Child("type"))
+	if err != nil {
+		errs = append(errs, err)
+	}
+	if err := r.validateLinodeMachineDisks(plan, spec); err != nil {
+		errs = append(errs, err)
 	}
 
 	if len(errs) == 0 {

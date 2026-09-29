@@ -158,9 +158,8 @@ func TestClusterScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			cScope, err := NewClusterScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
+				&mock.MockLinodeClient{},
 				ClusterScopeParams{
 					Cluster:           testcase.fields.Cluster,
 					LinodeMachineList: testcase.fields.LinodeMachineList,
@@ -267,7 +266,7 @@ func TestNewClusterScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewClusterScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, ClientConfig{Token: testcase.args.dnsApiKey}, testcase.args.params)
+			got, err := NewClusterScope(&mock.MockLinodeClient{}, &mock.MockLinodeClient{}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -364,9 +363,8 @@ func TestRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			cScope, err := NewClusterScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
+				&mock.MockLinodeClient{},
 				ClusterScopeParams{
 					Cluster:           testcase.fields.Cluster,
 					LinodeCluster:     testcase.fields.LinodeCluster,
@@ -479,9 +477,8 @@ func TestClusterSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			cScope, err := NewClusterScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
+				&mock.MockLinodeClient{},
 				ClusterScopeParams{
 					Cluster:           testcase.fields.Cluster,
 					LinodeCluster:     testcase.fields.LinodeCluster,

@@ -35,13 +35,17 @@ import (
 var linodeclusterlog = logf.Log.WithName("linodecluster-resource")
 
 type linodeClusterValidator struct {
-	Client client.Client
+	Client       client.Client
+	LinodeClient clients.LinodeClient
 }
 
 // SetupLinodeClusterWebhookWithManager registers the webhook for LinodeCluster in the manager.
-func SetupLinodeClusterWebhookWithManager(mgr ctrl.Manager) error {
+func SetupLinodeClusterWebhookWithManager(mgr ctrl.Manager, linodeClient clients.LinodeClient) error {
 	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeCluster{}).
-		WithValidator(&linodeClusterValidator{Client: mgr.GetClient()}).
+		WithValidator(&linodeClusterValidator{
+			Client:       mgr.GetClient(),
+			LinodeClient: linodeClient,
+		}).
 		Complete()
 }
 
@@ -59,15 +63,9 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 			cluster.Name, field.ErrorList{err})
 	}
 
-	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
-		cluster.Name, cluster.GetNamespace(), linodeclusterlog)
-	if err != nil {
-		return admission.Warnings{}, err
-	}
-
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
-	if err := r.validateLinodeClusterSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
+	if err := r.validateLinodeClusterSpec(ctx, r.LinodeClient, spec); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -95,15 +93,10 @@ func (r *linodeClusterValidator) ValidateDelete(_ context.Context, cluster *infr
 	return nil, nil
 }
 
-func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeClusterSpec, skipAPIValidation bool) field.ErrorList {
+func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeClusterSpec) field.ErrorList {
 	var errs field.ErrorList
 
-	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
+	// Validate local fields first before making any API calls for validation
 	if spec.Network.LoadBalancerType == "dns" {
 		if spec.Network.DNSRootDomain == "" {
 			errs = append(errs, &field.Error{
@@ -134,6 +127,10 @@ func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, 
 			Type:   field.ErrorTypeInvalid,
 			Detail: "Cannot specify both NodeBalancerFirewallID and NodeBalancerFirewallRef",
 		})
+	}
+
+	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
+		errs = append(errs, err)
 	}
 
 	if len(errs) == 0 {

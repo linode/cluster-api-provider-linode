@@ -58,7 +58,7 @@ func TestCreateLinodeClient(t *testing.T) {
 				BaseUrl:             testCase.baseUrl,
 				RootCertificatePath: testCase.rootCertificatePath,
 			}
-			got, err := CreateLinodeClient(clientConfig)
+			got, err := CreateLinodeClient(clientConfig, WithRetryCount(0))
 			if testCase.expectedErr != nil {
 				assert.EqualError(t, err, testCase.expectedErr.Error())
 			} else {

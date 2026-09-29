@@ -52,13 +52,9 @@ func validateMachineScopeParams(params MachineScopeParams) error {
 	return nil
 }
 
-func NewMachineScope(_ context.Context, linodeClientConfig ClientConfig, params MachineScopeParams) (*MachineScope, error) {
+func NewMachineScope(linodeClient clients.LinodeClient, params MachineScopeParams) (*MachineScope, error) {
 	if err := validateMachineScopeParams(params); err != nil {
 		return nil, err
-	}
-	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
 	helper, err := patch.NewHelper(params.LinodeMachine, params.Client)
@@ -72,7 +68,7 @@ func NewMachineScope(_ context.Context, linodeClientConfig ClientConfig, params 
 		PatchHelper:   helper,
 		Cluster:       params.Cluster,
 		Machine:       params.Machine,
-		TokenHash:     GetHash(linodeClientConfig.Token),
+		TokenHash:     "",
 		LinodeClient:  linodeClient,
 		LinodeCluster: params.LinodeCluster,
 		LinodeMachine: params.LinodeMachine,

@@ -45,14 +45,9 @@ func validateObjectStorageKeyScopeParams(params ObjectStorageKeyScopeParams) err
 	return nil
 }
 
-func NewObjectStorageKeyScope(ctx context.Context, linodeClientConfig ClientConfig, params ObjectStorageKeyScopeParams) (*ObjectStorageKeyScope, error) {
+func NewObjectStorageKeyScope(linodeClient clients.LinodeClient, params ObjectStorageKeyScopeParams) (*ObjectStorageKeyScope, error) {
 	if err := validateObjectStorageKeyScopeParams(params); err != nil {
 		return nil, err
-	}
-	linodeClientConfig.Timeout = clientTimeout
-	linodeClient, err := CreateLinodeClient(linodeClientConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
 	patchHelper, err := patch.NewHelper(params.Key, params.Client)

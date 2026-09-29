@@ -40,10 +40,11 @@ import (
 var linodeplacementgrouplog = logf.Log.WithName("linodeplacementgroup-resource")
 
 // SetupLinodePlacementGroupWebhookWithManager registers the webhook for LinodePlacementGroup in the manager.
-func SetupLinodePlacementGroupWebhookWithManager(mgr ctrl.Manager) error {
+func SetupLinodePlacementGroupWebhookWithManager(mgr ctrl.Manager, linodeClient clients.LinodeClient) error {
 	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodePlacementGroup{}).
 		WithValidator(&LinodePlacementGroupCustomValidator{
-			Client: mgr.GetClient(),
+			Client:       mgr.GetClient(),
+			LinodeClient: linodeClient,
 		}).
 		Complete()
 }
@@ -52,7 +53,8 @@ func SetupLinodePlacementGroupWebhookWithManager(mgr ctrl.Manager) error {
 
 // LinodePlacementGroupCustomValidator struct is responsible for validating the LinodePlacementGroup resource
 type LinodePlacementGroupCustomValidator struct {
-	Client client.Client
+	Client       client.Client
+	LinodeClient clients.LinodeClient
 }
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type LinodePlacementGroup.
@@ -66,14 +68,8 @@ func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context
 			pg.Name, field.ErrorList{err})
 	}
 
-	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, v.Client, pg.Spec.CredentialsRef,
-		pg.Name, pg.GetNamespace(), linodeplacementgrouplog)
-	if err != nil {
-		return admission.Warnings{}, err
-	}
-
 	var errs field.ErrorList
-	if err := v.validateLinodePlacementGroupSpec(ctx, linodeClient, pg.Spec, pg.Name, skipAPIValidation); err != nil {
+	if err := v.validateLinodePlacementGroupSpec(ctx, v.LinodeClient, pg.Spec, pg.Name); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -103,18 +99,18 @@ func (v *LinodePlacementGroupCustomValidator) ValidateDelete(_ context.Context, 
 	return nil, nil
 }
 
-func (v *LinodePlacementGroupCustomValidator) validateLinodePlacementGroupSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodePlacementGroupSpec, label string, skipAPIValidation bool) field.ErrorList {
+func (v *LinodePlacementGroupCustomValidator) validateLinodePlacementGroupSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodePlacementGroupSpec, label string) field.ErrorList {
 	var errs field.ErrorList
 
-	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityPlacementGroup); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
+	// Validate local fields first before making any API calls for validation
 	if err := validatePlacementGroupLabel(label, field.NewPath("metadata").Child("name")); err != nil {
 		errs = append(errs, err)
 	}
+
+	if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityPlacementGroup); err != nil {
+		errs = append(errs, err)
+	}
+
 	// PlacementGroupPolicy is immutable, no need to verify again.
 	if len(errs) == 0 {
 		return nil

@@ -392,9 +392,9 @@ var _ = Describe("pause handling", Label("cluster", "pause"), func() {
 		Expect(k8sClient.Create(ctx, linodeCluster)).To(Succeed())
 
 		reconciler := &LinodeClusterReconciler{
-			Client:             k8sClient,
-			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
-			DnsClientConfig:    scope.ClientConfig{Token: "test-token"},
+			Client:              k8sClient,
+			LinodeClient:        &mock.MockLinodeClient{},
+			LinodeDomainsClient: &mock.MockLinodeClient{},
 		}
 
 		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(linodeCluster)})

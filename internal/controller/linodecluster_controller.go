@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
 	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
@@ -61,11 +62,11 @@ const (
 // LinodeClusterReconciler reconciles a LinodeCluster object
 type LinodeClusterReconciler struct {
 	client.Client
-	Recorder           events.EventRecorder
-	LinodeClientConfig scope.ClientConfig
-	DnsClientConfig    scope.ClientConfig
-	WatchFilterValue   string
-	ReconcileTimeout   time.Duration
+	LinodeClient        clients.LinodeClient
+	LinodeDomainsClient clients.LinodeClient
+	Recorder            events.EventRecorder
+	WatchFilterValue    string
+	ReconcileTimeout    time.Duration
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=get;list;watch;create;update;patch;delete
@@ -102,9 +103,8 @@ func (r *LinodeClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Create the cluster scope.
 	clusterScope, err := scope.NewClusterScope(
-		ctx,
-		r.LinodeClientConfig,
-		r.DnsClientConfig,
+		r.LinodeClient,
+		r.LinodeDomainsClient,
 		scope.ClusterScopeParams{
 			Client:            r.TracedClient(),
 			Cluster:           cluster,

@@ -141,7 +141,7 @@ func TestNewFirewallScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewFirewallScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewFirewallScope(&mock.MockLinodeClient{}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -205,8 +205,7 @@ func TestFirewallScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			fwScope, err := NewFirewallScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
 					LinodeFirewall: testcase.LinodeFirewall,
@@ -299,8 +298,7 @@ func TestFirewallAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewFirewallScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
 					LinodeFirewall: testcase.LinodeFirewall,
@@ -389,8 +387,7 @@ func TestFirewallRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewFirewallScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
 					LinodeFirewall: testcase.LinodeFirewall,
@@ -486,8 +483,7 @@ func TestFirewallSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewFirewallScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				FirewallScopeParams{
 					Client:         mockK8sClient,
 					LinodeFirewall: testcase.LinodeFirewall,

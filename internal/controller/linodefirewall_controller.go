@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
 	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
@@ -53,10 +54,10 @@ import (
 // LinodeFirewallReconciler reconciles a LinodeFirewall object
 type LinodeFirewallReconciler struct {
 	client.Client
-	Recorder           events.EventRecorder
-	LinodeClientConfig scope.ClientConfig
-	WatchFilterValue   string
-	ReconcileTimeout   time.Duration
+	LinodeClient     clients.LinodeClient
+	Recorder         events.EventRecorder
+	WatchFilterValue string
+	ReconcileTimeout time.Duration
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodefirewalls,verbs=get;list;watch;create;update;patch;delete
@@ -100,8 +101,7 @@ func (r *LinodeFirewallReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Create the firewall scope.
 	fwScope, err := scope.NewFirewallScope(
-		ctx,
-		r.LinodeClientConfig,
+		r.LinodeClient,
 		scope.FirewallScopeParams{
 			Client:         r.TracedClient(),
 			LinodeFirewall: linodeFirewall,

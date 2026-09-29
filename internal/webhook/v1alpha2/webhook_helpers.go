@@ -19,25 +19,15 @@ package v1alpha2
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"os"
 	"slices"
-	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/linode/linodego/v2"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/clients"
-	"github.com/linode/cluster-api-provider-linode/observability/wrappers/linodeclient"
 )
 
 const (
-	// defaultClientTimeout is the default timeout for a client Linode API call
-	defaultClientTimeout = time.Second * 10
 	// minLabelLength is the minimum length for a Linode resource label
 	minLabelLength = 3
 	// maxLabelLength is the maximum length for a Linode resource label
@@ -76,75 +66,4 @@ func validateLinodeType(ctx context.Context, linodegoclient clients.LinodeClient
 	}
 
 	return plan, nil
-}
-
-func getCredentialDataFromRef(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) ([]byte, error) {
-	credSecret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
-	if err != nil {
-		return nil, err
-	}
-	rawData, ok := credSecret.Data["apiToken"]
-	if !ok {
-		return nil, fmt.Errorf("no %s key in credentials secret %s/%s", "apiToken", credentialsRef.Namespace, credentialsRef.Name)
-	}
-
-	return rawData, nil
-}
-
-func getCredentials(ctx context.Context, crClient clients.K8sClient, credentialsRef corev1.SecretReference, defaultNamespace string) (*corev1.Secret, error) {
-	secretRef := client.ObjectKey{
-		Name:      credentialsRef.Name,
-		Namespace: credentialsRef.Namespace,
-	}
-	if secretRef.Namespace == "" {
-		secretRef.Namespace = defaultNamespace
-	}
-
-	var credSecret corev1.Secret
-	if err := crClient.Get(ctx, secretRef, &credSecret); err != nil {
-		return nil, fmt.Errorf("get credentials secret %s/%s: %w", secretRef.Namespace, secretRef.Name, err)
-	}
-
-	return &credSecret, nil
-}
-
-// setupClientWithCredentials configures a Linode client with credentials the LINODE_TOKEN env variable or
-// a secret reference if it is provided
-// Returns (skipAPIValidation, client) - skipAPIValidation will be true if credentials cannot be found
-// and API validation should be skipped
-func setupClientWithCredentials(ctx context.Context, crClient clients.K8sClient, credRef *corev1.SecretReference,
-	resourceName, namespace string, logger logr.Logger) (bool, clients.LinodeClient, error) {
-	newClient, err := linodego.NewClient(&http.Client{Timeout: defaultClientTimeout})
-	if err != nil {
-		logger.Error(err, "failed to create linode client")
-		return false, nil, err
-	}
-	linodeClient := linodeclient.NewLinodeClientWithTracing(
-		new(newClient),
-		linodeclient.DefaultDecorator(),
-	)
-	credName := ""
-	apiToken := []byte(os.Getenv("LINODE_TOKEN"))
-	if credRef != nil {
-		credName = credRef.Name
-		apiToken, err = getCredentialDataFromRef(ctx, crClient, *credRef, namespace)
-	}
-
-	if err == nil {
-		logger.Info("creating a verified linode client for create request", "name", resourceName)
-		linodeClient.SetToken(string(apiToken))
-		return false, linodeClient, nil
-	}
-
-	// Handle error cases
-	if apierrors.IsNotFound(err) {
-		logger.Info("credentials secret not found, skipping API validation",
-			"name", resourceName, "secret", credName)
-		return true, linodeClient, nil
-	}
-
-	// For other errors, log the error but return the default client
-	// The caller should handle validation with the default client
-	logger.Error(err, "failed getting credentials from secret ref", "name", resourceName)
-	return false, linodeClient, nil
 }

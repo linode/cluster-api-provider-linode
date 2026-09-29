@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/cloud/services"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
@@ -52,11 +53,11 @@ import (
 // LinodeObjectStorageKeyReconciler reconciles a LinodeObjectStorageKey object
 type LinodeObjectStorageKeyReconciler struct {
 	client.Client
-	Logger             logr.Logger
-	Recorder           events.EventRecorder
-	LinodeClientConfig scope.ClientConfig
-	WatchFilterValue   string
-	ReconcileTimeout   time.Duration
+	LinodeClient     clients.LinodeClient
+	Logger           logr.Logger
+	Recorder         events.EventRecorder
+	WatchFilterValue string
+	ReconcileTimeout time.Duration
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=linodeobjectstoragekeys,verbs=get;list;watch;create;update;patch;delete
@@ -110,8 +111,7 @@ func (r *LinodeObjectStorageKeyReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	keyScope, err := scope.NewObjectStorageKeyScope(
-		ctx,
-		r.LinodeClientConfig,
+		r.LinodeClient,
 		scope.ObjectStorageKeyScopeParams{
 			Client: tracedClient,
 			Key:    objectStorageKey,

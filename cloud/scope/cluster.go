@@ -50,14 +50,9 @@ func validateClusterScopeParams(params ClusterScopeParams) error {
 
 // NewClusterScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-func NewClusterScope(ctx context.Context, linodeClientConfig, dnsClientConfig ClientConfig, params ClusterScopeParams) (*ClusterScope, error) {
+func NewClusterScope(linodeClient, linodeDomainsClient clients.LinodeClient, params ClusterScopeParams) (*ClusterScope, error) {
 	if err := validateClusterScopeParams(params); err != nil {
 		return nil, err
-	}
-
-	linodeClient, err := CreateLinodeClient(linodeClientConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
 	helper, err := patch.NewHelper(params.LinodeCluster, params.Client)
@@ -68,10 +63,6 @@ func NewClusterScope(ctx context.Context, linodeClientConfig, dnsClientConfig Cl
 	akamDomainsClient, err := setUpEdgeDNSInterface()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create akamai dns client: %w", err)
-	}
-	linodeDomainsClient, err := CreateLinodeClient(dnsClientConfig, WithRetryCount(0))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
 	return &ClusterScope{

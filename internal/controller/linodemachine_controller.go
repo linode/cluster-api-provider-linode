@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	wrappedruntimeclient "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimeclient"
 	wrappedruntimereconciler "github.com/linode/cluster-api-provider-linode/observability/wrappers/runtimereconciler"
@@ -87,10 +88,10 @@ var requeueInstanceStatuses = map[linodego.InstanceStatus]bool{
 // LinodeMachineReconciler reconciles a LinodeMachine object
 type LinodeMachineReconciler struct {
 	client.Client
-	Recorder           events.EventRecorder
-	LinodeClientConfig scope.ClientConfig
-	WatchFilterValue   string
-	ReconcileTimeout   time.Duration
+	LinodeClient     clients.LinodeClient
+	Recorder         events.EventRecorder
+	WatchFilterValue string
+	ReconcileTimeout time.Duration
 	// Feature flags
 	GzipCompressionEnabled bool
 }
@@ -149,8 +150,7 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	log = log.WithValues("LinodeCluster", linodeCluster.Name)
 
 	machineScope, err := scope.NewMachineScope(
-		ctx,
-		r.LinodeClientConfig,
+		r.LinodeClient,
 		scope.MachineScopeParams{
 			Client:        r.TracedClient(),
 			Cluster:       cluster,

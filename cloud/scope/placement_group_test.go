@@ -141,7 +141,7 @@ func TestNewPlacementGroupScope(t *testing.T) {
 
 			testcase.args.params.Client = mockK8sClient
 
-			got, err := NewPlacementGroupScope(t.Context(), ClientConfig{Token: testcase.args.apiKey}, testcase.args.params)
+			got, err := NewPlacementGroupScope(&mock.MockLinodeClient{}, testcase.args.params)
 
 			if testcase.expectedError != nil {
 				assert.ErrorContains(t, err, testcase.expectedError.Error())
@@ -205,8 +205,7 @@ func TestPlacementGroupScopeMethods(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
 					LinodePlacementGroup: testcase.LinodePlacementGroup,
@@ -299,8 +298,7 @@ func TestPlacementGroupAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
 					LinodePlacementGroup: testcase.LinodePlacementGroup,
@@ -389,8 +387,7 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
 					LinodePlacementGroup: testcase.LinodePlacementGroup,
@@ -475,8 +472,7 @@ func TestPlacementGroupSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			pgScope, err := NewPlacementGroupScope(
-				t.Context(),
-				ClientConfig{Token: "test-key"},
+				&mock.MockLinodeClient{},
 				PlacementGroupScopeParams{
 					Client:               mockK8sClient,
 					LinodePlacementGroup: testcase.LinodePlacementGroup,

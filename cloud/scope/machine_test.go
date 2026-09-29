@@ -131,8 +131,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 			})),
 			Path(Result("has finalizer", func(ctx context.Context, mck Mock) {
 				mScope, err := NewMachineScope(
-					ctx,
-					ClientConfig{Token: "apiToken"},
+					&mock.MockLinodeClient{},
 					MachineScopeParams{
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
@@ -158,8 +157,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 				}),
 				Result("finalizer added", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(
-						ctx,
-						ClientConfig{Token: "apiToken"},
+						&mock.MockLinodeClient{},
 						MachineScopeParams{
 							Client:        mck.K8sClient,
 							Cluster:       &clusterv1.Cluster{},
@@ -179,8 +177,7 @@ func TestMachineScopeAddFinalizer(t *testing.T) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(
-						ctx,
-						ClientConfig{Token: "apiToken"},
+						&mock.MockLinodeClient{},
 						MachineScopeParams{
 							Client:        mck.K8sClient,
 							Cluster:       &clusterv1.Cluster{},
@@ -205,8 +202,7 @@ func TestNewMachineScope(t *testing.T) {
 			Path(
 				Result("invalid params", func(ctx context.Context, mck Mock) {
 					mScope, err := NewMachineScope(
-						ctx,
-						ClientConfig{Token: "apiToken"},
+						&mock.MockLinodeClient{},
 						MachineScopeParams{},
 					)
 					require.ErrorContains(t, err, "is required")
@@ -214,7 +210,7 @@ func TestNewMachineScope(t *testing.T) {
 				})),
 			Path(
 				Result("no token", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, ClientConfig{Token: ""}, MachineScopeParams{
+					mScope, err := NewMachineScope(&mock.MockLinodeClient{}, MachineScopeParams{
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
@@ -239,7 +235,7 @@ func TestNewMachineScope(t *testing.T) {
 					mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme()).AnyTimes()
 				}),
 				Result("cannot init patch helper", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, ClientConfig{Token: "apiToken"}, MachineScopeParams{
+					mScope, err := NewMachineScope(&mock.MockLinodeClient{}, MachineScopeParams{
 						Client:        mck.K8sClient,
 						Cluster:       &clusterv1.Cluster{},
 						Machine:       &clusterv1.Machine{},
@@ -253,7 +249,7 @@ func TestNewMachineScope(t *testing.T) {
 		),
 		OneOf(
 			Path(Result("default credentials used", func(ctx context.Context, mck Mock) {
-				mScope, err := NewMachineScope(ctx, ClientConfig{Token: "apiToken"}, MachineScopeParams{
+				mScope, err := NewMachineScope(&mock.MockLinodeClient{}, MachineScopeParams{
 					Client:        mck.K8sClient,
 					Cluster:       &clusterv1.Cluster{},
 					Machine:       &clusterv1.Machine{},
@@ -265,7 +261,7 @@ func TestNewMachineScope(t *testing.T) {
 			})),
 			Path(
 				Result("object store clients are initialized lazily", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(ctx, ClientConfig{Token: "apiToken"}, MachineScopeParams{
+					mScope, err := NewMachineScope(&mock.MockLinodeClient{}, MachineScopeParams{
 						Client:  mck.K8sClient,
 						Cluster: &clusterv1.Cluster{},
 						Machine: &clusterv1.Machine{},
@@ -429,8 +425,7 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				t.Context(),
-				ClientConfig{Token: "apiToken"},
+				&mock.MockLinodeClient{},
 				MachineScopeParams{
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},
@@ -522,8 +517,7 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				t.Context(),
-				ClientConfig{Token: "apiToken"},
+				&mock.MockLinodeClient{},
 				MachineScopeParams{
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},
@@ -687,8 +681,7 @@ func TestMachineSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				t.Context(),
-				ClientConfig{Token: "apiToken"},
+				&mock.MockLinodeClient{},
 				MachineScopeParams{
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},

@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -242,7 +243,17 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 		os.Exit(1)
 	}
 
-	setupControllers(mgr, flags, linodeConfig, dnsConfig)
+	linodeClient, err := scope.CreateLinodeClient(linodeConfig, scope.WithRetryCount(0))
+	if err != nil {
+		setupLog.Error(err, "unable to create linode client")
+	}
+
+	linodeDomainsClient, err := scope.CreateLinodeClient(dnsConfig, scope.WithRetryCount(0))
+	if err != nil {
+		setupLog.Error(err, "unable to create linode client")
+	}
+
+	setupControllers(mgr, flags, linodeClient, linodeDomainsClient, linodeConfig)
 
 	// Setup webhooks if enabled (defaults to true)
 	webhooksEnabled := true // default to enabled
@@ -254,7 +265,7 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 		}
 	}
 	if webhooksEnabled {
-		setupWebhooks(mgr)
+		setupWebhooks(mgr, linodeClient)
 	}
 
 	// +kubebuilder:scaffold:builder
@@ -279,14 +290,14 @@ func setupHealthChecks(mgr manager.Manager) {
 
 // setupControllers initializes and registers various controllers with the manager.
 // It sets up controllers for Linode resources, configuring each with the appropriate client and options.
-func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, dnsConfig scope.ClientConfig) {
+func setupControllers(mgr manager.Manager, flags flagVars, linodeClient, linodeDomainsClient clients.LinodeClient, linodeClientConfig scope.ClientConfig) {
 	// LinodeCluster Controller
 	if err := (&controller.LinodeClusterReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorder("LinodeClusterReconciler"),
-		WatchFilterValue:   flags.clusterWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
-		DnsClientConfig:    dnsConfig,
+		Client:              mgr.GetClient(),
+		Recorder:            mgr.GetEventRecorder("LinodeClusterReconciler"),
+		WatchFilterValue:    flags.clusterWatchFilter,
+		LinodeClient:        linodeClient,
+		LinodeDomainsClient: linodeDomainsClient,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeClusterConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeCluster")
 		os.Exit(1)
@@ -302,7 +313,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 		Client:                 mgr.GetClient(),
 		Recorder:               mgr.GetEventRecorder("LinodeMachineReconciler"),
 		WatchFilterValue:       flags.machineWatchFilter,
-		LinodeClientConfig:     linodeClientConfig,
+		LinodeClient:           linodeClient,
 		GzipCompressionEnabled: useGzip,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeMachineConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeMachine")
@@ -311,10 +322,10 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 
 	// LinodeVPC Controller
 	if err := (&controller.LinodeVPCReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorder("LinodeVPCReconciler"),
-		LinodeClientConfig: linodeClientConfig,
-		WatchFilterValue:   flags.clusterWatchFilter,
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorder("LinodeVPCReconciler"),
+		LinodeClient:     linodeClient,
+		WatchFilterValue: flags.clusterWatchFilter,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeVPCConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeVPC")
 		os.Exit(1)
@@ -334,10 +345,10 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 
 	// LinodePlacementGroup Controller
 	if err := (&controller.LinodePlacementGroupReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorder("LinodePlacementGroupReconciler"),
-		WatchFilterValue:   flags.clusterWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorder("LinodePlacementGroupReconciler"),
+		WatchFilterValue: flags.clusterWatchFilter,
+		LinodeClient:     linodeClient,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodePlacementGroupConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodePlacementGroup")
 		os.Exit(1)
@@ -345,11 +356,11 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 
 	// LinodeObjectStorageKey Controller
 	if err := (&controller.LinodeObjectStorageKeyReconciler{
-		Client:             mgr.GetClient(),
-		Logger:             ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
-		Recorder:           mgr.GetEventRecorder("LinodeObjectStorageKeyReconciler"),
-		WatchFilterValue:   flags.objectStorageKeyWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
+		Client:           mgr.GetClient(),
+		Logger:           ctrl.Log.WithName("LinodeObjectStorageKeyReconciler"),
+		Recorder:         mgr.GetEventRecorder("LinodeObjectStorageKeyReconciler"),
+		WatchFilterValue: flags.objectStorageKeyWatchFilter,
+		LinodeClient:     linodeClient,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeObjectStorageBucketConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeObjectStorageKey")
 		os.Exit(1)
@@ -357,10 +368,10 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 
 	// LinodeFirewall Controller
 	if err := (&controller.LinodeFirewallReconciler{
-		Client:             mgr.GetClient(),
-		Recorder:           mgr.GetEventRecorder("LinodeFirewallReconciler"),
-		WatchFilterValue:   flags.clusterWatchFilter,
-		LinodeClientConfig: linodeClientConfig,
+		Client:           mgr.GetClient(),
+		Recorder:         mgr.GetEventRecorder("LinodeFirewallReconciler"),
+		WatchFilterValue: flags.clusterWatchFilter,
+		LinodeClient:     linodeClient,
 	}).SetupWithManager(mgr, crcontroller.Options{MaxConcurrentReconciles: flags.linodeFirewallConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "LinodeFirewall")
 		os.Exit(1)
@@ -378,9 +389,9 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 
 // setupWebhooks initializes webhooks for the specified resources in the manager.
 // It sets up webhooks for various Linode resources to handle admission control and validation.
-func setupWebhooks(mgr manager.Manager) {
+func setupWebhooks(mgr manager.Manager, linodeClient clients.LinodeClient) {
 	var err error
-	if err = webhookinfrastructurev1alpha2.SetupLinodeClusterWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeClusterWebhookWithManager(mgr, linodeClient); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
 		os.Exit(1)
 	}
@@ -388,7 +399,7 @@ func setupWebhooks(mgr manager.Manager) {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeClusterTemplate")
 		os.Exit(1)
 	}
-	if err = webhookinfrastructurev1alpha2.SetupLinodeMachineWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeMachineWebhookWithManager(mgr, linodeClient); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachine")
 		os.Exit(1)
 	}
@@ -396,15 +407,15 @@ func setupWebhooks(mgr manager.Manager) {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeMachineTemplate")
 		os.Exit(1)
 	}
-	if err = webhookinfrastructurev1alpha2.SetupLinodeVPCWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeVPCWebhookWithManager(mgr, linodeClient); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeVPC")
 		os.Exit(1)
 	}
-	if err = webhookinfrastructurev1alpha2.SetupLinodeObjectStorageBucketWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeObjectStorageBucketWebhookWithManager(mgr, linodeClient); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeObjectStorageBucket")
 		os.Exit(1)
 	}
-	if err = webhookinfrastructurev1alpha2.SetupLinodePlacementGroupWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodePlacementGroupWebhookWithManager(mgr, linodeClient); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodePlacementGroup")
 		os.Exit(1)
 	}

@@ -1262,8 +1262,8 @@ var _ = Describe("pause handling", Label("machine", "pause"), func() {
 		Expect(k8sClient.Create(ctx, linodeMachine)).To(Succeed())
 
 		reconciler := &LinodeMachineReconciler{
-			Client:             k8sClient,
-			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
+			Client:       k8sClient,
+			LinodeClient: &mock.MockLinodeClient{},
 		}
 
 		_, err := reconciler.Reconcile(ctrl.LoggerInto(ctx, ctrl.Log), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(linodeMachine)})

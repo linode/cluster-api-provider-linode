@@ -74,7 +74,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(&plan_max, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, testMachine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, testMachine.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -87,7 +87,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -103,7 +103,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, testMachine.Spec, SkipAPIValidation)
+			errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, testMachine.Spec)
 			for _, err := range errs {
 				require.Error(t, err)
 			}
@@ -117,7 +117,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("os disk too large", func(ctx context.Context, mck Mock) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, strconv.Itoa(plan_zero.Disk))
 					}
@@ -132,7 +132,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("2G")}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
@@ -147,7 +147,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDC: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
@@ -162,7 +162,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDD: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
@@ -177,7 +177,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDE: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
@@ -192,7 +192,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDF: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
@@ -207,7 +207,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDG: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
@@ -222,7 +222,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}
 					machine.Spec.DataDisks = &infrav1alpha2.InstanceDisks{SDB: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}, SDH: &infrav1alpha2.InstanceDisk{Size: resource.MustParse("1G")}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDisk)
 					}
@@ -236,7 +236,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.OSDisk = disk_zero.DeepCopy()
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, expectedErrorSubStringOSDiskOSDiskInvalid)
 					}
@@ -253,7 +253,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
 					machine.Spec.PrivateIP = new(true)
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, "Linode Interfaces do not support private IPs")
 					}
@@ -270,7 +270,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
 					machine.Spec.Interfaces = []infrav1alpha2.InstanceConfigInterfaceCreateOptions{{}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, "Cannot specify both LinodeInterfaces and Interfaces")
 					}
@@ -285,7 +285,7 @@ func TestValidateLinodeMachine(t *testing.T) {
 				Result("error", func(ctx context.Context, mck Mock) {
 					machine := testMachine.DeepCopy()
 					machine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{{}}
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, machine.Spec)
 					for _, err := range errs {
 						assert.ErrorContains(t, err, "no capability: Linode Interfaces")
 					}
@@ -378,7 +378,7 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 						}).AnyTimes()
 				}),
 				Result("valid", func(ctx context.Context, mck Mock) {
-					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefMachine.Spec.CredentialsRef, credentialsRefMachine.GetNamespace())
+					str, err := getCredentialDataFromRef(t, ctx, mockK8sClient, *credentialsRefMachine.Spec.CredentialsRef, credentialsRefMachine.GetNamespace())
 					require.NoError(t, err)
 					assert.Equal(t, []byte("token"), str)
 				}),
@@ -538,7 +538,7 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCID.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCID.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -554,7 +554,7 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCRef.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithVPCRef.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -570,7 +570,7 @@ func TestValidateVPCIDAndVPCRefOnMachine(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both VPCID and VPCRef")
 				}),
@@ -640,7 +640,7 @@ func TestValidateFirewallIDAndFirewallRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallID.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallID.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -656,7 +656,7 @@ func TestValidateFirewallIDAndFirewallRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallRef.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, validMachineWithFirewallRef.Spec)
 					require.Empty(t, errs)
 				}),
 			),
@@ -672,7 +672,7 @@ func TestValidateFirewallIDAndFirewallRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec, SkipAPIValidation)
+					errs := validator.validateLinodeMachineSpec(ctx, mck.LinodeClient, invalidMachine.Spec)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both FirewallID and FirewallRef")
 				}),

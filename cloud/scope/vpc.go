@@ -57,13 +57,9 @@ func validateVPCScopeParams(params VPCScopeParams) error {
 // This is meant to be called for each reconcile iteration.
 //
 //nolint:dupl // this is the same as PlacementGroups - worth making into generics later.
-func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VPCScopeParams) (*VPCScope, error) {
+func NewVPCScope(linodeClient clients.LinodeClient, params VPCScopeParams) (*VPCScope, error) {
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
-	}
-	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
 	}
 
 	helper, err := patch.NewHelper(params.LinodeVPC, params.Client)
