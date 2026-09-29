@@ -53,6 +53,13 @@ type LinodeObjectStorageBucketCustomValidator struct {
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type LinodeObjectStorageBucket.
 func (v *LinodeObjectStorageBucketCustomValidator) ValidateCreate(ctx context.Context, bucket *infrav1alpha2.LinodeObjectStorageBucket) (admission.Warnings, error) {
 	linodeobjectstoragebucketlog.Info("validate create", "name", bucket.Name)
+	// Reject invalid names before building a client or making any Linode API calls.
+	if err := validateLabelLength(bucket.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		return nil, apierrors.NewInvalid(
+			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageBucket"},
+			bucket.Name, field.ErrorList{err})
+	}
+
 	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, v.Client, bucket.Spec.CredentialsRef,
 		bucket.Name, bucket.GetNamespace(), linodemachinelog)
 	if err != nil {
@@ -60,9 +67,6 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateCreate(ctx context.Co
 	}
 
 	var errs field.ErrorList
-	if err := validateLabelLength(bucket.GetName(), field.NewPath("metadata").Child("name")); err != nil {
-		errs = append(errs, err)
-	}
 	if err := v.validateLinodeObjectStorageBucketSpec(ctx, bucket, linodeClient, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}

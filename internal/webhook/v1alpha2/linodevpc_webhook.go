@@ -85,6 +85,13 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, vpc *infrav1alp
 	spec := vpc.Spec
 	linodevpclog.Info("validate create", "name", vpc.Name)
 
+	// Reject invalid names before building a client or making any Linode API calls.
+	if err := validateLabelLength(vpc.GetName(), field.NewPath("metadata").Child("name")); err != nil {
+		return nil, apierrors.NewInvalid(
+			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
+			vpc.Name, field.ErrorList{err})
+	}
+
 	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
 		vpc.Name, vpc.GetNamespace(), linodevpclog)
 	if err != nil {
@@ -93,9 +100,6 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, vpc *infrav1alp
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
-	if err := validateLabelLength(vpc.GetName(), field.NewPath("metadata").Child("name")); err != nil {
-		errs = append(errs, err)
-	}
 	if err := r.validateLinodeVPCSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
