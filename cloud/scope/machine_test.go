@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -206,18 +207,6 @@ func TestNewMachineScope(t *testing.T) {
 						MachineScopeParams{},
 					)
 					require.ErrorContains(t, err, "is required")
-					assert.Nil(t, mScope)
-				})),
-			Path(
-				Result("no token", func(ctx context.Context, mck Mock) {
-					mScope, err := NewMachineScope(&mock.MockLinodeClient{}, MachineScopeParams{
-						Client:        mck.K8sClient,
-						Cluster:       &clusterv1.Cluster{},
-						Machine:       &clusterv1.Machine{},
-						LinodeCluster: &infrav1alpha2.LinodeCluster{},
-						LinodeMachine: &infrav1alpha2.LinodeMachine{},
-					})
-					require.ErrorContains(t, err, "failed to create linode client")
 					assert.Nil(t, mScope)
 				})),
 		),
@@ -421,11 +410,13 @@ func TestMachineAddCredentialsRefFinalizer(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockLinodeClient.EXPECT().SetToken(gomock.Any()).Return(&linodego.Client{}).AnyTimes()
 
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				&mock.MockLinodeClient{},
+				mockLinodeClient,
 				MachineScopeParams{
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},
@@ -513,11 +504,13 @@ func TestMachineRemoveCredentialsRefFinalizer(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockLinodeClient.EXPECT().SetToken(gomock.Any()).Return(&linodego.Client{}).AnyTimes()
 
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				&mock.MockLinodeClient{},
+				mockLinodeClient,
 				MachineScopeParams{
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},
@@ -677,11 +670,13 @@ func TestMachineSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockLinodeClient.EXPECT().SetToken(gomock.Any()).Return(&linodego.Client{}).AnyTimes()
 
 			testcase.expects(mockK8sClient)
 
 			mScope, err := NewMachineScope(
-				&mock.MockLinodeClient{},
+				mockLinodeClient,
 				MachineScopeParams{
 					Client:        mockK8sClient,
 					Cluster:       &clusterv1.Cluster{},

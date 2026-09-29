@@ -336,15 +336,17 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				Type:   "example",
 			},
 		}
-		validator = &linodeMachineValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
 		OneOf(
 			Path(
 				Call("invalid request", func(ctx context.Context, mck Mock) {
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
+					mck.LinodeClient.EXPECT().GetType(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid type")).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
+					validator := &linodeMachineValidator{LinodeClient: mck.LinodeClient}
 					_, err := validator.ValidateCreate(ctx, &machine)
 					assert.ErrorContains(t, err, "\"example\" is invalid: [spec.region: Not found: \"example\", spec.type: Not found: \"example\"]")
 				}),
@@ -353,6 +355,7 @@ func TestValidateCreateLinodeMachine(t *testing.T) {
 				Call("name too long", func(ctx context.Context, mck Mock) {
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
+					validator := &linodeMachineValidator{LinodeClient: mck.LinodeClient}
 					_, err := validator.ValidateCreate(ctx, &machineLongName)
 					assert.ErrorContains(t, err, labelLengthDetail)
 				}),

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -102,17 +103,6 @@ func TestNewVPCScope(t *testing.T) {
 			},
 			expects:       func(mock *mock.MockK8sClient) {},
 			expectedError: fmt.Errorf("linodeVPC is required when creating a VPCScope"),
-		},
-		{
-			name: "Error - Pass in valid args but get an error when creating a new linode client",
-			args: args{
-				apiKey: "",
-				params: VPCScopeParams{
-					LinodeVPC: &infrav1alpha2.LinodeVPC{},
-				},
-			},
-			expects:       func(mock *mock.MockK8sClient) {},
-			expectedError: fmt.Errorf("failed to create linode client: token cannot be empty"),
 		},
 		{
 			name: "Error - Pass in valid args but get an error when creating a new patch helper",
@@ -469,11 +459,13 @@ func TestVPCSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockLinodeClient.EXPECT().SetToken(gomock.Any()).Return(&linodego.Client{}).AnyTimes()
 
 			testcase.expects(mockK8sClient)
 
 			vScope, err := NewVPCScope(
-				&mock.MockLinodeClient{},
+				mockLinodeClient,
 				VPCScopeParams{
 					Client:    mockK8sClient,
 					LinodeVPC: testcase.LinodeVPC,

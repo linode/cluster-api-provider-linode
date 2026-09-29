@@ -127,19 +127,6 @@ func TestNewObjectStorageKeyScope(t *testing.T) {
 				k8s.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
 		},
-		{
-			name: "empty apiKey",
-			args: args{
-				apiKey: "",
-				params: ObjectStorageKeyScopeParams{
-					Client: nil,
-					Key:    &infrav1alpha2.LinodeObjectStorageKey{},
-					Logger: &logr.Logger{},
-				},
-			},
-			expectedErr: fmt.Errorf("failed to create linode client: token cannot be empty"),
-			expects:     func(mock *mock.MockK8sClient) {},
-		},
 	}
 	for _, tt := range tests {
 		testcase := tt
@@ -681,11 +668,14 @@ func TestObjectStorageKeySetCredentialRefTokenForLinodeClients(t *testing.T) {
 
 			mockK8sClient := mock.NewMockK8sClient(ctrl)
 
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockLinodeClient.EXPECT().SetToken(gomock.Any()).Return(&linodego.Client{}).AnyTimes()
+
 			testcase.expects(mockK8sClient)
 
 			testcase.args.params.Client = mockK8sClient
 
-			kscope, err := NewObjectStorageKeyScope(&mock.MockLinodeClient{}, testcase.args.params)
+			kscope, err := NewObjectStorageKeyScope(mockLinodeClient, testcase.args.params)
 
 			if err != nil {
 				t.Errorf("NewObjectStorageKeyScope() error = %v", err)

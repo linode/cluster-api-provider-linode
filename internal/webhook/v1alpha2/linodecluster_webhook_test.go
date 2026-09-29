@@ -135,16 +135,16 @@ func TestValidateLinodeClusterCreate(t *testing.T) {
 				},
 			},
 		}
-		validator = &linodeClusterValidator{Client: mockK8sClient}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
 		OneOf(
 			Path(
 				Call("invalid request", func(ctx context.Context, mck Mock) {
-
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
+					validator := &linodeClusterValidator{Client: mockK8sClient, LinodeClient: mck.LinodeClient}
 					_, err := validator.ValidateCreate(ctx, &cluster)
 					assert.ErrorContains(t, err, "\"example\" is invalid: spec.region: Not found:")
 				}),
@@ -154,6 +154,7 @@ func TestValidateLinodeClusterCreate(t *testing.T) {
 
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
+					validator := &linodeClusterValidator{Client: mockK8sClient, LinodeClient: mck.LinodeClient}
 					_, err := validator.ValidateCreate(ctx, &clusterLongName)
 					assert.ErrorContains(t, err, labelLengthDetail)
 				}),

@@ -430,7 +430,6 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 				Region: "example",
 			},
 		}
-		validator         = &linodeVPCValidator{}
 		credentialsRefVPC = infrav1alpha2.LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
@@ -449,9 +448,10 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 		OneOf(
 			Path(
 				Call("invalid request", func(ctx context.Context, mck Mock) {
-
+					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, errors.New("invalid region")).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
+					validator := &linodeVPCValidator{Client: mockK8sClient, LinodeClient: mck.LinodeClient}
 					_, err := validator.ValidateCreate(ctx, &vpc)
 					assert.ErrorContains(t, err, "\"example\" is invalid: spec.region: Not found:")
 				}),
@@ -461,6 +461,7 @@ func TestValidateCreateLinodeVPC(t *testing.T) {
 
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
+					validator := &linodeVPCValidator{Client: mockK8sClient, LinodeClient: mck.LinodeClient}
 					_, err := validator.ValidateCreate(ctx, &vpcLongName)
 					assert.ErrorContains(t, err, labelLengthDetail)
 				}),

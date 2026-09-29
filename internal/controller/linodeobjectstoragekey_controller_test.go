@@ -461,6 +461,9 @@ var _ = Describe("errors", Label("key", "key-errors"), func() {
 				}),
 			),
 		),
+		Call("scope creation fails", func(ctx context.Context, mck Mock) {
+			mck.K8sClient.EXPECT().Scheme().Return(runtime.NewScheme()).AnyTimes()
+		}),
 		Result("scope params is missing args", func(ctx context.Context, mck Mock) {
 			reconciler.Client = mck.K8sClient
 			reconciler.Logger = keyScope.Logger

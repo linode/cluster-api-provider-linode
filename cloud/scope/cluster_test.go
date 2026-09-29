@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/linode/linodego/v2"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -236,19 +237,6 @@ func TestNewClusterScope(t *testing.T) {
 			expects: func(mock *mock.MockK8sClient) {
 				mock.EXPECT().Scheme().Return(runtime.NewScheme())
 			},
-		},
-		{
-			name: "Error - createLinodeCluster throws an error for passing empty apiKey. Unable to create a valid ClusterScope",
-			args: args{
-				apiKey:    "",
-				dnsApiKey: "",
-				params: ClusterScopeParams{
-					Cluster:       &clusterv1.Cluster{},
-					LinodeCluster: &infrav1alpha2.LinodeCluster{},
-				},
-			},
-			expectedError: fmt.Errorf("failed to create linode client: token cannot be empty"),
-			expects:       func(mock *mock.MockK8sClient) {},
 		},
 	}
 
@@ -473,12 +461,14 @@ func TestClusterSetCredentialRefTokenForLinodeClients(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+			mockLinodeClient.EXPECT().SetToken(gomock.Any()).Return(&linodego.Client{}).AnyTimes()
 
 			testcase.expects(mockK8sClient)
 
 			cScope, err := NewClusterScope(
-				&mock.MockLinodeClient{},
-				&mock.MockLinodeClient{},
+				mockLinodeClient,
+				mockLinodeClient,
 				ClusterScopeParams{
 					Cluster:           testcase.fields.Cluster,
 					LinodeCluster:     testcase.fields.LinodeCluster,
