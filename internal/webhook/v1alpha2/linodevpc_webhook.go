@@ -132,11 +132,7 @@ func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodecl
 	// TODO: instrument with tracing, might need refactor to preserve readibility
 	var errs field.ErrorList
 
-	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityVPCs); err != nil {
-			errs = append(errs, err)
-		}
-	}
+	// Validate local fields first before making any API calls for validation
 	if err := r.validateLinodeVPCSubnets(spec); err != nil {
 		errs = slices.Concat(errs, err)
 	}
@@ -147,6 +143,12 @@ func (r *linodeVPCValidator) validateLinodeVPCSpec(ctx context.Context, linodecl
 		rangeErr := validateIPv6Range(ipv6Range.Range, ipv6RangePath)
 		if rangeErr != nil {
 			errs = append(errs, rangeErr)
+		}
+	}
+
+	if !skipAPIValidation {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityVPCs); err != nil {
+			errs = append(errs, err)
 		}
 	}
 

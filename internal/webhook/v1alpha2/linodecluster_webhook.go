@@ -98,12 +98,7 @@ func (r *linodeClusterValidator) ValidateDelete(_ context.Context, cluster *infr
 func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeClusterSpec, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
-	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
+	// Validate local fields first before making any API calls for validation
 	if spec.Network.LoadBalancerType == "dns" {
 		if spec.Network.DNSRootDomain == "" {
 			errs = append(errs, &field.Error{
@@ -134,6 +129,12 @@ func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, 
 			Type:   field.ErrorTypeInvalid,
 			Detail: "Cannot specify both NodeBalancerFirewallID and NodeBalancerFirewallRef",
 		})
+	}
+
+	if !skipAPIValidation {
+		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	if len(errs) == 0 {

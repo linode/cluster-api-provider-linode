@@ -106,15 +106,17 @@ func (v *LinodePlacementGroupCustomValidator) ValidateDelete(_ context.Context, 
 func (v *LinodePlacementGroupCustomValidator) validateLinodePlacementGroupSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodePlacementGroupSpec, label string, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
+	// Validate local fields first before making any API calls for validation
+	if err := validatePlacementGroupLabel(label, field.NewPath("metadata").Child("name")); err != nil {
+		errs = append(errs, err)
+	}
+
 	if !skipAPIValidation {
 		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region"), linodego.CapabilityPlacementGroup); err != nil {
 			errs = append(errs, err)
 		}
 	}
 
-	if err := validatePlacementGroupLabel(label, field.NewPath("metadata").Child("name")); err != nil {
-		errs = append(errs, err)
-	}
 	// PlacementGroupPolicy is immutable, no need to verify again.
 	if len(errs) == 0 {
 		return nil
