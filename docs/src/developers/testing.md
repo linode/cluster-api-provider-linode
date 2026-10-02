@@ -241,7 +241,14 @@ There are other selectors you can use to invoke specfic tests. Please look at th
 | DNS                              | `dns`           |
 
 *Note: For any flavor e2e tests, please set the required env variables*
-*e.g. for DNS: `CONTROL_PLANE_MACHINE_COUNT=3 chainsaw test e2e --selector dns`*
+
+Changes to DNS load balancing logic should be tested with the DNS Chainsaw e2e test using 3 control-plane replicas.
+The test currently defaults to 1 on GHA since it is a long-running test prone to timeouts.
+
+To test, run:
+```bash
+CONTROL_PLANE_MACHINE_COUNT=3 chainsaw test e2e --selector dns
+```
 
 ### Adding Tests
 1. Create a new directory under the controller you are testing with the naming scheme of `e2e/${COMPONENT}/${TEST_NAME}`
