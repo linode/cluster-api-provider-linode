@@ -6,7 +6,6 @@ metadata:
   name: dns-lb-cluster
   # Labels to allow the test to be triggered based on selector flag
   labels:
-    all:
     dns:
 spec:
   bindings:
