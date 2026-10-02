@@ -29,8 +29,8 @@ metadata:
   labels:
     cluster.x-k8s.io/cluster-name: ($cluster)
 status:
-  readyReplicas: 3
-  availableReplicas: 3
+  readyReplicas: (to_number(to_string(env('CONTROL_PLANE_MACHINE_COUNT') || '1')))
+  availableReplicas: (to_number(to_string(env('CONTROL_PLANE_MACHINE_COUNT') || '1')))
 ---
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmReleaseProxy
