@@ -349,6 +349,34 @@ type LinodeInterfaceCreateOptions struct {
 	// vlan is the VLAN interface configuration for the interface.
 	// +optional
 	VLAN *VLANInterface `json:"vlan,omitempty"`
+
+	// rdmaVPC attaches this interface entry to an RDMA VPC subnet.
+	// Mutually exclusive with vpc, public and vlan.
+	// firewallID is ignored for rdmaVPC entries
+	// NOTE: RDMA VPC interfaces may not currently be available to all users.
+	// +optional
+	RDMAVPC *RDMAVPCInterfaceSpec `json:"rdmaVPC,omitempty"`
+}
+
+// RDMAVPCInterfaceSpec defines an RDMA VPC subnet attachment within a linodeInterfaces entry.
+// Mirrors linodego.RDMAVPCInterfaceCreateOptions. IP address assignment is always auto.
+// Specify either subnetID (direct) or vpcRef+subnetName (resolved at reconcile time).
+type RDMAVPCInterfaceSpec struct {
+	// subnetID is the ID of the RDMA VPC subnet to attach.
+	// Use when the subnet ID is known upfront. Mutually exclusive with vpcRef/subnetName.
+	// +optional
+	SubnetID *int `json:"subnetID,omitempty"`
+
+	// vpcRef is a reference to a LinodeVPC resource with vpcType=rdma managed by CAPL.
+	// CAPL resolves the subnet ID at reconcile time using subnetName.
+	// Mutually exclusive with subnetID.
+	// +optional
+	VPCRef *corev1.ObjectReference `json:"vpcRef,omitempty"`
+
+	// subnetName is the label of the subnet within the referenced LinodeVPC.
+	// Required when vpcRef is set.
+	// +optional
+	SubnetName string `json:"subnetName,omitempty"`
 }
 
 // InterfaceDefaultRoute defines the default IPv4 and IPv6 routes for an interface

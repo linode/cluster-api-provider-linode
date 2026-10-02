@@ -1,0 +1,91 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../default
+  - rdmaVPC.yaml
+  - rdmaMachineDeployments.yaml
+
+patches:
+  # Rename the base worker LMT (${CLUSTER_NAME}) to ${CLUSTER_NAME}-0 so all three pools
+  # use a consistent numeric suffix: -0 (non-GPU), -1 (GPU host A), -2 (GPU host B).
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeMachineTemplate
+      name: ".*\\}$"
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: ${CLUSTER_NAME}-0
+  # Rename the base worker MachineDeployment to ${CLUSTER_NAME}-0 and fix the LMT reference.
+  - target:
+      group: cluster.x-k8s.io
+      version: v1beta2
+      kind: MachineDeployment
+      name: ".*\\}$"
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: ${CLUSTER_NAME}-0
+      - op: replace
+        path: /spec/template/spec/infrastructureRef/name
+        value: ${CLUSTER_NAME}-0
+  # Enable VPC-scoped NodeBalancer backends.
+  # NB_BACKEND_IPV4_RANGE must be set to the VPC subnet CIDR used for NodeBalancer backends.
+  - target:
+      group: infrastructure.cluster.x-k8s.io
+      version: v1alpha2
+      kind: LinodeCluster
+    patch: |-
+      apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+      kind: LinodeCluster
+      metadata:
+        name: ${CLUSTER_NAME}
+      spec:
+        network:
+          enableVPCBackends: true
+          nodeBalancerBackendIPv4Range: ${NB_BACKEND_IPV4_RANGE}
+  # Set cni.exclusive=false so other CNIs can coexist alongside Cilium.
+  - target:
+      group: addons.cluster.x-k8s.io
+      version: v1alpha1
+      kind: HelmChartProxy
+      name: ".*-cilium"
+    patch: |-
+      - op: replace
+        path: /spec/valuesTemplate
+        value: |
+          bgpControlPlane:
+            enabled: true
+          cni:
+            exclusive: false
+          routingMode: native
+          nodePort:
+            directRoutingDevice: eth+
+          kubeProxyReplacement: true
+          ipv4NativeRoutingCIDR: ${VPC_NETWORK_CIDR:=10.0.0.0/8}
+          tunnelProtocol: ""
+          enableIPv4Masquerade: true
+          policyAuditMode: ${FW_AUDIT_ONLY:=true}
+          hostFirewall:
+            enabled: true
+          extraConfig:
+            allow-localhost: policy
+          k8sServiceHost: {{ .InfraCluster.spec.controlPlaneEndpoint.host }}
+          k8sServicePort: {{ .InfraCluster.spec.controlPlaneEndpoint.port }}
+          extraArgs:
+          - --nodeport-addresses=0.0.0.0/0
+          ipam:
+            mode: kubernetes
+          ipv4:
+            enabled: true
+          ipv6:
+            enabled: false
+          k8s:
+            requireIPv4PodCIDR: true
+          hubble:
+            relay:
+              enabled: true
+            ui:
+              enabled: true

@@ -1,0 +1,34 @@
+---
+# RDMA VPC managed by CAPL. Each subnet maps to one rail interface (rdma0–rdma7).
+# RDMA_NETWORK_CIDR sets the VPC address space; each RDMA_SUBNET_CIDR_N is a /24 within it.
+# Labels must match the subnetName values referenced in the LinodeMachineTemplate.
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+kind: LinodeVPC
+metadata:
+  name: ${CLUSTER_NAME}-rdma
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+spec:
+  credentialsRef:
+    name: ${CLUSTER_NAME}-credentials
+  region: ${LINODE_REGION}
+  vpcType: rdma
+  ipv4Range:
+    - ${RDMA_NETWORK_CIDR:=10.2.0.0/16}
+  subnets:
+    - ipv4: ${RDMA_SUBNET_CIDR_0:=10.2.0.0/24}
+      label: gpu-0
+    - ipv4: ${RDMA_SUBNET_CIDR_1:=10.2.1.0/24}
+      label: gpu-1
+    - ipv4: ${RDMA_SUBNET_CIDR_2:=10.2.2.0/24}
+      label: gpu-2
+    - ipv4: ${RDMA_SUBNET_CIDR_3:=10.2.3.0/24}
+      label: gpu-3
+    - ipv4: ${RDMA_SUBNET_CIDR_4:=10.2.4.0/24}
+      label: gpu-4
+    - ipv4: ${RDMA_SUBNET_CIDR_5:=10.2.5.0/24}
+      label: gpu-5
+    - ipv4: ${RDMA_SUBNET_CIDR_6:=10.2.6.0/24}
+      label: gpu-6
+    - ipv4: ${RDMA_SUBNET_CIDR_7:=10.2.7.0/24}
+      label: gpu-7

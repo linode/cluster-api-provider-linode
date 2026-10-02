@@ -621,6 +621,7 @@ _Appears in:_
 | `public` _[PublicInterfaceCreateOptions](#publicinterfacecreateoptions)_ | public is the public interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vpc` _[VPCInterfaceCreateOptions](#vpcinterfacecreateoptions)_ | vpc is the VPC interface configuration for the interface. |  | Optional: \{\} <br /> |
 | `vlan` _[VLANInterface](#vlaninterface)_ | vlan is the VLAN interface configuration for the interface. |  | Optional: \{\} <br /> |
+| `rdmaVPC` _[RDMAVPCInterfaceSpec](#rdmavpcinterfacespec)_ | rdmaVPC attaches this interface entry to an RDMA VPC subnet.<br />Mutually exclusive with vpc, public and vlan.<br />firewallID is ignored for rdmaVPC entries<br />NOTE: RDMA VPC interfaces may not currently be available to all users. |  | Optional: \{\} <br /> |
 
 
 #### LinodeMachine
@@ -1174,6 +1175,7 @@ _Appears in:_
 | `ipv6Range` _[VPCCreateOptionsIPv6](#vpccreateoptionsipv6) array_ | ipv6Range is a list of IPv6 ranges to allocate to the VPC.<br />If not specified, the VPC will not have an IPv6 range allocated.<br />Once ranges are allocated, they will be added to the IPv6 field. |  | Optional: \{\} <br /> |
 | `ipv4Range` _string array_ | ipv4Range is a list of IPv4 ranges to allocate to the VPC.<br />If not specified, the VPC will not have an IPv4 range allocated.<br />Once ranges are allocated, they will be added to the IPv4 field. |  | Optional: \{\} <br /> |
 | `subnets` _[VPCSubnetCreateOptions](#vpcsubnetcreateoptions) array_ | subnets is a list of subnets to create in the VPC. |  | Optional: \{\} <br /> |
+| `vpcType` _[VPCType](#vpctype)_ | vpcType is the type of VPC to create. Valid values are "regular" and "rdma".<br />Defaults to "regular". Set to "rdma" to create a GPUDirect RDMA VPC.<br />NOTE: RDMA VPCs may not currently be available to all users. | regular | Enum: [regular rdma] <br />Optional: \{\} <br /> |
 | `retain` _boolean_ | retain allows you to keep the VPC after the LinodeVPC object is deleted.<br />This is useful if you want to use an existing VPC that was not created by this controller.<br />If set to true, the controller will not delete the VPC resource in Linode.<br />Defaults to false. | false | Optional: \{\} <br /> |
 | `credentialsRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#secretreference-v1-core)_ | credentialsRef is a reference to a Secret that contains the credentials to use for provisioning this VPC.<br />If not supplied, then the credentials of the controller will be used. |  | Optional: \{\} <br /> |
 
@@ -1364,6 +1366,26 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `range` _string_ | range is the IPv6 range for the public interface. |  | MinLength: 1 <br />Required: \{\} <br /> |
+
+
+#### RDMAVPCInterfaceSpec
+
+
+
+RDMAVPCInterfaceSpec defines an RDMA VPC subnet attachment within a linodeInterfaces entry.
+Mirrors linodego.RDMAVPCInterfaceCreateOptions. IP address assignment is always auto.
+Specify either subnetID (direct) or vpcRef+subnetName (resolved at reconcile time).
+
+
+
+_Appears in:_
+- [LinodeInterfaceCreateOptions](#linodeinterfacecreateoptions)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `subnetID` _integer_ | subnetID is the ID of the RDMA VPC subnet to attach.<br />Use when the subnet ID is known upfront. Mutually exclusive with vpcRef/subnetName. |  | Optional: \{\} <br /> |
+| `vpcRef` _[ObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectreference-v1-core)_ | vpcRef is a reference to a LinodeVPC resource with vpcType=rdma managed by CAPL.<br />CAPL resolves the subnet ID at reconcile time using subnetName.<br />Mutually exclusive with subnetID. |  | Optional: \{\} <br /> |
+| `subnetName` _string_ | subnetName is the label of the subnet within the referenced LinodeVPC.<br />Required when vpcRef is set. |  | Optional: \{\} <br /> |
 
 
 #### VLANInterface
