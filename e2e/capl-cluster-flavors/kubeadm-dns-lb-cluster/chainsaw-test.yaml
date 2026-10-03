@@ -17,6 +17,10 @@ spec:
       # linode firewall has limit of max 32 chars, so we truncate the cluster name to 29 chars
       # for firewall named as <cluster>-nb
       value: (trim((truncate(($run), `29`)), '-'))
+    - name: dnsRootDomain
+      value: 'lkedevs.net'
+    - name: dnsSubdomain
+      value: (join('.', [($cluster), 'capl-e2e']))
   template: true
   steps:
     - name: Check if CAPI provider resources exist
@@ -36,11 +40,11 @@ spec:
               - name: KUBERNETES_VERSION
                 value: (env('KUBERNETES_VERSION') || 'v1.36.2')
               - name: DNS_ROOT_DOMAIN
-                value: 'lkedevs.net'
+                value: ($dnsRootDomain)
               - name: DNS_UNIQUE_ID
                 value: ''
               - name: DNS_SUBDOMAIN_OVERRIDE
-                value: (join('.', [($cluster), 'capl-e2e']))
+                value: ($dnsSubdomain)
               - name: CONTROL_PLANE_MACHINE_COUNT
                 value: (env('CONTROL_PLANE_MACHINE_COUNT')) # 1 or 3
             content: |
@@ -75,32 +79,59 @@ spec:
         - describe:
             apiVersion: addons.cluster.x-k8s.io/v1alpha1
             kind: HelmReleaseProxy
-    - name: Assert DNS has entries
+    - name: Assert DNS records exist in the Linode API
+      bindings:
+        - name: expectedDnsRecordCount
+          value: (to_number(to_string(env('CONTROL_PLANE_MACHINE_COUNT') || '1')))
       try:
-        - script:
-            shell: bash
-            shellArgs:
-              - -c
+        - command:
+            entrypoint: linode-cli
+            args:
+              - domains
+              - list
+              - --domain
+              - $DNS_ROOT_DOMAIN
+              - --format
+              - id
+              - --json
             env:
-              - name: CLUSTER_URL
-                value: (join('.', [($cluster), 'capl-e2e', 'lkedevs.net']))
-              - name: CONTROL_PLANE_MACHINE_COUNT
-                value: (env('CONTROL_PLANE_MACHINE_COUNT')) # 1 or 3
-            content: |
-              set -e
-              count=0
-              for _ in $(seq 1 10); do # cap at 5 minutes per exec timeout in .chainsaw.yaml
-                count=$(dig @ns1.linode.com. $CLUSTER_URL +short | wc -l | tr -d ' ')
-                if [[ "$count" == "${CONTROL_PLANE_MACHINE_COUNT:-1}" ]]; then
-                  exit 0
-                fi
-                sleep 30
-              done
-
-              echo "expected ${CONTROL_PLANE_MACHINE_COUNT:-1} records, got ${count:-0}"
-              exit 1
+              - name: LINODE_CLI_TOKEN
+                value: (env('LINODE_DNS_TOKEN'))
+              - name: LINODE_CLI_API_HOST
+                value: 'api.linode.com'
+              - name: DNS_ROOT_DOMAIN
+                value: ($dnsRootDomain)
+            outputs:
+              - name: dnsDomainId
+                value: (to_string(json_parse($stdout)[0].id))
             check:
               ($error == null): true
+              (length(json_parse($stdout)) == `1`): true
+        - command:
+            entrypoint: linode-cli
+            args:
+              - domains
+              - records-list
+              - $DNS_DOMAIN_ID
+              - --name
+              - $DNS_RECORD_NAME
+              - --type
+              - A
+              - --format
+              - id
+              - --json
+            env:
+              - name: LINODE_CLI_TOKEN
+                value: (env('LINODE_DNS_TOKEN'))
+              - name: LINODE_CLI_API_HOST
+                value: 'api.linode.com'
+              - name: DNS_DOMAIN_ID
+                value: ($dnsDomainId)
+              - name: DNS_RECORD_NAME
+                value: ($dnsSubdomain)
+            check:
+              ($error == null): true
+              (length(json_parse($stdout)) == $expectedDnsRecordCount): true
     - name: Delete child cluster
       try:
         - script:

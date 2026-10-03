@@ -22,6 +22,7 @@ golangci-lint = "2.11.4"
 mdbook = "0.5.2"
 jq = "1.8.1"
 "go:github.com/elastic/crd-ref-docs" = "0.3.0"
+"pipx:linode-cli" = "5.68.0"
 
 [tasks.fmt]
 description = "Format Go sources"
