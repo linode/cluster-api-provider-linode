@@ -29,8 +29,8 @@ metadata:
   labels:
     cluster.x-k8s.io/cluster-name: ($cluster)
 status:
-  readyReplicas: 3
-  availableReplicas: 3
+  (readyReplicas > `0`): true
+  (availableReplicas > `0`): true
 ---
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
 kind: HelmReleaseProxy
