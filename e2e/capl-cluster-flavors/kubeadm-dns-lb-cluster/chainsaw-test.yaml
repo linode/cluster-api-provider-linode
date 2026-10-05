@@ -107,19 +107,8 @@ spec:
             check:
               ($error == null): true
               (length(json_parse($stdout)) == `1`): true
-        - command:
-            entrypoint: linode-cli
-            args:
-              - domains
-              - records-list
-              - $DNS_DOMAIN_ID
-              - --name
-              - $DNS_RECORD_NAME
-              - --type
-              - A
-              - --format
-              - id
-              - --json
+        - script:
+            timeout: 31m
             env:
               - name: LINODE_CLI_TOKEN
                 value: (env('LINODE_DNS_TOKEN'))
@@ -129,9 +118,26 @@ spec:
                 value: ($dnsDomainId)
               - name: DNS_RECORD_NAME
                 value: ($dnsSubdomain)
+              - name: EXPECTED_COUNT
+                value: ($expectedDnsRecordCount)
+            content: |
+              deadline=$((SECONDS + 1800))
+              count=0
+              while true; do
+                out=$(linode-cli domains records-list "$DNS_DOMAIN_ID" --name "$DNS_RECORD_NAME" --type A --format id --json 2>/dev/null) || out=""
+                count=$(printf '%s' "$out" | grep -o '"id"' | wc -l | tr -d ' ')
+                echo "Found $count/$EXPECTED_COUNT A records for $DNS_RECORD_NAME"
+                if [ "$count" -eq "$EXPECTED_COUNT" ]; then
+                  exit 0
+                fi
+                if [ "$SECONDS" -ge "$deadline" ]; then
+                  echo "Timed out waiting for $EXPECTED_COUNT DNS records"
+                  exit 1
+                fi
+                sleep 15
+              done
             check:
               ($error == null): true
-              (length(json_parse($stdout)) == $expectedDnsRecordCount): true
     - name: Delete child cluster
       try:
         - script:
