@@ -52,6 +52,10 @@ jobs:
              - e2e/capl-cluster-flavors/kubeadm-flatcar-vpcless-capl-cluster/*
             cluster-pause:
               - e2e/cluster-pause/*
+            dns:
+              - templates/flavors/kubeadm/dns-loadbalancing/*
+              - e2e/capl-cluster-flavors/kubeadm-dns-lb-cluster/*
+              - cloud/services/domains.go
 
   go-test:
     environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
@@ -64,6 +68,8 @@ jobs:
         with:
           egress-policy: block
           allowed-endpoints: >
+            pypi.org:443
+            files.pythonhosted.org:443
             api.github.com:443
             github.com:443
             golang.org:443

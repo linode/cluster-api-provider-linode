@@ -65,6 +65,8 @@ jobs:
         with:
           egress-policy: block
           allowed-endpoints: >
+            pypi.org:443
+            files.pythonhosted.org:443
             api.github.com:443
             github.com:443
             golang.org:443
@@ -103,6 +105,8 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
+            pypi.org:443
+            files.pythonhosted.org:443
             api.github.com:443
             github.com:443
             index.docker.io:443
