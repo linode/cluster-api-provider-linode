@@ -6,7 +6,7 @@ on:
       e2e-selector:
         default: quick
         description: "Selector for which tests to run, defaults to 'quick'"
-        required: true
+        required: false
         type: string
       e2e-flags:
         type: string
@@ -55,6 +55,7 @@ jobs:
   e2e-test:
     name: ${{ format('{0}-e2e-tests', inputs.e2e-selector) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     environment: ${{ inputs.environment }}
     env:
       GITHUB_TOKEN: ${{ secrets.github_token }}
@@ -68,6 +69,8 @@ jobs:
           allowed-endpoints: >
             *:6443
             api.linode.com:443
+            pypi.org:443
+            files.pythonhosted.org:443
             api.github.com:443
             github.com:443
             gcr.io:443

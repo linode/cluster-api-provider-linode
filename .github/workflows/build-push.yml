@@ -22,6 +22,8 @@ jobs:
           disable-sudo: true
           egress-policy: block
           allowed-endpoints: >
+            pypi.org:443
+            files.pythonhosted.org:443
             api.github.com:443
             github.com:443
             auth.docker.io:443
