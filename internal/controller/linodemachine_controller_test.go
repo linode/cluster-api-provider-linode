@@ -4496,8 +4496,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 		Context("when no rdmaVPC interfaces are present", func() {
 			It("should succeed immediately without any k8s calls", func() {
 				machineScope.LinodeMachine.Spec.LinodeInterfaces = nil
-				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
-				Expect(err).NotTo(HaveOccurred())
+				result := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
 				Expect(result).To(Equal(ctrl.Result{}))
 			})
 		})
@@ -4508,8 +4507,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 				machineScope.LinodeMachine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{
 					{RDMAVPC: &infrav1alpha2.RDMAVPCInterfaceSpec{SubnetID: &subnetID}},
 				}
-				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
-				Expect(err).NotTo(HaveOccurred())
+				result := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
 				Expect(result).To(Equal(ctrl.Result{}))
 			})
 		})
@@ -4533,8 +4531,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 						VPCRef: &corev1.ObjectReference{Name: "rdma-vpc", Namespace: "default"},
 					}},
 				}
-				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
-				Expect(err).NotTo(HaveOccurred())
+				result := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
 				Expect(result).To(Equal(ctrl.Result{}))
 				condition := linodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
@@ -4557,8 +4554,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 						VPCRef: &corev1.ObjectReference{Name: "rdma-vpc", Namespace: "default"},
 					}},
 				}
-				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
-				Expect(err).NotTo(HaveOccurred())
+				result := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
 				Expect(result.RequeueAfter).To(BeNumerically(">", 0))
 				condition := linodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)
 				Expect(condition).NotTo(BeNil())
@@ -4577,8 +4573,7 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 						VPCRef: &corev1.ObjectReference{Name: "rdma-vpc", Namespace: "default"},
 					}},
 				}
-				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
-				Expect(err).NotTo(HaveOccurred())
+				result := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
 				Expect(result.RequeueAfter).To(BeNumerically(">", 0))
 				condition := linodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)
 				Expect(condition).NotTo(BeNil())

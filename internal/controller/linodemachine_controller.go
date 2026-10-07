@@ -311,9 +311,9 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 
 	if hasRDMAVPCRef(machineScope.LinodeMachine.Spec) {
 		if !reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
-			res, err := r.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
-			if err != nil || !res.IsZero() {
-				return res, err
+			res := r.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
+			if !res.IsZero() {
+				return res, nil
 			}
 		}
 	}
@@ -575,7 +575,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 // and its LinodeVPC is ready before instance creation is attempted. Because RDMA VPCs may be
 // provisioned concurrently with the machine (e.g. when a flavor applies both resources at once),
 // errors here are transient: the function returns a requeue rather than a terminal failure.
-func (r *LinodeMachineReconciler) reconcilePreflightRDMAVPCRefs(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
+func (r *LinodeMachineReconciler) reconcilePreflightRDMAVPCRefs(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) ctrl.Result {
 	for idx, iface := range machineScope.LinodeMachine.Spec.LinodeInterfaces {
 		if iface.RDMAVPC == nil || iface.RDMAVPC.VPCRef == nil {
 			continue
@@ -594,7 +594,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightRDMAVPCRefs(ctx context.Cont
 				Reason:  "RDMALinodeVPCFetchError",
 				Message: err.Error(),
 			})
-			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, err
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}
 		}
 		if !linodeVPC.Status.Ready || linodeVPC.Spec.VPCID == nil {
 			logger.Info("RDMA LinodeVPC is not yet ready", "index", idx, "vpc", vpcRef.Name)
@@ -603,7 +603,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightRDMAVPCRefs(ctx context.Cont
 				Status: metav1.ConditionFalse,
 				Reason: "RDMALinodeVPCNotReady",
 			})
-			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}
 		}
 	}
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
@@ -611,7 +611,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightRDMAVPCRefs(ctx context.Cont
 		Status: metav1.ConditionTrue,
 		Reason: "RDMALinodeVPCReady",
 	})
-	return ctrl.Result{}, nil
+	return ctrl.Result{}
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
