@@ -688,6 +688,12 @@ spec:
                                   type: object
                                   x-kubernetes-map-type: atomic
                               type: object
+                              x-kubernetes-validations:
+                              - message: specify either subnetID alone, or both vpcRef
+                                  and a non-empty subnetName
+                                rule: (has(self.subnetID) && !has(self.vpcRef)) ||
+                                  (!has(self.subnetID) && has(self.vpcRef) && self.subnetName
+                                  != "")
                             vlan:
                               description: vlan is the VLAN interface configuration
                                 for the interface.
@@ -830,6 +836,11 @@ spec:
                                   type: integer
                               type: object
                           type: object
+                          x-kubernetes-validations:
+                          - message: rdmaVPC is mutually exclusive with vpc, public,
+                              and vlan
+                            rule: '!has(self.rdmaVPC) || (!has(self.vpc) && !has(self.public)
+                              && !has(self.vlan))'
                         type: array
                         x-kubernetes-list-type: atomic
                         x-kubernetes-validations:

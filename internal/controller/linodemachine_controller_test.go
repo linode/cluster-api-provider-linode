@@ -4491,4 +4491,99 @@ var _ = Describe("direct vpc functions", Label("machine", "vpc", "functions"), O
 			})
 		})
 	})
+
+	Describe("reconcilePreflightRDMAVPCRefs", func() {
+		Context("when no rdmaVPC interfaces are present", func() {
+			It("should succeed immediately without any k8s calls", func() {
+				machineScope.LinodeMachine.Spec.LinodeInterfaces = nil
+				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+			})
+		})
+
+		Context("when rdmaVPC interface uses a direct subnetID (no vpcRef)", func() {
+			It("should succeed without any k8s calls", func() {
+				subnetID := 42
+				machineScope.LinodeMachine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{
+					{RDMAVPC: &infrav1alpha2.RDMAVPCInterfaceSpec{SubnetID: &subnetID}},
+				}
+				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+			})
+		})
+
+		Context("when rdmaVPC vpcRef LinodeVPC is ready", func() {
+			BeforeEach(func() {
+				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{
+					Namespace: "default",
+					Name:      "rdma-vpc",
+				}, gomock.Any()).DoAndReturn(
+					func(_ context.Context, _ interface{}, vpc *infrav1alpha2.LinodeVPC, _ ...interface{}) error {
+						vpc.Status.Ready = true
+						vpc.Spec.VPCID = new(200)
+						return nil
+					})
+			})
+
+			It("should succeed and set condition to true", func() {
+				machineScope.LinodeMachine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{
+					{RDMAVPC: &infrav1alpha2.RDMAVPCInterfaceSpec{
+						VPCRef: &corev1.ObjectReference{Name: "rdma-vpc", Namespace: "default"},
+					}},
+				}
+				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+				condition := linodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionTrue))
+			})
+		})
+
+		Context("when rdmaVPC vpcRef LinodeVPC exists but is not yet ready", func() {
+			BeforeEach(func() {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, _ interface{}, vpc *infrav1alpha2.LinodeVPC, _ ...interface{}) error {
+						vpc.Status.Ready = false
+						return nil
+					})
+			})
+
+			It("should requeue with delay and set condition to false", func() {
+				machineScope.LinodeMachine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{
+					{RDMAVPC: &infrav1alpha2.RDMAVPCInterfaceSpec{
+						VPCRef: &corev1.ObjectReference{Name: "rdma-vpc", Namespace: "default"},
+					}},
+				}
+				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.RequeueAfter).To(BeNumerically(">", 0))
+				condition := linodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			})
+		})
+
+		Context("when rdmaVPC vpcRef LinodeVPC is not found", func() {
+			BeforeEach(func() {
+				mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("not found"))
+			})
+
+			It("should requeue with delay and set condition to false", func() {
+				machineScope.LinodeMachine.Spec.LinodeInterfaces = []infrav1alpha2.LinodeInterfaceCreateOptions{
+					{RDMAVPC: &infrav1alpha2.RDMAVPCInterfaceSpec{
+						VPCRef: &corev1.ObjectReference{Name: "rdma-vpc", Namespace: "default"},
+					}},
+				}
+				result, err := reconciler.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result.RequeueAfter).To(BeNumerically(">", 0))
+				condition := linodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)
+				Expect(condition).NotTo(BeNil())
+				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			})
+		})
+	})
 })

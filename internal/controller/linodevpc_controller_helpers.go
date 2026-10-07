@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -63,6 +64,15 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 	}
 
 	if len(vpcs) != 0 {
+		desiredType := vpcScope.LinodeVPC.Spec.VPCType
+		if desiredType == "" {
+			desiredType = linodego.VPCTypeRegular
+		}
+		if vpcs[0].VPCType != desiredType {
+			err := fmt.Errorf("existing VPC %q has type %q but vpcType %q is required", vpcs[0].Label, vpcs[0].VPCType, desiredType)
+			logger.Error(err, "VPC type mismatch prevents adoption")
+			return err
+		}
 		return reconcileExistingVPC(ctx, vpcScope, &vpcs[0])
 	}
 

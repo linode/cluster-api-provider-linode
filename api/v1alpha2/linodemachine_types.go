@@ -319,6 +319,7 @@ type InstanceConfigInterfaceCreateOptions struct {
 }
 
 // LinodeInterfaceCreateOptions defines the linode network interface config
+// +kubebuilder:validation:XValidation:rule="!has(self.rdmaVPC) || (!has(self.vpc) && !has(self.public) && !has(self.vlan))",message="rdmaVPC is mutually exclusive with vpc, public, and vlan"
 type LinodeInterfaceCreateOptions struct {
 	// firewallID is the ID of the firewall to use for the interface.
 	// +optional
@@ -361,6 +362,7 @@ type LinodeInterfaceCreateOptions struct {
 // RDMAVPCInterfaceSpec defines an RDMA VPC subnet attachment within a linodeInterfaces entry.
 // Mirrors linodego.RDMAVPCInterfaceCreateOptions. IP address assignment is always auto.
 // Specify either subnetID (direct) or vpcRef+subnetName (resolved at reconcile time).
+// +kubebuilder:validation:XValidation:rule=(has(self.subnetID) && !has(self.vpcRef)) || (!has(self.subnetID) && has(self.vpcRef) && self.subnetName != ""),message="specify either subnetID alone, or both vpcRef and a non-empty subnetName"
 type RDMAVPCInterfaceSpec struct {
 	// subnetID is the ID of the RDMA VPC subnet to attach.
 	// Use when the subnet ID is known upfront. Mutually exclusive with vpcRef/subnetName.
