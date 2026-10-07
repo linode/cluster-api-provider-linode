@@ -56,6 +56,7 @@ const (
 	maxBootstrapDataBytesCloudInit = 16384
 	vlanIPFormat                   = "%s/11"
 	defaultNodeIPv6CIDRRange       = "/64" // Default IPv6 range for VPC interfaces
+	rdmaInterfaceFirewallDisabled  = -1
 )
 
 var (
@@ -143,7 +144,18 @@ func fillCreateConfig(ctx context.Context, createConfig *linodego.InstanceCreate
 func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzipCompressionEnabled bool, logger logr.Logger) (*linodego.InstanceCreateOptions, error) {
 	var err error
 
-	createConfig := linodeMachineSpecToInstanceCreateConfig(machineScope.LinodeMachine.Spec, getTags(machineScope, []string{}))
+	// Pre-resolve any linodeInterfaces[].rdmaVPC entries that use vpcRef+subnetName into
+	// concrete subnetIDs. This must happen before constructLinodeInterfaceCreateOpts, which
+	// is a pure function and cannot do k8s lookups.
+	spec := machineScope.LinodeMachine.Spec
+	if len(spec.LinodeInterfaces) > 0 {
+		spec.LinodeInterfaces, err = resolveLinodeInterfaceRDMASubnetRefs(ctx, machineScope, logger, spec.LinodeInterfaces)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	createConfig := linodeMachineSpecToInstanceCreateConfig(spec, getTags(machineScope, []string{}))
 	if createConfig == nil {
 		err = errors.New("failed to convert machine spec to create instance config")
 		logger.Error(err, "Panic! Struct of LinodeMachineSpec is different than InstanceCreateOptions")
@@ -190,6 +202,17 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 
 // configureVPCInterface handles all VPC configuration scenarios and adds the appropriate interface
 func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	// Check if there are existing Linode instance interfaces in the createConfig and skip adding a new one if necessary
+	if len(createConfig.LinodeInstanceInterfaces) > 0 {
+		for _, iface := range createConfig.LinodeInstanceInterfaces {
+			if iface.VPC != nil {
+				// VPC interface already exists, no need to add another one
+				logger.Info("VPC interface already exists, skipping addition")
+				return nil
+			}
+		}
+	}
+
 	// First check if a direct VPCID is specified on the machine then the cluster
 	if machineScope.LinodeMachine.Spec.VPCID != nil {
 		return addVPCInterfaceFromDirectID(ctx, machineScope, createConfig, logger, *machineScope.LinodeMachine.Spec.VPCID)
@@ -1019,6 +1042,22 @@ func constructLinodeInterfaceCreateOpts(createOpts []infrav1alpha2.LinodeInterfa
 		if firewallID != nil {
 			ifaceCreateOpts.FirewallID = firewallID
 		}
+		// Handle RDMAVPC — mutually exclusive with VPC/Public/VLAN above.
+		// IP is always auto; firewall injection happens in configureFirewall.
+		// vpcRef+subnetName entries must be resolved to SubnetID before this point
+		// by resolveLinodeInterfaceRDMASubnetRefs; skip any that are still unresolved.
+		if iface.RDMAVPC != nil {
+			if iface.RDMAVPC.SubnetID == nil {
+				continue
+			}
+			linodeInterfaces[idx].RDMAVPC = &linodego.RDMAVPCInterfaceCreateOptions{
+				SubnetID: *iface.RDMAVPC.SubnetID,
+				IPv4: &linodego.RDMAVPCInterfaceIPv4Options{
+					Addresses: []linodego.RDMAVPCInterfaceIPv4AddressOptions{{Address: "auto"}},
+				},
+			}
+			continue
+		}
 		// createOpts is now fully populated with the interface options
 		linodeInterfaces[idx].LinodeInterfaceCreateOptions = ifaceCreateOpts
 	}
@@ -1531,6 +1570,15 @@ func getVPCRefFromScope(machineScope *scope.MachineScope) *corev1.ObjectReferenc
 	return machineScope.LinodeCluster.Spec.VPCRef
 }
 
+func hasRDMAVPCRef(spec infrav1alpha2.LinodeMachineSpec) bool {
+	for _, iface := range spec.LinodeInterfaces {
+		if iface.RDMAVPC != nil && iface.RDMAVPC.VPCRef != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // configureVlanInterface adds a VLAN interface to the configuration
 func configureVlanInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
 	switch {
@@ -1559,6 +1607,68 @@ func configureVlanInterface(ctx context.Context, machineScope *scope.MachineScop
 	}
 
 	return nil
+}
+
+// resolveLinodeInterfaceRDMASubnetRefs pre-resolves any linodeInterfaces[].rdmaVPC entries that
+// use vpcRef+subnetName into a concrete subnetID by looking up the referenced LinodeVPC resource.
+// Returns a shallow copy of the slice with resolved entries; the original spec is not mutated.
+// Entries that already have SubnetID set, or that have no RDMAVPC, are returned unchanged.
+// VPC lookups are cached so multiple entries referencing the same VPC make only one API call.
+func resolveLinodeInterfaceRDMASubnetRefs(ctx context.Context, machineScope *scope.MachineScope, logger logr.Logger, interfaces []infrav1alpha2.LinodeInterfaceCreateOptions) ([]infrav1alpha2.LinodeInterfaceCreateOptions, error) {
+	needsResolution := false
+	for _, iface := range interfaces {
+		if iface.RDMAVPC != nil && iface.RDMAVPC.VPCRef != nil {
+			needsResolution = true
+			break
+		}
+	}
+	if !needsResolution {
+		return interfaces, nil
+	}
+
+	resolved := make([]infrav1alpha2.LinodeInterfaceCreateOptions, len(interfaces))
+	copy(resolved, interfaces)
+
+	type cachedVPC struct {
+		vpc *infrav1alpha2.LinodeVPC
+		err error
+	}
+	vpcCache := map[string]*cachedVPC{}
+
+	for idx, iface := range resolved {
+		if iface.RDMAVPC == nil || iface.RDMAVPC.VPCRef == nil {
+			continue
+		}
+
+		cacheKey := iface.RDMAVPC.VPCRef.Namespace + "/" + iface.RDMAVPC.VPCRef.Name
+		entry, ok := vpcCache[cacheKey]
+		if !ok {
+			linodeVPC, err := getVPCFromRef(ctx, machineScope, logger, iface.RDMAVPC.VPCRef)
+			entry = &cachedVPC{vpc: linodeVPC, err: err}
+			vpcCache[cacheKey] = entry
+		}
+		if entry.err != nil {
+			return nil, fmt.Errorf("linodeInterfaces[%d].rdmaVPC: failed to get VPC from ref: %w", idx, entry.err)
+		}
+
+		subnetsByLabel := make(map[string]int, len(entry.vpc.Spec.Subnets))
+		for _, subnet := range entry.vpc.Spec.Subnets {
+			subnetsByLabel[subnet.Label] = subnet.SubnetID
+		}
+
+		subnetID, ok := subnetsByLabel[iface.RDMAVPC.SubnetName]
+		if !ok {
+			return nil, fmt.Errorf("linodeInterfaces[%d].rdmaVPC: subnet %q not found in VPC %q", idx, iface.RDMAVPC.SubnetName, iface.RDMAVPC.VPCRef.Name)
+		}
+
+		rdmaSpec := *iface.RDMAVPC
+		rdmaSpec.SubnetID = &subnetID
+		rdmaSpec.VPCRef = nil
+		rdmaSpec.SubnetName = ""
+		resolved[idx].RDMAVPC = &rdmaSpec
+	}
+
+	return resolved, nil
 }
 
 // configurePlacementGroup adds placement group configuration
@@ -1603,7 +1713,12 @@ func configureFirewall(ctx context.Context, machineScope *scope.MachineScope, cr
 
 	// If using LinodeInterfaces that needs to know about the firewall ID
 	for i := range createConfig.LinodeInstanceInterfaces {
-		createConfig.LinodeInstanceInterfaces[i].FirewallID = new(fwID)
+		if createConfig.LinodeInstanceInterfaces[i].RDMAVPC != nil {
+			// RDMA Interfaces cannot have a firewall attached
+			createConfig.LinodeInstanceInterfaces[i].FirewallID = new(rdmaInterfaceFirewallDisabled)
+		} else {
+			createConfig.LinodeInstanceInterfaces[i].FirewallID = new(fwID)
+		}
 	}
 
 	return nil

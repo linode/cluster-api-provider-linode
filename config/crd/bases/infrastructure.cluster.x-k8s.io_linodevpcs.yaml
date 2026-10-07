@@ -221,6 +221,19 @@ spec:
               vpcID:
                 description: vpcID is the ID of the VPC.
                 type: integer
+              vpcType:
+                default: regular
+                description: |-
+                  vpcType is the type of VPC to create. Valid values are "regular" and "rdma".
+                  Defaults to "regular". Set to "rdma" to create a GPUDirect RDMA VPC.
+                  NOTE: RDMA VPCs may not currently be available to all users.
+                enum:
+                - regular
+                - rdma
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: self == oldSelf
             required:
             - region
             type: object

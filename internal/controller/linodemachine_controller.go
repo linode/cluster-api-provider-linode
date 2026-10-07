@@ -60,6 +60,7 @@ const (
 	// conditions for preflight instance creation
 	ConditionPreflightBootstrapDataSecretReady  = "PreflightBootstrapDataSecretReady"
 	ConditionPreflightLinodeFirewallReady       = "PreflightLinodeFirewallReady"
+	ConditionPreflightRDMALinodeVPCReady        = "PreflightRDMALinodeVPCReady"
 	ConditionPreflightMetadataSupportConfigured = "PreflightMetadataSupportConfigured"
 	ConditionPreflightCreated                   = "PreflightCreated"
 	ConditionPreflightAdditionalDisksCreated    = "PreflightAdditionalDisksCreated"
@@ -305,6 +306,15 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		res, err := r.reconcilePreflightMetadataSupportConfigure(ctx, logger, machineScope)
 		if err != nil || !res.IsZero() {
 			return res, err
+		}
+	}
+
+	if hasRDMAVPCRef(machineScope.LinodeMachine.Spec) {
+		if !reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+			res := r.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
+			if !res.IsZero() {
+				return res, nil
+			}
 		}
 	}
 
@@ -559,6 +569,49 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 		Reason: "LinodeMetadataSupportConfigured", // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}, nil
+}
+
+// reconcilePreflightRDMAVPCRefs checks that every linodeInterfaces[].rdmaVPC.vpcRef is resolvable
+// and its LinodeVPC is ready before instance creation is attempted. Because RDMA VPCs may be
+// provisioned concurrently with the machine (e.g. when a flavor applies both resources at once),
+// errors here are transient: the function returns a requeue rather than a terminal failure.
+func (r *LinodeMachineReconciler) reconcilePreflightRDMAVPCRefs(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) ctrl.Result {
+	for idx, iface := range machineScope.LinodeMachine.Spec.LinodeInterfaces {
+		if iface.RDMAVPC == nil || iface.RDMAVPC.VPCRef == nil {
+			continue
+		}
+		vpcRef := iface.RDMAVPC.VPCRef
+		namespace := vpcRef.Namespace
+		if namespace == "" {
+			namespace = machineScope.LinodeMachine.Namespace
+		}
+		linodeVPC := infrav1alpha2.LinodeVPC{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpcRef.Name}}
+		if err := machineScope.Client.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC); err != nil {
+			logger.Error(err, "Failed to fetch RDMA LinodeVPC for interface", "index", idx, "vpc", vpcRef.Name)
+			machineScope.LinodeMachine.SetCondition(metav1.Condition{
+				Type:    ConditionPreflightRDMALinodeVPCReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  "RDMALinodeVPCFetchError",
+				Message: err.Error(),
+			})
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}
+		}
+		if !linodeVPC.Status.Ready || linodeVPC.Spec.VPCID == nil {
+			logger.Info("RDMA LinodeVPC is not yet ready", "index", idx, "vpc", vpcRef.Name)
+			machineScope.LinodeMachine.SetCondition(metav1.Condition{
+				Type:   ConditionPreflightRDMALinodeVPCReady,
+				Status: metav1.ConditionFalse,
+				Reason: "RDMALinodeVPCNotReady",
+			})
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}
+		}
+	}
+	machineScope.LinodeMachine.SetCondition(metav1.Condition{
+		Type:   ConditionPreflightRDMALinodeVPCReady,
+		Status: metav1.ConditionTrue,
+		Reason: "RDMALinodeVPCReady",
+	})
+	return ctrl.Result{}
 }
 
 func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
@@ -855,6 +908,10 @@ func (r *LinodeMachineReconciler) listAttachedFirewallIDsAndIfaceIDs(ctx context
 		}
 		ifaceFWIDs = make(map[int][]int, len(linodeInterfaces))
 		for _, iface := range linodeInterfaces {
+			// RDMA interfaces do not support firewall attachment; skip them entirely.
+			if iface.RDMAVPC != nil {
+				continue
+			}
 			ifaceFWs, err := machineScope.LinodeClient.ListInterfaceFirewalls(ctx, instanceID, iface.ID, nil)
 			if err != nil {
 				logger.Error(err, "Failed to list firewalls for Linode instance interface", "interfaceID", iface.ID)

@@ -79,6 +79,15 @@ type LinodeVPCSpec struct {
 	// +listType=atomic
 	Subnets []VPCSubnetCreateOptions `json:"subnets,omitzero"`
 
+	// vpcType is the type of VPC to create. Valid values are "regular" and "rdma".
+	// Defaults to "regular". Set to "rdma" to create a GPUDirect RDMA VPC.
+	// NOTE: RDMA VPCs may not currently be available to all users.
+	// +kubebuilder:validation:Enum=regular;rdma
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
+	// +kubebuilder:default=regular
+	// +optional
+	VPCType linodego.VPCType `json:"vpcType,omitempty"`
+
 	// retain allows you to keep the VPC after the LinodeVPC object is deleted.
 	// This is useful if you want to use an existing VPC that was not created by this controller.
 	// If set to true, the controller will not delete the VPC resource in Linode.

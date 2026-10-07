@@ -1,12 +1,18 @@
 package controller
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
 	"github.com/linode/linodego/v2"
+	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/cloud/scope"
+	"github.com/linode/cluster-api-provider-linode/mock"
 )
 
 func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
@@ -282,5 +288,77 @@ func Test_linodeVPCSpecToVPCCreateConfig(t *testing.T) {
 				t.Errorf("linodeVPCSpecToVPCCreateConfig() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestReconcileVPC_VPCTypeMismatch(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+	logger := zap.New()
+
+	rdmaType := linodego.VPCTypeRDMA
+	vpcScope := &scope.VPCScope{
+		LinodeClient: mockLinodeClient,
+		LinodeVPC: &infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-vpc", Namespace: "default"},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region:  "us-ord",
+				VPCType: rdmaType,
+			},
+		},
+	}
+
+	// ListVPCs returns a regular VPC even though spec requires rdma.
+	mockLinodeClient.EXPECT().ListVPCs(gomock.Any(), gomock.Any()).Return([]linodego.VPC{
+		{ID: 1, Label: "test-vpc", VPCType: linodego.VPCTypeRegular},
+	}, nil)
+
+	err := reconcileVPC(context.Background(), vpcScope, logger)
+	if err == nil {
+		t.Fatal("expected error due to VPC type mismatch, got nil")
+	}
+	expected := `existing VPC "test-vpc" has type "regular" but vpcType "rdma" is required`
+	if err.Error() != expected {
+		t.Errorf("unexpected error message:\ngot:  %q\nwant: %q", err.Error(), expected)
+	}
+}
+
+func TestReconcileVPC_MatchingRDMATypeAdopted(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockLinodeClient := mock.NewMockLinodeClient(ctrl)
+	logger := zap.New()
+
+	rdmaType := linodego.VPCTypeRDMA
+	vpcID := 1
+	vpcScope := &scope.VPCScope{
+		LinodeClient: mockLinodeClient,
+		LinodeVPC: &infrav1alpha2.LinodeVPC{
+			ObjectMeta: metav1.ObjectMeta{Name: "rdma-vpc", Namespace: "default"},
+			Spec: infrav1alpha2.LinodeVPCSpec{
+				Region:  "us-ord",
+				VPCType: rdmaType,
+			},
+		},
+	}
+
+	// ListVPCs returns an RDMA VPC matching the spec type — adoption should proceed.
+	mockLinodeClient.EXPECT().ListVPCs(gomock.Any(), gomock.Any()).Return([]linodego.VPC{
+		{ID: vpcID, Label: "rdma-vpc", VPCType: linodego.VPCTypeRDMA},
+	}, nil)
+
+	err := reconcileVPC(context.Background(), vpcScope, logger)
+	if err != nil {
+		t.Fatalf("expected no error when VPC type matches, got: %v", err)
+	}
+	if vpcScope.LinodeVPC.Spec.VPCID == nil || *vpcScope.LinodeVPC.Spec.VPCID != vpcID {
+		t.Errorf("expected VPCID to be set to %d after adoption", vpcID)
 	}
 }
