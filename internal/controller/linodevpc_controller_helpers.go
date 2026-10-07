@@ -68,8 +68,12 @@ func reconcileVPC(ctx context.Context, vpcScope *scope.VPCScope, logger logr.Log
 		if desiredType == "" {
 			desiredType = linodego.VPCTypeRegular
 		}
-		if vpcs[0].VPCType != desiredType {
-			err := fmt.Errorf("existing VPC %q has type %q but vpcType %q is required", vpcs[0].Label, vpcs[0].VPCType, desiredType)
+		discoveredType := vpcs[0].VPCType
+		if discoveredType == "" {
+			discoveredType = linodego.VPCTypeRegular
+		}
+		if discoveredType != desiredType {
+			err := fmt.Errorf("existing VPC %q has type %q but vpcType %q is required", vpcs[0].Label, discoveredType, desiredType)
 			logger.Error(err, "VPC type mismatch prevents adoption")
 			return err
 		}
