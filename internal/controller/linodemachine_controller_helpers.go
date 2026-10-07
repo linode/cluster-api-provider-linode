@@ -1570,6 +1570,15 @@ func getVPCRefFromScope(machineScope *scope.MachineScope) *corev1.ObjectReferenc
 	return machineScope.LinodeCluster.Spec.VPCRef
 }
 
+func hasRDMAVPCRef(spec infrav1alpha2.LinodeMachineSpec) bool {
+	for _, iface := range spec.LinodeInterfaces {
+		if iface.RDMAVPC != nil && iface.RDMAVPC.VPCRef != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // configureVlanInterface adds a VLAN interface to the configuration
 func configureVlanInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
 	switch {

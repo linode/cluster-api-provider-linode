@@ -309,10 +309,12 @@ func (r *LinodeMachineReconciler) reconcileCreate(
 		}
 	}
 
-	if !reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
-		res, err := r.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
-		if err != nil || !res.IsZero() {
-			return res, err
+	if hasRDMAVPCRef(machineScope.LinodeMachine.Spec) {
+		if !reconciler.ConditionTrue(machineScope.LinodeMachine.GetCondition(ConditionPreflightRDMALinodeVPCReady)) && machineScope.LinodeMachine.Spec.ProviderID == nil {
+			res, err := r.reconcilePreflightRDMAVPCRefs(ctx, logger, machineScope)
+			if err != nil || !res.IsZero() {
+				return res, err
+			}
 		}
 	}
 
@@ -574,12 +576,10 @@ func (r *LinodeMachineReconciler) reconcilePreflightMetadataSupportConfigure(ctx
 // provisioned concurrently with the machine (e.g. when a flavor applies both resources at once),
 // errors here are transient: the function returns a requeue rather than a terminal failure.
 func (r *LinodeMachineReconciler) reconcilePreflightRDMAVPCRefs(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (ctrl.Result, error) {
-	anyRef := false
 	for idx, iface := range machineScope.LinodeMachine.Spec.LinodeInterfaces {
 		if iface.RDMAVPC == nil || iface.RDMAVPC.VPCRef == nil {
 			continue
 		}
-		anyRef = true
 		vpcRef := iface.RDMAVPC.VPCRef
 		namespace := vpcRef.Namespace
 		if namespace == "" {
@@ -606,13 +606,11 @@ func (r *LinodeMachineReconciler) reconcilePreflightRDMAVPCRefs(ctx context.Cont
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
 		}
 	}
-	if anyRef {
-		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:   ConditionPreflightRDMALinodeVPCReady,
-			Status: metav1.ConditionTrue,
-			Reason: "RDMALinodeVPCReady",
-		})
-	}
+	machineScope.LinodeMachine.SetCondition(metav1.Condition{
+		Type:   ConditionPreflightRDMALinodeVPCReady,
+		Status: metav1.ConditionTrue,
+		Reason: "RDMALinodeVPCReady",
+	})
 	return ctrl.Result{}, nil
 }
 
