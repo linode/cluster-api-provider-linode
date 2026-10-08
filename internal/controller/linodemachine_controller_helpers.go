@@ -202,15 +202,18 @@ func newCreateConfig(ctx context.Context, machineScope *scope.MachineScope, gzip
 
 // configureVPCInterface handles all VPC configuration scenarios and adds the appropriate interface
 func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
-	// Check if there are existing Linode instance interfaces in the createConfig and skip adding a new one if necessary
-	if len(createConfig.LinodeInstanceInterfaces) > 0 {
-		for _, iface := range createConfig.LinodeInstanceInterfaces {
-			if iface.VPC != nil {
-				// VPC interface already exists, no need to add another one
-				logger.Info("VPC interface already exists, skipping addition")
-				return nil
-			}
+	// If a VPC interface already exists, keep the user's configuration but make sure a subnet is set,
+	// since the Linode API requires a subnet ID for VPC linode interfaces.
+	for _, iface := range createConfig.LinodeInstanceInterfaces {
+		if iface.VPC == nil {
+			continue
 		}
+		if iface.VPC.SubnetID != 0 {
+			logger.Info("VPC interface already exists, skipping addition")
+			return nil
+		}
+
+		return resolveMissingVPCInterfaceSubnet(ctx, machineScope, createConfig, logger)
 	}
 
 	// First check if a direct VPCID is specified on the machine then the cluster
@@ -226,6 +229,45 @@ func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope
 	}
 
 	// No VPC configuration found, nothing to do
+	return nil
+}
+
+// resolveMissingVPCInterfaceSubnet fills in the subnet ID of user-defined VPC linode interfaces that omit it,
+// using the VPC configured on the machine or cluster (honoring the cluster's subnetName, else the first subnet).
+// Other user-provided settings on the interface, such as IPv6, are preserved.
+func resolveMissingVPCInterfaceSubnet(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
+	type savedIPv6 struct {
+		iface *linodego.VPCInterfaceCreateOptions
+		ipv6  *linodego.VPCInterfaceIPv6CreateOptions
+	}
+	var saved []savedIPv6
+	for _, iface := range createConfig.LinodeInstanceInterfaces {
+		if iface.VPC != nil && iface.VPC.SubnetID == 0 {
+			saved = append(saved, savedIPv6{iface.VPC, iface.VPC.IPv6})
+		}
+	}
+
+	var err error
+	switch {
+	case machineScope.LinodeMachine.Spec.VPCID != nil:
+		_, err = getVPCLinodeInterfaceConfigFromDirectID(ctx, machineScope, createConfig.LinodeInstanceInterfaces, logger, *machineScope.LinodeMachine.Spec.VPCID)
+	case machineScope.LinodeCluster != nil && machineScope.LinodeCluster.Spec.VPCID != nil:
+		_, err = getVPCLinodeInterfaceConfigFromDirectID(ctx, machineScope, createConfig.LinodeInstanceInterfaces, logger, *machineScope.LinodeCluster.Spec.VPCID)
+	default:
+		vpcRef := getVPCRefFromScope(machineScope)
+		if vpcRef == nil {
+			return errors.New("VPC linode interface has no subnet ID and no VPC is configured to determine it from")
+		}
+		_, err = getVPCLinodeInterfaceConfig(ctx, machineScope, createConfig.LinodeInstanceInterfaces, logger, vpcRef)
+	}
+	if err != nil {
+		return err
+	}
+
+	for _, s := range saved {
+		s.iface.IPv6 = s.ipv6
+	}
+
 	return nil
 }
 

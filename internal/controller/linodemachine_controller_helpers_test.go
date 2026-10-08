@@ -1668,6 +1668,62 @@ func TestConfigureVPCInterfaceWithExistingLinodeInterfaces(t *testing.T) {
 		require.NotNil(t, createConfig.LinodeInstanceInterfaces[0].VPC)
 		require.Equal(t, suppliedSubnetID, createConfig.LinodeInstanceInterfaces[0].VPC.SubnetID)
 	})
+
+	t.Run("resolves missing subnet on supplied VPC interface and preserves its settings", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := gomock.NewController(t)
+		linodeClient := mock.NewMockLinodeClient(ctrl)
+		k8sClient := mock.NewMockK8sClient(ctrl)
+		linodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+			ID:      123,
+			Subnets: []linodego.VPCSubnet{{ID: 456, Label: "subnet-1"}},
+		}, nil)
+
+		ipv6 := &linodego.VPCInterfaceIPv6CreateOptions{IsPublic: new(true)}
+		createConfig := &linodego.InstanceCreateOptions{
+			LinodeInstanceInterfaces: []linodego.LinodeInstanceInterfaceCreateOptions{{
+				LinodeInterfaceCreateOptions: linodego.LinodeInterfaceCreateOptions{
+					VPC: &linodego.VPCInterfaceCreateOptions{IPv6: ipv6},
+				},
+			}},
+		}
+		machineScope := &scope.MachineScope{
+			LinodeClient: linodeClient,
+			Client:       k8sClient,
+			LinodeMachine: &infrav1alpha2.LinodeMachine{
+				Spec: infrav1alpha2.LinodeMachineSpec{VPCID: new(123)},
+			},
+			LinodeCluster: &infrav1alpha2.LinodeCluster{},
+		}
+
+		err := configureVPCInterface(t.Context(), machineScope, createConfig, testr.New(t))
+
+		require.NoError(t, err)
+		require.Len(t, createConfig.LinodeInstanceInterfaces, 1)
+		require.Equal(t, 456, createConfig.LinodeInstanceInterfaces[0].VPC.SubnetID)
+		require.Same(t, ipv6, createConfig.LinodeInstanceInterfaces[0].VPC.IPv6)
+	})
+
+	t.Run("errors when subnet is missing and no VPC is configured", func(t *testing.T) {
+		t.Parallel()
+
+		createConfig := &linodego.InstanceCreateOptions{
+			LinodeInstanceInterfaces: []linodego.LinodeInstanceInterfaceCreateOptions{{
+				LinodeInterfaceCreateOptions: linodego.LinodeInterfaceCreateOptions{
+					VPC: &linodego.VPCInterfaceCreateOptions{},
+				},
+			}},
+		}
+		machineScope := &scope.MachineScope{
+			LinodeMachine: &infrav1alpha2.LinodeMachine{},
+			LinodeCluster: &infrav1alpha2.LinodeCluster{},
+		}
+
+		err := configureVPCInterface(t.Context(), machineScope, createConfig, testr.New(t))
+
+		require.ErrorContains(t, err, "no subnet ID")
+	})
 }
 
 func TestGetVPCInterfaceConfig(t *testing.T) {
