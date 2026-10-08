@@ -236,14 +236,15 @@ func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope
 // using the VPC configured on the machine or cluster (honoring the cluster's subnetName, else the first subnet).
 // Other user-provided settings on the interface, such as IPv6, are preserved.
 func resolveMissingVPCInterfaceSubnet(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
-	type savedIPv6 struct {
+	type savedVPCSettings struct {
 		iface *linodego.VPCInterfaceCreateOptions
+		ipv4  *linodego.VPCInterfaceIPv4CreateOptions
 		ipv6  *linodego.VPCInterfaceIPv6CreateOptions
 	}
-	var saved []savedIPv6
+	var saved []savedVPCSettings
 	for _, iface := range createConfig.LinodeInstanceInterfaces {
 		if iface.VPC != nil && iface.VPC.SubnetID == 0 {
-			saved = append(saved, savedIPv6{iface.VPC, iface.VPC.IPv6})
+			saved = append(saved, savedVPCSettings{iface.VPC, iface.VPC.IPv4, iface.VPC.IPv6})
 		}
 	}
 
@@ -266,6 +267,7 @@ func resolveMissingVPCInterfaceSubnet(ctx context.Context, machineScope *scope.M
 
 	for _, s := range saved {
 		s.iface.IPv6 = s.ipv6
+		s.iface.IPv4 = s.ipv4
 	}
 
 	return nil

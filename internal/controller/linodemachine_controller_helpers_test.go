@@ -1681,10 +1681,15 @@ func TestConfigureVPCInterfaceWithExistingLinodeInterfaces(t *testing.T) {
 		}, nil)
 
 		ipv6 := &linodego.VPCInterfaceIPv6CreateOptions{IsPublic: new(true)}
+		ipv4 := &linodego.VPCInterfaceIPv4CreateOptions{
+			Ranges: []linodego.VPCInterfaceIPv4RangeCreateOptions{{
+				Range: "192.168.1.1/32",
+			}},
+		}
 		createConfig := &linodego.InstanceCreateOptions{
 			LinodeInstanceInterfaces: []linodego.LinodeInstanceInterfaceCreateOptions{{
 				LinodeInterfaceCreateOptions: linodego.LinodeInterfaceCreateOptions{
-					VPC: &linodego.VPCInterfaceCreateOptions{IPv6: ipv6},
+					VPC: &linodego.VPCInterfaceCreateOptions{IPv6: ipv6, IPv4: ipv4},
 				},
 			}},
 		}
@@ -1703,6 +1708,7 @@ func TestConfigureVPCInterfaceWithExistingLinodeInterfaces(t *testing.T) {
 		require.Len(t, createConfig.LinodeInstanceInterfaces, 1)
 		require.Equal(t, 456, createConfig.LinodeInstanceInterfaces[0].VPC.SubnetID)
 		require.Same(t, ipv6, createConfig.LinodeInstanceInterfaces[0].VPC.IPv6)
+		require.Same(t, ipv4, createConfig.LinodeInstanceInterfaces[0].VPC.IPv4)
 	})
 
 	t.Run("errors when subnet is missing and no VPC is configured", func(t *testing.T) {
