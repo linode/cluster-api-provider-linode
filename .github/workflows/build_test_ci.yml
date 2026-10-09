@@ -58,7 +58,9 @@ jobs:
               - cloud/services/domains.go
 
   go-test:
-    environment: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
+    environment:
+      name: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
+      deployment: false
     runs-on: ubuntu-latest
     needs: changes
     if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
