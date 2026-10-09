@@ -276,7 +276,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightFirewallID(ctx context.Conte
 	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeNBFirewallReady,
 		Status: metav1.ConditionTrue,
-		Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+		Reason: LinodeFirewallReadyReason, // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}
 }
@@ -332,7 +332,7 @@ func (r *LinodeClusterReconciler) reconcilePreflightFirewallRef(ctx context.Cont
 	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeNBFirewallReady,
 		Status: metav1.ConditionTrue,
-		Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+		Reason: LinodeFirewallReadyReason, // We have to set the reason to not fail object patching
 	})
 
 	return ctrl.Result{}, nil

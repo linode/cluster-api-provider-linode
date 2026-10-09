@@ -67,6 +67,7 @@ const (
 	ConditionPreflightConfigured                = "PreflightConfigured"
 	ConditionPreflightBootTriggered             = "PreflightBootTriggered"
 	ConditionPreflightReady                     = "PreflightReady"
+	LinodeFirewallReadyReason                   = "LinodeFirewallReady"
 
 	// WaitingForBootstrapDataReason used when machine is waiting for bootstrap data to be ready before proceeding.
 	WaitingForBootstrapDataReason = "WaitingForBootstrapData"
@@ -474,7 +475,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeFirewallReady,
 			Status: metav1.ConditionTrue,
-			Reason: "LinodeFirewallReady",
+			Reason: LinodeFirewallReadyReason,
 		})
 		return ctrl.Result{}, nil
 	}
@@ -496,7 +497,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
 			Type:   ConditionPreflightLinodeFirewallReady,
 			Status: metav1.ConditionTrue,
-			Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+			Reason: LinodeFirewallReadyReason, // We have to set the reason to not fail object patching
 		})
 		return ctrl.Result{}, nil
 	}
@@ -543,7 +544,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightLinodeFirewallCheck(ctx cont
 	machineScope.LinodeMachine.SetCondition(metav1.Condition{
 		Type:   ConditionPreflightLinodeFirewallReady,
 		Status: metav1.ConditionTrue,
-		Reason: "LinodeFirewallReady", // We have to set the reason to not fail object patching
+		Reason: LinodeFirewallReadyReason, // We have to set the reason to not fail object patching
 	})
 	return ctrl.Result{}, nil
 }

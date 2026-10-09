@@ -55,7 +55,7 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 	// Reject invalid names before building a client or making any Linode API calls.
 	if err := validateLabelLength(cluster.GetName(), field.NewPath("metadata").Child("name")); err != nil {
 		return nil, apierrors.NewInvalid(
-			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeCluster"},
+			schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeCluster"},
 			cluster.Name, field.ErrorList{err})
 	}
 
@@ -75,7 +75,7 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeCluster"},
+		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeCluster"},
 		cluster.Name, errs)
 }
 
