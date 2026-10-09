@@ -1894,15 +1894,15 @@ func TestIsCapiMachineReady(t *testing.T) {
 		Controller: new(true),
 	}}
 	conds := func(status metav1.ConditionStatus) []metav1.Condition {
-		var out []metav1.Condition
-		for _, t := range []string{
+		out := make([]metav1.Condition, 0, 5)
+		for _, condType := range []string{
 			kcpv1beta2.KubeadmControlPlaneMachineAPIServerPodHealthyCondition,
 			kcpv1beta2.KubeadmControlPlaneMachineControllerManagerPodHealthyCondition,
 			kcpv1beta2.KubeadmControlPlaneMachineSchedulerPodHealthyCondition,
 			kcpv1beta2.KubeadmControlPlaneMachineEtcdPodHealthyCondition,
 			kcpv1beta2.KubeadmControlPlaneMachineEtcdMemberHealthyCondition,
 		} {
-			out = append(out, metav1.Condition{Type: t, Status: status})
+			out = append(out, metav1.Condition{Type: condType, Status: status})
 		}
 		return out
 	}
@@ -1978,7 +1978,7 @@ func TestGetDNSEntriesToEnsurePending(t *testing.T) {
 	opts, pending, err := d.getDNSEntriesToEnsure(t.Context(), cscope)
 	require.NoError(t, err)
 	assert.True(t, pending)
-	var targets []string
+	targets := make([]string, 0, len(opts))
 	for _, o := range opts {
 		targets = append(targets, o.Target)
 	}
