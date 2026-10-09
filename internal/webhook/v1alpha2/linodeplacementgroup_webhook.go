@@ -62,7 +62,7 @@ func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context
 	// Reject invalid names before building a client or making any Linode API calls.
 	if err := validateLabelLength(pg.GetName(), field.NewPath("metadata").Child("name")); err != nil {
 		return nil, apierrors.NewInvalid(
-			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodePlacementGroup"},
+			schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodePlacementGroup"},
 			pg.Name, field.ErrorList{err})
 	}
 
@@ -81,7 +81,7 @@ func (v *LinodePlacementGroupCustomValidator) ValidateCreate(ctx context.Context
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodePlacementGroup"},
+		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodePlacementGroup"},
 		pg.Name, errs)
 }
 

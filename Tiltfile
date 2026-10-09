@@ -166,7 +166,7 @@ if debug == "true":
     docker_build_with_restart(
         "docker.io/linode/cluster-api-provider-linode",
         context=".",
-        dockerfile_contents="""FROM golang:1.26
+        dockerfile_contents="""FROM golang:1.27
         RUN go install github.com/go-delve/delve/cmd/dlv@latest
         COPY bin/manager /ko-app/cmd
         WORKDIR /""",
