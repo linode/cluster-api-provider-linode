@@ -218,6 +218,8 @@ func TestAddIPToEdgeDNS(t *testing.T) {
 			},
 			expects: func(mockClient *mock.MockAkamClient) {
 				mockClient.EXPECT().GetRecord(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
+				// the first machine is always published; the pending one only requeues
+				mockClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError: util.ErrReconcileAgain,
 			expectK8sClient: func(mockK8sClient *mock.MockK8sClient) {
@@ -1871,10 +1873,117 @@ func mockCAPIMachine(mockK8sClient *mock.MockK8sClient, ownerRefs []metav1.Owner
 				machine.DeletionTimestamp = nil
 				machine.UID = "test-uid"
 				machine.OwnerReferences = ownerRefs
+				if len(ownerRefs) > 0 {
+					machine.Status.NodeRef = clusterv1.MachineNodeReference{Name: "test-node"}
+				}
 				if machineStatus != nil {
 					machine.SetConditions(machineStatus.Conditions)
 				}
 			}
 			return nil
 		}).AnyTimes()
+}
+
+func TestIsCapiMachineReady(t *testing.T) {
+	t.Parallel()
+
+	kcpOwner := []metav1.OwnerReference{{
+		APIVersion: kcpv1beta2.GroupVersion.String(),
+		Kind:       "KubeadmControlPlane",
+		Name:       "test-cluster-cp",
+		Controller: new(true),
+	}}
+	conds := func(status metav1.ConditionStatus) []metav1.Condition {
+		out := make([]metav1.Condition, 0, 5)
+		for _, condType := range []string{
+			kcpv1beta2.KubeadmControlPlaneMachineAPIServerPodHealthyCondition,
+			kcpv1beta2.KubeadmControlPlaneMachineControllerManagerPodHealthyCondition,
+			kcpv1beta2.KubeadmControlPlaneMachineSchedulerPodHealthyCondition,
+			kcpv1beta2.KubeadmControlPlaneMachineEtcdPodHealthyCondition,
+			kcpv1beta2.KubeadmControlPlaneMachineEtcdMemberHealthyCondition,
+		} {
+			out = append(out, metav1.Condition{Type: condType, Status: status})
+		}
+		return out
+	}
+
+	tests := []struct {
+		name       string
+		conditions []metav1.Condition
+		nodeRef    string
+		expected   bool
+	}{
+		{name: "conditions Unknown", conditions: conds(metav1.ConditionUnknown), nodeRef: "node", expected: false},
+		{name: "conditions unset", nodeRef: "node", expected: false},
+		{name: "no NodeRef", conditions: conds(metav1.ConditionTrue), expected: false},
+		{name: "one condition False", conditions: append(conds(metav1.ConditionTrue)[:4], metav1.Condition{Type: kcpv1beta2.KubeadmControlPlaneMachineEtcdMemberHealthyCondition, Status: metav1.ConditionFalse}), nodeRef: "node", expected: false},
+		{name: "all True", conditions: conds(metav1.ConditionTrue), nodeRef: "node", expected: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockK8sClient := mock.NewMockK8sClient(ctrl)
+			mockK8sClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+			machine := &clusterv1.Machine{ObjectMeta: metav1.ObjectMeta{Name: "m", Namespace: "default", OwnerReferences: kcpOwner}}
+			machine.SetConditions(tt.conditions)
+			machine.Status.NodeRef = clusterv1.MachineNodeReference{Name: tt.nodeRef}
+
+			ready, err := isCapiMachineReady(t.Context(), machine, mockK8sClient)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, ready)
+		})
+	}
+}
+
+func TestGetDNSEntriesToEnsurePending(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockK8sClient := mock.NewMockK8sClient(ctrl)
+	// CAPI machine with no conditions or NodeRef, owned by a KCP
+	mockCAPIMachine(mockK8sClient, []metav1.OwnerReference{{
+		APIVersion: kcpv1beta2.GroupVersion.String(),
+		Kind:       "KubeadmControlPlane",
+		Name:       "test-cluster-cp",
+		Controller: new(true),
+	}}, nil)
+
+	newMachine := func(ip string, created int64) infrav1alpha2.LinodeMachine {
+		return infrav1alpha2.LinodeMachine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "lm-" + ip,
+				CreationTimestamp: metav1.Unix(created, 0),
+				OwnerReferences:   []metav1.OwnerReference{{APIVersion: clusterv1.GroupVersion.String(), Kind: "Machine", Name: "test-machine", UID: "test-uid"}},
+			},
+			Status: infrav1alpha2.LinodeMachineStatus{
+				Addresses: []clusterv1.MachineAddress{{Type: clusterv1.MachineExternalIP, Address: ip}},
+			},
+		}
+	}
+	cscope := &scope.ClusterScope{
+		Client:        mockK8sClient,
+		Cluster:       &clusterv1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "test-cluster"}},
+		LinodeCluster: &infrav1alpha2.LinodeCluster{ObjectMeta: metav1.ObjectMeta{Name: "test-cluster"}},
+		LinodeMachines: infrav1alpha2.LinodeMachineList{Items: []infrav1alpha2.LinodeMachine{
+			newMachine("10.0.0.2", 2),
+			newMachine("10.0.0.1", 1),
+		}},
+	}
+
+	var d DNSEntries
+	opts, pending, err := d.getDNSEntriesToEnsure(t.Context(), cscope)
+	require.NoError(t, err)
+	assert.True(t, pending)
+	targets := make([]string, 0, len(opts))
+	for _, o := range opts {
+		targets = append(targets, o.Target)
+	}
+	// first machine always included; unready second skipped; TXT record present
+	assert.Contains(t, targets, "10.0.0.1")
+	assert.NotContains(t, targets, "10.0.0.2")
+	assert.Contains(t, targets, "test-cluster")
 }

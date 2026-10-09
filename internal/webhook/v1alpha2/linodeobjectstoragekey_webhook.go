@@ -67,7 +67,7 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateCreate(_ context.Context
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageKey"},
+		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeObjectStorageKey"},
 		key.Name, errs)
 }
 
@@ -81,7 +81,7 @@ func (v *LinodeObjectStorageKeyCustomValidator) ValidateUpdate(_ context.Context
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageKey"},
+		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeObjectStorageKey"},
 		newKey.Name, errs)
 }
 

@@ -88,7 +88,7 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, vpc *infrav1alp
 	// Reject invalid names before building a client or making any Linode API calls.
 	if err := validateLabelLength(vpc.GetName(), field.NewPath("metadata").Child("name")); err != nil {
 		return nil, apierrors.NewInvalid(
-			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
+			schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeVPC"},
 			vpc.Name, field.ErrorList{err})
 	}
 
@@ -108,7 +108,7 @@ func (r *linodeVPCValidator) ValidateCreate(ctx context.Context, vpc *infrav1alp
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeVPC"},
+		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeVPC"},
 		vpc.Name, errs)
 }
 

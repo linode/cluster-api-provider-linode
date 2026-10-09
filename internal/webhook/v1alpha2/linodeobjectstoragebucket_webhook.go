@@ -56,7 +56,7 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateCreate(ctx context.Co
 	// Reject invalid names before building a client or making any Linode API calls.
 	if err := validateLabelLength(bucket.GetName(), field.NewPath("metadata").Child("name")); err != nil {
 		return nil, apierrors.NewInvalid(
-			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageBucket"},
+			schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeObjectStorageBucket"},
 			bucket.Name, field.ErrorList{err})
 	}
 
@@ -75,7 +75,7 @@ func (v *LinodeObjectStorageBucketCustomValidator) ValidateCreate(ctx context.Co
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeObjectStorageBucket"},
+		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeObjectStorageBucket"},
 		bucket.Name, errs)
 }
 

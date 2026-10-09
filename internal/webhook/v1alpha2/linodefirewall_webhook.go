@@ -64,7 +64,7 @@ func (v *LinodeFirewallCustomValidator) ValidateCreate(_ context.Context, linode
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeFirewall"},
+		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeFirewall"},
 		linodefirewall.Name, errs)
 }
 

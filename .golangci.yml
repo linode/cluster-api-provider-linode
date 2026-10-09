@@ -124,6 +124,7 @@ linters:
           - copyloopvar
           - dupl
           - errcheck
+          - goconst
           - gocyclo
           - gosec
           - maintidx

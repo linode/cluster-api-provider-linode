@@ -59,7 +59,7 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, machine *in
 	// so a bad naming template can't cause a retry storm against the API.
 	if err := validateLabelLength(machine.GetName(), field.NewPath("metadata").Child("name")); err != nil {
 		return nil, apierrors.NewInvalid(
-			schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeMachine"},
+			schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeMachine"},
 			machine.Name, field.ErrorList{err})
 	}
 
@@ -78,7 +78,7 @@ func (r *linodeMachineValidator) ValidateCreate(ctx context.Context, machine *in
 		return nil, nil
 	}
 	return nil, apierrors.NewInvalid(
-		schema.GroupKind{Group: "infrastructure.cluster.x-k8s.io", Kind: "LinodeMachine"},
+		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeMachine"},
 		machine.Name, errs)
 }
 
