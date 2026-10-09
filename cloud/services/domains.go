@@ -19,7 +19,7 @@ import (
 	kcpv1beta2 "sigs.k8s.io/cluster-api/api/controlplane/kubeadm/v1beta2"
 	"sigs.k8s.io/cluster-api/api/core/v1beta2"
 	kutil "sigs.k8s.io/cluster-api/util"
-	"sigs.k8s.io/cluster-api/util/collections"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/linode/cluster-api-provider-linode/api/v1alpha2"
@@ -45,7 +45,7 @@ type DNSOptions struct {
 func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation string) error {
 	// Get the public IP that was assigned
 	var dnss DNSEntries
-	dnsEntries, err := dnss.getDNSEntriesToEnsure(ctx, cscope)
+	dnsEntries, pending, err := dnss.getDNSEntriesToEnsure(ctx, cscope)
 	if err != nil {
 		return err
 	}
@@ -69,6 +69,10 @@ func EnsureDNSEntries(ctx context.Context, cscope *scope.ClusterScope, operation
 		}
 	}
 
+	if pending {
+		// Stale entries were reconciled above; requeue so unready machines get added later.
+		return util.ErrReconcileAgain
+	}
 	return nil
 }
 
@@ -345,14 +349,28 @@ func isCapiMachineReady(ctx context.Context, capiMachine *v1beta2.Machine, k8sCl
 	if err := k8sClient.Get(ctx, client.ObjectKey{Namespace: capiMachine.Namespace, Name: ref.Name}, kcp); err != nil {
 		return false, err
 	}
-	// Don't assume we have MachineHealthCheck conditions to check.
-	// Instead, use the CAPI upstream filter to check the machine does not have unhealthy control plane components.
-	// (See https://github.com/kubernetes-sigs/cluster-api/blob/v1.13.4/util/collections/machine_filters.go#L171-L174)
-	// This saves us from having to check the several conditions ourselves.
-	// If etcd is not externally managed, check the etcd component health too.
-	isEtcdManagedExternally := kcp.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.External.IsDefined()
-	return len(collections.FromMachines(capiMachine).
-		Filter(collections.HasUnhealthyControlPlaneComponents(!isEtcdManagedExternally))) == 0, nil
+	// Require a positive signal: CAPI's HasUnhealthyControlPlaneComponents treats Unknown/unset
+	// conditions as transient, which would publish DNS before the apiserver is serving.
+	if capiMachine.Status.NodeRef.Name == "" {
+		return false, nil
+	}
+	required := []string{
+		kcpv1beta2.KubeadmControlPlaneMachineAPIServerPodHealthyCondition,
+		kcpv1beta2.KubeadmControlPlaneMachineControllerManagerPodHealthyCondition,
+		kcpv1beta2.KubeadmControlPlaneMachineSchedulerPodHealthyCondition,
+	}
+	if !kcp.Spec.KubeadmConfigSpec.ClusterConfiguration.Etcd.External.IsDefined() {
+		required = append(required,
+			kcpv1beta2.KubeadmControlPlaneMachineEtcdPodHealthyCondition,
+			kcpv1beta2.KubeadmControlPlaneMachineEtcdMemberHealthyCondition,
+		)
+	}
+	for _, condType := range required {
+		if !conditions.IsTrue(capiMachine, condType) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machine v1alpha2.LinodeMachine, dnsTTLSec int, subdomain string, firstMachine bool) ([]DNSOptions, error) {
@@ -399,7 +417,8 @@ func processLinodeMachine(ctx context.Context, cscope *scope.ClusterScope, machi
 }
 
 // getDNSEntriesToEnsure return DNS entries to create/delete
-func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.ClusterScope) ([]DNSOptions, error) {
+// pending is true when at least one non-first machine was skipped because it is not ready yet.
+func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.ClusterScope) (_ []DNSOptions, pending bool, _ error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 	dnsTTLSec := rutil.DefaultDNSTTLSec
@@ -419,6 +438,10 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 	for _, eachMachine := range cscope.LinodeMachines.Items {
 		options, err := processLinodeMachine(ctx, cscope, eachMachine, dnsTTLSec, subDomain, firstMachine)
 		firstMachine = false
+		if errors.Is(err, util.ErrReconcileAgain) {
+			pending = true
+			continue
+		}
 		if err != nil {
 			encounteredErrors = append(encounteredErrors, fmt.Errorf("failed to process LinodeMachine %s: %w", eachMachine.Name, err))
 		}
@@ -426,7 +449,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 	}
 	d.options = append(d.options, DNSOptions{subDomain, cscope.LinodeCluster.Name, linodego.RecordTypeTXT, dnsTTLSec})
 
-	return d.options, errors.Join(encounteredErrors...)
+	return d.options, pending, errors.Join(encounteredErrors...)
 }
 
 // GetDomainID gets the domains linode id
