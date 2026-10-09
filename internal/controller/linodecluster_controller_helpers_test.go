@@ -562,6 +562,9 @@ func TestAddMachineToLB(t *testing.T) {
 				}
 				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: "test-machine-1", Namespace: defaultNamespace}, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				mockK8sClient.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: "test-machine-2", Namespace: defaultNamespace}, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				// stale entries are reconciled before requeueing for the pending machine
+				mockDNSClient.EXPECT().GetRecord(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("Not Found")).AnyTimes()
+				mockDNSClient.EXPECT().CreateRecord(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			expectedError:       true,
 			expectedErrorString: util.ErrReconcileAgain.Error(),
