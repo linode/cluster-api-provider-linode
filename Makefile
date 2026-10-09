@@ -308,7 +308,7 @@ conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessar
 $(CONVERSION_GEN): $(LOCALBIN)
 	GOBIN=$(CACHE_BIN) go install k8s.io/code-generator/cmd/conversion-gen@$(CONVERSION_GEN_VERSION)
 
-.phony: golangci-lint-custom
+.PHONY: golangci-lint-custom
 golangci-lint-custom: $(GOLANGCI_LINT_CUSTOM)
 $(GOLANGCI_LINT_CUSTOM): # Build golangci-lint-custom from custom configuration.
-	golangci-lint custom
+	golangci-lint custom --version v$(shell mise current golangci-lint)

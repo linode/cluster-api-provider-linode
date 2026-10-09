@@ -1,4 +1,3 @@
-version: v2.5.0
 name: golangci-lint-custom
 destination: ./bin
 plugins:
