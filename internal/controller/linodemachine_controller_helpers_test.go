@@ -1711,6 +1711,52 @@ func TestConfigureVPCInterfaceWithExistingLinodeInterfaces(t *testing.T) {
 		require.Same(t, ipv4, createConfig.LinodeInstanceInterfaces[0].VPC.IPv4)
 	})
 
+	t.Run("applies machine ipv6Options to supplied VPC interface missing a subnet", func(t *testing.T) {
+		t.Parallel()
+
+		ctrl := gomock.NewController(t)
+		linodeClient := mock.NewMockLinodeClient(ctrl)
+		k8sClient := mock.NewMockK8sClient(ctrl)
+		linodeClient.EXPECT().GetVPC(gomock.Any(), 123).Return(&linodego.VPC{
+			ID: 123,
+			Subnets: []linodego.VPCSubnet{{
+				ID:    456,
+				Label: "subnet-1",
+				IPv6:  []linodego.VPCIPv6Range{{Range: "2001:db8::/52"}},
+			}},
+		}, nil)
+
+		// constructLinodeInterfaceVPC always emits an IPv6 block with IsPublic=false when unset.
+		createConfig := &linodego.InstanceCreateOptions{
+			LinodeInstanceInterfaces: []linodego.LinodeInstanceInterfaceCreateOptions{{
+				LinodeInterfaceCreateOptions: linodego.LinodeInterfaceCreateOptions{
+					VPC: &linodego.VPCInterfaceCreateOptions{
+						IPv6: &linodego.VPCInterfaceIPv6CreateOptions{IsPublic: new(false)},
+					},
+				},
+			}},
+		}
+		machineScope := &scope.MachineScope{
+			LinodeClient: linodeClient,
+			Client:       k8sClient,
+			LinodeMachine: &infrav1alpha2.LinodeMachine{
+				Spec: infrav1alpha2.LinodeMachineSpec{
+					VPCID:       new(123),
+					IPv6Options: &infrav1alpha2.IPv6CreateOptions{IsPublicIPv6: new(true)},
+				},
+			},
+			LinodeCluster: &infrav1alpha2.LinodeCluster{},
+		}
+
+		err := configureVPCInterface(t.Context(), machineScope, createConfig, testr.New(t))
+
+		require.NoError(t, err)
+		require.Equal(t, 456, createConfig.LinodeInstanceInterfaces[0].VPC.SubnetID)
+		require.NotNil(t, createConfig.LinodeInstanceInterfaces[0].VPC.IPv6)
+		require.NotNil(t, createConfig.LinodeInstanceInterfaces[0].VPC.IPv6.IsPublic)
+		require.True(t, *createConfig.LinodeInstanceInterfaces[0].VPC.IPv6.IsPublic)
+	})
+
 	t.Run("errors when subnet is missing and no VPC is configured", func(t *testing.T) {
 		t.Parallel()
 
