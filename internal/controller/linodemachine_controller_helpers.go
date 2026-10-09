@@ -234,20 +234,9 @@ func configureVPCInterface(ctx context.Context, machineScope *scope.MachineScope
 
 // resolveMissingVPCInterfaceSubnet fills in the subnet ID of user-defined VPC linode interfaces that omit it,
 // using the VPC configured on the machine or cluster (honoring the cluster's subnetName, else the first subnet).
-// Other user-provided settings on the interface, such as IPv6, are preserved.
+// The helpers only set the subnet ID and, when the machine's ipv6Options apply, the IPv6 configuration;
+// the user's IPv4 settings are untouched.
 func resolveMissingVPCInterfaceSubnet(ctx context.Context, machineScope *scope.MachineScope, createConfig *linodego.InstanceCreateOptions, logger logr.Logger) error {
-	type savedVPCSettings struct {
-		iface *linodego.VPCInterfaceCreateOptions
-		ipv4  *linodego.VPCInterfaceIPv4CreateOptions
-		ipv6  *linodego.VPCInterfaceIPv6CreateOptions
-	}
-	var saved []savedVPCSettings
-	for _, iface := range createConfig.LinodeInstanceInterfaces {
-		if iface.VPC != nil && iface.VPC.SubnetID == 0 {
-			saved = append(saved, savedVPCSettings{iface.VPC, iface.VPC.IPv4, iface.VPC.IPv6})
-		}
-	}
-
 	var err error
 	switch {
 	case machineScope.LinodeMachine.Spec.VPCID != nil:
@@ -261,16 +250,7 @@ func resolveMissingVPCInterfaceSubnet(ctx context.Context, machineScope *scope.M
 		}
 		_, err = getVPCLinodeInterfaceConfig(ctx, machineScope, createConfig.LinodeInstanceInterfaces, logger, vpcRef)
 	}
-	if err != nil {
-		return err
-	}
-
-	for _, s := range saved {
-		s.iface.IPv6 = s.ipv6
-		s.iface.IPv4 = s.ipv4
-	}
-
-	return nil
+	return err
 }
 
 // addVPCInterfaceFromDirectID handles adding a VPC interface from a direct ID
