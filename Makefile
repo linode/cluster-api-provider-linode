@@ -8,7 +8,8 @@ IMAGE_TAGS          ?= $(VERSION)
 WITH_GOFLAGS        ?= GOFLAGS=-ldflags=-X=github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)
 KO_DOCKER_REPO      ?= docker.io/linode/cluster-api-provider-linode
 KOCACHE ?= ~/.ko
-ENVTEST_K8S_VERSION := $(shell go list -m -f '{{.Version}}' k8s.io/client-go)
+# client-go v0.N.x pairs with envtest Kubernetes 1.N.x; pin the minor so local and CI use the same control plane.
+ENVTEST_K8S_VERSION := $(shell go list -m -f '{{.Version}}' k8s.io/client-go | sed -E 's/^v0\.([0-9]+)\..*/1.\1.x/')
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
 .SHELLFLAGS          = -ec
@@ -148,7 +149,7 @@ docs:
 
 .PHONY: test
 test: generate fmt vet ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell setup-envtest use ${ENVTEST_K8S_VERSION#v} -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
+	KUBEBUILDER_ASSETS="$(shell setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" go test -race -timeout 60s `go list ./... | grep -v ./mock$$`  -coverprofile cover.out.tmp
 	grep -v "zz_generated.*" cover.out.tmp > cover.out
 	rm cover.out.tmp
 
