@@ -240,6 +240,8 @@ CAPL container on port `40000` and use Tilt live_reload to rebuild the CAPL Cont
 
 ### Automated Testing
 
+Use `mise run check` for quick feedback while editing and `mise run verify` before opening a PR. See [Testing](./testing.md#executing-tests) for what each task does and costs.
+
 #### E2E Testing
 
 To run E2E locally run:
