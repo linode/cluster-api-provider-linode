@@ -81,5 +81,8 @@ jobs:
       - name: lint-api
         run: mise run lint-api
 
+      - name: nilcheck
+        run: mise run nilcheck
+
       - name: Vulncheck
         run: mise run vulncheck
