@@ -30,80 +30,90 @@ import (
 func TestCAPIContractLabels(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		plural string
-	}{
-		{plural: "linodeclusters"},
-		{plural: "linodeclustertemplates"},
-		{plural: "linodemachines"},
-		{plural: "linodemachinetemplates"},
+	patchPaths := readKustomizationPatchPaths(t)
+	for _, plural := range []string{
+		"linodeclusters",
+		"linodeclustertemplates",
+		"linodemachines",
+		"linodemachinetemplates",
+	} {
+		t.Run(plural, func(t *testing.T) {
+			t.Parallel()
+
+			patchPath := filepath.Join("..", "..", "config", "crd", "patches", "capicontract_in_"+plural+".yaml")
+			patch := readCRD(t, patchPath)
+			patchPathForKustomize := filepath.ToSlash(filepath.Join("patches", "capicontract_in_"+plural+".yaml"))
+			assert.Contains(t, patchPaths, patchPathForKustomize)
+
+			basePath := filepath.Join("..", "..", "config", "crd", "bases", "infrastructure.cluster.x-k8s.io_"+plural+".yaml")
+			base := readCRD(t, basePath)
+			assertCAPIContractLabels(t, patch, base)
+		})
+	}
+}
+
+func readCRD(t *testing.T, path string) apiextensionsv1.CustomResourceDefinition {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read CRD %q: %v", path, err)
 	}
 
-	kustomizationData, err := os.ReadFile(filepath.Join("..", "..", "config", "crd", "kustomization.yaml"))
-	if !assert.NoError(t, err) {
-		return
+	var crd apiextensionsv1.CustomResourceDefinition
+	if err := yaml.Unmarshal(data, &crd); err != nil {
+		t.Fatalf("unmarshal CRD %q: %v", path, err)
 	}
+	return crd
+}
+
+func readKustomizationPatchPaths(t *testing.T) map[string]struct{} {
+	t.Helper()
+
+	path := filepath.Join("..", "..", "config", "crd", "kustomization.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read kustomization %q: %v", path, err)
+	}
+
 	var kustomization struct {
 		Patches []struct {
 			Path string `json:"path,omitempty" yaml:"path,omitempty"`
 		} `json:"patches,omitempty" yaml:"patches,omitempty"`
 	}
-	if !assert.NoError(t, yaml.Unmarshal(kustomizationData, &kustomization)) {
-		return
+	if err := yaml.Unmarshal(data, &kustomization); err != nil {
+		t.Fatalf("unmarshal kustomization %q: %v", path, err)
 	}
+
 	patchPaths := make(map[string]struct{}, len(kustomization.Patches))
 	for _, patch := range kustomization.Patches {
 		patchPaths[patch.Path] = struct{}{}
 	}
+	return patchPaths
+}
 
-	for _, tc := range tests {
-		t.Run(tc.plural, func(t *testing.T) {
-			t.Parallel()
+func assertCAPIContractLabels(t *testing.T, patch, base apiextensionsv1.CustomResourceDefinition) {
+	t.Helper()
 
-			patchPath := filepath.Join("..", "..", "config", "crd", "patches", "capicontract_in_"+tc.plural+".yaml")
-			patchData, err := os.ReadFile(patchPath)
-			if !assert.NoError(t, err) {
-				return
-			}
-			var patch apiextensionsv1.CustomResourceDefinition
-			if !assert.NoError(t, yaml.Unmarshal(patchData, &patch)) {
-				return
-			}
-
-			patchPathForKustomize := filepath.ToSlash(filepath.Join("patches", "capicontract_in_"+tc.plural+".yaml"))
-			_, included := patchPaths[patchPathForKustomize]
-			assert.True(t, included, "contract patch %q must be included by config/crd/kustomization.yaml", patchPathForKustomize)
-
-			basePath := filepath.Join("..", "..", "config", "crd", "bases", "infrastructure.cluster.x-k8s.io_"+tc.plural+".yaml")
-			baseData, err := os.ReadFile(basePath)
-			if !assert.NoError(t, err) {
-				return
-			}
-			var base apiextensionsv1.CustomResourceDefinition
-			if !assert.NoError(t, yaml.Unmarshal(baseData, &base)) {
-				return
-			}
-
-			assert.Equal(t, map[string]string{
-				"cluster.x-k8s.io/v1beta1": "v1alpha2",
-				"cluster.x-k8s.io/v1beta2": "v1alpha2",
-			}, patch.Labels)
-
-			for _, labelKey := range []string{"cluster.x-k8s.io/v1beta1", "cluster.x-k8s.io/v1beta2"} {
-				labelValue := patch.Labels[labelKey]
-				for _, versionName := range strings.Split(labelValue, "_") {
-					served := false
-					for _, version := range base.Spec.Versions {
-						if version.Name == versionName && version.Served {
-							served = true
-							break
-						}
-					}
-					assert.True(t, served, "label %q version %q must be served by %s", labelKey, versionName, base.Name)
-				}
-			}
-		})
+	expected := map[string]string{
+		"cluster.x-k8s.io/v1beta1": "v1alpha2",
+		"cluster.x-k8s.io/v1beta2": "v1alpha2",
 	}
+	assert.Equal(t, expected, patch.Labels)
+	for labelKey, labelValue := range expected {
+		for _, versionName := range strings.Split(labelValue, "_") {
+			assert.True(t, crdServesVersion(base, versionName), "label %q version %q must be served by %s", labelKey, versionName, base.Name)
+		}
+	}
+}
+
+func crdServesVersion(crd apiextensionsv1.CustomResourceDefinition, name string) bool {
+	for _, version := range crd.Spec.Versions {
+		if version.Name == name && version.Served {
+			return true
+		}
+	}
+	return false
 }
 
 func TestInitializationStatusSchema(t *testing.T) {
