@@ -1151,6 +1151,18 @@ spec:
                   can be added as events to the Machine object and/or logged in the
                   controller's output.
                 type: string
+              initialization:
+                description: |-
+                  initialization provides observations of the LinodeMachine initialization process.
+                  NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+                minProperties: 1
+                properties:
+                  provisioned:
+                    description: |-
+                      provisioned is true when the infrastructure provider reports that the Machine's infrastructure is fully provisioned.
+                      NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning.
+                    type: boolean
+                type: object
               instanceState:
                 description: instanceState is the state of the Linode instance for
                   this machine.
