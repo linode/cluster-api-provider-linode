@@ -818,6 +818,7 @@ func (r *LinodeMachineReconciler) reconcileUpdate(ctx context.Context, logger lo
 		})
 	} else {
 		machineScope.LinodeMachine.Status.Ready = true
+		machineScope.LinodeMachine.Status.Initialization.Provisioned = new(true)
 		machineScope.LinodeMachine.SetCondition(metav1.Condition{
 			Type:   clusterv1.ReadyCondition,
 			Status: metav1.ConditionTrue,

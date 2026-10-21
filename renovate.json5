@@ -41,6 +41,15 @@
       "datasourceTemplate": "docker",
       "versioningTemplate": "semver-coerced",
     },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^templates/addons/.+\\.ya?ml$/",
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: extractVersion=(?<extractVersion>[^\\s]+?))?\\s+version:\\s*\\$\\{[A-Za-z0-9_]+:=(?<currentValue>[^}]+)\\}",
+      ]
+    }
   ],
   "packageRules": [
     {

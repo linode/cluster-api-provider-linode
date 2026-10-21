@@ -589,6 +589,11 @@ type LinodeMachineStatus struct {
 	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
+	// initialization provides observations of the LinodeMachine initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+	// +optional
+	Initialization LinodeMachineInitializationStatus `json:"initialization,omitempty,omitzero"`
+
 	// ready is true when the provider resource is ready.
 	// +optional
 	// +kubebuilder:default=false
@@ -655,6 +660,15 @@ type LinodeMachineStatus struct {
 	// +optional
 	// +listType=set
 	Tags []string `json:"tags,omitempty"`
+}
+
+// LinodeMachineInitializationStatus provides observations of the LinodeMachine initialization process.
+// +kubebuilder:validation:MinProperties=1
+type LinodeMachineInitializationStatus struct {
+	// provisioned is true when the infrastructure provider reports that the Machine's infrastructure is fully provisioned.
+	// NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning.
+	// +optional
+	Provisioned *bool `json:"provisioned,omitempty"`
 }
 
 // +kubebuilder:object:root=true
