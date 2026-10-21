@@ -4,6 +4,7 @@ load("ext://namespace", "namespace_create")
 load("ext://restart_process", "docker_build_with_restart")
 load("ext://secret", "secret_from_dict")
 load("ext://base64", "decode_base64")
+load("ext://ko", "ko_build")
 update_settings(k8s_upsert_timeout_secs=120)
 
 if os.getenv("USE_CAPI_OPERATOR", "false") == "true":
@@ -154,6 +155,7 @@ capl_resources = [
 ]
 capl_deps = ["capi-controller-manager"]
 debug = os.getenv("CAPL_DEBUG", "false")
+skip_ko_build = os.getenv("SKIP_KO_BUILD", "false") == "true"
 # debug setting
 if debug == "true":
     local_resource(
@@ -204,6 +206,10 @@ for resource in manager_yaml:
         resource["spec"]["template"]["spec"].pop("securityContext")
         for container in resource["spec"]["template"]["spec"]["containers"]:
             container.pop("securityContext")
+            if debug != "true" and not skip_ko_build:
+                env = container.setdefault("env", [])
+                if not any([entry["name"] == "OTEL_TRACES_EXPORTER" for entry in env]):
+                    env.append({"name": "OTEL_TRACES_EXPORTER", "value": "none"})
             timeout_value = os.getenv("LINODE_CLIENT_TIMEOUT")
             if timeout_value:
                 env = container.setdefault("env", [])
@@ -214,14 +220,34 @@ for resource in manager_yaml:
 
 k8s_yaml(encode_yaml_stream(manager_yaml))
 
-if os.getenv("SKIP_DOCKER_BUILD", "false") != "true" and debug != "true":
-    docker_build(
+if not skip_ko_build and debug != "true":
+    nodes = decode_json(
+        local(
+            ["kubectl", "--context", k8s_context(), "get", "nodes", "-o", "json"],
+            quiet=True,
+        )
+    )
+    target_platform = "linux/" + nodes["items"][0]["status"]["nodeInfo"]["architecture"]
+    ko_build(
         "docker.io/linode/cluster-api-provider-linode",
-        context=".",
-        dockerfile="dev.Dockerfile",
-        only=("dev.Dockerfile", "Makefile", "vendor", "go.mod", "go.sum",
-        "./api", "./clients", "./cloud", "./cmd", "./internal", "./observability", "./util", "./version"),
-        build_args={"VERSION": os.getenv("VERSION", "")},
+        "./cmd",
+        deps=[
+            "Makefile",
+            ".ko.yaml",
+            "go.mod",
+            "go.sum",
+            "./api",
+            "./clients",
+            "./cloud",
+            "./cmd",
+            "./internal",
+            "./observability",
+            "./util",
+            "./version",
+        ],
+        env={
+            "KO_DEFAULTPLATFORMS": target_platform,
+        },
     )
 
 k8s_resource(
