@@ -81,6 +81,11 @@ type LinodeClusterStatus struct {
 	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
+	// initialization provides observations of the LinodeCluster initialization process.
+	// NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+	// +optional
+	Initialization LinodeClusterInitializationStatus `json:"initialization,omitempty,omitzero"`
+
 	// ready denotes that the cluster (infrastructure) is ready.
 	// +optional
 	Ready bool `json:"ready"`
@@ -96,6 +101,15 @@ type LinodeClusterStatus struct {
 	// for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
+}
+
+// LinodeClusterInitializationStatus provides observations of the LinodeCluster initialization process.
+// +kubebuilder:validation:MinProperties=1
+type LinodeClusterInitializationStatus struct {
+	// provisioned is true when the infrastructure provider reports that the Cluster's infrastructure is fully provisioned.
+	// NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning.
+	// +optional
+	Provisioned *bool `json:"provisioned,omitempty"`
 }
 
 // +kubebuilder:object:root=true

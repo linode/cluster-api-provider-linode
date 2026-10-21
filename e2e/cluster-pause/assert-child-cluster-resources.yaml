@@ -8,6 +8,8 @@ spec:
   type: g6-standard-2
 status:
   ready: true
+  initialization:
+    provisioned: true
   instanceState: running
 ---
 apiVersion: cluster.x-k8s.io/v1beta2

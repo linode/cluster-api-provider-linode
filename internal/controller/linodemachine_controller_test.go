@@ -1995,6 +1995,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceRunning))
 					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition).Status).To(Equal(metav1.ConditionTrue))
+					Expect(linodeMachine.Status.Initialization.Provisioned).To(HaveValue(BeTrue()))
 				})),
 		),
 		Path(

@@ -200,6 +200,7 @@ func (r *LinodeClusterReconciler) reconcile(
 	}
 
 	clusterScope.LinodeCluster.Status.Ready = true
+	clusterScope.LinodeCluster.Status.Initialization.Provisioned = new(true)
 	clusterScope.LinodeCluster.SetCondition(metav1.Condition{
 		Type:   clusterv1.ReadyCondition,
 		Status: metav1.ConditionTrue,

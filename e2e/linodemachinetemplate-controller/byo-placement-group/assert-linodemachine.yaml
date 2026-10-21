@@ -8,4 +8,6 @@ spec:
   type: g6-nanode-1
 status:
   ready: true
+  initialization:
+    provisioned: true
   instanceState: running
