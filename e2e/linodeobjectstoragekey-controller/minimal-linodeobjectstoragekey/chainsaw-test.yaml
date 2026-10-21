@@ -100,8 +100,6 @@ spec:
               apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
               kind: LinodeObjectStorageKey
               name: ($key)
-    - name: Check if the LinodeObjectStorageKey and Secret were deleted
-      try:
         - error:
             file: check-key-and-secret-deletion.yaml
     - name: Delete bucket
