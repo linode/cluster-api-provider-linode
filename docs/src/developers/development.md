@@ -41,7 +41,7 @@ export INSTALL_K3S_PROVIDER=false # Default false. Set this to true to enable k3
 export INSTALL_RKE2_PROVIDER=false # Default false. Set this to true to enable the RKE2 capi provider installation
 export INSTALL_HELM_PROVIDER=true # Default true. Set this to true to enable CAAPH provider installation
 export INSTALL_KUBEADM_PROVIDER=true # Default true. Set this to true to enable kubeadm CAPI provider installation
-export SKIP_DOCKER_BUILD=false # Default false. Set this to true to skip local docker builds of CAPL images
+export SKIP_KO_BUILD=false # Default false. Set true to skip the local CAPL ko image build and use the latest main image from Dockerhub
 export CAPL_MONITORING=false # Default false. Set this to true to install the kube-prometheus-stack and capl serviceMonitor
 ```
 
@@ -96,12 +96,14 @@ set the following env vars first:
 export INSTALL_RKE2_PROVIDER=true
 export INSTALL_K3S_PROVIDER=true
 ```
-Additionally, if you want to skip the docker build step for CAPL to
-instead use the latest image on `main` from Dockerhub, set the following:
+Additionally, if you want to skip the local CAPL ko image build and use the latest image on `main` from Dockerhub, set:
 ```sh
-export SKIP_DOCKER_BUILD=true
+export SKIP_KO_BUILD=true
 ```
 ~~~
+
+With `CAPL_DEBUG=false`, Tilt uses ko for the first node's Linux architecture, reuses Go's build cache and ko's image-layer cache (`KOCACHE`, default `${HOME}/.ko`), then pushes the immutable image to the cluster's local registry.
+Published images still use `.ko.yaml`'s `linux/arm64` and `linux/amd64` platforms.
 
 To build a kind cluster and start Tilt, simply run:
 ```sh

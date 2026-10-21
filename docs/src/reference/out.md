@@ -379,6 +379,23 @@ _Appears in:_
 | `status` _[LinodeClusterStatus](#linodeclusterstatus)_ | status is the observed state of the LinodeCluster. |  | Optional: \{\} <br /> |
 
 
+#### LinodeClusterInitializationStatus
+
+
+
+LinodeClusterInitializationStatus provides observations of the LinodeCluster initialization process.
+
+_Validation:_
+- MinProperties: 1
+
+_Appears in:_
+- [LinodeClusterStatus](#linodeclusterstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `provisioned` _boolean_ | provisioned is true when the infrastructure provider reports that the Cluster's infrastructure is fully provisioned.<br />NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning. |  | Optional: \{\} <br /> |
+
+
 #### LinodeClusterList
 
 
@@ -437,6 +454,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeCluster. |  | Optional: \{\} <br /> |
+| `initialization` _[LinodeClusterInitializationStatus](#linodeclusterinitializationstatus)_ | initialization provides observations of the LinodeCluster initialization process.<br />NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning. |  | MinProperties: 1 <br />Optional: \{\} <br /> |
 | `ready` _boolean_ | ready denotes that the cluster (infrastructure) is ready. |  | Optional: \{\} <br /> |
 | `failureReason` _string_ | failureReason will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a succinct value suitable<br />for machine interpretation. |  | Optional: \{\} <br /> |
 | `failureMessage` _string_ | failureMessage will be set in the event that there is a terminal problem<br />reconciling the LinodeCluster and will contain a more verbose string suitable<br />for logging and human consumption. |  | Optional: \{\} <br /> |
@@ -646,6 +664,23 @@ _Appears in:_
 | `status` _[LinodeMachineStatus](#linodemachinestatus)_ | status defines the observed state of LinodeMachine. |  | Optional: \{\} <br /> |
 
 
+#### LinodeMachineInitializationStatus
+
+
+
+LinodeMachineInitializationStatus provides observations of the LinodeMachine initialization process.
+
+_Validation:_
+- MinProperties: 1
+
+_Appears in:_
+- [LinodeMachineStatus](#linodemachinestatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `provisioned` _boolean_ | provisioned is true when the infrastructure provider reports that the Machine's infrastructure is fully provisioned.<br />NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning. |  | Optional: \{\} <br /> |
+
+
 #### LinodeMachineList
 
 
@@ -725,6 +760,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ | conditions define the current service state of the LinodeMachine. |  | Optional: \{\} <br /> |
+| `initialization` _[LinodeMachineInitializationStatus](#linodemachineinitializationstatus)_ | initialization provides observations of the LinodeMachine initialization process.<br />NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning. |  | MinProperties: 1 <br />Optional: \{\} <br /> |
 | `ready` _boolean_ | ready is true when the provider resource is ready. | false | Optional: \{\} <br /> |
 | `addresses` _MachineAddress array_ | addresses contains the Linode instance associated addresses. |  | Optional: \{\} <br /> |
 | `cloudinitMetadataSupport` _boolean_ | cloudinitMetadataSupport determines whether to use cloud-init or not.<br />Deprecated: stackscript are no longer in use, so this field is not used. | true | Optional: \{\} <br /> |

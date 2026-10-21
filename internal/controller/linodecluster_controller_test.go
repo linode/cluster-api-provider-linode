@@ -308,6 +308,33 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 				),
 			),
 			Path(
+				Call("previously provisioned cluster keeps initialization.provisioned while requeueing", func(ctx context.Context, mck Mock) {
+					cScope.LinodeClient = mck.LinodeClient
+					reconciler.Client = k8sClient
+					cScope.LinodeCluster.Spec.Network.ApiserverNodeBalancerConfigID = nbConfigID
+					cScope.LinodeCluster.Status.Ready = true
+					cScope.LinodeCluster.Status.Initialization.Provisioned = new(true)
+					mck.LinodeClient.EXPECT().GetNodeBalancer(gomock.Any(), gomock.Any()).
+						Return(&linodego.NodeBalancer{
+							ID:   nodebalancerID,
+							IPv4: &controlPlaneEndpointHost,
+						}, nil)
+					mck.LinodeClient.EXPECT().GetNodeBalancerConfig(gomock.Any(), gomock.Any(), gomock.Any()).
+						Return(nil, errors.New("failed to get nodebalancer config"))
+				}),
+				OneOf(
+					Path(Result("cluster requeues without clearing initialization.provisioned", func(ctx context.Context, mck Mock) {
+						reconciler.Client = k8sClient
+						res, err := reconciler.reconcile(ctx, cScope, mck.Logger())
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultClusterControllerReconcileDelay))
+						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultClusterControllerReconcileDelay+time.Duration(float64(rec.DefaultClusterControllerReconcileDelay)*rec.RetryJitterFraction)))
+						Expect(cScope.LinodeCluster.Status.Ready).To(BeFalse())
+						Expect(cScope.LinodeCluster.Status.Initialization.Provisioned).To(HaveValue(BeTrue()))
+					})),
+				),
+			),
+			Path(
 				Call("cluster is not created because there is no capl cluster", func(ctx context.Context, mck Mock) {
 					cScope.LinodeClient = mck.LinodeClient
 				}),
@@ -347,6 +374,7 @@ var _ = Describe("cluster-lifecycle", Ordered, Label("cluster", "cluster-lifecyc
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
+					Expect(linodeCluster.Status.Initialization.Provisioned).To(HaveValue(BeTrue()))
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(3))
 					Expect(linodeCluster.GetCondition(string(clusterv1.ReadyCondition)).Status).To(Equal(metav1.ConditionTrue))
 					Expect(linodeCluster.GetCondition(ConditionPreflightLinodeNBFirewallReady)).NotTo(BeNil())
@@ -556,6 +584,7 @@ var _ = Describe("cluster-lifecycle-dns", Ordered, Label("cluster", "cluster-lif
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
+					Expect(linodeCluster.Status.Initialization.Provisioned).To(HaveValue(BeTrue()))
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
 					readyCond := linodeCluster.GetCondition(string(clusterv1.ReadyCondition))
 					Expect(readyCond).NotTo(BeNil())
@@ -841,6 +870,7 @@ var _ = Describe("dns-override-endpoint", Ordered, Label("cluster", "dns-overrid
 					clusterKey := client.ObjectKeyFromObject(&linodeCluster)
 					Expect(k8sClient.Get(ctx, clusterKey, &linodeCluster)).To(Succeed())
 					Expect(linodeCluster.Status.Ready).To(BeTrue())
+					Expect(linodeCluster.Status.Initialization.Provisioned).To(HaveValue(BeTrue()))
 					Expect(linodeCluster.Status.Conditions).To(HaveLen(1))
 					cond := linodeCluster.GetCondition(string(clusterv1.ReadyCondition))
 					Expect(cond).NotTo(BeNil())

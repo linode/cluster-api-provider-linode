@@ -9,7 +9,8 @@ spec:
   repoURL: https://linode.github.io/linode-cloud-controller-manager/
   chartName: ccm-linode
   namespace: kube-system
-  version: ${LINODE_CCM_VERSION:=v0.9.8}
+  # renovate: datasource=github-releases depName=linode/linode-cloud-controller-manager extractVersion=^(?<version>v\d+\.\d+\.\d+)$
+  version: ${LINODE_CCM_VERSION:=v0.9.11}
   options:
     waitForJobs: true
     wait: true
