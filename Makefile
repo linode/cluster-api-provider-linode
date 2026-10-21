@@ -7,7 +7,9 @@ VERSION             ?= $(shell git describe --always --tag --dirty=-dev)
 IMAGE_TAGS          ?= $(VERSION)
 WITH_GOFLAGS        ?= GOFLAGS=-ldflags=-X=github.com/linode/cluster-api-provider-linode/version.version=$(VERSION)
 KO_DOCKER_REPO      ?= docker.io/linode/cluster-api-provider-linode
-KOCACHE ?= ~/.ko
+KOCACHE             ?= $(HOME)/.ko
+# ko's --local path uses DOCKER_HOST directly rather than Docker CLI contexts.
+DOCKER_HOST          ?= $(shell docker context inspect --format '{{.Endpoints.docker.Host}}')
 ENVTEST_K8S_VERSION := $(shell go list -m -f '{{.Version}}' k8s.io/client-go)
 BUILD_ARGS          := --build-arg VERSION=$(VERSION)
 SHELL                = /usr/bin/env bash -o pipefail
@@ -158,7 +160,7 @@ e2etest: generate local-release local-deploy
 
 .PHONY: local-deploy
 local-deploy: kind-cluster
-	tilt ci -f Tiltfile
+	DOCKER_HOST=$(DOCKER_HOST) KOCACHE=$(KOCACHE) tilt ci -f Tiltfile
 
 .PHONY: kind-cluster
 kind-cluster:
@@ -202,11 +204,11 @@ build: generate fmt vet ## Build manager binary.
 
 .PHONY: ko-build
 ko-build:
-	$(WITH_GOFLAGS) KO_CACHE=$(KOCACHE) ko build --local -t $(IMAGE_TAGS) --bare github.com/linode/cluster-api-provider-linode/cmd
+	DOCKER_HOST=$(DOCKER_HOST) $(WITH_GOFLAGS) KOCACHE=$(KOCACHE) ko build --local -t $(IMAGE_TAGS) --bare github.com/linode/cluster-api-provider-linode/cmd
 
 .PHONY: ko-publish
 ko-publish:
-	$(WITH_GOFLAGS) KO_CACHE=$(KOCACHE) KO_DOCKER_REPO=$(KO_DOCKER_REPO) ko build -t $(IMAGE_TAGS) --bare github.com/linode/cluster-api-provider-linode/cmd
+	$(WITH_GOFLAGS) KOCACHE=$(KOCACHE) KO_DOCKER_REPO=$(KO_DOCKER_REPO) ko build -t $(IMAGE_TAGS) --bare github.com/linode/cluster-api-provider-linode/cmd
 
 ## --------------------------------------
 ## Deployment
@@ -221,7 +223,7 @@ endif
 .PHONY: tilt-cluster
 tilt-cluster:
 	ctlptl apply -f .tilt/ctlptl-config.yaml
-	tilt up
+	DOCKER_HOST=$(DOCKER_HOST) KOCACHE=$(KOCACHE) tilt up
 
 ## --------------------------------------
 ## Release

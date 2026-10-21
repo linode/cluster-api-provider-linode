@@ -157,7 +157,7 @@ Cluster templates in `templates/flavors/` define different configurations (VPC v
 - `CAPL_MONITORING`: Enable Prometheus metrics and Grafana dashboards (`true`/`false`)
 - `ENABLE_WEBHOOKS`: Enable/disable admission webhooks (`true`/`false`)
 - `GZIP_COMPRESSION_ENABLED`: Enable gzip compression for metadata (`true`/`false`)
-- `SKIP_DOCKER_BUILD`: Skip Docker build in Tilt development (`true`/`false`)
+- `SKIP_KO_BUILD`: Skip local CAPL ko image builds in Tilt development (`true`/`false`)
 - `VERSION`: Build version override
 
 ### Provider Installation (Tilt Development)
