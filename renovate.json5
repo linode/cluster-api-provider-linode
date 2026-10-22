@@ -30,6 +30,18 @@
       ]
     },
     {
+      "description": "Kubernetes version of the kind management cluster used by Tilt and e2e.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/)\\.tilt/ctlptl-config\\.yaml$/",
+      ],
+      "matchStrings": [
+        "image:\\s*(?<depName>kindest/node):(?<currentValue>v[0-9.]+)",
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "semver-coerced",
+    },
+    {
       "customType": "regex",
       "managerFilePatterns": [
         "/^templates/addons/.+\\.ya?ml$/",
@@ -48,6 +60,11 @@
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true,
+    },
+    {
+      "description": "Changing the management cluster Kubernetes version is only exercised by e2e, so review it.",
+      "matchDepNames": ["kindest/node"],
+      "automerge": false,
     },
     {
       "groupName": "kubernetes",
