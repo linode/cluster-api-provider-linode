@@ -157,3 +157,12 @@ spec:
               done
             check:
               (contains($stdout, '404')): true
+    - name: Delete LinodeObjectStorageKey once bucket is gone
+      try:
+        - delete:
+            ref:
+              apiVersion: infrastructure.cluster.x-k8s.io/v1alpha2
+              kind: LinodeObjectStorageKey
+              name: ($bucket)
+        - error:
+            file: check-lobjkey-deletion.yaml
