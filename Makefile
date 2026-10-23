@@ -76,7 +76,7 @@ generate: generate-manifests generate-code generate-mock generate-api-docs
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	controller-gen rbac:roleName=manager-role crd:omitToolVersion=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate-code
 generate-code: ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
