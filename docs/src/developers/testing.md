@@ -13,10 +13,20 @@
 
 ## Unit Tests
 ### Executing Tests
-In order to run the unit tests run the following command
-```bash
-mise run test
-```
+Run builds, tests, and checks through `mise run <task>` (list them with `mise tasks`). Pick the task by how much feedback you need:
+
+| Need | Command | Cost |
+|---|---|---|
+| Quick feedback while editing (fmt, vet, lint, lint-api) | `mise run check` | seconds |
+| Unit and envtest suites only | `mise run test` | about a minute |
+| Full CI-equivalent gate before opening a PR (lint, lint-api, nilcheck, vulncheck, test, build) | `mise run verify` | 1-3 minutes |
+| Final check after `verify` passes | `mise run e2etest` (see [E2E Tests](#e2e-tests)) | long-running |
+
+`test`, `build`, and `verify` regenerate code and reformat Go files in place, so review `git status` afterwards and keep the regenerated files with your change; CI fails if they are stale.
+
+The controller tests use [envtest](https://book.kubebuilder.io/reference/envtest) and need binaries that `mise run test` installs and exposes through `KUBEBUILDER_ASSETS`. Running `go test` on `internal/controller` directly fails with a message pointing back to `mise run test`.
+Run `mise run doctor` to confirm your tools, env vars, docker, and active Linode account are ready.
+
 ### Creating Tests
 General unit tests of functions follow the same conventions for testing using Go's `testing` standard library, along with the [testify](https://github.com/stretchr/testify) toolkit for making assertions.
 
@@ -211,7 +221,7 @@ export LINODE_MACHINE_TYPE=g6-standard-2
 
 mise run e2etest
 ```
-*Note: By default `mise run e2etest` runs all the e2e tests defined under `/e2e` dir*
+*Note: Without `E2E_SELECTOR`, `mise run e2etest` runs all the e2e tests defined under `/e2e` dir. Set `E2E_SELECTOR` to the narrowest label for the area you changed.*
 
 In order to run specific test, you need to pass flags to chainsaw by setting env var `E2E_SELECTOR`
 
@@ -233,7 +243,10 @@ There are other selectors you can use to invoke specfic tests. Please look at th
 | K3S Cluster                      | `k3s`           | 
 | RKE2 Cluster                     | `rke2`          |
 | Default (kubeadm) Cluster        | `kubeadm`       |
+| Admission Webhooks               | `webhook`       |
 | Linode Cluster Controller        | `linodecluster` |
+| Linode Firewall Controller       | `linodefirewall`|
+| Linode Placement Group Controller| `linodeplacementgroup` |
 | Linode Machine Controller        | `linodemachine` |
 | Linode Obj Controller            | `linodeobj`     | 
 | Linode Obj Key Controller        | `linodeobjkey`  | 
@@ -247,7 +260,7 @@ The test currently defaults to 1 on GHA since it is a long-running test prone to
 
 To test, run:
 ```bash
-CONTROL_PLANE_MACHINE_COUNT=3 chainsaw test e2e --selector dns
+CONTROL_PLANE_MACHINE_COUNT=3 mise run e2etest E2E_SELECTOR=dns
 ```
 
 ### Adding Tests
