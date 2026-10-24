@@ -24,48 +24,45 @@ jq = "1.8.1"
 "go:github.com/elastic/crd-ref-docs" = "0.3.0"
 "pipx:linode-cli" = "5.68.0"
 
+
 [tasks.check]
-description = "[check] Fast pre-flight: fmt, vet, lint, lint-api. Mutates Go formatting only. Builds bin/golangci-lint-custom on first use."
+description = "[check] Run fmt, vet, lint, and API lint; formats Go sources and builds bin/golangci-lint-custom if absent."
 run = [{ task = "fmt" }, { task = "vet" }, { task = "lint" }, { task = "lint-api" }]
 
-[tasks.doctor]
-description = "[check] Read-only: verify tools, env vars, docker, and the active Linode account are ready. Run first in a new environment."
-run = "hack/doctor.sh"
-
 [tasks.verify]
-description = "[verify] CI-equivalent gate: lint, lint-api, nilcheck, vulncheck, test, build. Stops at the first failure. Mutates generated files and Go formatting."
+description = "[verify] Run lint, API lint, nilcheck, vulncheck, test, and build; regenerates and formats files."
 run = [{ task = "lint" }, { task = "lint-api" }, { task = "nilcheck" }, { task = "vulncheck" }, { task = "test" }, { task = "build" }]
 
 [tasks.fmt]
-description = "[check] Format Go sources in place. Mutates Go files."
+description = "[check] Format Go sources in place."
 run = "make fmt"
 
 [tasks.vet]
-description = "[check] Run go vet. Read-only."
+description = "[check] Run go vet."
 run = "make vet"
 
 [tasks.lint]
-description = "[check] Run golangci-lint. Read-only."
+description = "[check] Run golangci-lint."
 run = "make lint"
 
 [tasks.lint-api]
-description = "[verify] Run API linting (kube-api-linter). Read-only; builds bin/golangci-lint-custom on first use."
+description = "[verify] Run kube-api-linter; builds bin/golangci-lint-custom if absent."
 run = "make lint-api"
 
 [tasks.vulncheck]
-description = "[verify] Run govulncheck. Read-only; needs network."
+description = "[verify] Run govulncheck (requires network)."
 run = "make vulncheck"
 
 [tasks.test]
-description = "[verify] Regenerate code, format, vet, then run unit and envtest suites with -race. Mutates generated files and Go formatting. Writes cover.out."
+description = "[verify] Regenerate and format code, then run race-enabled unit/envtest tests; writes cover.out."
 run = "make test"
 
 [tasks.build]
-description = "[verify] Regenerate code, format, vet, then build bin/manager. Mutates generated files and Go formatting."
+description = "[verify] Regenerate and format code, then build bin/manager."
 run = "make build"
 
 [tasks.generate]
-description = "[dev] Regenerate CRDs, RBAC, webhooks, deepcopy, mocks, and API reference docs. Mutates config/, api/, mock/, docs/src/reference."
+description = "[dev] Regenerate API/RBAC manifests, code, mocks, and reference docs in config/, api/, mock/, and docs/src/reference/."
 run = "make generate"
 
 [tasks.generate-flavors]
@@ -73,15 +70,23 @@ description = "[dev] Regenerate cluster templates from templates/flavors into te
 run = "make generate-flavors"
 
 [tasks.local-release]
-description = "[dev] Rebuild release manifests and templates in infrastructure-local-linode/v0.0.0 (git-ignored; the old output is deleted first). Runs git restore on config/default/*manager_image_patch.yaml, discarding uncommitted edits to those files. Run after changing templates/ or config/."
+description = "[dev] Rebuild infrastructure-local-linode/v0.0.0; deletes old output and git-restores config/default/*manager_image_patch.yaml. Do not run with uncommitted edits to those files."
 run = "make local-release"
 
 [tasks.e2etest]
-description = "[e2e] Final check after verify passes. Runs generate, local-release (see its warning), local-deploy, then Chainsaw tests on a kind+Tilt cluster. Select tests with E2E_SELECTOR=quick|all|<label> and pass E2E_FLAGS."
-run = "make e2etest"
+description = "[e2e] Generate, rebuild local release (may discard uncommitted manager-image patch edits), create a kind+Tilt cluster, and run Chainsaw. Defaults to quick."
+usage = '''
+arg "[selector]" env="E2E_SELECTOR" default="quick" help="Chainsaw selector for the tests to run"
+flag "--flags <flags>" env="E2E_FLAGS" help="Additional flags passed to Chainsaw"
+'''
+env.LINODE_TOKEN = { required = "Set LINODE_TOKEN for Linode E2E tests", redact = true }
+env.LINODE_REGION = { required = "Set LINODE_REGION for E2E tests" }
+env.LINODE_CONTROL_PLANE_MACHINE_TYPE = { required = "Set LINODE_CONTROL_PLANE_MACHINE_TYPE for E2E tests" }
+env.LINODE_MACHINE_TYPE = { required = "Set LINODE_MACHINE_TYPE for E2E tests" }
+run = 'make e2etest E2E_SELECTOR="${usage_selector?}" E2E_FLAGS="${usage_flags:-}"'
 
 [tasks.check-gen-diff]
-description = "[ci] Fails on ANY uncommitted change (git diff --exit-code). Meant for CI after generate; use verify locally."
+description = "[ci] Fail if the worktree has any changes; run after generation in CI. Use verify locally."
 run = "make check-gen-diff"
 
 [tasks.tidy]
@@ -89,7 +94,7 @@ description = "[dev] Run go mod tidy. Mutates go.mod and go.sum; needs network."
 run = "make tidy"
 
 [tasks.nilcheck]
-description = "[verify] Run nilaway on this module's packages. Read-only; builds bin/golangci-lint-custom on first use."
+description = "[verify] Run nilaway; builds bin/golangci-lint-custom if absent."
 run = "make nilcheck"
 
 [tasks.docs]
@@ -105,7 +110,7 @@ description = "[dev] Create the kind cluster and run interactive tilt up until s
 run = "make tilt-cluster"
 
 [tasks.test-upgrade]
-description = "[e2e] Upgrade test: checks out the last release tag, then back to HEAD (git checkout), and runs Chainsaw. Needs a clean tree. Run only when asked."
+description = "[e2e] Checkout and test the last release and HEAD; requires a clean tree. Run only when asked."
 run = "make test-upgrade"
 
 [tasks.clean-child-clusters]

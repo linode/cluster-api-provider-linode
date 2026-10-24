@@ -246,19 +246,25 @@ Use `mise run check` for quick feedback while editing and `mise run verify` befo
 
 #### E2E Testing
 
-To run E2E locally run:
+To run E2E locally with the default `quick` selector, set the required Linode inputs and install the pinned tools:
 ```sh
-# Required env vars to run e2e tests
-export INSTALL_K3S_PROVIDER=true
-export INSTALL_RKE2_PROVIDER=true
+export LINODE_TOKEN=...
 export LINODE_REGION=us-sea
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
 
-mise run e2etest
+mise install
 ```
 
-This command creates a KIND cluster, and executes all the defined tests. 
+The E2E task defaults to `quick`; pass a selector to choose another subset:
+```sh
+mise run e2etest
+mise run e2etest linodevpc
+```
+
+For selector-specific inputs such as DNS credentials or K3s/RKE2 provider switches, see [selector-specific E2E environment inputs](./testing.md#selector-specific-environment-inputs).
+
+The E2E task creates a KIND cluster and executes the selected tests.
 
 For more details on E2E tests, please refer to [E2E Testing](./testing.md)
 

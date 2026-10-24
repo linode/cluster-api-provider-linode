@@ -20,12 +20,12 @@ Run builds, tests, and checks through `mise run <task>` (list them with `mise ta
 | Quick feedback while editing (fmt, vet, lint, lint-api) | `mise run check` | seconds |
 | Unit and envtest suites only | `mise run test` | about a minute |
 | Full CI-equivalent gate before opening a PR (lint, lint-api, nilcheck, vulncheck, test, build) | `mise run verify` | 1-3 minutes |
-| Final check after `verify` passes | `mise run e2etest` (see [E2E Tests](#e2e-tests)) | long-running |
+| Final check after `verify` passes | `mise run e2etest` (defaults to `quick`; see [E2E Tests](#e2e-tests)) | long-running |
 
 `test`, `build`, and `verify` regenerate code and reformat Go files in place, so review `git status` afterwards and keep the regenerated files with your change; CI fails if they are stale.
 
 The controller tests use [envtest](https://book.kubebuilder.io/reference/envtest) and need binaries that `mise run test` installs and exposes through `KUBEBUILDER_ASSETS`. Running `go test` on `internal/controller` directly fails with a message pointing back to `mise run test`.
-Run `mise run doctor` to confirm your tools, env vars, docker, and active Linode account are ready.
+Mise manages and activates the project-pinned tools; use `mise install` to set them up on a new environment. The `e2etest` task defaults its selector to `quick` and requires `LINODE_TOKEN`, `LINODE_REGION`, `LINODE_CONTROL_PLANE_MACHINE_TYPE`, and `LINODE_MACHINE_TYPE`. Mise validates those inputs when the task runs.
 
 ### Creating Tests
 General unit tests of functions follow the same conventions for testing using Go's `testing` standard library, along with the [testify](https://github.com/stretchr/testify) toolkit for making assertions.
@@ -210,26 +210,22 @@ providers:
 ```
 
 ### Running Tests
-In order to run e2e tests run the following commands: 
+To run the default `quick` selector, set the required Linode inputs, install the pinned tools, and invoke the task:
 ```bash
-# Required env vars to run e2e tests
-export INSTALL_K3S_PROVIDER=true
-export INSTALL_RKE2_PROVIDER=true
+export LINODE_TOKEN=...
 export LINODE_REGION=us-sea
 export LINODE_CONTROL_PLANE_MACHINE_TYPE=g6-standard-2
 export LINODE_MACHINE_TYPE=g6-standard-2
 
+mise install
 mise run e2etest
 ```
-*Note: Without `E2E_SELECTOR`, `mise run e2etest` runs all the e2e tests defined under `/e2e` dir. Set `E2E_SELECTOR` to the narrowest label for the area you changed.*
 
-In order to run specific test, you need to pass flags to chainsaw by setting env var `E2E_SELECTOR`
-
-Additional settings can be passed to chainsaw by setting env var `E2E_FLAGS`
+Pass additional Chainsaw options with `--flags`.
 
 Example: Only running e2e tests for flavors *(default, k3s, rke2)*
 ```bash
-mise run e2etest E2E_SELECTOR='flavors' E2E_FLAGS='--assert-timeout 10m0s'
+mise run e2etest flavors --flags='--assert-timeout 10m0s'
 ```
 *Note: We need to bump up the assert timeout to 10 mins to allow the cluster to complete building and become available*
 
@@ -253,14 +249,27 @@ There are other selectors you can use to invoke specfic tests. Please look at th
 | Linode VPC Controller            | `linodevpc`     |
 | DNS                              | `dns`           |
 
-*Note: For any flavor e2e tests, please set the required env variables*
+#### Selector-specific environment inputs
 
-Changes to DNS load balancing logic should be tested with the DNS Chainsaw e2e test using 3 control-plane replicas.
-The test currently defaults to 1 on GHA since it is a long-running test prone to timeouts.
+The `quick` selector needs no selector-specific variables. Mise validates only the four common Linode inputs listed above; it does not validate the additional inputs for other selectors:
 
-To test, run:
+| Selector | Additional input | Details |
+|---|---|---|
+| `k3s`, `flavors`, `all` | `INSTALL_K3S_PROVIDER=true` | Enables the K3s providers; disabled by default in Tilt. |
+| `rke2`, `flavors`, `all` | `INSTALL_RKE2_PROVIDER=true` | Enables the RKE2 providers; disabled by default in Tilt. |
+| `dns`, `all` | `LINODE_DNS_TOKEN` | Passed directly to `linode-cli` for DNS checks. Use a token with domain permissions; it can equal `LINODE_TOKEN` if that token has those permissions. |
+| DNS high-availability test | `CONTROL_PLANE_MACHINE_COUNT=3` | Optional; the DNS test defaults to one control-plane replica. |
+
+Run a flavor selector with the relevant providers enabled:
 ```bash
-CONTROL_PLANE_MACHINE_COUNT=3 mise run e2etest E2E_SELECTOR=dns
+INSTALL_K3S_PROVIDER=true INSTALL_RKE2_PROVIDER=true mise run e2etest flavors
+```
+
+`CLUSTERCTL_CONFIG` may point to a custom Cluster API config; test scripts default to `${HOME}/.cluster-api/clusterctl.yaml`. `KUBERNETES_VERSION` defaults to `v1.36.2`.
+
+For DNS load-balancing changes, run the high-availability variant with:
+```bash
+LINODE_DNS_TOKEN="$LINODE_TOKEN" CONTROL_PLANE_MACHINE_COUNT=3 mise run e2etest dns
 ```
 
 ### Adding Tests

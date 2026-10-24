@@ -17,7 +17,7 @@ SHELL                = /usr/bin/env bash -o pipefail
 .SHELLFLAGS          = -ec
 MDBOOK_DEV_HOST      = 0.0.0.0
 MDBOOK_DEV_PORT      = 3000
-E2E_SELECTOR        ?= all
+E2E_SELECTOR        ?= quick
 
 #####################################################################
 # OS / ARCH

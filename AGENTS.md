@@ -8,17 +8,20 @@ IMPORTANT: Run build, test, lint, and verification only through `mise run <task>
 
 | Need | Command | Cost |
 |---|---|---|
-| New machine, or a task fails on a missing tool or credential | `mise run doctor` (read-only) | seconds |
+| New environment | `mise install` | seconds |
 | Quick feedback while editing | `mise run check` (fmt, vet, lint, lint-api) | seconds |
 | Unit and envtest suites only | `mise run test` | about a minute |
 | Full CI-equivalent gate before you call the work done | `mise run verify` | 1-3 minutes |
-| Final check after `verify` passes (regenerates, builds local release, creates a kind cluster, then runs Chainsaw) | `mise run e2etest E2E_SELECTOR=<label>` | long-running |
+| Final check after `verify` passes (regenerates, builds local release, creates a kind cluster, then runs Chainsaw) | `mise run e2etest [selector]` | long-running |
 
-- `doctor` reports missing tools (fix with `mise install`, which is the one non-`mise run` command you may use), unset env vars, docker, and the Linode account your environment resolves to. Before any e2e or cluster work, show the user the account and API host it prints and ask them to confirm it is the intended one; if the user has not told you which account to use, ask. Having credentials does not authorize creating or deleting resources.
+- Mise installs and activates project-pinned dependencies for tasks; `mise install` sets up tools on a new environment. The `e2etest` task defaults its selector to `quick` and rejects a missing `LINODE_TOKEN`, `LINODE_REGION`, `LINODE_CONTROL_PLANE_MACHINE_TYPE`, or `LINODE_MACHINE_TYPE` before starting Make. Before E2E or cluster work, use `linode-context` and confirm the intended account/environment with the user. Having credentials does not authorize creating or deleting resources.
+- For E2E, use the scripted `mise run e2etest [selector]` flow: it handles code generation, local release, kind/Tilt setup, clusterctl manifest generation/application, and Chainsaw readiness assertions. Do not manually inspect or pre-validate generated manifests, or add separate apply/readiness steps. Inspect a generated manifest only when absolutely necessary to diagnose a concrete failure or verify an intentional template, manifest, or CRD change. Never open, print, or expose the full raw manifest. Before viewing any part, use a YAML-aware filter that omits every Secret object entirely and redacts credential values from all remaining objects; then inspect only the specific non-Secret resource fields relevant to the failure. Never inspect a Secret object or its data, even in redacted form. If safe filtering cannot be guaranteed, do not inspect the manifest; use other diagnostics or request a sanitized excerpt.
+
 - `test`, `build`, and `verify` regenerate code and reformat Go files in place. Review `git status` afterwards and keep regenerated files with your change; CI fails if they are stale. The tree may also hold the user's own uncommitted edits: leave those alone and attribute to your change only what you edited plus the generated paths listed under Code map.
 - The suite in `internal/controller` needs envtest assets that only `mise run test` sets up. A bare `go test` there fails in `BeforeSuite` with a message pointing back to the task.
 - `check-gen-diff` fails on any uncommitted change; it is a CI step. Use `verify` locally.
-- Selector labels (`quick`, `all`, `flavors`, `linodemachine`, ...) are listed in `docs/src/developers/testing.md`. Never run `e2etest` without `E2E_SELECTOR`: unset means all tests. Use the narrowest label for the area you changed (see E2E labels). E2E needs `LINODE_TOKEN` and the environment in `docs/src/developers/development.md`. Tasks marked destructive or "run only when asked" in `mise tasks` need an explicit user request.
+- Selector labels (`quick`, `all`, `flavors`, `linodemachine`, ...) are listed in `docs/src/developers/testing.md`. `mise run e2etest` defaults to `quick`; pass a selector argument or set `E2E_SELECTOR` to override it. Use the narrowest label for the area you changed, and use `all` only when you intend to run every E2E test. E2E needs `LINODE_TOKEN` and the environment in `docs/src/developers/development.md`. Tasks marked destructive or "run only when asked" in `mise tasks` need an explicit user request.
+- Before running a selector other than `quick`, read the selector-specific environment inputs in `docs/src/developers/testing.md`; these inputs are not validated by the Mise task.
 
 ## What to run for each change
 
@@ -70,7 +73,7 @@ Do this only when the user explicitly asks. Never start it on your own, even aft
 
 1. `mise run verify` exits 0 on the final state of the tree, after your last edit.
 2. Behavior changes have a unit or e2e test, extended from an existing one where possible (see Tests for your change).
-3. For changes to controllers, webhooks, templates, or `e2e/`, `mise run e2etest E2E_SELECTOR=<label>` passes as the last step, after `verify`. Confirm with the user before starting it unless they asked for it.
+3. For changes to controllers, webhooks, templates, or `e2e/`, `mise run e2etest <label>` passes as the last step, after `verify`. Confirm with the user before starting it unless they asked for it.
 4. Report the commands you ran and their results. If a task fails or you did not run it, say so.
 5. PR titles and description follow `.github/PULL_REQUEST_TEMPLATE.md`.
 
