@@ -1,204 +1,123 @@
-# Cluster API Provider Linode (CAPL) - AI Agent Instructions
+# Cluster API Provider Linode (CAPL)
 
-## Project Overview
-CAPL is a Kubernetes Cluster API infrastructure provider for Linode/Akamai cloud services. It enables declarative management of Kubernetes clusters on Linode infrastructure using native Kubernetes APIs and follows the Cluster API v1beta1 specification.
+Cluster API infrastructure provider for Linode/Akamai. Go, controller-runtime, API group version `v1alpha2` (`api/v1alpha2/`).
 
-## Architecture Patterns
+## Commands
 
-### Controller-Scope-Service Architecture
-All infrastructure resources follow a three-layer pattern:
-1. **Controllers** (`internal/controller/`) - Handle Kubernetes reconciliation events
-2. **Scopes** (`cloud/scope/`) - Encapsulate reconciliation context with both K8s and Linode clients
-3. **Services** (`cloud/services/`) - Abstract Linode API interactions (loadbalancers, domains, object storage)
+IMPORTANT: Run build, test, lint, and verification only through `mise run <task>`. Do not call `go test`, `golangci-lint`, `make`, `chainsaw`, or other tools directly, and do not run a single package or test by hand, unless the user asks. If no task covers what you need, tell the user instead of improvising. List tasks with `mise tasks`; each description says what the task mutates.
 
-### Standard Controller Structure
-```go
-func (r *LinodeResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-    // 1. Fetch the resource
-    // 2. Create scope with clients: scope.NewResourceScope(ctx, r.LinodeClientConfig, params)
-    // 3. Check pause conditions
-    // 4. Call reconcile helper with proper defer for status updates
-    // 5. Handle errors and events
-}
-```
+| Need | Command | Cost |
+|---|---|---|
+| New environment | `mise install` | seconds |
+| Quick feedback while editing | `mise run check` (fmt, vet, lint, lint-api) | seconds |
+| Unit and envtest suites only | `mise run test` | about a minute |
+| Full CI-equivalent gate before you call the work done | `mise run verify` | 1-3 minutes |
+| Final check after `verify` passes (regenerates, builds local release, creates a kind cluster, then runs Chainsaw) | `mise run e2etest [selector]` | long-running |
 
-### Scope Pattern Usage
-Every resource controller creates a scope that manages:
-- Kubernetes client for CRD operations
-- Linode client for API calls
-- Resource references and credentials
-- Patch helpers for status updates
+- Mise installs and activates project-pinned dependencies for tasks; `mise install` sets up tools on a new environment. The `e2etest` task defaults its selector to `quick` and rejects a missing `LINODE_TOKEN`, `LINODE_REGION`, `LINODE_CONTROL_PLANE_MACHINE_TYPE`, or `LINODE_MACHINE_TYPE` before starting Make. Before E2E or cluster work, use `linode-context` and confirm the intended account/environment with the user. Having credentials does not authorize creating or deleting resources.
+- For E2E, use the scripted `mise run e2etest [selector]` flow: it handles code generation, local release, kind/Tilt setup, clusterctl manifest generation/application, and Chainsaw readiness assertions. Do not manually inspect or pre-validate generated manifests, or add separate apply/readiness steps. Inspect a generated manifest only when absolutely necessary to diagnose a concrete failure or verify an intentional template, manifest, or CRD change. Never open, print, or expose the full raw manifest. Before viewing any part, use a YAML-aware filter that omits every Secret object entirely and redacts credential values from all remaining objects; then inspect only the specific non-Secret resource fields relevant to the failure. Never inspect a Secret object or its data, even in redacted form. If safe filtering cannot be guaranteed, do not inspect the manifest; use other diagnostics or request a sanitized excerpt.
 
-Example: `scope.NewClusterScope()` combines `LinodeCluster` + CAPI `Cluster` resources.
+- `test`, `build`, and `verify` regenerate code and reformat Go files in place. Review `git status` afterwards and keep regenerated files with your change; CI fails if they are stale. The tree may also hold the user's own uncommitted edits: leave those alone and attribute to your change only what you edited plus the generated paths listed under Code map.
+- The suite in `internal/controller` needs envtest assets that only `mise run test` sets up. A bare `go test` there fails in `BeforeSuite` with a message pointing back to the task.
+- `check-gen-diff` fails on any uncommitted change; it is a CI step. Use `verify` locally.
+- Selector labels (`quick`, `all`, `flavors`, `linodemachine`, ...) are listed in `docs/src/developers/testing.md`. `mise run e2etest` defaults to `quick`; pass a selector argument or set `E2E_SELECTOR` to override it. Use the narrowest label for the area you changed, and use `all` only when you intend to run every E2E test. E2E needs `LINODE_TOKEN` and the environment in `docs/src/developers/development.md`. Tasks marked destructive or "run only when asked" in `mise tasks` need an explicit user request.
+- Before running a selector other than `quick`, read the selector-specific environment inputs in `docs/src/developers/testing.md`; these inputs are not validated by the Mise task.
 
-## Key Resource Types
+## What to run for each change
 
-### Core Infrastructure
-- **LinodeCluster**: Cluster networking, load balancers (NodeBalancer/DNS), VPC references, firewalls
-- **LinodeMachine**: Compute instances with placement groups, disk configuration, networking
-- **LinodeVPC**: Virtual Private Cloud with IPv4/IPv6 subnets
-- **LinodeFirewall**: Cloud firewall rules with AddressSet references
-- **LinodePlacementGroup**: Anti-affinity constraints for high availability
+| Changed | Run |
+|---|---|
+| Go code | `check` while iterating, then `verify` |
+| `api/v1alpha2/` types or markers | `verify` (regenerates CRDs, deepcopy, mocks, API reference docs; keep the generated output) |
+| `clients/clients.go` interface | `verify` (regenerates `mock/client.go`) |
+| `templates/` or `config/` | `mise run local-release` (it runs `git restore` on `config/default/*manager_image_patch.yaml`, so do not run it over uncommitted edits to those files), then `verify` |
+| `e2e/` Chainsaw tests | `verify`, then `e2etest` with the matching label |
+| Controller or webhook | `verify`, then `e2etest` with that component's label (see E2E labels) |
+| Markdown only | no task |
 
-### API Design Conventions
-- **Dual Reference Pattern**: Support both direct IDs (`vpcID: 123`) and K8s object refs (`vpcRef: {name: "vpc-1"}`)
-- **Credential References**: All resources support `credentialsRef` for multi-tenancy
-- **Immutable Fields**: Use `+kubebuilder:validation:XValidation:rule="self == oldSelf"` for region, type, etc.
-- **Status Structure**: Always include `ready`, `failureReason`, `failureMessage`, `conditions`
+## E2E labels
 
-## Development Workflows
+Label for each component's tests; the full list is in `docs/src/developers/testing.md`. If your change spans components, run each label.
 
-### Build & Test Commands
-- `mise run generate` - Regenerate CRDs and mocks after API changes
-- `mise run test` - Run unit tests with mocked clients
-- `mise run e2e E2E_SELECTOR=quick` - Run specific E2E tests using Chainsaw
-- `mise run lint` - Run golangci-lint with project-specific rules
-- `mise run build` - Build the controller manager binary
+| Changed | `E2E_SELECTOR` |
+|---|---|
+| `linodecluster-controller` | `linodecluster` |
+| `linodemachine-controller`, `linodemachinetemplate-controller` | `linodemachine` |
+| `linodevpc-controller` | `linodevpc` |
+| `linodefirewall-controller` | `linodefirewall` |
+| `linodeplacementgroup-controller` | `linodeplacementgroup` |
+| `linodeobjectstoragebucket-controller` | `linodeobj` |
+| `linodeobjectstoragekey-controller` | `linodeobjkey` |
+| `admission-webhooks` | `webhook` |
+| Templates or flavors | `flavors` |
 
-### Adding New Resources
-1. Define API types in `api/v1alpha2/` with proper validation markers
-2. Implement controller in `internal/controller/` following the standard pattern
-3. Add scope in `cloud/scope/` for client management
-4. Add validation webhook in `internal/webhook/v1alpha2/`
-5. Add cloud services in `cloud/services/` if needed
-6. Run `mise run generate` to update CRDs and mocks
-7. Add E2E tests in `e2e/<resource>-controller/`
+## Tests for your change
 
-### Testing Patterns
-- Unit tests use GoMock with `mock.MockLinodeClient` and `mock.MockK8sClient`
-- Mock expectations pattern: `mockLinodeClient.EXPECT().Method().Return(result, error)`
-- E2E tests use Chainsaw YAML manifests in `e2e/` directories organized by controller and flavors
-- Service tests mock both success and error scenarios from Linode API
-- Test naming uses dynamic identifiers: `(join('-', ['e2e', 'feature', env('GIT_REF')]))`
-- Table-driven tests with `name`, `objects`, `expectedError`, `expectedResult`, `expectations` structure
+Decide whether the change needs a unit test, an e2e test, or neither, and say which in your report. A behavior change or bug fix needs a test that fails without it; a rename, comment, or docs change does not. For a bug report, first reproduce it with a failing test or a stack trace. If the code does not show the reported failure, say so and ask the user for a trace or repro instead of guessing a fix.
 
-## Linode Platform Integration
+Before writing one, read the existing tests for the code you touched (`*_test.go` beside it; `e2e/<component>/`). Extend them first:
 
-### Load Balancer Types
-- **NodeBalancer**: Linode's managed load balancer for cluster API endpoints
-- **DNS**: Uses Linode or Akamai DNS for API endpoint resolution
-- **External**: For existing external load balancers
+- Add a case to the existing `mocktest` path, table, or Ginkgo spec that already exercises the function.
+- Add a new test function or e2e directory only when the behavior has no existing test to extend, or extending would make an existing test cover two unrelated things.
+- Do not copy a test to change one input.
+- For e2e, extend the existing `e2e/<component>/<test>/` when the behavior is a variant of its happy path. Add a sibling directory for a failure or negative case that needs its own resources and assertions. Webhook rejections go in `e2e/admission-webhooks/validating`.
+- CEL rules such as `self == oldSelf` are evaluated only by a real API server, not by the webhook unit tests. No existing Go test covers one: use the envtest suite in `internal/controller` (it loads `config/crd/bases`) and tell the user you are adding the first such case.
 
-### Networking Features
-- **VPC**: Private networking with configurable IPv4/IPv6 subnets
-- **Firewalls**: Cloud firewalls with inbound/outbound rules and AddressSet reuse
-- **Placement Groups**: Anti-affinity for spreading instances across failure domains
+Conventions and the `mocktest` DSL: `docs/src/developers/testing.md`. Run the result with `mise run test`.
 
-### Bootstrap Integration
-- Supports kubeadm, k3s, and rke2 bootstrap providers
-- Uses cloud-init with Linode's metadata service
-- Object storage integration for large bootstrap payloads via pre-signed URLs
+## Manual verification on a cluster
 
-## Common Patterns
+Do this only when the user explicitly asks. Never start it on your own, even after `verify` passes. Before running anything, read the "Developing" section of `docs/src/developers/development.md` (local release, Tilt, deploying and cleaning up a workload cluster), and confirm the Linode account with the user. Use a very short cluster name (less than 20 chars), report the exact manifest you applied and what you observed, and leave the cluster running until the user asks you to delete it.
 
-### Standard Reconciliation Structure
-```go
-func (r *Controller) reconcile(ctx context.Context, scope *ScopeType) (res ctrl.Result, err error) {
-    scope.Resource.Status.Ready = false
-    scope.Resource.Status.FailureReason = nil
-    
-    defer func() {
-        if err != nil {
-            scope.Resource.Status.FailureReason = new("ReconcileError")
-            scope.Resource.Status.FailureMessage = new(err.Error())
-        }
-        if patchErr := scope.Close(ctx); patchErr != nil {
-            err = errors.Join(err, patchErr)
-        }
-    }()
-    
-    // Add finalizer, handle deletion, or ensure resource
-}
-```
+## Definition of done
 
-### Error Handling
-```go
-// Ignore specific HTTP errors
-if util.IgnoreLinodeAPIError(err, http.StatusNotFound) != nil {
-    return fmt.Errorf("failed to get resource: %w", err)
-}
+1. `mise run verify` exits 0 on the final state of the tree, after your last edit.
+2. Behavior changes have a unit or e2e test, extended from an existing one where possible (see Tests for your change).
+3. For changes to controllers, webhooks, templates, or `e2e/`, `mise run e2etest <label>` passes as the last step, after `verify`. Confirm with the user before starting it unless they asked for it.
+4. Report the commands you ran and their results. If a task fails or you did not run it, say so.
+5. PR titles and description follow `.github/PULL_REQUEST_TEMPLATE.md`.
 
-// Handle retryable vs terminal errors
-if linodego.ErrHasStatus(err, http.StatusBadRequest) {
-    // Terminal error - set failure reason, don't requeue
-    return ctrl.Result{}, fmt.Errorf("terminal error: %w", err)
-}
-// Retryable error - requeue with backoff
-return ctrl.Result{RequeueAfter: time.Minute * 5}, nil
-```
+## Code map
 
-### Finalizer Management
-Add finalizers early in reconciliation, remove during deletion after cleanup.
+| Path | Role | Start from |
+|---|---|---|
+| `api/v1alpha2/` | CRD types and kubebuilder markers | `linodevpc_types.go` |
+| `internal/controller/` | Reconcilers | `linodevpc_controller.go` |
+| `cloud/scope/` | Per-reconcile Kubernetes + Linode clients and patch helper | `vpc.go` |
+| `cloud/services/` | Linode API logic that takes a scope | existing service files |
+| `internal/webhook/v1alpha2/` | Validation webhooks | existing webhook files |
+| `clients/`, `mock/`, `mock/mocktest/` | Linode client interfaces, generated gomock clients, test DSL | `docs/src/developers/testing.md` |
+| `templates/flavors/` | Kustomize sources for cluster templates (outputs are git-ignored) | `hack/generate-flavors.sh` |
+| `e2e/<component>/<test>/` | Chainsaw tests | `docs/src/developers/testing.md` |
 
-### Credential Resolution
-Controllers resolve credentials from `credentialsRef` Secret or default to cluster-wide token.
+Never hand-edit generated files: `zz_generated.*`, `mock/client.go`, `config/crd/bases/`, `docs/src/reference/`. Change the source and run `verify`.
 
-### Template System
-Cluster templates in `templates/flavors/` define different configurations (VPC vs vpcless, dual-stack networking, etc.).
+## Conventions
 
-## Environment Variables
+- Controllers get the Kubernetes and Linode clients from their scope (`scope.LinodeClient`), never by building their own; reusable Linode API logic goes in `cloud/services`. Lint enforces the construction half (`linodego.NewClient` only in `cloud/scope`, plus the webhook helper); the rest is by review. This keeps each package unit testable with mocks.
+- Resources accept both a direct ID and an object reference (`vpcID` / `vpcRef`) and support `credentialsRef` for multi-tenancy.
+- Immutable fields use `+kubebuilder:validation:XValidation:rule="self == oldSelf"`.
+- Status carries `ready`, `failureReason`, `failureMessage`, and `conditions`.
+- Add finalizers early in reconcile and remove them only after cleanup. Treat a Linode 404 on delete as success (`util.IgnoreLinodeAPIError`).
+- Unit tests use the `mock/mocktest` DSL as described in `docs/src/developers/testing.md`.
 
-### Core Authentication & API
-- `LINODE_TOKEN`: Primary Linode API authentication token (required)
-- `LINODE_DNS_TOKEN`: Separate token for DNS operations (optional, defaults to LINODE_TOKEN)
-- `LINODE_URL`: Custom Linode API endpoint (optional, for testing/dev environments)
-- `LINODE_DNS_URL`: Custom DNS API endpoint (optional)
-- `LINODE_DNS_CA`: Custom CA certificate for DNS API (optional)
-- `LINODE_CA_BASE64`: Base64-encoded CA certificate for Linode API (optional)
+## Enforcing a convention with lint
 
-### Akamai Integration
-- `AKAMAI_HOST`: Akamai EdgeRC API hostname
-- `AKAMAI_CLIENT_TOKEN`: Akamai EdgeRC client token  
-- `AKAMAI_CLIENT_SECRET`: Akamai EdgeRC client secret
-- `AKAMAI_ACCESS_TOKEN`: Akamai EdgeRC access token
+Prose conventions drift; a lint rule fails `check` and `verify` instead. If you break a convention above, or the user wants one enforced, propose a rule to the user and add it only after they agree.
 
-### Development & Debugging
-- `CAPL_DEBUG`: Enable debug logging and OpenTelemetry tracing (`true`/`false`)
-- `CAPL_MONITORING`: Enable Prometheus metrics and Grafana dashboards (`true`/`false`)
-- `ENABLE_WEBHOOKS`: Enable/disable admission webhooks (`true`/`false`)
-- `GZIP_COMPRESSION_ENABLED`: Enable gzip compression for metadata (`true`/`false`)
-- `SKIP_KO_BUILD`: Skip local CAPL ko image builds in Tilt development (`true`/`false`)
-- `VERSION`: Build version override
+1. Pick a convention that is checkable by name or import (for example, who may call `linodego.NewClient`). If the code already violates it widely, say so instead of adding a noisy rule.
+2. Add it in `.golangci.yml`: `forbidigo` for forbidden calls, `depguard` for forbidden imports. Put the fix in the rule's `msg`. Exempt the owning package and any intentional exception under `linters.exclusions.rules`, with a comment saying why.
+3. Prove it with `mise run lint`: it must pass on the current tree, then fail on a temporary violation that no other linter flags on the same line (golangci-lint reports one issue per line). Delete the temporary file and run `mise run lint` again.
+4. Run `mise run verify`, then edit the convention's line in Conventions to say lint enforces it and which exceptions exist.
 
-### Provider Installation (Tilt Development)
-- `INSTALL_KUBEADM_PROVIDER`: Install kubeadm bootstrap/control-plane providers (`true`/`false`, default: `true`)
-- `INSTALL_HELM_PROVIDER`: Install Cluster API Addon Provider Helm (`true`/`false`, default: `true`)
-- `INSTALL_K3S_PROVIDER`: Install K3s bootstrap/control-plane providers (`true`/`false`, default: `false`)
-- `INSTALL_RKE2_PROVIDER`: Install RKE2 bootstrap/control-plane providers (`true`/`false`, default: `false`)
+## Read before you start
 
-### Cluster Configuration (Templates)
-- `CLUSTER_NAME`: Name for generated clusters
-- `LINODE_REGION`: Default Linode region (e.g., `us-ord`, `us-sea`)
-- `LINODE_CONTROL_PLANE_MACHINE_TYPE`: Instance type for control plane nodes (e.g., `g6-standard-2`)
-- `LINODE_MACHINE_TYPE`: Instance type for worker nodes (e.g., `g6-standard-2`)
-- `LINODE_SSH_PUBKEY`: SSH public key for cluster node access
-
-### DNS LoadBalancer Configuration
-- `DNS_ROOT_DOMAIN`: Root domain for DNS-based load balancing (e.g., `example.com`)
-- `DNS_UNIQUE_ID`: Unique identifier for DNS records (e.g., `abc123`)
-
-### Backup & Storage
-- `OBJ_BUCKET_REGION`: Object storage region for etcd backups (e.g., `us-ord`)
-- `ETCDBR_IMAGE`: Optional override for the etcd backup/restore controller image (defaults to the official gardener `etcdbrctl` image)
-- `SSE_KEY`: Server-side encryption key for object storage
-
-### E2E Testing
-- `E2E_SELECTOR`: Chainsaw test selector (`quick`, `all`, `flavors`, `linodecluster`, etc.)
-- `E2E_FLAGS`: Additional flags passed to Chainsaw (e.g., `--assert-timeout 10m0s`)
-- `CLUSTER_AUTOSCALER_VERSION`: Version for cluster autoscaler tests (e.g., `v1.29.0`)
-
-### OpenTelemetry Tracing
-Standard OpenTelemetry environment variables are supported via `autoexport` package:
-- `OTEL_EXPORTER_OTLP_ENDPOINT`: OTLP endpoint URL
-- `OTEL_EXPORTER_JAEGER_ENDPOINT`: Jaeger endpoint URL  
-- `OTEL_SERVICE_NAME`: Service name for traces
-- `OTEL_RESOURCE_ATTRIBUTES`: Additional resource attributes
-
-## Debugging Tips
-- Check controller logs for reconciliation errors and API failures
-- Verify Linode API permissions and regional capabilities  
-- Use `kubectl describe` on resources to see status conditions and events
-- E2E test failures often indicate webhook validation or API compatibility issues
-- Enable debug logging with `CAPL_DEBUG=true` for detailed tracing
-- Validate CRDs are current with `mise run generate` after API changes
-- Generate local-release whenever making changes to the /templates directory. Use command `mise run local-release` to generate the release files.
+| Task | Read |
+|---|---|
+| Add a new resource | Follow an existing one end to end: types, controller, scope, webhook, services, then `verify`, then a test under `e2e/<resource>-controller/`. Layout: `docs/src/developers/development.md` (Code Overview) |
+| Set up local dev, Tilt, env vars, deploy a workload cluster | `docs/src/developers/development.md` |
+| Write unit or e2e tests, pick an e2e label | `docs/src/developers/testing.md` |
+| Change a user-facing feature (VPC, firewall, DNS, backups, ...) | `docs/src/topics/` |
+| Debug a cluster | `docs/src/topics/troubleshooting.md` |
+| Cut a release | `docs/src/developers/releasing.md` |
+| Contribution rules | `CONTRIBUTING.md` |

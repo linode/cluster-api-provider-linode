@@ -83,6 +83,10 @@ linters:
               desc: Please convert types manually
     dupl:
       threshold: 100
+    forbidigo:
+      forbid:
+        - pattern: ^linodego\.NewClient\b
+          msg: Build Linode clients in cloud/scope so credentials, tracing, and retries are configured in one place.
     errcheck:
       check-type-assertions: true
       check-blank: true
@@ -133,6 +137,11 @@ linters:
       - linters:
           - dupl
         path: _conversion\.go
+      # Constructing a Linode client is allowed in cloud/scope (the owner) and in the webhook helper,
+      # which needs its own client for credential-aware API validation.
+      - linters:
+          - forbidigo
+        path: ^(cloud/scope/|internal/webhook/v1alpha2/webhook_helpers\.go$)|_test\.go$
       - linters:
           - gocritic
         path: _test\.go

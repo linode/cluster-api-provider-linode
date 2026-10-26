@@ -24,90 +24,107 @@ jq = "1.8.1"
 "go:github.com/elastic/crd-ref-docs" = "0.3.0"
 "pipx:linode-cli" = "5.68.0"
 
+
+[tasks.check]
+description = "[check] Run fmt, vet, lint, and API lint; formats Go sources and builds bin/golangci-lint-custom if absent."
+run = [{ task = "fmt" }, { task = "vet" }, { task = "lint" }, { task = "lint-api" }]
+
+[tasks.verify]
+description = "[verify] Run lint, API lint, nilcheck, vulncheck, test, and build; regenerates and formats files."
+run = [{ task = "lint" }, { task = "lint-api" }, { task = "nilcheck" }, { task = "vulncheck" }, { task = "test" }, { task = "build" }]
+
 [tasks.fmt]
-description = "Format Go sources"
+description = "[check] Format Go sources in place."
 run = "make fmt"
 
-[tasks.tidy]
-description = "Tidy Go modules"
-run = "make tidy"
-
 [tasks.vet]
-description = "Run Go vet"
+description = "[check] Run go vet."
 run = "make vet"
 
 [tasks.lint]
-description = "Run lint checks"
+description = "[check] Run golangci-lint."
 run = "make lint"
 
 [tasks.lint-api]
-description = "Run API lint checks"
+description = "[verify] Run kube-api-linter; builds bin/golangci-lint-custom if absent."
 run = "make lint-api"
 
-[tasks.nilcheck]
-description = "Run nilcheck"
-run = "make nilcheck"
-
 [tasks.vulncheck]
-description = "Run vulncheck"
+description = "[verify] Run govulncheck (requires network)."
 run = "make vulncheck"
 
-[tasks.docs]
-description = "Serve docs"
-run = "make docs"
+[tasks.test]
+description = "[verify] Regenerate and format code, then run race-enabled unit/envtest tests; writes cover.out."
+run = "make test"
+
+[tasks.build]
+description = "[verify] Regenerate and format code, then build bin/manager."
+run = "make build"
 
 [tasks.generate]
-description = "Regenerate manifests, code, mocks, and api docs"
+description = "[dev] Regenerate API/RBAC manifests, code, mocks, and reference docs in config/, api/, mock/, and docs/src/reference/."
 run = "make generate"
 
 [tasks.generate-flavors]
-description = "Regenerate CAPL flavors"
+description = "[dev] Regenerate cluster templates from templates/flavors into templates/ (git-ignored output)."
 run = "make generate-flavors"
 
-[tasks.check-gen-diff]
-description = "Check for diffs when regenerating"
-run = "make check-gen-diff"
-
-[tasks.test]
-description = "Run tests"
-run = "make test"
+[tasks.local-release]
+description = "[dev] Rebuild infrastructure-local-linode/v0.0.0; deletes old output and git-restores config/default/*manager_image_patch.yaml. Do not run with uncommitted edits to those files."
+run = "make local-release"
 
 [tasks.e2etest]
-description = "Run e2e tests"
-run = "make e2etest"
+description = "[e2e] Generate, rebuild local release (may discard uncommitted manager-image patch edits), create a kind+Tilt cluster, and run Chainsaw. Defaults to quick."
+usage = '''
+arg "[selector]" env="E2E_SELECTOR" default="quick" help="Chainsaw selector for the tests to run"
+flag "--flags <flags>" env="E2E_FLAGS" help="Additional flags passed to Chainsaw"
+'''
+env.LINODE_TOKEN = { required = "Set LINODE_TOKEN for Linode E2E tests", redact = true }
+env.LINODE_REGION = { required = "Set LINODE_REGION for E2E tests" }
+env.LINODE_CONTROL_PLANE_MACHINE_TYPE = { required = "Set LINODE_CONTROL_PLANE_MACHINE_TYPE for E2E tests" }
+env.LINODE_MACHINE_TYPE = { required = "Set LINODE_MACHINE_TYPE for E2E tests" }
+run = 'make e2etest E2E_SELECTOR="${usage_selector?}" E2E_FLAGS="${usage_flags:-}"'
 
-[tasks.test-upgrade]
-description = "Run the CAPL upgrade tests"
-run = "make test-upgrade"
+[tasks.check-gen-diff]
+description = "[ci] Fail if the worktree has any changes; run after generation in CI. Use verify locally."
+run = "make check-gen-diff"
 
-[tasks.clean-child-clusters]
-description = "Clean up the child cluster created by CAPL"
-run = "make clean-child-clusters"
+[tasks.tidy]
+description = "[dev] Run go mod tidy. Mutates go.mod and go.sum; needs network."
+run = "make tidy"
 
-[tasks.clean-kind-cluster]
-description = "Clean up the kind management cluster"
-run = "make clean-kind-cluster"
+[tasks.nilcheck]
+description = "[verify] Run nilaway; builds bin/golangci-lint-custom if absent."
+run = "make nilcheck"
+
+[tasks.docs]
+description = "[dev] Serve the mdBook docs on 0.0.0.0:3000 until stopped."
+run = "make docs"
 
 [tasks.local-deploy]
-description = "Deploy CAPL locally"
+description = "[dev] Create the kind management cluster and deploy CAPL with Tilt (tilt ci). Needs Docker."
 run = "make local-deploy"
 
 [tasks.tilt-cluster]
-description = "Set up a Tilt cluster with CAPL"
+description = "[dev] Create the kind cluster and run interactive tilt up until stopped."
 run = "make tilt-cluster"
 
-[tasks.build]
-description = "Build binary"
-run = "make build"
+[tasks.test-upgrade]
+description = "[e2e] Checkout and test the last release and HEAD; requires a clean tree. Run only when asked."
+run = "make test-upgrade"
+
+[tasks.clean-child-clusters]
+description = "[dev] Delete ALL Cluster objects in ALL namespaces of the current kube context (kubectl delete clusters -A --all). Destructive; run only when asked."
+run = "make clean-child-clusters"
+
+[tasks.clean-kind-cluster]
+description = "[dev] Delete the kind management cluster from .tilt/ctlptl-config.yaml. Destructive."
+run = "make clean-kind-cluster"
 
 [tasks.ko-build]
-description = "Build ko image"
+description = "[dev] Build the controller image locally with ko. Does not push."
 run = "make ko-build"
 
 [tasks.ko-publish]
-description = "Publish ko image"
+description = "[dev] Build and push the controller image to KO_DOCKER_REPO. Publishes; run only when asked."
 run = "make ko-publish"
-
-[tasks.local-release]
-description = "Make a local release for testing"
-run = "make local-release"

@@ -14,3 +14,4 @@ vendor/
 .vscode/
 .tool-versions
 .opencode/
+.worktrees/
