@@ -2618,6 +2618,39 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 					Expect(controllerutil.ContainsFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)).To(BeTrue())
 				}),
 			),
+			Path(
+				Call("no instance is found in the list", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.ProviderID = nil
+					controllerutil.AddFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)
+					// DeleteInstance is intentionally not mocked: any call to it fails the test.
+					mck.LinodeClient.EXPECT().ListInstances(gomock.Any(), gomock.Any()).
+						Return([]linodego.Instance{}, nil)
+				}),
+				Result("nothing is deleted and finalizer is removed", func(ctx context.Context, mck Mock) {
+					defer restoreMachine()
+					res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res).To(Equal(ctrl.Result{}))
+					Expect(mck.Logs()).NotTo(ContainSubstring("Found orphaned instance, deleting"))
+					Expect(controllerutil.ContainsFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)).To(BeFalse())
+				}),
+			),
+			Path(
+				Call("lookup fails with an internal server error", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.ProviderID = nil
+					controllerutil.AddFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)
+					mck.LinodeClient.EXPECT().ListInstances(gomock.Any(), gomock.Any()).
+						Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
+				}),
+				Result("reconcile requeues and keeps finalizer", func(ctx context.Context, mck Mock) {
+					defer restoreMachine()
+					res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
+					Expect(controllerutil.ContainsFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)).To(BeTrue())
+				}),
+			),
 		),
 	)
 })
