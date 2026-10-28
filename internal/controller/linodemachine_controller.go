@@ -180,6 +180,9 @@ func (r *LinodeMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Logger, machineScope *scope.MachineScope) (res ctrl.Result, err error) {
 	failureReason := util.UnknownError
+	// ClassifiedCreateError protects a classified Ready written during this reconcile
+	// from the deferred generic error handler. It is not persisted.
+	machineScope.ClassifiedCreateError = false
 	//nolint:dupl // Code duplication is simplicity in this case.
 	defer func() {
 		if err != nil {
@@ -187,12 +190,14 @@ func (r *LinodeMachineReconciler) reconcile(ctx context.Context, logger logr.Log
 			if linodego.ErrHasStatus(err, http.StatusBadRequest) {
 				machineScope.LinodeMachine.Status.FailureReason = new(failureReason)
 				machineScope.LinodeMachine.Status.FailureMessage = new(err.Error())
-				machineScope.LinodeMachine.SetCondition(metav1.Condition{
-					Type:    clusterv1.ReadyCondition,
-					Status:  metav1.ConditionFalse,
-					Reason:  failureReason,
-					Message: err.Error(),
-				})
+				if !machineScope.ClassifiedCreateError {
+					machineScope.LinodeMachine.SetCondition(metav1.Condition{
+						Type:    clusterv1.ReadyCondition,
+						Status:  metav1.ConditionFalse,
+						Reason:  failureReason,
+						Message: err.Error(),
+					})
+				}
 			}
 
 			// Record the event regardless of whether the error is retryable or not for visibility.
@@ -630,22 +635,12 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 
 	if err != nil {
 		logger.Error(err, "Failed to create Linode machine instance")
-		if reconciler.HasStaleCondition(machineScope.LinodeMachine.GetCondition(ConditionPreflightCreated),
-			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout)) {
-			machineScope.LinodeMachine.SetCondition(metav1.Condition{
-				Type:    ConditionPreflightCreated,
-				Status:  metav1.ConditionFalse,
-				Reason:  util.CreateError,
-				Message: err.Error(),
-			})
+		stale := reconciler.HasStaleCondition(machineScope.LinodeMachine.GetCondition(ConditionPreflightCreated),
+			reconciler.DefaultTimeout(r.ReconcileTimeout, reconciler.DefaultMachineControllerWaitForPreflightTimeout))
+		machineScope.ClassifiedCreateError = setInstanceCreateErrorConditions(machineScope.LinodeMachine, err)
+		if stale {
 			return ctrl.Result{}, err
 		}
-		machineScope.LinodeMachine.SetCondition(metav1.Condition{
-			Type:    ConditionPreflightCreated,
-			Status:  metav1.ConditionFalse,
-			Reason:  util.CreateError,
-			Message: err.Error(),
-		})
 		return retryIfTransient(err, logger)
 	}
 
@@ -656,6 +651,7 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 	})
 	// Set the provider ID since the instance is successfully created
 	machineScope.LinodeMachine.Spec.ProviderID = new(fmt.Sprintf("linode://%d", linodeInstance.ID))
+	retireClassifiedCreateReady(machineScope.LinodeMachine)
 	return ctrl.Result{}, nil
 }
 

@@ -12,6 +12,27 @@ This could be due to the `LINODE_TOKEN` either not being set in your environment
 If expired, [provision a new token](../topics/getting-started.md#prerequisites) and optionally
 set the "Expiry" to "Never" (default expiry is 6 months).
 
+### Instance creation is blocked by capacity or an account limit
+
+CAPL classifies exactly two Linode instance-create failures:
+
+| Condition reason | Cause | Recovery |
+| --- | --- | --- |
+| `InsufficientCapacity` | The Linode API returns HTTP 403 indicating that the requested plan is not currently available in the selected region. | Wait for capacity, choose another plan or region for replacement Machines. |
+| `AccountLimitReached` | The Linode API returns HTTP 400 indicating that the account's active-services limit has been reached. | Remove unused services or contact Support to request a limit increase. |
+
+Both `PreflightCreated` and `Ready` on the `LinodeMachine` become `False`, with the classified reason and original error message for diagnostics. CAPI mirrors `Ready` into the owning Machine's `InfrastructureReady` condition. Inspect them on the management cluster:
+
+```bash
+kubectl get linodemachine "$LINODE_MACHINE_NAME" -n "$NAMESPACE" \
+  -o jsonpath='{range .status.conditions[?(@.type=="PreflightCreated")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}{range .status.conditions[?(@.type=="Ready")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
+kubectl get machine "$MACHINE_NAME" -n "$NAMESPACE" \
+  -o jsonpath='{range .status.conditions[?(@.type=="InfrastructureReady")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
+```
+
+Successful creation sets `PreflightCreated=True`, removes the classified `Ready` condition, and continues provisioning as usual.
+
+
 ### One or more control plane replicas are missing
 
 Take a look at the `KubeadmControlPlane` controller logs and look for any potential errors:
@@ -27,7 +48,7 @@ Otherwise, [ensure that the linode-ccm is installed on your workload cluster via
 ### Nodes are in NotReady state
 
 Make sure [a CNI is installed on the workload cluster](../topics/addons.md#cni)
-and that all the pods on the workload cluster are in running state. 
+and that all the pods on the workload cluster are in running state.
 
 If the Cluster is labeled with `cni: <cluster-name>-cilium`, check that the \<cluster-name\>-cilium `HelmChartProxy` is installed in
 the management cluster and that the `HelmChartProxy` is in a `Ready` state:

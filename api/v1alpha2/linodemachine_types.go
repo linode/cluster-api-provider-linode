@@ -33,6 +33,13 @@ const (
 	DefaultConditionReason = "None"
 )
 
+// InsufficientCapacity and AccountLimitReached are the only classified instance-create
+// failures on PreflightCreated and Ready.
+const (
+	InsufficientCapacity = "InsufficientCapacity"
+	AccountLimitReached  = "AccountLimitReached"
+)
+
 // LinodeMachineSpec defines the desired state of LinodeMachine
 type LinodeMachineSpec struct {
 	// providerID is the unique identifier as specified by the cloud provider.
