@@ -1070,19 +1070,18 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		// Search by label to avoid orphaning the instance.
 		listFilter := util.Filter{Label: machineScope.LinodeMachine.Name}
 		filter, filterErr := listFilter.String()
-		if filterErr == nil {
-			instances, listErr := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
-			if listErr != nil {
-				logger.Error(listErr, "Failed to list instances when checking for orphan")
-				return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
-			}
-			if len(instances) > 0 {
-				logger.Info("Found orphaned instance, deleting", "instanceID", instances[0].ID)
-				if delErr := machineScope.LinodeClient.DeleteInstance(ctx, instances[0].ID); delErr != nil {
-					if util.IgnoreLinodeAPIError(delErr, http.StatusNotFound) != nil {
-						logger.Error(delErr, "Failed to delete orphaned Linode instance")
-						return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
-					}
+		if filterErr != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to build filter to find orphaned Linode instance: %w", filterErr)
+		}
+		instances, listErr := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
+		if listErr != nil {
+			return retryIfTransient(listErr, logger)
+		}
+		if len(instances) > 0 {
+			logger.Info("Found orphaned instance, deleting", "instanceID", instances[0].ID)
+			if delErr := machineScope.LinodeClient.DeleteInstance(ctx, instances[0].ID); delErr != nil {
+				if util.IgnoreLinodeAPIError(delErr, http.StatusNotFound) != nil {
+					return retryIfTransient(delErr, logger)
 				}
 			}
 		}

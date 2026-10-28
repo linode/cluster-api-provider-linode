@@ -60,7 +60,7 @@ func IsRetryableError(err error) bool {
 		http.StatusGatewayTimeout,
 		http.StatusServiceUnavailable,
 		http.StatusRequestTimeout,
-		linodego.ErrorFromError) || errors.Is(err, http.ErrHandlerTimeout) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF)
+		linodego.ErrorFromError) || errors.Is(err, http.ErrHandlerTimeout) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.ErrUnexpectedEOF)
 }
 
 // GetInstanceID determines the instance ID from the ProviderID

@@ -2581,6 +2581,21 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 					_, err := reconciler.reconcileDelete(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 				})),
+			Path(
+				Call("machine without provider ID has an orphaned instance", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.ProviderID = nil
+					mck.LinodeClient.EXPECT().ListInstances(gomock.Any(), gomock.Any()).
+						Return([]linodego.Instance{{ID: 12345}}, nil)
+					mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), 12345).
+						Return(nil)
+				}),
+				Result("orphaned instance is deleted", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(linodeMachine.Spec.ProviderID).To(BeNil())
+					linodeMachine.Spec.ProviderID = &providerID
+				}),
+			),
 		),
 	)
 })
