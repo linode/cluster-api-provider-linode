@@ -1075,12 +1075,14 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 		}
 		instances, listErr := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
 		if listErr != nil {
+			logger.Error(listErr, "Failed to look up Linode instance by label")
 			return retryIfTransient(listErr, logger)
 		}
 		if len(instances) > 0 {
 			logger.Info("Found orphaned instance, deleting", "instanceID", instances[0].ID)
 			if delErr := machineScope.LinodeClient.DeleteInstance(ctx, instances[0].ID); delErr != nil {
 				if util.IgnoreLinodeAPIError(delErr, http.StatusNotFound) != nil {
+					logger.Error(delErr, "Failed to delete orphaned Linode instance")
 					return retryIfTransient(delErr, logger)
 				}
 			}
