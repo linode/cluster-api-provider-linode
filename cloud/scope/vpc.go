@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/go-logr/logr"
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
 )
@@ -36,6 +37,7 @@ type VPCScope struct {
 	LinodeClient clients.LinodeClient
 	LinodeVPC    *infrav1alpha2.LinodeVPC
 	Cluster      *clusterv1.Cluster
+	Logger       logr.Logger
 }
 
 // VPCScopeParams defines the input parameters used to create a new Scope.
@@ -43,6 +45,7 @@ type VPCScopeParams struct {
 	Client    clients.K8sClient
 	LinodeVPC *infrav1alpha2.LinodeVPC
 	Cluster   *clusterv1.Cluster
+	Logger    logr.Logger
 }
 
 func validateVPCScopeParams(params VPCScopeParams) error {
@@ -55,20 +58,14 @@ func validateVPCScopeParams(params VPCScopeParams) error {
 
 // NewVPCScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-//
-//nolint:dupl // this is the same as PlacementGroups - worth making into generics later.
 func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VPCScopeParams) (*VPCScope, error) {
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
 	}
-	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
-	}
 
-	helper, err := patch.NewHelper(params.LinodeVPC, params.Client)
+	linodeClient, helper, err := initScopeClients(linodeClientConfig, params.LinodeVPC, params.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init patch helper: %w", err)
+		return nil, err
 	}
 
 	return &VPCScope{
@@ -77,6 +74,7 @@ func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VP
 		LinodeVPC:    params.LinodeVPC,
 		PatchHelper:  helper,
 		Cluster:      params.Cluster,
+		Logger:       params.Logger,
 	}, nil
 }
 

@@ -53,20 +53,14 @@ func validateFirewallScopeParams(params FirewallScopeParams) error {
 
 // NewFirewallScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-//
-//nolint:dupl // this is the same as PlacementGroups - worth making into generics later.
 func NewFirewallScope(ctx context.Context, linodeClientConfig ClientConfig, params FirewallScopeParams) (*FirewallScope, error) {
 	if err := validateFirewallScopeParams(params); err != nil {
 		return nil, err
 	}
-	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
-	}
 
-	helper, err := patch.NewHelper(params.LinodeFirewall, params.Client)
+	linodeClient, helper, err := initScopeClients(linodeClientConfig, params.LinodeFirewall, params.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init patch helper: %w", err)
+		return nil, err
 	}
 
 	return &FirewallScope{

@@ -48,6 +48,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/internal/controller"
 	webhookinfrastructurev1alpha2 "github.com/linode/cluster-api-provider-linode/internal/webhook/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/observability/tracing"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler/common"
 	"github.com/linode/cluster-api-provider-linode/version"
 
 	// +kubebuilder:scaffold:imports
@@ -310,8 +311,7 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 	}
 
 	// LinodeVPC Controller
-	if err := (&controller.LinodeVPCReconciler{
-		Client:             mgr.GetClient(),
+	if err := common.NewControllerFor(&controller.LinodeVPCReconciler{
 		Recorder:           mgr.GetEventRecorder("LinodeVPCReconciler"),
 		LinodeClientConfig: linodeClientConfig,
 		WatchFilterValue:   flags.clusterWatchFilter,

@@ -95,20 +95,14 @@ func (s *PlacementGroupScope) RemoveCredentialsRefFinalizer(ctx context.Context)
 
 // NewPlacementGroupScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-//
-//nolint:dupl // This is pretty much the same as VPC, maybe a candidate to use generics later.
 func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig, params PlacementGroupScopeParams) (*PlacementGroupScope, error) {
 	if err := validatePlacementGroupScope(params); err != nil {
 		return nil, err
 	}
-	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
-	}
 
-	helper, err := patch.NewHelper(params.LinodePlacementGroup, params.Client)
+	linodeClient, helper, err := initScopeClients(linodeClientConfig, params.LinodePlacementGroup, params.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init patch helper: %w", err)
+		return nil, err
 	}
 
 	return &PlacementGroupScope{

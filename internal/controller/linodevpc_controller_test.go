@@ -21,6 +21,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/linode/linodego/v2"
 	"go.uber.org/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,12 +31,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler/common"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -60,30 +62,21 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 
 	objectKey := client.ObjectKeyFromObject(&linodeVPC)
 
-	var reconciler LinodeVPCReconciler
-	var vpcScope scope.VPCScope
+	var controller *common.Controller[*scope.VPCScope, *infrav1alpha2.LinodeVPC]
+	var reconciler *LinodeVPCReconciler
 
 	BeforeAll(func(ctx SpecContext) {
-		vpcScope.Client = k8sClient
 		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
 	})
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
-		vpcScope.LinodeClient = mck.LinodeClient
-
 		Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
-		vpcScope.LinodeVPC = &linodeVPC
-
-		// Create patch helper with latest state of resource.
-		// This is only needed when relying on envtest's k8sClient.
-		patchHelper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		vpcScope.PatchHelper = patchHelper
 
 		// Reset reconciler for each test
-		reconciler = LinodeVPCReconciler{
+		reconciler = &LinodeVPCReconciler{
 			Recorder: mck.Recorder(),
 		}
+		controller = common.NewControllerFor(reconciler).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mck.LinodeClient, mck.Logger()))
 	})
 
 	suite.Run(
@@ -93,22 +86,13 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{}, nil)
 					mck.LinodeClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
 				}),
-				OneOf(
-					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
-						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC creation"))
-					})),
-					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
-						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
-						Expect(err).To(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Events()).To(ContainSubstring("server error"))
-					})),
-				),
+				Result("create requeues", func(ctx context.Context, mck Mock) {
+					res, err := controller.Reconcile(ctx, &linodeVPC)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
+					Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC reconciliation"))
+				}),
 			),
 			Path(
 				Call("able to create", func(ctx context.Context, mck Mock) {
@@ -122,7 +106,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					}, nil)
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					_, err := controller.Reconcile(ctx, &linodeVPC)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
@@ -161,11 +145,13 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					})
 				}),
 				Result("update success", func(ctx context.Context, mck Mock) {
-					err = vpcScope.Client.Get(ctx, client.ObjectKeyFromObject(vpcScope.LinodeVPC), vpcScope.LinodeVPC)
+					err = k8sClient.Get(ctx, objectKey, &linodeVPC)
 					Expect(err).NotTo(HaveOccurred())
-					vpcScope.LinodeVPC.Spec.IPv4Range = []string{"10.118.0.0/20"}
+					linodeVPC.Spec.IPv4Range = []string{"10.118.0.0/20"}
+					Expect(k8sClient.Update(ctx, &linodeVPC)).NotTo(HaveOccurred())
+					Expect(k8sClient.Get(ctx, objectKey, &linodeVPC)).To(Succeed())
 
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					_, err := controller.Reconcile(ctx, &linodeVPC)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(mck.Logs()).NotTo(ContainSubstring("Failed to update VPC"))
 				}),
@@ -174,28 +160,19 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 				Call("unable to list VPC", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return(nil, errors.New("server error"))
 				}),
-				OneOf(
-					Path(Result("update requeues", func(ctx context.Context, mck Mock) {
-						vpcScope.LinodeVPC.SetCondition(metav1.Condition{
-							Type:    string(clusterv1.ReadyCondition),
-							Status:  metav1.ConditionFalse,
-							Reason:  "test",
-							Message: "test",
-						})
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
-						Expect(err).NotTo(HaveOccurred())
-						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
-						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC update"))
-					})),
-					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
-						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
-						Expect(err).To(HaveOccurred())
-						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Events()).To(ContainSubstring("server error"))
-					})),
-				),
+				Result("update requeues", func(ctx context.Context, mck Mock) {
+					linodeVPC.SetCondition(metav1.Condition{
+						Type:    string(clusterv1.ReadyCondition),
+						Status:  metav1.ConditionFalse,
+						Reason:  "test",
+						Message: "test",
+					})
+					res, err := controller.Reconcile(ctx, &linodeVPC)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
+					Expect(mck.Logs()).To(ContainSubstring("re-queuing VPC reconciliation"))
+				}),
 			),
 		),
 		Once("delete", func(ctx context.Context, _ Mock) {
@@ -209,7 +186,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
@@ -217,7 +194,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 						Expect(mck.Events()).To(ContainSubstring("server error"))
@@ -237,7 +214,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
@@ -245,7 +222,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 						Expect(mck.Events()).To(ContainSubstring("server error"))
@@ -268,7 +245,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
@@ -276,7 +253,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 						Expect(mck.Events()).To(ContainSubstring("will not delete VPC with node(s) attached"))
@@ -295,7 +272,7 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().DeleteVPC(ctx, gomock.Any()).After(getVPC).Return(nil)
 				}),
 				Result("delete success", func(ctx context.Context, mck Mock) {
-					res, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					res, err := controller.Reconcile(ctx, &linodeVPC)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 					k8sClient.Get(ctx, objectKey, &linodeVPC)
@@ -336,12 +313,11 @@ var _ = Describe("pause handling", Label("vpc", "pause"), func() {
 		Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 		Expect(k8sClient.Create(ctx, vpc)).To(Succeed())
 
-		reconciler := &LinodeVPCReconciler{
-			Client:             k8sClient,
+		reconciler := common.NewControllerFor(&LinodeVPCReconciler{
 			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
-		}
+		}).WithClientForTest(k8sClient)
 
-		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(vpc)})
+		_, err := reconciler.Reconcile(ctx, vpc)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(vpc), vpc)).To(Succeed())
@@ -396,12 +372,10 @@ var _ = Describe("pause handling", Label("vpc", "pause"), func() {
 var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
-	var reconciler LinodeVPCReconciler
-	var vpcScope scope.VPCScope
+	var controller *common.Controller[*scope.VPCScope, *infrav1alpha2.LinodeVPC]
 	var linodeVPC infrav1alpha2.LinodeVPC
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
-		vpcScope.Client = k8sClient
 		linodeVPC = infrav1alpha2.LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "retained-vpc-",
@@ -423,20 +397,12 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 		// Add deletion timestamp to trigger reconcileDelete
 		Expect(k8sClient.Delete(ctx, &linodeVPC)).To(Succeed())
 
-		vpcScope.LinodeClient = mck.LinodeClient
-
-		reconciler = LinodeVPCReconciler{
+		controller = common.NewControllerFor(&LinodeVPCReconciler{
 			Recorder: mck.Recorder(),
-		}
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mck.LinodeClient, mck.Logger()))
 
 		// Get the resource back to ensure we have the latest state with the deletion timestamp.
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
-		vpcScope.LinodeVPC = &linodeVPC
-
-		// Initialize patch helper with the deleted object.
-		patchHelper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		vpcScope.PatchHelper = patchHelper
 	})
 
 	AfterEach(func(ctx SpecContext) {
@@ -450,7 +416,7 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 		OneOf(
 			Path(
 				Call("retained VPC is not deleted", func(ctx context.Context, mck Mock) {
-					vpcScope.LinodeVPC.Spec.Retain = true
+					linodeVPC.Spec.Retain = true
 					mck.LinodeClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
 						ID:      1,
 						Label:   "vpc1",
@@ -463,11 +429,11 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 						},
 					}, nil)
 
-					mck.LinodeClient.EXPECT().DeleteVPCSubnet(ctx, *vpcScope.LinodeVPC.Spec.VPCID, vpcScope.LinodeVPC.Spec.Subnets[1].SubnetID).Return(nil)
+					mck.LinodeClient.EXPECT().DeleteVPCSubnet(ctx, *linodeVPC.Spec.VPCID, linodeVPC.Spec.Subnets[1].SubnetID).Return(nil)
 
 				}),
 				Result("retained success", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					_, err := controller.Reconcile(ctx, &linodeVPC)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC))).To(BeTrue())
@@ -476,9 +442,9 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("retained VPC with subnet deletion disabled", func(ctx context.Context, mck Mock) {
-					vpcScope.LinodeVPC.Spec.Retain = true
-					vpcScope.LinodeVPC.Spec.Subnets[0].Retain = true
-					vpcScope.LinodeVPC.Spec.Subnets[1].Retain = true
+					linodeVPC.Spec.Retain = true
+					linodeVPC.Spec.Subnets[0].Retain = true
+					linodeVPC.Spec.Subnets[1].Retain = true
 
 					mck.LinodeClient.EXPECT().GetVPC(ctx, gomock.Any()).Return(&linodego.VPC{
 						ID:      1,
@@ -493,7 +459,7 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 
 				}),
 				Result("unretained subnets are not deleted", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					_, err := controller.Reconcile(ctx, &linodeVPC)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC))).To(BeTrue())
@@ -502,21 +468,21 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("retained VPC with unretained subnet deletion", func(ctx context.Context, mck Mock) {
-					vpcScope.LinodeVPC.Spec.Retain = true
-					vpcScope.LinodeVPC.Spec.Subnets[0].Retain = true
-					vpcScope.LinodeVPC.Spec.Subnets[1].Retain = false
+					linodeVPC.Spec.Retain = true
+					linodeVPC.Spec.Subnets[0].Retain = true
+					linodeVPC.Spec.Subnets[1].Retain = false
 
-					mck.LinodeClient.EXPECT().GetVPC(ctx, *vpcScope.LinodeVPC.Spec.VPCID).Return(&linodego.VPC{
-						ID: *vpcScope.LinodeVPC.Spec.VPCID,
+					mck.LinodeClient.EXPECT().GetVPC(ctx, *linodeVPC.Spec.VPCID).Return(&linodego.VPC{
+						ID: *linodeVPC.Spec.VPCID,
 						Subnets: []linodego.VPCSubnet{
-							{ID: vpcScope.LinodeVPC.Spec.Subnets[0].SubnetID},
-							{ID: vpcScope.LinodeVPC.Spec.Subnets[1].SubnetID},
+							{ID: linodeVPC.Spec.Subnets[0].SubnetID},
+							{ID: linodeVPC.Spec.Subnets[1].SubnetID},
 						},
 					}, nil)
-					mck.LinodeClient.EXPECT().DeleteVPCSubnet(ctx, *vpcScope.LinodeVPC.Spec.VPCID, vpcScope.LinodeVPC.Spec.Subnets[1].SubnetID).Return(nil)
+					mck.LinodeClient.EXPECT().DeleteVPCSubnet(ctx, *linodeVPC.Spec.VPCID, linodeVPC.Spec.Subnets[1].SubnetID).Return(nil)
 				}),
 				Result("unretained subnets deleted", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+					_, err := controller.Reconcile(ctx, &linodeVPC)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC))).To(BeTrue())
@@ -530,12 +496,10 @@ var _ = Describe("retained VPC", Label("vpc", "lifecycle"), func() {
 var _ = Describe("adopt existing VPC", Label("vpc", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
-	var reconciler LinodeVPCReconciler
-	var vpcScope scope.VPCScope
+	var controller *common.Controller[*scope.VPCScope, *infrav1alpha2.LinodeVPC]
 	var linodeVPC infrav1alpha2.LinodeVPC
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
-		vpcScope.Client = k8sClient
 		linodeVPC = infrav1alpha2.LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "adopt-vpc-",
@@ -551,18 +515,11 @@ var _ = Describe("adopt existing VPC", Label("vpc", "lifecycle"), func() {
 		}
 		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
 
-		vpcScope.LinodeClient = mck.LinodeClient
-
-		reconciler = LinodeVPCReconciler{
+		controller = common.NewControllerFor(&LinodeVPCReconciler{
 			Recorder: mck.Recorder(),
-		}
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mck.LinodeClient, mck.Logger()))
 
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
-		vpcScope.LinodeVPC = &linodeVPC
-
-		patchHelper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		vpcScope.PatchHelper = patchHelper
 	})
 
 	AfterEach(func(ctx SpecContext) {
@@ -596,7 +553,7 @@ var _ = Describe("adopt existing VPC", Label("vpc", "lifecycle"), func() {
 				}, nil)
 			}),
 			Result("adopt and create success", func(ctx context.Context, mck Mock) {
-				_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+				_, err := controller.Reconcile(ctx, &linodeVPC)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
@@ -611,12 +568,10 @@ var _ = Describe("adopt existing VPC", Label("vpc", "lifecycle"), func() {
 var _ = Describe("name changing VPC", Label("vpc", "lifecycle"), func() {
 	suite := NewControllerSuite(GinkgoT(), mock.MockLinodeClient{})
 
-	var reconciler LinodeVPCReconciler
-	var vpcScope scope.VPCScope
+	var controller *common.Controller[*scope.VPCScope, *infrav1alpha2.LinodeVPC]
 	var linodeVPC infrav1alpha2.LinodeVPC
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
-		vpcScope.Client = k8sClient
 		linodeVPC = infrav1alpha2.LinodeVPC{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "changing-vpc-",
@@ -630,19 +585,11 @@ var _ = Describe("name changing VPC", Label("vpc", "lifecycle"), func() {
 			},
 		}
 		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
-
-		vpcScope.LinodeClient = mck.LinodeClient
-
-		reconciler = LinodeVPCReconciler{
-			Recorder: mck.Recorder(),
-		}
-
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
-		vpcScope.LinodeVPC = &linodeVPC
 
-		patchHelper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		vpcScope.PatchHelper = patchHelper
+		controller = common.NewControllerFor(&LinodeVPCReconciler{
+			Recorder: mck.Recorder(),
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mck.LinodeClient, mck.Logger()))
 	})
 
 	AfterEach(func(ctx SpecContext) {
@@ -671,7 +618,7 @@ var _ = Describe("name changing VPC", Label("vpc", "lifecycle"), func() {
 				}, nil)
 			}),
 			Result("reconcile VPC with changed name and create success", func(ctx context.Context, mck Mock) {
-				_, err := reconciler.reconcile(ctx, mck.Logger(), &vpcScope)
+				_, err := controller.Reconcile(ctx, &linodeVPC)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeVPC), &linodeVPC)).To(Succeed())
@@ -682,3 +629,22 @@ var _ = Describe("name changing VPC", Label("vpc", "lifecycle"), func() {
 		),
 	)
 })
+
+func vpcTestNewScopeFunc(
+	linodeClient clients.LinodeClient,
+	logger logr.Logger,
+) func(context.Context, clients.K8sClient, *infrav1alpha2.LinodeVPC, *clusterv1.Cluster, logr.Logger) (*scope.VPCScope, error) {
+	return func(ctx context.Context, k8sClient clients.K8sClient, obj *infrav1alpha2.LinodeVPC, cl *clusterv1.Cluster, _ logr.Logger) (*scope.VPCScope, error) {
+		patchHelper, err := patch.NewHelper(obj, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+
+		return &scope.VPCScope{
+			Client:       k8sClient,
+			PatchHelper:  patchHelper,
+			LinodeClient: linodeClient,
+			LinodeVPC:    obj,
+			Cluster:      cl,
+			Logger:       logger,
+		}, nil
+	}
+}
