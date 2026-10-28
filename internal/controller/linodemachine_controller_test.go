@@ -2545,6 +2545,12 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 		reconciler.Client = mck.K8sClient
 	})
 
+	// restoreMachine undoes the changes made by the paths that exercise a machine without a provider ID.
+	restoreMachine := func() {
+		linodeMachine.Spec.ProviderID = &providerID
+		controllerutil.RemoveFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)
+	}
+
 	ctlrSuite.Run(
 		OneOf(
 			Path(
@@ -2594,6 +2600,22 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 					Expect(err).NotTo(HaveOccurred())
 					Expect(linodeMachine.Spec.ProviderID).To(BeNil())
 					linodeMachine.Spec.ProviderID = &providerID
+				}),
+			),
+			Path(
+				Call("no orphaned instance found because the lookup fails", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.ProviderID = nil
+					controllerutil.AddFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)
+					mck.LinodeClient.EXPECT().ListInstances(gomock.Any(), gomock.Any()).
+						Return(nil, &linodego.Error{Code: http.StatusBadGateway})
+				}),
+				Result("lookup fails and reconcile requeues", func(ctx context.Context, mck Mock) {
+					defer restoreMachine()
+					res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
+					Expect(controllerutil.ContainsFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)).To(BeTrue())
 				}),
 			),
 		),
