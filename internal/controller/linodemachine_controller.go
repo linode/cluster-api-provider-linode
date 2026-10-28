@@ -1068,19 +1068,17 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	if machineScope.LinodeMachine.Spec.ProviderID == nil {
 		// A timed-out POST may have created an instance on Linode without setting ProviderID.
 		// Search by label to avoid orphaning the instance.
-		listFilter := util.Filter{Label: machineScope.LinodeMachine.Name}
-		filter, filterErr := listFilter.String()
-		if filterErr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to build filter to find orphaned Linode instance: %w", filterErr)
+		instance, err := findInstanceByLabel(ctx, machineScope, machineScope.LinodeMachine.Name)
+		if err != nil {
+			if errors.Is(err, errBuildLabelFilter) {
+				return ctrl.Result{}, fmt.Errorf("failed to find orphaned Linode instance: %w", err)
+			}
+			logger.Error(err, "Failed to look up Linode instance by label")
+			return retryIfTransient(err, logger)
 		}
-		instances, listErr := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
-		if listErr != nil {
-			logger.Error(listErr, "Failed to look up Linode instance by label")
-			return retryIfTransient(listErr, logger)
-		}
-		if len(instances) > 0 {
-			logger.Info("Found orphaned instance, deleting", "instanceID", instances[0].ID)
-			if delErr := machineScope.LinodeClient.DeleteInstance(ctx, instances[0].ID); delErr != nil {
+		if instance != nil {
+			logger.Info("Found orphaned instance, deleting", "instanceID", instance.ID)
+			if delErr := machineScope.LinodeClient.DeleteInstance(ctx, instance.ID); delErr != nil {
 				if util.IgnoreLinodeAPIError(delErr, http.StatusNotFound) != nil {
 					logger.Error(delErr, "Failed to delete orphaned Linode instance")
 					return retryIfTransient(delErr, logger)
