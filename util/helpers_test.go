@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -92,6 +93,14 @@ func TestIsRetryableError(t *testing.T) {
 	}{{
 		name: "unexpected EOF",
 		err:  io.ErrUnexpectedEOF,
+		want: true,
+	}, {
+		name: "context deadline exceeded",
+		err:  context.DeadlineExceeded,
+		want: true,
+	}, {
+		name: "wrapped context deadline exceeded",
+		err:  fmt.Errorf("failed to list instances: %w", context.DeadlineExceeded),
 		want: true,
 	}, {
 		name: "not found Linode API error",

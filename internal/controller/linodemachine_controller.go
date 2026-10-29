@@ -1066,6 +1066,26 @@ func (r *LinodeMachineReconciler) reconcileDelete(
 	}
 
 	if machineScope.LinodeMachine.Spec.ProviderID == nil {
+		// A timed-out POST may have created an instance on Linode without setting ProviderID.
+		// Search by label and delete any orphaned instances
+		instance, err := findInstanceByLabel(ctx, machineScope, machineScope.LinodeMachine.Name)
+		switch {
+		case errors.Is(err, errInstanceNotFound):
+			logger.Info("No orphaned instances found to clean up")
+		case errors.Is(err, errBuildLabelFilter):
+			return ctrl.Result{}, fmt.Errorf("failed to find orphaned Linode instance: %w", err)
+		case err != nil:
+			logger.Error(err, "Failed to look up Linode instance by label")
+			return retryIfTransient(err, logger)
+		default:
+			logger.Info("Found orphaned instance, deleting", "instanceID", instance.ID)
+			delErr := machineScope.LinodeClient.DeleteInstance(ctx, instance.ID)
+			if util.IgnoreLinodeAPIError(delErr, http.StatusNotFound) != nil {
+				logger.Error(delErr, "Failed to delete orphaned Linode instance")
+				return retryIfTransient(delErr, logger)
+			}
+		}
+
 		logger.Info("Machine ID is missing, nothing to do")
 
 		if err := machineScope.RemoveCredentialsRefFinalizer(ctx); err != nil {

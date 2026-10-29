@@ -2545,6 +2545,12 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 		reconciler.Client = mck.K8sClient
 	})
 
+	// restoreMachine undoes the changes made by the paths that exercise a machine without a provider ID.
+	restoreMachine := func() {
+		linodeMachine.Spec.ProviderID = &providerID
+		controllerutil.RemoveFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)
+	}
+
 	ctlrSuite.Run(
 		OneOf(
 			Path(
@@ -2581,6 +2587,54 @@ var _ = Describe("machine-delete", Ordered, Label("machine", "machine-delete"), 
 					_, err := reconciler.reconcileDelete(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 				})),
+			Path(
+				Call("machine without provider ID has an orphaned instance", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.ProviderID = nil
+					mck.LinodeClient.EXPECT().ListInstances(gomock.Any(), gomock.Any()).
+						Return([]linodego.Instance{{ID: 12345}}, nil)
+					mck.LinodeClient.EXPECT().DeleteInstance(gomock.Any(), 12345).
+						Return(nil)
+				}),
+				Result("orphaned instance is deleted", func(ctx context.Context, mck Mock) {
+					_, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(linodeMachine.Spec.ProviderID).To(BeNil())
+					linodeMachine.Spec.ProviderID = &providerID
+				}),
+			),
+			Path(
+				Call("no orphaned instance found because the lookup fails", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.ProviderID = nil
+					controllerutil.AddFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)
+					mck.LinodeClient.EXPECT().ListInstances(gomock.Any(), gomock.Any()).
+						Return(nil, &linodego.Error{Code: http.StatusBadGateway})
+				}),
+				Result("lookup fails and reconcile requeues", func(ctx context.Context, mck Mock) {
+					defer restoreMachine()
+					res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerRetryDelay))
+					Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerRetryDelay+time.Duration(float64(rutil.DefaultMachineControllerRetryDelay)*rutil.RetryJitterFraction)))
+					Expect(controllerutil.ContainsFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)).To(BeTrue())
+				}),
+			),
+			Path(
+				Call("no instance is found in the list", func(ctx context.Context, mck Mock) {
+					linodeMachine.Spec.ProviderID = nil
+					controllerutil.AddFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)
+					// DeleteInstance is intentionally not mocked: any call to it fails the test.
+					mck.LinodeClient.EXPECT().ListInstances(gomock.Any(), gomock.Any()).
+						Return([]linodego.Instance{}, nil)
+				}),
+				Result("nothing is deleted and finalizer is removed", func(ctx context.Context, mck Mock) {
+					defer restoreMachine()
+					res, err := reconciler.reconcileDelete(ctx, mck.Logger(), mScope)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(res).To(Equal(ctrl.Result{}))
+					Expect(mck.Logs()).NotTo(ContainSubstring("Found orphaned instance, deleting"))
+					Expect(controllerutil.ContainsFinalizer(linodeMachine, infrav1alpha2.MachineFinalizer)).To(BeFalse())
+				}),
+			),
 		),
 	)
 })

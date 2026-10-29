@@ -66,6 +66,8 @@ var (
 	errNoPublicIPv4Addrs      = errors.New("no public ipv4 addresses set")
 	errNoPublicIPv6Addrs      = errors.New("no public IPv6 address set")
 	errNoPublicIPv6SLAACAddrs = errors.New("no public SLAAC address set")
+	errBuildLabelFilter       = errors.New("failed to build label filter")
+	errInstanceNotFound       = errors.New("instance not found")
 
 	// We have to account for the default swap in Linodes when calculating the root disk size.
 	// While we don't actually use swap in any of our flavors (we set swapoff), we can't
@@ -1582,6 +1584,25 @@ func createInstance(ctx context.Context, logger logr.Logger, machineScope *scope
 	}
 
 	return inst, ctr.RetryAfter(), err
+}
+
+// findInstanceByLabel returns the Linode instance with the given label, or errInstanceNotFound if none exists
+func findInstanceByLabel(ctx context.Context, machineScope *scope.MachineScope, label string) (*linodego.Instance, error) {
+	listFilter := util.Filter{Label: label}
+	filter, filterErr := listFilter.String()
+	if filterErr != nil {
+		return nil, fmt.Errorf("%w: %w", errBuildLabelFilter, filterErr)
+	}
+
+	instances, err := machineScope.LinodeClient.ListInstances(ctx, linodego.NewListOptions(1, filter))
+	if err != nil {
+		return nil, err
+	}
+	if len(instances) == 0 {
+		return nil, errInstanceNotFound
+	}
+
+	return &instances[0], nil
 }
 
 // getVPCRefFromScope returns the appropriate VPC reference based on priority:
