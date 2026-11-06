@@ -36,6 +36,9 @@ type VPCScope struct {
 	LinodeClient clients.LinodeClient
 	LinodeVPC    *infrav1alpha2.LinodeVPC
 	Cluster      *clusterv1.Cluster
+
+	// ErrorType represents the type of error that may occur during VPC reconciliation.
+	ErrorType infrav1alpha2.VPCStatusError
 }
 
 // VPCScopeParams defines the input parameters used to create a new Scope.
@@ -55,29 +58,30 @@ func validateVPCScopeParams(params VPCScopeParams) error {
 
 // NewVPCScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-//
-//nolint:dupl // this is the same as PlacementGroups - worth making into generics later.
 func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VPCScopeParams) (*VPCScope, error) {
 	if err := validateVPCScopeParams(params); err != nil {
 		return nil, err
 	}
-	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
+
+	linodeClient, helper, err := initScopeClients(linodeClientConfig, params.LinodeVPC, params.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
+		return nil, err
 	}
 
-	helper, err := patch.NewHelper(params.LinodeVPC, params.Client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init patch helper: %w", err)
-	}
+	params.LinodeVPC.Status.Ready = false
+	params.LinodeVPC.Status.FailureReason = nil
+	params.LinodeVPC.Status.FailureMessage = nil
 
-	return &VPCScope{
+	vpcScope := &VPCScope{
 		Client:       params.Client,
 		LinodeClient: linodeClient,
 		LinodeVPC:    params.LinodeVPC,
 		PatchHelper:  helper,
 		Cluster:      params.Cluster,
-	}, nil
+		ErrorType:    infrav1alpha2.VPCStatusError("UnknownError"),
+	}
+
+	return vpcScope, nil
 }
 
 // PatchObject persists the machine configuration and status.
@@ -98,6 +102,11 @@ func (s *VPCScope) AddFinalizer(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// RemoveFinalizer removes the finalizer if present.
+func (s *VPCScope) RemoveFinalizer() {
+	controllerutil.RemoveFinalizer(s.LinodeVPC, infrav1alpha2.VPCFinalizer)
 }
 
 func (s *VPCScope) AddCredentialsRefFinalizer(ctx context.Context) error {

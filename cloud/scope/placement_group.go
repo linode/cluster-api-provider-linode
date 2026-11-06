@@ -36,6 +36,9 @@ type PlacementGroupScope struct {
 	LinodeClient         clients.LinodeClient
 	LinodePlacementGroup *infrav1alpha2.LinodePlacementGroup
 	Cluster              *clusterv1.Cluster
+
+	// ErrorType represents the type of error that may occur during PlacementGroup reconciliation.
+	ErrorType infrav1alpha2.LinodePlacementGroupStatusError
 }
 
 // PlacementGroupScopeParams defines the input parameters used to create a new Scope.
@@ -73,6 +76,11 @@ func (s *PlacementGroupScope) AddFinalizer(ctx context.Context) error {
 	return nil
 }
 
+// RemoveFinalizer removes the finalizer if present.
+func (s *PlacementGroupScope) RemoveFinalizer() {
+	controllerutil.RemoveFinalizer(s.LinodePlacementGroup, infrav1alpha2.PlacementGroupFinalizer)
+}
+
 func (s *PlacementGroupScope) AddCredentialsRefFinalizer(ctx context.Context) error {
 	if s.LinodePlacementGroup.Spec.CredentialsRef == nil {
 		return nil
@@ -95,21 +103,19 @@ func (s *PlacementGroupScope) RemoveCredentialsRefFinalizer(ctx context.Context)
 
 // NewPlacementGroupScope creates a new Scope from the supplied parameters.
 // This is meant to be called for each reconcile iteration.
-//
-//nolint:dupl // This is pretty much the same as VPC, maybe a candidate to use generics later.
 func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig, params PlacementGroupScopeParams) (*PlacementGroupScope, error) {
 	if err := validatePlacementGroupScope(params); err != nil {
 		return nil, err
 	}
-	linodeClient, err := CreateLinodeClient(linodeClientConfig, WithRetryCount(0))
+
+	linodeClient, helper, err := initScopeClients(linodeClientConfig, params.LinodePlacementGroup, params.Client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create linode client: %w", err)
+		return nil, err
 	}
 
-	helper, err := patch.NewHelper(params.LinodePlacementGroup, params.Client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init patch helper: %w", err)
-	}
+	params.LinodePlacementGroup.Status.Ready = false
+	params.LinodePlacementGroup.Status.FailureReason = nil
+	params.LinodePlacementGroup.Status.FailureMessage = nil
 
 	return &PlacementGroupScope{
 		Client:               params.Client,
@@ -117,6 +123,7 @@ func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig
 		LinodePlacementGroup: params.LinodePlacementGroup,
 		PatchHelper:          helper,
 		Cluster:              params.Cluster,
+		ErrorType:            infrav1alpha2.LinodePlacementGroupStatusError("UnknownError"),
 	}, nil
 }
 

@@ -30,12 +30,13 @@ import (
 	"sigs.k8s.io/cluster-api/util/paused"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler/common"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -59,30 +60,24 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 
 	objectKey := client.ObjectKeyFromObject(&linodePG)
 
-	var reconciler LinodePlacementGroupReconciler
-	var pgScope scope.PlacementGroupScope
+	var controller *common.Controller[*scope.PlacementGroupScope, *infrav1alpha2.LinodePlacementGroup]
+	var reconciler *LinodePlacementGroupReconciler
 
 	BeforeAll(func(ctx SpecContext) {
-		pgScope.Client = k8sClient
 		Expect(k8sClient.Create(ctx, &linodePG)).To(Succeed())
 	})
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
-		pgScope.LinodeClient = mck.LinodeClient
-
 		Expect(k8sClient.Get(ctx, objectKey, &linodePG)).To(Succeed())
-		pgScope.LinodePlacementGroup = &linodePG
-
-		// Create patch helper with latest state of resource.
-		// This is only needed when relying on envtest's k8sClient.
-		patchHelper, err := patch.NewHelper(&linodePG, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		pgScope.PatchHelper = patchHelper
 
 		// Reset reconciler for each test
-		reconciler = LinodePlacementGroupReconciler{
+		reconciler = &LinodePlacementGroupReconciler{
 			Recorder: mck.Recorder(),
 		}
+		controller = common.NewControllerFor(reconciler).
+			WithClientForTest(k8sClient).
+			WithNewScopeForTest(pgTestNewScopeFunc(mck.LinodeClient)).
+			WithLoggerForTest(mck.Logger())
 	})
 
 	suite.Run(
@@ -94,15 +89,15 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 				}),
 				OneOf(
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						res, err := controller.Reconcile(ctx, &linodePG)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
-						Expect(mck.Logs()).To(ContainSubstring("re-queuing Placement Group creation"))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						res, err := controller.Reconcile(ctx, &linodePG)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 						Expect(mck.Events()).To(ContainSubstring("server error"))
@@ -118,7 +113,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					}, nil)
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+					_, err := controller.Reconcile(ctx, &linodePG)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8sClient.Get(ctx, objectKey, &linodePG)).To(Succeed())
@@ -138,7 +133,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 				}),
 				OneOf(
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						res, err := controller.Reconcile(ctx, &linodePG)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
@@ -146,7 +141,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						res, err := controller.Reconcile(ctx, &linodePG)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 						Expect(mck.Events()).To(ContainSubstring("server error"))
@@ -164,7 +159,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 				}),
 				OneOf(
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						res, err := controller.Reconcile(ctx, &linodePG)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
@@ -172,7 +167,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						res, err := controller.Reconcile(ctx, &linodePG)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 						Expect(mck.Events()).To(ContainSubstring("server error"))
@@ -199,7 +194,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 				}),
 				OneOf(
 					Path(Result("delete requeues", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						res, err := controller.Reconcile(ctx, &linodePG)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultPGControllerReconcilerDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultPGControllerReconcilerDelay+time.Duration(float64(rec.DefaultPGControllerReconcilerDelay)*rec.RetryJitterFraction)))
@@ -207,7 +202,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+						res, err := controller.Reconcile(ctx, &linodePG)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 						Expect(mck.Events()).To(ContainSubstring("Will not delete Placement Group"))
@@ -225,7 +220,7 @@ var _ = Describe("lifecycle", Ordered, Label("placementgroup", "lifecycle"), fun
 					mck.LinodeClient.EXPECT().DeletePlacementGroup(ctx, gomock.Any()).After(getPG).Return(nil)
 				}),
 				Result("delete success", func(ctx context.Context, mck Mock) {
-					res, err := reconciler.reconcile(ctx, mck.Logger(), &pgScope)
+					res, err := controller.Reconcile(ctx, &linodePG)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 					Expect(apierrors.IsNotFound(k8sClient.Get(ctx, objectKey, &linodePG))).To(BeTrue())
@@ -264,12 +259,11 @@ var _ = Describe("pause handling", Label("placementgroup", "pause"), func() {
 		Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 		Expect(k8sClient.Create(ctx, placementGroup)).To(Succeed())
 
-		reconciler := &LinodePlacementGroupReconciler{
-			Client:             k8sClient,
+		controller := common.NewControllerFor(&LinodePlacementGroupReconciler{
 			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
-		}
+		}).WithClientForTest(k8sClient)
 
-		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(placementGroup)})
+		_, err := controller.Reconcile(ctx, placementGroup)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(placementGroup), placementGroup)).To(Succeed())
@@ -319,3 +313,18 @@ var _ = Describe("pause handling", Label("placementgroup", "pause"), func() {
 		Expect(pausedCondition.Status).To(Equal(metav1.ConditionFalse))
 	})
 })
+
+func pgTestNewScopeFunc(linodeClient clients.LinodeClient) func(context.Context, clients.K8sClient, *infrav1alpha2.LinodePlacementGroup, *clusterv1.Cluster) (*scope.PlacementGroupScope, error) {
+	return func(ctx context.Context, k8sClient clients.K8sClient, obj *infrav1alpha2.LinodePlacementGroup, cl *clusterv1.Cluster) (*scope.PlacementGroupScope, error) {
+		patchHelper, err := patch.NewHelper(obj, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+
+		return &scope.PlacementGroupScope{
+			Client:               k8sClient,
+			PatchHelper:          patchHelper,
+			LinodeClient:         linodeClient,
+			LinodePlacementGroup: obj,
+			Cluster:              cl,
+		}, nil
+	}
+}
