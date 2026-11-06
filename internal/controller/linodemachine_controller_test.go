@@ -46,6 +46,7 @@ import (
 	"github.com/linode/cluster-api-provider-linode/mock"
 	"github.com/linode/cluster-api-provider-linode/util"
 	rutil "github.com/linode/cluster-api-provider-linode/util/reconciler"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler/common"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -2588,7 +2589,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 	var machine clusterv1.Machine
 	var linodeMachine infrav1alpha2.LinodeMachine
 	var secret corev1.Secret
-	var lpgReconciler *LinodePlacementGroupReconciler
 	var linodePlacementGroup infrav1alpha2.LinodePlacementGroup
 	var linodeFirewall infrav1alpha2.LinodeFirewall
 
@@ -2696,11 +2696,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 			},
 		}
 
-		lpgReconciler = &LinodePlacementGroupReconciler{
-			Recorder: recorder,
-			Client:   k8sClient,
-		}
-
 		mockCtrl = gomock.NewController(GinkgoT())
 		testLogs = &bytes.Buffer{}
 		logger = zap.New(
@@ -2721,17 +2716,13 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 
 	It("creates an instance in a PlacementGroup with a firewall", func(ctx SpecContext) {
 		mockLinodeClient := mock.NewMockLinodeClient(mockCtrl)
-		helper, err := patch.NewHelper(&linodePlacementGroup, k8sClient)
+
+		lpgController := common.NewControllerFor(&LinodePlacementGroupReconciler{
+			Recorder: recorder,
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(pgTestNewScopeFunc(mockLinodeClient))
+		_, err = lpgController.Reconcile(ctx, &linodePlacementGroup)
 		Expect(err).NotTo(HaveOccurred())
 
-		_, err = lpgReconciler.reconcile(ctx, logger, &scope.PlacementGroupScope{
-			PatchHelper:          helper,
-			Client:               k8sClient,
-			LinodeClient:         mockLinodeClient,
-			LinodePlacementGroup: &linodePlacementGroup,
-		})
-
-		Expect(err).NotTo(HaveOccurred())
 		mScope := scope.MachineScope{
 			Client:        k8sClient,
 			LinodeClient:  mockLinodeClient,
@@ -2756,7 +2747,6 @@ var _ = Describe("machine in PlacementGroup", Label("machine", "placementGroup")
 var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 	var machine clusterv1.Machine
 	var secret corev1.Secret
-	var lvpcReconciler *LinodeVPCReconciler
 	var linodeVPC infrav1alpha2.LinodeVPC
 
 	var mockCtrl *gomock.Controller
@@ -2837,11 +2827,6 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 		}
 		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
 
-		lvpcReconciler = &LinodeVPCReconciler{
-			Recorder: recorder,
-			Client:   k8sClient,
-		}
-
 		mockCtrl = gomock.NewController(GinkgoT())
 		testLogs = &bytes.Buffer{}
 		logger = zap.New(
@@ -2896,16 +2881,11 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Label: "test",
 				IPv4:  "10.0.0.0/24",
 			}}}, nil)
-		helper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
 
-		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
-			PatchHelper:  helper,
-			Client:       k8sClient,
-			LinodeClient: mockLinodeClient,
-			LinodeVPC:    &linodeVPC,
-		})
-
+		lvpcController := common.NewControllerFor(&LinodeVPCReconciler{
+			Recorder: recorder,
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mockLinodeClient))
+		_, err := lvpcController.Reconcile(ctx, &linodeVPC)
 		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{
@@ -2970,16 +2950,11 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 				Label: "test",
 				IPv4:  "10.0.0.0/24",
 			}}}, nil)
-		helper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
 
-		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
-			PatchHelper:  helper,
-			Client:       k8sClient,
-			LinodeClient: mockLinodeClient,
-			LinodeVPC:    &linodeVPC,
-		})
-
+		lvpcController := common.NewControllerFor(&LinodeVPCReconciler{
+			Recorder: recorder,
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mockLinodeClient))
+		_, err = lvpcController.Reconcile(ctx, &linodeVPC)
 		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{
@@ -3046,16 +3021,11 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 					IPv4:  "10.0.0.0/24",
 				},
 			}}, nil)
-		helper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
 
-		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
-			PatchHelper:  helper,
-			Client:       k8sClient,
-			LinodeClient: mockLinodeClient,
-			LinodeVPC:    &linodeVPC,
-		})
-
+		lvpcController := common.NewControllerFor(&LinodeVPCReconciler{
+			Recorder: recorder,
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mockLinodeClient))
+		_, err := lvpcController.Reconcile(ctx, &linodeVPC)
 		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{
@@ -3091,7 +3061,6 @@ var _ = Describe("machine in VPC", Label("machine", "VPC"), Ordered, func() {
 var _ = Describe("machine in VPC with new network interfaces", Label("machine", "newNetworkInterfaces", "VPC"), Ordered, func() {
 	var machine clusterv1.Machine
 	var secret corev1.Secret
-	var lvpcReconciler *LinodeVPCReconciler
 	var linodeVPC infrav1alpha2.LinodeVPC
 
 	var mockCtrl *gomock.Controller
@@ -3172,11 +3141,6 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 		}
 		Expect(k8sClient.Create(ctx, &linodeVPC)).To(Succeed())
 
-		lvpcReconciler = &LinodeVPCReconciler{
-			Recorder: recorder,
-			Client:   k8sClient,
-		}
-
 		mockCtrl = gomock.NewController(GinkgoT())
 		testLogs = &bytes.Buffer{}
 		logger = zap.New(
@@ -3226,16 +3190,11 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				Label: "test",
 				IPv4:  "10.0.0.0/24",
 			}}}, nil)
-		helper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
 
-		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
-			PatchHelper:  helper,
-			Client:       k8sClient,
-			LinodeClient: mockLinodeClient,
-			LinodeVPC:    &linodeVPC,
-		})
-
+		lvpcController := common.NewControllerFor(&LinodeVPCReconciler{
+			Recorder: recorder,
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mockLinodeClient))
+		_, err := lvpcController.Reconcile(ctx, &linodeVPC)
 		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{
@@ -3295,16 +3254,11 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 				Label: "test",
 				IPv4:  "10.0.0.0/24",
 			}}}, nil)
-		helper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
 
-		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
-			PatchHelper:  helper,
-			Client:       k8sClient,
-			LinodeClient: mockLinodeClient,
-			LinodeVPC:    &linodeVPC,
-		})
-
+		lvpcController := common.NewControllerFor(&LinodeVPCReconciler{
+			Recorder: recorder,
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mockLinodeClient))
+		_, err := lvpcController.Reconcile(ctx, &linodeVPC)
 		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{
@@ -3370,16 +3324,11 @@ var _ = Describe("machine in VPC with new network interfaces", Label("machine", 
 					IPv4:  "10.0.0.0/24",
 				},
 			}}, nil)
-		helper, err := patch.NewHelper(&linodeVPC, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
 
-		_, err = lvpcReconciler.reconcile(ctx, logger, &scope.VPCScope{
-			PatchHelper:  helper,
-			Client:       k8sClient,
-			LinodeClient: mockLinodeClient,
-			LinodeVPC:    &linodeVPC,
-		})
-
+		lvpcController := common.NewControllerFor(&LinodeVPCReconciler{
+			Recorder: recorder,
+		}).WithClientForTest(k8sClient).WithNewScopeForTest(vpcTestNewScopeFunc(mockLinodeClient))
+		_, err := lvpcController.Reconcile(ctx, &linodeVPC)
 		Expect(err).NotTo(HaveOccurred())
 
 		mScope := scope.MachineScope{

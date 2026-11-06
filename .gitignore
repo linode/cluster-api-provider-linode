@@ -14,3 +14,5 @@ vendor/
 .vscode/
 .tool-versions
 .opencode/
+mise.local.toml
+mise.*.local.toml
