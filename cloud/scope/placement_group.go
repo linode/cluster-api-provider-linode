@@ -96,6 +96,8 @@ func (s *PlacementGroupScope) RemoveCredentialsRefFinalizer(ctx context.Context)
 		return nil
 	}
 
+	fmt.Println(toFinalizer(s.LinodePlacementGroup))
+
 	return removeCredentialsFinalizer(ctx, s.Client,
 		*s.LinodePlacementGroup.Spec.CredentialsRef, s.LinodePlacementGroup.GetNamespace(),
 		toFinalizer(s.LinodePlacementGroup))
