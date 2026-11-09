@@ -292,3 +292,11 @@ LINODE_DNS_TOKEN="$LINODE_TOKEN" CONTROL_PLANE_MACHINE_COUNT=3 mise run e2etest 
             file: 01-assert.yaml
     ```
 3. Add any resources to create or assert on in the same directory
+
+### Chainsaw schema validation
+
+Run the configuration and test-manifest schema checks without a cluster:
+
+```bash
+mise run chainsaw-lint
+```

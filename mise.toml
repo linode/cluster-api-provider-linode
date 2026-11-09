@@ -26,12 +26,12 @@ jq = "1.8.1"
 
 
 [tasks.check]
-description = "[check] Run fmt, vet, lint, and API lint; formats Go sources and builds bin/golangci-lint-custom if absent."
-run = [{ task = "fmt" }, { task = "vet" }, { task = "lint" }, { task = "lint-api" }]
+description = "[check] Run fmt, vet, lint, Chainsaw lint, and API lint; formats Go sources and builds bin/golangci-lint-custom if absent."
+run = [{ task = "fmt" }, { task = "vet" }, { task = "lint" }, { task = "chainsaw-lint" }, { task = "lint-api" }]
 
 [tasks.verify]
-description = "[verify] Run lint, API lint, nilcheck, vulncheck, test, and build; regenerates and formats files."
-run = [{ task = "lint" }, { task = "lint-api" }, { task = "nilcheck" }, { task = "vulncheck" }, { task = "test" }, { task = "build" }]
+description = "[verify] Run lint, Chainsaw lint, API lint, nilcheck, vulncheck, test, and build; regenerates and formats files."
+run = [{ task = "lint" }, { task = "chainsaw-lint" }, { task = "lint-api" }, { task = "nilcheck" }, { task = "vulncheck" }, { task = "test" }, { task = "build" }]
 
 [tasks.fmt]
 description = "[check] Format Go sources in place."
@@ -44,6 +44,10 @@ run = "make vet"
 [tasks.lint]
 description = "[check] Run golangci-lint."
 run = "make lint"
+
+[tasks.chainsaw-lint]
+description = "[check] Validate the Chainsaw configuration and every E2E test manifest."
+run = "make chainsaw-lint"
 
 [tasks.lint-api]
 description = "[verify] Run kube-api-linter; builds bin/golangci-lint-custom if absent."

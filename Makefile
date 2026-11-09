@@ -159,6 +159,11 @@ test: generate fmt vet ## Run tests.
 e2etest: generate local-release local-deploy
 	SSE_KEY=$$(openssl rand -base64 32) chainsaw test ./e2e --parallel 2 --selector $(E2E_SELECTOR) $(E2E_FLAGS)
 
+.PHONY: chainsaw-lint
+chainsaw-lint: ## Validate the Chainsaw configuration and every test manifest.
+	chainsaw lint configuration --file .chainsaw.yaml
+	find e2e -type f -name 'chainsaw-test.yaml' -print0 | xargs -0 -n 1 chainsaw lint test --file
+
 .PHONY: local-deploy
 local-deploy: kind-cluster
 	DOCKER_HOST=$(DOCKER_HOST) KOCACHE=$(KOCACHE) tilt ci -f Tiltfile

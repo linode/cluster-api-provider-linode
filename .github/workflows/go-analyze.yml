@@ -81,6 +81,9 @@ jobs:
       - name: lint-api
         run: mise run lint-api
 
+      - name: Chainsaw lint
+        run: mise run chainsaw-lint
+
       - name: nilcheck
         run: mise run nilcheck
 
