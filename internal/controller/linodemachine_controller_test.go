@@ -722,19 +722,19 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			mockLinodeClient.EXPECT().OnAfterResponse(gomock.Any())
 			mockLinodeClient.EXPECT().CreateInstance(ctx, gomock.Any()).Return(instance, createErr)
 		}
-		expectFailure := func(reason, message string) {
-			for _, conditionType := range []string{ConditionPreflightCreated, clusterv1.ReadyCondition} {
-				condition := linodeMachine.GetCondition(conditionType)
-				Expect(condition).NotTo(BeNil())
-				Expect(condition.Status).To(Equal(metav1.ConditionFalse))
-				Expect(condition.Reason).To(Equal(reason))
-				Expect(condition.Message).To(Equal(message))
-			}
+		expectFailure := func(conditionType, reason, message string) {
+			condition := linodeMachine.GetCondition(conditionType)
+			Expect(condition).NotTo(BeNil())
+			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
+			Expect(condition.Reason).To(Equal(reason))
+			Expect(condition.Message).To(Equal(message))
 		}
 		failCreate := func(ctx context.Context, createErr error) ctrl.Result {
 			expectCreate(ctx, nil, createErr)
+			ready := linodeMachine.GetCondition(clusterv1.ReadyCondition).DeepCopy()
 			res, err := reconciler.reconcilePreflightCreate(ctx, logger, mScope)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(Equal(ready))
 			return res
 		}
 		expectRetry := func(res ctrl.Result, delay time.Duration) {
@@ -770,7 +770,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		DescribeTable("classifies only recognized create errors and requeues them", func(ctx SpecContext, createErr error, reason string) {
 			failClassified(ctx, createErr)
-			expectFailure(reason, createErr.Error())
+			expectFailure(ConditionPreflightCreated, reason, createErr.Error())
+			Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(BeNil())
 			Expect(linodeMachine.Spec.ProviderID).To(BeNil())
 			Expect(linodeMachine.Status.FailureReason).To(BeNil())
 			Expect(linodeMachine.Status.FailureMessage).To(BeNil())
@@ -818,12 +819,18 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Entry("unexpected EOF", io.ErrUnexpectedEOF, rutil.DefaultMachineControllerRetryDelay),
 		)
 
-		DescribeTable("protects a signal present on only one condition", func(ctx SpecContext, conditionType string) {
+		DescribeTable("keeps preflight diagnostics independent of Ready", func(ctx SpecContext, conditionType string) {
 			failClassified(ctx, accountErr)
+			linodeMachine.SetCondition(metav1.Condition{
+				Type: clusterv1.ReadyCondition, Status: metav1.ConditionFalse, Reason: AccountLimitReached, Message: accountErr.Error(),
+			})
 			linodeMachine.DeleteCondition(conditionType)
-			before := linodeMachine.DeepCopy().Status.Conditions
 			expectRetry(failCreate(ctx, serverErr), rutil.DefaultMachineControllerRetryDelay)
-			Expect(linodeMachine.Status.Conditions).To(Equal(before))
+			if conditionType == ConditionPreflightCreated {
+				expectFailure(ConditionPreflightCreated, util.CreateError, serverErr.Error())
+			} else {
+				expectFailure(ConditionPreflightCreated, AccountLimitReached, accountErr.Error())
+			}
 		},
 			Entry("only Ready", ConditionPreflightCreated),
 			Entry("only PreflightCreated", clusterv1.ReadyCondition),
@@ -832,21 +839,20 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		DescribeTable("replaces a previous failure with the latest recognized reason", func(ctx SpecContext, firstErr, nextErr error, reason string) {
 			failCreate(ctx, firstErr)
 			failClassified(ctx, nextErr)
-			expectFailure(reason, nextErr.Error())
+			expectFailure(ConditionPreflightCreated, reason, nextErr.Error())
 		},
 			Entry("generic to capacity", serverErr, capacityErr, InsufficientCapacity),
 			Entry("capacity to account limit", capacityErr, accountErr, AccountLimitReached),
 		)
 
-		DescribeTable("retires a classified Ready on an unrecognized API 4xx", func(ctx SpecContext, createErr error) {
+		DescribeTable("updates only preflight on an unrecognized API 4xx", func(ctx SpecContext, createErr error) {
 			failClassified(ctx, capacityErr)
-			expectFailure(InsufficientCapacity, capacityErr.Error())
+			linodeMachine.SetCondition(metav1.Condition{
+				Type: clusterv1.ReadyCondition, Status: metav1.ConditionFalse, Reason: InsufficientCapacity, Message: capacityErr.Error(),
+			})
 			Expect(failCreate(ctx, createErr)).To(Equal(ctrl.Result{}))
-			condition := linodeMachine.GetCondition(ConditionPreflightCreated)
-			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
-			Expect(condition.Reason).To(Equal(util.CreateError))
-			Expect(condition.Message).To(Equal(createErr.Error()))
-			Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(BeNil())
+			expectFailure(ConditionPreflightCreated, util.CreateError, createErr.Error())
+			expectFailure(clusterv1.ReadyCondition, InsufficientCapacity, capacityErr.Error())
 		},
 			Entry("unknown 400", unknownErr),
 			Entry("401", &linodego.Error{Code: http.StatusUnauthorized, Message: "Unauthorized"}),
@@ -854,10 +860,17 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Entry("wrapped 400", fmt.Errorf("create instance: %w", unknownErr)),
 		)
 
-		DescribeTable("removes a classified Ready on creation or adoption without completing provisioning", func(ctx SpecContext, adopt bool) {
-			failClassified(ctx, capacityErr)
-			expectFailure(InsufficientCapacity, capacityErr.Error())
+		DescribeTable("preserves a classified Ready on creation or adoption without completing provisioning", func(ctx SpecContext, adopt bool) {
 			persistMachine(ctx)
+			expectCreate(ctx, nil, capacityErr)
+			res, err := reconciler.reconcile(ctx, logger, mScope)
+			Expect(err).NotTo(HaveOccurred())
+			expectRetry(res, rutil.DefaultMachineControllerRetryDelay)
+			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeMachine), &linodeMachine)).To(Succeed())
+			expectFailure(clusterv1.ReadyCondition, InsufficientCapacity, capacityErr.Error())
+			ready := linodeMachine.GetCondition(clusterv1.ReadyCondition).DeepCopy()
+			mScope.PatchHelper, err = patch.NewHelper(&linodeMachine, k8sClient)
+			Expect(err).NotTo(HaveOccurred())
 			instance := &linodego.Instance{ID: 123}
 			if adopt {
 				expectCreate(ctx, nil, &linodego.Error{Code: http.StatusBadRequest, Message: "Label must be unique"})
@@ -865,20 +878,19 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			} else {
 				expectCreate(ctx, instance, nil)
 			}
-			res, err := reconciler.reconcilePreflightCreate(ctx, logger, mScope)
+			res, err = reconciler.reconcilePreflightCreate(ctx, logger, mScope)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(res).To(Equal(ctrl.Result{}))
 			Expect(linodeMachine.Spec.ProviderID).To(HaveValue(Equal("linode://123")))
 			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
-			Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(BeNil())
+			Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(Equal(ready))
 			Expect(linodeMachine.Status.Ready).To(BeFalse())
 			Expect(linodeMachine.Status.Initialization.Provisioned).To(BeNil())
 			Expect(linodeMachine.Status.InstanceState).To(BeNil())
-			// The removal must survive the patch helper, not only the in-memory object.
 			Expect(mScope.Close(ctx)).To(Succeed())
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeMachine), &linodeMachine)).To(Succeed())
 			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Status).To(Equal(metav1.ConditionTrue))
-			Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(BeNil())
+			Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(Equal(ready))
 		},
 			Entry("creation", false),
 			Entry("adoption after a duplicate-label error", true),
@@ -921,7 +933,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			if reason == util.CreateError {
 				Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(BeNil())
 			} else {
-				expectFailure(reason, createErr.Error())
+				expectFailure(clusterv1.ReadyCondition, reason, createErr.Error())
 			}
 			Expect(linodeMachine.Spec.ProviderID).To(BeNil())
 			Expect(linodeMachine.Status.FailureReason).To(BeNil())
@@ -935,6 +947,11 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		DescribeTable("keeps stale-path errors and legacy failure fields", func(ctx SpecContext, firstErr, nextErr error, reason string) {
 			failCreate(ctx, firstErr)
+			if errors.Is(firstErr, capacityErr) || errors.Is(firstErr, accountErr) {
+				ready := *linodeMachine.GetCondition(ConditionPreflightCreated)
+				ready.Type = clusterv1.ReadyCondition
+				linodeMachine.SetCondition(ready)
+			}
 			firstFailure := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
 			linodeMachine.GetCondition(ConditionPreflightCreated).LastTransitionTime = firstFailure
 			persistMachine(ctx)
@@ -952,17 +969,15 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			if linodego.ErrHasStatus(nextErr, http.StatusBadRequest) {
 				Expect(linodeMachine.Status.FailureReason).To(HaveValue(Equal(util.CreateError)))
 				Expect(linodeMachine.Status.FailureMessage).To(HaveValue(Equal(nextErr.Error())))
-				expectFailure(reason, nextErr.Error())
+				expectFailure(clusterv1.ReadyCondition, reason, nextErr.Error())
 			} else {
 				Expect(linodeMachine.Status.FailureReason).To(BeNil())
 				Expect(linodeMachine.Status.FailureMessage).To(BeNil())
 				if linodego.ErrHasStatus(nextErr, http.StatusForbidden) && reason == util.CreateError {
-					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(BeNil())
 					Expect(linodeMachine.Spec.ProviderID).To(BeNil())
 					Expect(linodeMachine.Status.Ready).To(BeFalse())
-				} else {
-					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(Equal(previousReady))
 				}
+				Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(Equal(previousReady))
 				if reason == InsufficientCapacity {
 					Expect(preflight.Message).To(Equal(firstErr.Error()))
 				} else {
@@ -974,8 +989,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Entry("stale account limit replaces capacity", capacityErr, accountErr, AccountLimitReached),
 			Entry("stale capacity is preserved across 503", capacityErr, serverErr, InsufficientCapacity),
 			Entry("stale generic diagnostics still change", context.DeadlineExceeded, serverErr, util.CreateError),
-			Entry("stale unknown 400 retires account limit", accountErr, unknownErr, util.CreateError),
-			Entry("stale unknown 403 retires capacity", capacityErr, &linodego.Error{Code: http.StatusForbidden, Message: "Forbidden"}, util.CreateError),
+			Entry("stale unknown 400 replaces account limit with generic Ready", accountErr, unknownErr, util.CreateError),
+			Entry("stale unknown 403 leaves Ready unchanged", capacityErr, &linodego.Error{Code: http.StatusForbidden, Message: "Forbidden"}, util.CreateError),
 		)
 
 		DescribeTable("replaces a classified Ready after recovery and a later boot error", func(ctx SpecContext, adopt bool) {
@@ -989,9 +1004,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			res, err := reconciler.reconcile(ctx, logger, mScope)
 			Expect(err).NotTo(HaveOccurred())
 			expectRetry(res, rutil.DefaultMachineControllerRetryDelay)
-			Expect(mScope.ClassifiedCreateError).To(BeTrue())
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeMachine), &linodeMachine)).To(Succeed())
-			expectFailure(AccountLimitReached, accountErr.Error())
+			expectFailure(ConditionPreflightCreated, AccountLimitReached, accountErr.Error())
+			expectFailure(clusterv1.ReadyCondition, AccountLimitReached, accountErr.Error())
 			Expect(linodeMachine.Spec.ProviderID).To(BeNil())
 
 			mScope.PatchHelper, err = patch.NewHelper(&linodeMachine, k8sClient)
@@ -1009,7 +1024,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			}).Return(nil, nil)
 			mockLinodeClient.EXPECT().BootInstance(ctx, 123, linodego.InstanceBootOptions{}).DoAndReturn(
 				func(context.Context, int, linodego.InstanceBootOptions) error {
-					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(BeNil())
+					expectFailure(clusterv1.ReadyCondition, AccountLimitReached, accountErr.Error())
 					return accountErr
 				},
 			)
@@ -1034,14 +1049,18 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Entry("adoption", true),
 		)
 
-		It("does not protect an old classified Ready from a later boot error with the same wording", func(ctx SpecContext) {
+		DescribeTable("does not protect an old classified failure from a later boot error with the same wording", func(ctx SpecContext, created metav1.ConditionStatus) {
 			failClassified(ctx, accountErr)
+			linodeMachine.SetCondition(metav1.Condition{
+				Type: clusterv1.ReadyCondition, Status: metav1.ConditionFalse, Reason: AccountLimitReached, Message: accountErr.Error(),
+			})
 			linodeMachine.Spec.ProviderID = new("linode://123")
-			for _, conditionType := range []string{ConditionPreflightCreated, ConditionPreflightConfigured} {
-				linodeMachine.SetCondition(metav1.Condition{
-					Type: conditionType, Status: metav1.ConditionTrue, Reason: "Completed",
-				})
-			}
+			linodeMachine.SetCondition(metav1.Condition{
+				Type: ConditionPreflightCreated, Status: created, Reason: AccountLimitReached, Message: accountErr.Error(),
+			})
+			linodeMachine.SetCondition(metav1.Condition{
+				Type: ConditionPreflightConfigured, Status: metav1.ConditionTrue, Reason: "Completed",
+			})
 			linodeMachine.SetCondition(metav1.Condition{
 				Type: ConditionPreflightBootTriggered, Status: metav1.ConditionFalse,
 				Reason: util.CreateError, LastTransitionTime: metav1.NewTime(time.Now().Add(-time.Hour)),
@@ -1059,7 +1078,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(linodeMachine.Status.FailureReason).To(HaveValue(Equal(util.CreateError)))
 			Expect(linodeMachine.Status.FailureMessage).To(HaveValue(Equal(accountErr.Error())))
 			Expect(recorder.Events).To(Receive(ContainSubstring("Warning CreateError " + accountErr.Error())))
-		})
+		},
+			Entry("completed preflight", metav1.ConditionTrue),
+			Entry("outdated failed preflight with a provider ID", metav1.ConditionFalse),
+		)
 
 		It("persists the first failure timestamp across False-to-False reason changes", func(ctx SpecContext) {
 			failCreate(ctx, serverErr)
@@ -1067,15 +1089,23 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			linodeMachine.GetCondition(ConditionPreflightCreated).LastTransitionTime = firstFailure
 			persistMachine(ctx)
 			for _, createErr := range []error{capacityErr, accountErr} {
-				failClassified(ctx, createErr)
-				Expect(mScope.Close(ctx)).To(Succeed())
+				expectCreate(ctx, nil, createErr)
+				res, err := reconciler.reconcile(ctx, logger, mScope)
+				Expect(err).NotTo(HaveOccurred())
+				expectRetry(res, rutil.DefaultMachineControllerRetryDelay)
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeMachine), &linodeMachine)).To(Succeed())
 				Expect(linodeMachine.GetCondition(ConditionPreflightCreated).LastTransitionTime).To(Equal(firstFailure))
-				var err error
+				if errors.Is(createErr, capacityErr) {
+					linodeMachine.GetCondition(clusterv1.ReadyCondition).LastTransitionTime = firstFailure
+					Expect(k8sClient.Status().Update(ctx, &linodeMachine)).To(Succeed())
+				} else {
+					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition).LastTransitionTime).To(Equal(firstFailure))
+				}
 				mScope.PatchHelper, err = patch.NewHelper(&linodeMachine, k8sClient)
 				Expect(err).NotTo(HaveOccurred())
 			}
-			expectFailure(AccountLimitReached, accountErr.Error())
+			expectFailure(ConditionPreflightCreated, AccountLimitReached, accountErr.Error())
+			expectFailure(clusterv1.ReadyCondition, AccountLimitReached, accountErr.Error())
 		})
 
 		It("leaves conditions and delay handling unchanged when the local POST limit is reached", func(ctx SpecContext) {
@@ -2387,11 +2417,22 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 				Result("machine status updated", func(ctx context.Context, mck Mock) {
 					linodeMachine.Spec.ProviderID = new("linode://11111")
 					linodeMachine.Status.InstanceState = new(linodego.InstanceOffline)
+					for _, conditionType := range []string{ConditionPreflightCreated, clusterv1.ReadyCondition} {
+						linodeMachine.SetCondition(metav1.Condition{
+							Type: conditionType, Status: metav1.ConditionFalse, Reason: InsufficientCapacity, Message: "previous create failure",
+							LastTransitionTime: metav1.NewTime(time.Now().Add(-time.Minute).Truncate(time.Second)),
+						})
+					}
+					ready := linodeMachine.GetCondition(clusterv1.ReadyCondition).DeepCopy()
 					res, err := reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceProvisioning))
 					Expect(res.RequeueAfter).To(BeNumerically(">=", rutil.DefaultMachineControllerWaitForRunningDelay))
 					Expect(res.RequeueAfter).To(BeNumerically("<=", rutil.DefaultMachineControllerWaitForRunningDelay+time.Duration(float64(rutil.DefaultMachineControllerWaitForRunningDelay)*rutil.RetryJitterFraction)))
+					Expect(k8sClient.Get(ctx, machineKey, linodeMachine)).To(Succeed())
+					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(Equal(ready))
+					mScope.PatchHelper, err = patch.NewHelper(linodeMachine, k8sClient)
+					Expect(err).NotTo(HaveOccurred())
 
 					mck.LinodeClient.EXPECT().GetInstance(ctx, 11111).Return(
 						&linodego.Instance{
@@ -2404,6 +2445,7 @@ var _ = Describe("machine-update", Ordered, Label("machine", "machine-update"), 
 						}, nil)
 					res, err = reconciler.reconcile(ctx, logr.Logger{}, mScope)
 					Expect(err).NotTo(HaveOccurred())
+					Expect(k8sClient.Get(ctx, machineKey, linodeMachine)).To(Succeed())
 					Expect(*linodeMachine.Status.InstanceState).To(Equal(linodego.InstanceRunning))
 					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition).Status).To(Equal(metav1.ConditionTrue))
 					Expect(linodeMachine.Status.Initialization.Provisioned).To(HaveValue(BeTrue()))

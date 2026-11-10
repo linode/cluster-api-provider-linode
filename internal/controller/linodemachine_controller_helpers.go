@@ -90,19 +90,31 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 }
 
 func hasClassifiedCreateFailure(condition *metav1.Condition) bool {
-	return condition != nil && (condition.Reason == InsufficientCapacity || condition.Reason == AccountLimitReached)
+	// Failed PreflightCreated conditions use CreateError unless the error was classified.
+	return condition != nil && condition.Status == metav1.ConditionFalse && condition.Reason != util.CreateError
 }
 
-// retireClassifiedCreateReady removes Ready only when it holds a classified create failure,
-// restoring the create-phase state without a Ready condition. Unrelated reasons are left alone.
-func retireClassifiedCreateReady(machine *infrav1alpha2.LinodeMachine) {
-	if hasClassifiedCreateFailure(machine.GetCondition(clusterv1.ReadyCondition)) {
-		machine.DeleteCondition(clusterv1.ReadyCondition)
+func setMachineReadyCondition(machine *infrav1alpha2.LinodeMachine, failureReason string, err error) {
+	preflight := machine.GetCondition(ConditionPreflightCreated)
+	if failureReason == util.CreateError && machine.Spec.ProviderID == nil && preflight != nil && hasClassifiedCreateFailure(preflight) {
+		machine.SetCondition(metav1.Condition{
+			Type:    clusterv1.ReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  preflight.Reason,
+			Message: preflight.Message,
+		})
+	} else if err != nil && linodego.ErrHasStatus(err, http.StatusBadRequest) {
+		machine.SetCondition(metav1.Condition{
+			Type:    clusterv1.ReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  failureReason,
+			Message: err.Error(),
+		})
 	}
 }
 
-// setInstanceCreateErrorConditions reports whether this attempt wrote a classified failure.
-func setInstanceCreateErrorConditions(machine *infrav1alpha2.LinodeMachine, err error) bool {
+// setInstanceCreateErrorCondition reports whether this attempt wrote a classified failure.
+func setInstanceCreateErrorCondition(machine *infrav1alpha2.LinodeMachine, err error) bool {
 	var reason string
 	switch linodego.ClassifyInstanceCreateError(err) {
 	case linodego.InstanceCreateErrorInsufficientCapacity:
@@ -111,23 +123,20 @@ func setInstanceCreateErrorConditions(machine *infrav1alpha2.LinodeMachine, err 
 		reason = AccountLimitReached
 	}
 	if reason != "" {
-		for _, conditionType := range []string{ConditionPreflightCreated, clusterv1.ReadyCondition} {
-			machine.SetCondition(metav1.Condition{
-				Type:    conditionType,
-				Status:  metav1.ConditionFalse,
-				Reason:  reason,
-				Message: err.Error(),
-			})
-		}
+		machine.SetCondition(metav1.Condition{
+			Type:    ConditionPreflightCreated,
+			Status:  metav1.ConditionFalse,
+			Reason:  reason,
+			Message: err.Error(),
+		})
 		return true
 	}
 
 	// Signal preservation is independent of which errors the retry helper accepts.
 	var apiErr *linodego.Error
-	if errors.As(err, &apiErr) && apiErr.Code >= http.StatusBadRequest && apiErr.Code < http.StatusInternalServerError &&
-		apiErr.Code != http.StatusRequestTimeout && apiErr.Code != http.StatusTooManyRequests {
-		retireClassifiedCreateReady(machine)
-	} else if hasClassifiedCreateFailure(machine.GetCondition(ConditionPreflightCreated)) || hasClassifiedCreateFailure(machine.GetCondition(clusterv1.ReadyCondition)) {
+	unclassifiedClientError := errors.As(err, &apiErr) && apiErr != nil && apiErr.Code >= http.StatusBadRequest && apiErr.Code < http.StatusInternalServerError &&
+		apiErr.Code != http.StatusRequestTimeout && apiErr.Code != http.StatusTooManyRequests
+	if !unclassifiedClientError && hasClassifiedCreateFailure(machine.GetCondition(ConditionPreflightCreated)) {
 		return false
 	}
 

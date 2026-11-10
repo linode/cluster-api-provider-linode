@@ -24,16 +24,15 @@ type MachineScopeParams struct {
 }
 
 type MachineScope struct {
-	Client                clients.K8sClient
-	S3Clients             S3ClientBuilder
-	PatchHelper           *patch.Helper
-	Cluster               *clusterv1.Cluster
-	Machine               *clusterv1.Machine
-	TokenHash             string
-	LinodeClient          clients.LinodeClient
-	LinodeCluster         *infrav1alpha2.LinodeCluster
-	LinodeMachine         *infrav1alpha2.LinodeMachine
-	ClassifiedCreateError bool
+	Client        clients.K8sClient
+	S3Clients     S3ClientBuilder
+	PatchHelper   *patch.Helper
+	Cluster       *clusterv1.Cluster
+	Machine       *clusterv1.Machine
+	TokenHash     string
+	LinodeClient  clients.LinodeClient
+	LinodeCluster *infrav1alpha2.LinodeCluster
+	LinodeMachine *infrav1alpha2.LinodeMachine
 }
 
 func validateMachineScopeParams(params MachineScopeParams) error {
