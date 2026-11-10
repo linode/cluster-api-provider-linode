@@ -20,23 +20,30 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"testing"
 	"time"
 
 	"github.com/linode/linodego/v2"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/paused"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
+	"github.com/linode/cluster-api-provider-linode/clients"
 	"github.com/linode/cluster-api-provider-linode/cloud/scope"
 	"github.com/linode/cluster-api-provider-linode/mock"
 	rec "github.com/linode/cluster-api-provider-linode/util/reconciler"
+	"github.com/linode/cluster-api-provider-linode/util/reconciler/common"
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 	. "github.com/onsi/ginkgo/v2"
@@ -117,35 +124,28 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 	addrSetObjectKey := client.ObjectKeyFromObject(&addrSet)
 	fwRuleObjectKey := client.ObjectKeyFromObject(&fwRule)
 
-	var reconciler LinodeFirewallReconciler
-	var fwScope scope.FirewallScope
+	var controller reconcile.ObjectReconciler[*infrav1alpha2.LinodeFirewall]
+	var reconciler *LinodeFirewallReconciler
 
 	BeforeAll(func(ctx SpecContext) {
-		fwScope.Client = k8sClient
 		Expect(k8sClient.Create(ctx, &addrSet)).To(Succeed())
 		Expect(k8sClient.Create(ctx, &fwRule)).To(Succeed())
 		Expect(k8sClient.Create(ctx, &linodeFW)).To(Succeed())
 	})
 
 	suite.BeforeEach(func(ctx context.Context, mck Mock) {
-		fwScope.LinodeClient = mck.LinodeClient
-
 		Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
-		fwScope.LinodeFirewall = &linodeFW
 		Expect(k8sClient.Get(ctx, addrSetObjectKey, &addrSet)).To(Succeed())
 		Expect(k8sClient.Get(ctx, fwRuleObjectKey, &fwRule)).To(Succeed())
 
-		// Create patch helper with latest state of resource.
-		// This is only needed when relying on envtest's k8sClient.
-		patchHelper, err := patch.NewHelper(&linodeFW, k8sClient)
-		Expect(err).NotTo(HaveOccurred())
-		fwScope.PatchHelper = patchHelper
-
 		// Reset reconciler for each test
-		reconciler = LinodeFirewallReconciler{
+		reconciler = &LinodeFirewallReconciler{
 			Recorder: mck.Recorder(),
 		}
-		reconciler.Client = k8sClient
+		controller = common.NewControllerFor(reconciler).
+			WithClientForTest(k8sClient).
+			WithNewScopeForTest(fwTestNewScopeFunc(mck.LinodeClient)).
+			WithLoggerForTest(mck.Logger())
 	})
 
 	suite.Run(
@@ -156,15 +156,15 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						res, err := controller.Reconcile(ctx, &linodeFW)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultFWControllerReconcilerDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultFWControllerReconcilerDelay+time.Duration(float64(rec.DefaultFWControllerReconcilerDelay)*rec.RetryJitterFraction)))
-						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing reconciliation"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						res, err := controller.Reconcile(ctx, &linodeFW)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 					})),
@@ -182,7 +182,7 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 						},
 					})
 				}
-				res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+				res, err := controller.Reconcile(ctx, &linodeFW)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(mck.Logs()).To(ContainSubstring("too many IPs in this ACL"))
 				Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
@@ -196,11 +196,11 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, nil)
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+					_, err := controller.Reconcile(ctx, &linodeFW)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
-					Expect(mck.Logs()).NotTo(ContainSubstring("failed, requeuing"))
+					Expect(mck.Logs()).NotTo(ContainSubstring("re-queuing reconciliation"))
 				}),
 			),
 			Path(
@@ -217,11 +217,11 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, nil)
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+					_, err := controller.Reconcile(ctx, &linodeFW)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
-					Expect(mck.Logs()).NotTo(ContainSubstring("failed, requeuing"))
+					Expect(mck.Logs()).NotTo(ContainSubstring("re-queuing reconciliation"))
 				}),
 			),
 			Path(
@@ -233,33 +233,34 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("update requeues for update rules error", func(ctx context.Context, mck Mock) {
-						fwScope.LinodeFirewall.SetCondition(metav1.Condition{
+						linodeFW.SetCondition(metav1.Condition{
 							Type:    clusterv1.ReadyCondition,
 							Status:  metav1.ConditionFalse,
 							Reason:  "test",
 							Message: "test",
 						})
+						Expect(k8sClient.Update(ctx, &linodeFW)).To(Succeed())
 						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						res, err := controller.Reconcile(ctx, &linodeFW)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultFWControllerReconcilerDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultFWControllerReconcilerDelay+time.Duration(float64(rec.DefaultFWControllerReconcilerDelay)*rec.RetryJitterFraction)))
-						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing reconciliation"))
 					})),
 					Path(Result("update requeues for update error", func(ctx context.Context, mck Mock) {
 						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
 						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						res, err := controller.Reconcile(ctx, &linodeFW)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultFWControllerReconcilerDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultFWControllerReconcilerDelay+time.Duration(float64(rec.DefaultFWControllerReconcilerDelay)*rec.RetryJitterFraction)))
-						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
+						Expect(mck.Logs()).To(ContainSubstring("re-queuing reconciliation"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						mck.LinodeClient.EXPECT().UpdateFirewallRules(ctx, 1, gomock.Any()).Return(nil, nil)
 						mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, &linodego.Error{Code: http.StatusInternalServerError})
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						res, err := controller.Reconcile(ctx, &linodeFW)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 					})),
@@ -289,12 +290,12 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 					mck.LinodeClient.EXPECT().UpdateFirewall(ctx, 1, gomock.Any()).Return(nil, nil)
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					_, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+					_, err := controller.Reconcile(ctx, &linodeFW)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(k8sClient.Get(ctx, fwObjectKey, &linodeFW)).To(Succeed())
 					Expect(*linodeFW.Spec.FirewallID).To(Equal(1))
-					Expect(mck.Logs()).NotTo(ContainSubstring("failed, requeuing"))
+					Expect(mck.Logs()).NotTo(ContainSubstring("re-queuing reconciliation"))
 				}),
 			),
 		),
@@ -307,15 +308,15 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("deletes are requeued", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						res, err := controller.Reconcile(ctx, &linodeFW)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultFWControllerReconcilerDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultFWControllerReconcilerDelay+time.Duration(float64(rec.DefaultFWControllerReconcilerDelay)*rec.RetryJitterFraction)))
-						Expect(mck.Logs()).To(ContainSubstring("failed, requeuing"))
+						Expect(mck.Logs()).To(ContainSubstring("Re-queuing Firewall deletion due to API delete error"))
 					})),
 					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						res, err := controller.Reconcile(ctx, &linodeFW)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
 					})),
@@ -327,10 +328,10 @@ var _ = Describe("lifecycle", Ordered, Label("firewalls", "lifecycle"), func() {
 				}),
 				OneOf(
 					Path(Result("success", func(ctx context.Context, mck Mock) {
-						res, err := reconciler.reconcile(ctx, mck.Logger(), &fwScope)
+						res, err := controller.Reconcile(ctx, &linodeFW)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Logs()).NotTo(ContainSubstring("failed, requeuing"))
+						Expect(mck.Logs()).NotTo(ContainSubstring("re-queuing reconciliation"))
 					})),
 				),
 			),
@@ -365,12 +366,11 @@ var _ = Describe("pause handling", Label("firewalls", "pause"), func() {
 		Expect(k8sClient.Create(ctx, cluster)).To(Succeed())
 		Expect(k8sClient.Create(ctx, firewall)).To(Succeed())
 
-		reconciler := &LinodeFirewallReconciler{
-			Client:             k8sClient,
+		controller := common.NewControllerFor(&LinodeFirewallReconciler{
 			LinodeClientConfig: scope.ClientConfig{Token: "test-token"},
-		}
+		}).WithClientForTest(k8sClient)
 
-		_, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(firewall)})
+		_, err := controller.Reconcile(ctx, firewall)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(firewall), firewall)).To(Succeed())
@@ -418,3 +418,77 @@ var _ = Describe("pause handling", Label("firewalls", "pause"), func() {
 		Expect(pausedCondition.Status).To(Equal(metav1.ConditionFalse))
 	})
 })
+
+func fwTestNewScopeFunc(linodeClient clients.LinodeClient) func(context.Context, clients.K8sClient, *infrav1alpha2.LinodeFirewall, *clusterv1.Cluster) (*scope.FirewallScope, error) {
+	return func(ctx context.Context, k8sClient clients.K8sClient, obj *infrav1alpha2.LinodeFirewall, cl *clusterv1.Cluster) (*scope.FirewallScope, error) {
+		patchHelper, err := patch.NewHelper(obj, k8sClient)
+		Expect(err).NotTo(HaveOccurred())
+
+		return &scope.FirewallScope{
+			Client:         k8sClient,
+			PatchHelper:    patchHelper,
+			LinodeClient:   linodeClient,
+			LinodeFirewall: obj,
+			Cluster:        cl,
+		}, nil
+	}
+}
+
+func TestLinodeFirewallObject(t *testing.T) {
+	t.Parallel()
+
+	require.IsType(t, &infrav1alpha2.LinodeFirewall{}, (&LinodeFirewallReconciler{}).Object())
+}
+
+func TestLinodeFirewallAddWatches(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, infrav1alpha2.AddToScheme(scheme))
+	k8sClient := mock.NewMockK8sClient(gomock.NewController(t))
+	k8sClient.EXPECT().Scheme().AnyTimes().Return(scheme)
+
+	require.NotPanics(t, func() {
+		(&LinodeFirewallReconciler{}).AddWatches(&builder.Builder{}, k8sClient)
+	})
+}
+
+func TestFirewallUpdatePredicate(t *testing.T) {
+	t.Parallel()
+
+	oldFW := &infrav1alpha2.LinodeFirewall{
+		Spec: infrav1alpha2.LinodeFirewallSpec{},
+	}
+	newFW := &infrav1alpha2.LinodeFirewall{
+		Spec: infrav1alpha2.LinodeFirewallSpec{
+			FirewallID: new(123),
+		},
+	}
+	updateEvent := event.UpdateEvent{
+		ObjectOld: oldFW,
+		ObjectNew: newFW,
+	}
+
+	require.False(t, firewallUpdatePredicate(updateEvent))
+	newFW.Spec.FirewallID = nil
+	require.True(t, firewallUpdatePredicate(updateEvent))
+}
+
+func TestLinodeFirewallNewScope(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, infrav1alpha2.AddToScheme(scheme))
+	k8sClient := mock.NewMockK8sClient(gomock.NewController(t))
+	k8sClient.EXPECT().Scheme().Return(scheme)
+	firewall := &infrav1alpha2.LinodeFirewall{}
+	cluster := &clusterv1.Cluster{}
+	reconciler := &LinodeFirewallReconciler{LinodeClientConfig: scope.ClientConfig{Token: "test-key"}}
+
+	got, err := reconciler.NewScope(t.Context(), k8sClient, firewall, cluster)
+
+	require.NoError(t, err)
+	require.Same(t, k8sClient, got.Client)
+	require.Same(t, firewall, got.LinodeFirewall)
+	require.Same(t, cluster, got.Cluster)
+}
