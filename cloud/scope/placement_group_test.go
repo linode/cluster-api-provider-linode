@@ -348,6 +348,8 @@ func TestPlacementGroupRemoveCredentialsRefFinalizer(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "example",
 							Namespace: "test",
+							// Finalizer is partly derived from typemeta, which is not populated without an API
+							Finalizers: []string{"./test-pg"},
 						},
 						Data: map[string][]byte{
 							"apiToken": []byte("example"),
