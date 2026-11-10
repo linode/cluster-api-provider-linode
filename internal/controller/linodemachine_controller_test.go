@@ -771,9 +771,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(linodeMachine.Status.FailureReason).To(BeNil())
 			Expect(linodeMachine.Status.FailureMessage).To(BeNil())
 		},
-			Entry("capacity", capacityErr, infrav1alpha2.InsufficientCapacity),
-			Entry("account limit", accountErr, infrav1alpha2.AccountLimitReached),
-			Entry("wrapped capacity", fmt.Errorf("create instance: %w", capacityErr), infrav1alpha2.InsufficientCapacity),
+			Entry("capacity", capacityErr, InsufficientCapacity),
+			Entry("account limit", accountErr, AccountLimitReached),
+			Entry("wrapped capacity", fmt.Errorf("create instance: %w", capacityErr), InsufficientCapacity),
 		)
 
 		DescribeTable("keeps first-error diagnostics", func(ctx SpecContext, createErr error, delay time.Duration) {
@@ -830,13 +830,13 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(failCreate(ctx, nextErr)).To(Equal(ctrl.Result{}))
 			expectFailure(reason, nextErr.Error())
 		},
-			Entry("generic to capacity", serverErr, capacityErr, infrav1alpha2.InsufficientCapacity),
-			Entry("capacity to account limit", capacityErr, accountErr, infrav1alpha2.AccountLimitReached),
+			Entry("generic to capacity", serverErr, capacityErr, InsufficientCapacity),
+			Entry("capacity to account limit", capacityErr, accountErr, AccountLimitReached),
 		)
 
 		DescribeTable("retires a classified Ready on an unrecognized API 4xx", func(ctx SpecContext, createErr error) {
 			Expect(failCreate(ctx, capacityErr)).To(Equal(ctrl.Result{}))
-			expectFailure(infrav1alpha2.InsufficientCapacity, capacityErr.Error())
+			expectFailure(InsufficientCapacity, capacityErr.Error())
 			Expect(failCreate(ctx, createErr)).To(Equal(ctrl.Result{}))
 			condition := linodeMachine.GetCondition(ConditionPreflightCreated)
 			Expect(condition.Status).To(Equal(metav1.ConditionFalse))
@@ -852,7 +852,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		DescribeTable("removes a classified Ready on creation or adoption without completing provisioning", func(ctx SpecContext, adopt bool) {
 			Expect(failCreate(ctx, capacityErr)).To(Equal(ctrl.Result{}))
-			expectFailure(infrav1alpha2.InsufficientCapacity, capacityErr.Error())
+			expectFailure(InsufficientCapacity, capacityErr.Error())
 			persistMachine(ctx)
 			instance := &linodego.Instance{ID: 123}
 			if adopt {
@@ -914,8 +914,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(linodeMachine.Status.FailureMessage).To(BeNil())
 			Expect(recorder.Events).To(Receive(ContainSubstring("Warning CreateError nil ProviderID")))
 		},
-			Entry("capacity", capacityErr, infrav1alpha2.InsufficientCapacity),
-			Entry("account limit", accountErr, infrav1alpha2.AccountLimitReached),
+			Entry("capacity", capacityErr, InsufficientCapacity),
+			Entry("account limit", accountErr, AccountLimitReached),
 			Entry("unknown 400", unknownErr, util.CreateError),
 			Entry("decoding", &json.SyntaxError{Offset: 1}, util.CreateError),
 		)
@@ -950,7 +950,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				} else {
 					Expect(linodeMachine.GetCondition(clusterv1.ReadyCondition)).To(Equal(previousReady))
 				}
-				if reason == infrav1alpha2.InsufficientCapacity {
+				if reason == InsufficientCapacity {
 					Expect(preflight.Message).To(Equal(firstErr.Error()))
 				} else {
 					Expect(preflight.Message).To(Equal(nextErr.Error()))
@@ -958,8 +958,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			}
 			Expect(recorder.Events).To(Receive(ContainSubstring("Warning CreateError " + nextErr.Error())))
 		},
-			Entry("stale account limit replaces capacity", capacityErr, accountErr, infrav1alpha2.AccountLimitReached),
-			Entry("stale capacity is preserved across 503", capacityErr, serverErr, infrav1alpha2.InsufficientCapacity),
+			Entry("stale account limit replaces capacity", capacityErr, accountErr, AccountLimitReached),
+			Entry("stale capacity is preserved across 503", capacityErr, serverErr, InsufficientCapacity),
 			Entry("stale generic diagnostics still change", context.DeadlineExceeded, serverErr, util.CreateError),
 			Entry("stale unknown 400 retires account limit", accountErr, unknownErr, util.CreateError),
 			Entry("stale unknown 403 retires capacity", capacityErr, &linodego.Error{Code: http.StatusForbidden, Message: "Forbidden"}, util.CreateError),
@@ -978,7 +978,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(res).To(Equal(ctrl.Result{}))
 			Expect(mScope.ClassifiedCreateError).To(BeTrue())
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeMachine), &linodeMachine)).To(Succeed())
-			expectFailure(infrav1alpha2.AccountLimitReached, accountErr.Error())
+			expectFailure(AccountLimitReached, accountErr.Error())
 			Expect(linodeMachine.Spec.ProviderID).To(BeNil())
 			Expect(recorder.Events).To(Receive(ContainSubstring("Warning CreateError nil ProviderID")))
 
@@ -1063,7 +1063,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				mScope.PatchHelper, err = patch.NewHelper(&linodeMachine, k8sClient)
 				Expect(err).NotTo(HaveOccurred())
 			}
-			expectFailure(infrav1alpha2.AccountLimitReached, accountErr.Error())
+			expectFailure(AccountLimitReached, accountErr.Error())
 		})
 
 		It("leaves conditions and delay handling unchanged when the local POST limit is reached", func(ctx SpecContext) {

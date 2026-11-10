@@ -90,7 +90,7 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 }
 
 func hasClassifiedCreateFailure(condition *metav1.Condition) bool {
-	return condition != nil && (condition.Reason == infrav1alpha2.InsufficientCapacity || condition.Reason == infrav1alpha2.AccountLimitReached)
+	return condition != nil && (condition.Reason == InsufficientCapacity || condition.Reason == AccountLimitReached)
 }
 
 // retireClassifiedCreateReady removes Ready only when it holds a classified create failure,
@@ -106,9 +106,9 @@ func setInstanceCreateErrorConditions(machine *infrav1alpha2.LinodeMachine, err 
 	var reason string
 	switch linodego.ClassifyInstanceCreateError(err) {
 	case linodego.InstanceCreateErrorInsufficientCapacity:
-		reason = infrav1alpha2.InsufficientCapacity
+		reason = InsufficientCapacity
 	case linodego.InstanceCreateErrorAccountLimitReached:
-		reason = infrav1alpha2.AccountLimitReached
+		reason = AccountLimitReached
 	}
 	if reason != "" {
 		for _, conditionType := range []string{ConditionPreflightCreated, clusterv1.ReadyCondition} {

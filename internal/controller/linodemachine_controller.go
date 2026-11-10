@@ -71,6 +71,11 @@ const (
 
 	// WaitingForBootstrapDataReason used when machine is waiting for bootstrap data to be ready before proceeding.
 	WaitingForBootstrapDataReason = "WaitingForBootstrapData"
+
+	// InsufficientCapacity and AccountLimitReached are the only classified instance-create
+	// failures on PreflightCreated and Ready.
+	InsufficientCapacity = "InsufficientCapacity"
+	AccountLimitReached  = "AccountLimitReached"
 )
 
 // statuses to keep requeueing on while an instance is booting
