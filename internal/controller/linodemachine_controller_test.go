@@ -745,6 +745,10 @@ var _ = Describe("create", Label("machine", "create"), func() {
 				Expect(res).To(Equal(ctrl.Result{RequeueAfter: delay}))
 			}
 		}
+		// Classified failures can recover, so they requeue with the jittered default retry delay.
+		failClassified := func(ctx context.Context, createErr error) {
+			expectRetry(failCreate(ctx, createErr), rutil.DefaultMachineControllerRetryDelay)
+		}
 		persistMachine := func(ctx context.Context) {
 			status := linodeMachine.Status
 			linodeMachine.Name = ""
@@ -764,8 +768,8 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		DescribeTable("classifies only recognized create errors", func(ctx SpecContext, createErr error, reason string) {
-			Expect(failCreate(ctx, createErr)).To(Equal(ctrl.Result{}))
+		DescribeTable("classifies only recognized create errors and requeues them", func(ctx SpecContext, createErr error, reason string) {
+			failClassified(ctx, createErr)
 			expectFailure(reason, createErr.Error())
 			Expect(linodeMachine.Spec.ProviderID).To(BeNil())
 			Expect(linodeMachine.Status.FailureReason).To(BeNil())
@@ -792,7 +796,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		)
 
 		DescribeTable("preserves classified conditions across excluded errors", func(ctx SpecContext, createErr error, delay time.Duration) {
-			Expect(failCreate(ctx, capacityErr)).To(Equal(ctrl.Result{}))
+			failClassified(ctx, capacityErr)
 			before := linodeMachine.DeepCopy().Status.Conditions
 			expectRetry(failCreate(ctx, createErr), delay)
 			Expect(linodeMachine.Status.Conditions).To(Equal(before))
@@ -815,7 +819,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		)
 
 		DescribeTable("protects a signal present on only one condition", func(ctx SpecContext, conditionType string) {
-			Expect(failCreate(ctx, accountErr)).To(Equal(ctrl.Result{}))
+			failClassified(ctx, accountErr)
 			linodeMachine.DeleteCondition(conditionType)
 			before := linodeMachine.DeepCopy().Status.Conditions
 			expectRetry(failCreate(ctx, serverErr), rutil.DefaultMachineControllerRetryDelay)
@@ -827,7 +831,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 
 		DescribeTable("replaces a previous failure with the latest recognized reason", func(ctx SpecContext, firstErr, nextErr error, reason string) {
 			failCreate(ctx, firstErr)
-			Expect(failCreate(ctx, nextErr)).To(Equal(ctrl.Result{}))
+			failClassified(ctx, nextErr)
 			expectFailure(reason, nextErr.Error())
 		},
 			Entry("generic to capacity", serverErr, capacityErr, InsufficientCapacity),
@@ -835,7 +839,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		)
 
 		DescribeTable("retires a classified Ready on an unrecognized API 4xx", func(ctx SpecContext, createErr error) {
-			Expect(failCreate(ctx, capacityErr)).To(Equal(ctrl.Result{}))
+			failClassified(ctx, capacityErr)
 			expectFailure(InsufficientCapacity, capacityErr.Error())
 			Expect(failCreate(ctx, createErr)).To(Equal(ctrl.Result{}))
 			condition := linodeMachine.GetCondition(ConditionPreflightCreated)
@@ -851,7 +855,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		)
 
 		DescribeTable("removes a classified Ready on creation or adoption without completing provisioning", func(ctx SpecContext, adopt bool) {
-			Expect(failCreate(ctx, capacityErr)).To(Equal(ctrl.Result{}))
+			failClassified(ctx, capacityErr)
 			expectFailure(InsufficientCapacity, capacityErr.Error())
 			persistMachine(ctx)
 			instance := &linodego.Instance{ID: 123}
@@ -896,12 +900,21 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			Entry("unrelated Ready on unknown 400", "WaitingForBootstrap", unknownErr),
 		)
 
-		DescribeTable("keeps full-reconcile fallthrough and Warning events before the timeout", func(ctx SpecContext, createErr error, reason string) {
+		DescribeTable("requeues classified failures and keeps fallthrough for others before the timeout", func(ctx SpecContext, createErr error, reason string) {
 			persistMachine(ctx)
 			expectCreate(ctx, nil, createErr)
+			eventsBefore := len(recorder.Events)
 			res, err := reconciler.reconcile(ctx, logger, mScope)
-			Expect(err).To(MatchError("nil ProviderID"))
-			Expect(res).To(Equal(ctrl.Result{}))
+			if reason == util.CreateError {
+				Expect(err).To(MatchError("nil ProviderID"))
+				Expect(res).To(Equal(ctrl.Result{}))
+				Expect(recorder.Events).To(Receive(ContainSubstring("Warning CreateError nil ProviderID")))
+			} else {
+				// The reconcile stops at the create step instead of failing on the nil ProviderID.
+				Expect(err).NotTo(HaveOccurred())
+				expectRetry(res, rutil.DefaultMachineControllerRetryDelay)
+				Expect(recorder.Events).To(HaveLen(eventsBefore))
+			}
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeMachine), &linodeMachine)).To(Succeed())
 			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Reason).To(Equal(reason))
 			Expect(linodeMachine.GetCondition(ConditionPreflightCreated).Message).To(Equal(createErr.Error()))
@@ -910,9 +923,9 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			} else {
 				expectFailure(reason, createErr.Error())
 			}
+			Expect(linodeMachine.Spec.ProviderID).To(BeNil())
 			Expect(linodeMachine.Status.FailureReason).To(BeNil())
 			Expect(linodeMachine.Status.FailureMessage).To(BeNil())
-			Expect(recorder.Events).To(Receive(ContainSubstring("Warning CreateError nil ProviderID")))
 		},
 			Entry("capacity", capacityErr, InsufficientCapacity),
 			Entry("account limit", accountErr, AccountLimitReached),
@@ -974,13 +987,12 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			persistMachine(ctx)
 			expectCreate(ctx, nil, accountErr)
 			res, err := reconciler.reconcile(ctx, logger, mScope)
-			Expect(err).To(MatchError("nil ProviderID"))
-			Expect(res).To(Equal(ctrl.Result{}))
+			Expect(err).NotTo(HaveOccurred())
+			expectRetry(res, rutil.DefaultMachineControllerRetryDelay)
 			Expect(mScope.ClassifiedCreateError).To(BeTrue())
 			Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeMachine), &linodeMachine)).To(Succeed())
 			expectFailure(AccountLimitReached, accountErr.Error())
 			Expect(linodeMachine.Spec.ProviderID).To(BeNil())
-			Expect(recorder.Events).To(Receive(ContainSubstring("Warning CreateError nil ProviderID")))
 
 			mScope.PatchHelper, err = patch.NewHelper(&linodeMachine, k8sClient)
 			Expect(err).NotTo(HaveOccurred())
@@ -1023,7 +1035,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		)
 
 		It("does not protect an old classified Ready from a later boot error with the same wording", func(ctx SpecContext) {
-			Expect(failCreate(ctx, accountErr)).To(Equal(ctrl.Result{}))
+			failClassified(ctx, accountErr)
 			linodeMachine.Spec.ProviderID = new("linode://123")
 			for _, conditionType := range []string{ConditionPreflightCreated, ConditionPreflightConfigured} {
 				linodeMachine.SetCondition(metav1.Condition{
@@ -1055,7 +1067,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 			linodeMachine.GetCondition(ConditionPreflightCreated).LastTransitionTime = firstFailure
 			persistMachine(ctx)
 			for _, createErr := range []error{capacityErr, accountErr} {
-				Expect(failCreate(ctx, createErr)).To(Equal(ctrl.Result{}))
+				failClassified(ctx, createErr)
 				Expect(mScope.Close(ctx)).To(Succeed())
 				Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&linodeMachine), &linodeMachine)).To(Succeed())
 				Expect(linodeMachine.GetCondition(ConditionPreflightCreated).LastTransitionTime).To(Equal(firstFailure))
@@ -1067,7 +1079,7 @@ var _ = Describe("create", Label("machine", "create"), func() {
 		})
 
 		It("leaves conditions and delay handling unchanged when the local POST limit is reached", func(ctx SpecContext) {
-			Expect(failCreate(ctx, capacityErr)).To(Equal(ctrl.Result{}))
+			failClassified(ctx, capacityErr)
 			before := linodeMachine.DeepCopy().Status.Conditions
 			mScope.TokenHash = "classified-create-rate-limit"
 			counter := util.GetPostReqCounter(mScope.TokenHash)

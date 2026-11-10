@@ -646,6 +646,10 @@ func (r *LinodeMachineReconciler) reconcilePreflightCreate(ctx context.Context, 
 		if stale {
 			return ctrl.Result{}, err
 		}
+		if machineScope.ClassifiedCreateError {
+			// Capacity and account limits can recover, so requeue explicitly
+			return ctrl.Result{RequeueAfter: reconciler.WithJitter(reconciler.DefaultMachineControllerRetryDelay)}, nil
+		}
 		return retryIfTransient(err, logger)
 	}
 
