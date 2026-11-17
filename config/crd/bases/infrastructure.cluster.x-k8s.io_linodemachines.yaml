@@ -927,6 +927,9 @@ spec:
                 description: providerID is the unique identifier as specified by the
                   cloud provider.
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable
+                  rule: oldSelf == null || self == oldSelf
               region:
                 description: region is the Linode region to create the instance in.
                 minLength: 1
