@@ -2,7 +2,7 @@ module github.com/linode/cluster-api-provider-linode
 
 go 1.27.0
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	github.com/akamai/AkamaiOPEN-edgegrid-golang/v12 v12.3.0
