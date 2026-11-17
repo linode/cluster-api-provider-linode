@@ -30,7 +30,7 @@ kubectl get machine "$MACHINE_NAME" -n "$NAMESPACE" \
   -o jsonpath='{range .status.conditions[?(@.type=="InfrastructureReady")]}{.type}{"\t"}{.status}{"\t"}{.reason}{"\t"}{.message}{"\n"}{end}'
 ```
 
-Successful creation sets `PreflightCreated=True`, removes the classified `Ready` condition, and continues provisioning as usual.
+Successful creation or adoption sets `PreflightCreated=True` and keeps the classified `Ready=False` condition during provisioning. Normal lifecycle handling can replace it with a later error, or set `Ready=True` when the instance is running.
 
 
 ### One or more control plane replicas are missing
