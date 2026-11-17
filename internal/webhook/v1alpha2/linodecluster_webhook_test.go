@@ -19,6 +19,7 @@ package v1alpha2
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/linode/linodego/v2"
@@ -334,6 +335,66 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 				require.Contains(t, err.Error(), "dnsRootDomain")
 			}
 		}),
+	)
+}
+
+func TestValidateDNSLinodeClusterUniqueness(t *testing.T) {
+	t.Parallel()
+
+	validator := &linodeClusterValidator{}
+
+	suite := NewSuite(t, mock.MockLinodeClient{}, mock.MockK8sClient{})
+	suite.BeforeEach(func(ctx context.Context, mck Mock) {
+		validator.Client = mck.K8sClient
+	})
+
+	suite.Run(
+		Call("calls", func(ctx context.Context, mck Mock) {
+			mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			mck.K8sClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list client.ObjectList, _ ...client.ListOption) error {
+				linodeClusterList, ok := list.(*infrav1alpha2.LinodeClusterList)
+				if !ok {
+					return fmt.Errorf("failed to convert list to LinodeClusterList")
+				}
+
+				linodeClusterList.Items = []infrav1alpha2.LinodeCluster{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "existing",
+							Namespace: "existing",
+						},
+					},
+				}
+
+				return nil
+			}).AnyTimes()
+		}),
+		OneOf(
+			Path(Result("dnsSubDomainOverride exists", func(ctx context.Context, mck Mock) {
+				errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, infrav1alpha2.LinodeClusterSpec{
+					Region: "us-ord",
+					Network: infrav1alpha2.NetworkSpec{
+						LoadBalancerType:     "dns",
+						DNSRootDomain:        "test.net",
+						DNSSubDomainOverride: "subdomain",
+					},
+				}, SkipAPIValidation)
+				require.Len(t, errs, 1)
+				require.Equal(t, "spec.network.dnsSubDomainOverride", errs[0].Field)
+			})),
+			Path(Result("dnsUniqueIdentifier exists", func(ctx context.Context, mck Mock) {
+				errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, infrav1alpha2.LinodeClusterSpec{
+					Region: "us-ord",
+					Network: infrav1alpha2.NetworkSpec{
+						LoadBalancerType:    "dns",
+						DNSRootDomain:       "test.net",
+						DNSUniqueIdentifier: "abc123",
+					},
+				}, SkipAPIValidation)
+				require.Len(t, errs, 1)
+				require.Equal(t, "spec.network.dnsUniqueIdentifier", errs[0].Field)
+			})),
+		),
 	)
 }
 
