@@ -37,6 +37,23 @@ import (
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
 
+func TestExtractFQDN(t *testing.T) {
+	t.Parallel()
+
+	require.Empty(t, extractFQDN(&corev1.ConfigMap{}))
+	require.Empty(t, extractFQDN(&infrav1alpha2.LinodeCluster{}))
+	require.Equal(t, []string{"cluster.test.net"}, extractFQDN(&infrav1alpha2.LinodeCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster",
+		},
+		Spec: infrav1alpha2.LinodeClusterSpec{
+			Network: infrav1alpha2.NetworkSpec{
+				DNSRootDomain: "test.net",
+			},
+		},
+	}))
+}
+
 func TestValidateLinodeCluster(t *testing.T) {
 	t.Parallel()
 
@@ -59,7 +76,6 @@ func TestValidateLinodeCluster(t *testing.T) {
 				},
 			},
 		}
-		validator              = &linodeClusterValidator{}
 		expectedErrorSubString = "spec.region: Not found: \"example\""
 	)
 
@@ -70,7 +86,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, &cluster, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &cluster, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -81,7 +97,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, &cluster, SkipAPIValidation)
+			errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &cluster, SkipAPIValidation)
 			for _, err := range errs {
 				assert.ErrorContains(t, err, expectedErrorSubString)
 			}
@@ -309,7 +325,6 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}, mock.MockK8sClient{}).Run(
@@ -319,16 +334,15 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 		OneOf(
 			Path(
 				Call("list clusters", func(ctx context.Context, mck Mock) {
-					validator.Client = mck.K8sClient
 					mck.K8sClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
 				Result("root domain set", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, &validCluster, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &validCluster, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
 			Path(Result("no root domain set", func(ctx context.Context, mck Mock) {
-				errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, &inValidCluster, SkipAPIValidation)
+				errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &inValidCluster, SkipAPIValidation)
 				for _, err := range errs {
 					require.Contains(t, err.Error(), "dnsRootDomain")
 				}
@@ -348,8 +362,27 @@ func TestValidateDNSLinodeClusterUniqueness(t *testing.T) {
 	}
 
 	NewSuite(t, mock.MockLinodeClient{}, mock.MockK8sClient{}).Run(
+		Call("list error", func(ctx context.Context, mck Mock) {
+			mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil)
+			validator.Client = mck.K8sClient
+			mck.K8sClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("error"))
+		}),
+		Result("returned error", func(ctx context.Context, mck Mock) {
+			errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &infrav1alpha2.LinodeCluster{
+				ObjectMeta: objectMeta,
+				Spec: infrav1alpha2.LinodeClusterSpec{
+					Region: "us-ord",
+					Network: infrav1alpha2.NetworkSpec{
+						LoadBalancerType: "dns",
+						DNSRootDomain:    "test.net",
+					},
+				},
+			}, false)
+			require.Len(t, errs, 1)
+			require.Contains(t, errs[0].Detail, "failed to list")
+		}),
 		Call("calls", func(ctx context.Context, mck Mock) {
-			mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil)
 			validator.Client = mck.K8sClient
 			mck.K8sClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list client.ObjectList, _ ...client.ListOption) error {
 				linodeClusterList, ok := list.(*infrav1alpha2.LinodeClusterList)
@@ -364,11 +397,11 @@ func TestValidateDNSLinodeClusterUniqueness(t *testing.T) {
 				}
 
 				return nil
-			}).AnyTimes()
+			})
 		}),
 		OneOf(
 			Path(Result("dnsSubDomainOverride exists", func(ctx context.Context, mck Mock) {
-				errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, &infrav1alpha2.LinodeCluster{
+				errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &infrav1alpha2.LinodeCluster{
 					ObjectMeta: objectMeta,
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Region: "us-ord",
@@ -383,7 +416,7 @@ func TestValidateDNSLinodeClusterUniqueness(t *testing.T) {
 				require.Contains(t, errs[0].Detail, "already exists")
 			})),
 			Path(Result("dnsUniqueIdentifier exists", func(ctx context.Context, mck Mock) {
-				errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, &infrav1alpha2.LinodeCluster{
+				errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &infrav1alpha2.LinodeCluster{
 					ObjectMeta: objectMeta,
 					Spec: infrav1alpha2.LinodeClusterSpec{
 						Region: "us-ord",
@@ -434,7 +467,6 @@ func TestValidateVlanAndVPC(t *testing.T) {
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -444,7 +476,7 @@ func TestValidateVlanAndVPC(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, &validCluster, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &validCluster, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -455,7 +487,7 @@ func TestValidateVlanAndVPC(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, &inValidCluster, SkipAPIValidation)
+			errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &inValidCluster, SkipAPIValidation)
 			for _, err := range errs {
 				require.Contains(t, err.Error(), "Cannot use VLANs and VPCs together")
 			}
@@ -506,7 +538,6 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -525,7 +556,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, validClusterWithVPCID, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, validClusterWithVPCID, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -536,7 +567,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, validClusterWithVPCRef, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, validClusterWithVPCRef, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -547,7 +578,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, invalidCluster, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, invalidCluster, SkipAPIValidation)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both VPCID and VPCRef")
 				}),
@@ -603,7 +634,6 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -613,7 +643,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, validClusterWithFirewallID, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, validClusterWithFirewallID, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -624,7 +654,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, validClusterWithFirewallRef, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, validClusterWithFirewallRef, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -635,7 +665,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeCluster(ctx, mck.LinodeClient, invalidCluster, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, invalidCluster, SkipAPIValidation)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both NodeBalancerFirewallID and NodeBalancerFirewallRef")
 				}),

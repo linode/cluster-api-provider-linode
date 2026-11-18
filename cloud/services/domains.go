@@ -571,6 +571,8 @@ func IsAkamaiDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope) 
 	return true, nil
 }
 
+// BuildFQDN builds a FQDN from the required DNSRootDomain and optional network subfields.
+// It assumes DNSRootDomain is not empty.
 func BuildFQDN(lc *v1alpha2.LinodeCluster) string {
 	return getSubDomain(lc) + "." + lc.Spec.Network.DNSRootDomain
 }

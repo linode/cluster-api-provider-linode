@@ -88,7 +88,7 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
-	if err := r.validateLinodeCluster(ctx, linodeClient, cluster, skipAPIValidation); err != nil {
+	if err := validateLinodeCluster(ctx, linodeClient, r.Client, cluster, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -116,7 +116,7 @@ func (r *linodeClusterValidator) ValidateDelete(_ context.Context, cluster *infr
 	return nil, nil
 }
 
-func (r *linodeClusterValidator) validateLinodeCluster(ctx context.Context, linodeclient clients.LinodeClient, cluster *infrav1alpha2.LinodeCluster, skipAPIValidation bool) field.ErrorList {
+func validateLinodeCluster(ctx context.Context, linodeclient clients.LinodeClient, k8sclient clients.K8sClient, cluster *infrav1alpha2.LinodeCluster, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
 	// Validate local fields first before making any API calls for validation
@@ -157,7 +157,7 @@ func (r *linodeClusterValidator) validateLinodeCluster(ctx context.Context, lino
 			errs = append(errs, err)
 		}
 
-		if err := enforceUniqueFQDN(ctx, r.Client, cluster); err != nil {
+		if err := enforceUniqueFQDN(ctx, k8sclient, cluster); err != nil {
 			errs = append(errs, err)
 		}
 	}
