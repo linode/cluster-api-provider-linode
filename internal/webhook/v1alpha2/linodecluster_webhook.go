@@ -18,7 +18,6 @@ package v1alpha2
 
 import (
 	"context"
-	"fmt"
 	"slices"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,13 +31,10 @@ import (
 
 	infrav1alpha2 "github.com/linode/cluster-api-provider-linode/api/v1alpha2"
 	"github.com/linode/cluster-api-provider-linode/clients"
+	"github.com/linode/cluster-api-provider-linode/cloud/services"
 )
 
-const (
-	dnsRootDomainField        = "spec.network.dnsRootDomain"
-	dnsSubDomainOverrideField = "spec.network.dnsSubDomainOverride"
-	dnsUniqueIdentifierField  = "spec.network.dnsUniqueIdentifier"
-)
+const clusterFQDNIndexerKey = "linodecluster-fqdn"
 
 var linodeclusterlog = logf.Log.WithName("linodecluster-resource")
 
@@ -48,11 +44,8 @@ type linodeClusterValidator struct {
 
 // SetupLinodeClusterWebhookWithManager registers the webhook for LinodeCluster in the manager.
 func SetupLinodeClusterWebhookWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	cache := mgr.GetCache()
-	for _, fieldName := range []string{dnsRootDomainField, dnsSubDomainOverrideField, dnsUniqueIdentifierField} {
-		if err := cache.IndexField(ctx, &infrav1alpha2.LinodeCluster{}, fieldName, extractValueFunc(fieldName)); err != nil {
-			return err
-		}
+	if err := mgr.GetCache().IndexField(ctx, &infrav1alpha2.LinodeCluster{}, clusterFQDNIndexerKey, extractFQDN); err != nil {
+		return err
 	}
 
 	return ctrl.NewWebhookManagedBy(mgr, &infrav1alpha2.LinodeCluster{}).
@@ -60,39 +53,24 @@ func SetupLinodeClusterWebhookWithManager(ctx context.Context, mgr ctrl.Manager)
 		Complete()
 }
 
-func extractValueFunc(fieldName string) func(obj client.Object) []string {
-	return func(obj client.Object) []string {
-		cluster, ok := obj.(*infrav1alpha2.LinodeCluster)
-		if !ok {
-			return nil
-		}
-		switch fieldName {
-		case "spec.network.dnsRootDomain":
-			if cluster.Spec.Network.DNSRootDomain == "" {
-				return nil
-			}
-			return []string{cluster.Spec.Network.DNSRootDomain}
-		case "spec.network.dnsSubDomainOverride":
-			if cluster.Spec.Network.DNSSubDomainOverride == "" {
-				return nil
-			}
-			return []string{cluster.Spec.Network.DNSSubDomainOverride}
-		case "spec.network.dnsUniqueIdentifier":
-			if cluster.Spec.Network.DNSUniqueIdentifier == "" {
-				return nil
-			}
-			return []string{cluster.Spec.Network.DNSUniqueIdentifier}
-		default:
-			return nil
-		}
+// Indexes LinodeClusters with LoadBalancerType DNS to perform FQDN lookups for uniqueness checks.
+func extractFQDN(obj client.Object) []string {
+	cluster, ok := obj.(*infrav1alpha2.LinodeCluster)
+	if !ok {
+		return nil
 	}
+
+	if cluster.Spec.Network.DNSRootDomain == "" {
+		return nil
+	}
+
+	return []string{services.BuildFQDN(cluster)}
 }
 
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=create,versions=v1alpha2,name=validation.linodecluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
-	spec := cluster.Spec
 	linodeclusterlog.Info("validate create", "name", cluster.Name)
 
 	// Reject invalid names before building a client or making any Linode API calls.
@@ -102,7 +80,7 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 			cluster.Name, field.ErrorList{err})
 	}
 
-	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, spec.CredentialsRef,
+	skipAPIValidation, linodeClient, err := setupClientWithCredentials(ctx, r.Client, cluster.Spec.CredentialsRef,
 		cluster.Name, cluster.GetNamespace(), linodeclusterlog)
 	if err != nil {
 		return admission.Warnings{}, err
@@ -110,7 +88,7 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 
 	// TODO: instrument with tracing, might need refactor to preserve readability
 	var errs field.ErrorList
-	if err := r.validateLinodeClusterSpec(ctx, linodeClient, spec, skipAPIValidation); err != nil {
+	if err := r.validateLinodeCluster(ctx, linodeClient, cluster, skipAPIValidation); err != nil {
 		errs = slices.Concat(errs, err)
 	}
 
@@ -138,31 +116,27 @@ func (r *linodeClusterValidator) ValidateDelete(_ context.Context, cluster *infr
 	return nil, nil
 }
 
-func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, linodeclient clients.LinodeClient, spec infrav1alpha2.LinodeClusterSpec, skipAPIValidation bool) field.ErrorList {
+func (r *linodeClusterValidator) validateLinodeCluster(ctx context.Context, linodeclient clients.LinodeClient, cluster *infrav1alpha2.LinodeCluster, skipAPIValidation bool) field.ErrorList {
 	var errs field.ErrorList
 
 	// Validate local fields first before making any API calls for validation
-	if spec.Network.LoadBalancerType == "dns" {
-		if spec.Network.DNSRootDomain == "" {
-			errs = append(errs, &field.Error{
-				Field: "dnsRootDomain needs to be set when LoadBalancer Type is DNS",
-				Type:  field.ErrorTypeRequired,
-			})
-		}
-
-		if err := enforceUniqueDNSFields(ctx, r.Client, spec.Network); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	if spec.Network.UseVlan && spec.VPCRef != nil {
+	if cluster.Spec.Network.LoadBalancerType == "dns" && cluster.Spec.Network.DNSRootDomain == "" {
 		errs = append(errs, &field.Error{
-			Field: "Cannot use VLANs and VPCs together. Unset `network.useVlan` or remove `vpcRef`",
-			Type:  field.ErrorTypeInvalid,
+			Field:  "spec.network.dnsRootDomain",
+			Type:   field.ErrorTypeRequired,
+			Detail: "dnsRootDomain needs to be set when LoadBalancer Type is DNS",
 		})
 	}
 
-	if spec.VPCID != nil && spec.VPCRef != nil {
+	if cluster.Spec.Network.UseVlan && cluster.Spec.VPCRef != nil {
+		errs = append(errs, &field.Error{
+			Field:  "spec.network.useVlan/spec.vpcRef",
+			Type:   field.ErrorTypeInvalid,
+			Detail: "Cannot use VLANs and VPCs together. Unset `network.useVlan` or remove `vpcRef`",
+		})
+	}
+
+	if cluster.Spec.VPCID != nil && cluster.Spec.VPCRef != nil {
 		errs = append(errs, &field.Error{
 			Field:  "spec.vpcID/spec.vpcRef",
 			Type:   field.ErrorTypeInvalid,
@@ -170,7 +144,7 @@ func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, 
 		})
 	}
 
-	if spec.Network.NodeBalancerFirewallID != nil && spec.NodeBalancerFirewallRef != nil {
+	if cluster.Spec.Network.NodeBalancerFirewallID != nil && cluster.Spec.NodeBalancerFirewallRef != nil {
 		errs = append(errs, &field.Error{
 			Field:  "spec.network.nodeBalancerFirewallID/spec.nodeBalancerFirewallRef",
 			Type:   field.ErrorTypeInvalid,
@@ -179,7 +153,11 @@ func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, 
 	}
 
 	if !skipAPIValidation {
-		if err := validateRegion(ctx, linodeclient, spec.Region, field.NewPath("spec").Child("region")); err != nil {
+		if err := validateRegion(ctx, linodeclient, cluster.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
+			errs = append(errs, err)
+		}
+
+		if err := enforceUniqueFQDN(ctx, r.Client, cluster); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -190,43 +168,33 @@ func (r *linodeClusterValidator) validateLinodeClusterSpec(ctx context.Context, 
 	return errs
 }
 
-// enforceUniqueDNSFields ensures there is no other LinodeCluster with the same DNSRootDomain and either DNSSubDomainOverride or DNSUniqueIdentifier.
+// enforceUniqueFQDN ensures there is no other LinodeCluster with the same derived FQDN.
 // DNSSubDomainOverride and DNSUniqueIdentifier are mutually exclusive, with DNSSubDomainOverride taking precedence.
-// If either are set, we need to validate that the incominmg spec does not match an existing LinodeCluster.
-func enforceUniqueDNSFields(ctx context.Context, cl client.Client, networkSpec infrav1alpha2.NetworkSpec) *field.Error {
-	if networkSpec.DNSRootDomain == "" {
+// If either are set, we need to validate that the incoming spec does not match an existing LinodeCluster.
+func enforceUniqueFQDN(ctx context.Context, cl client.Client, cluster *infrav1alpha2.LinodeCluster) *field.Error {
+	if cluster.Spec.Network.LoadBalancerType != "dns" || cluster.Spec.Network.DNSRootDomain == "" {
 		return nil
 	}
 
 	fieldsSelectorSet := map[string]string{
-		"spec.network.dnsRootDomain": networkSpec.DNSRootDomain,
-	}
-
-	var fieldPath string
-	if networkSpec.DNSSubDomainOverride != "" {
-		fieldPath = "spec.network.dnsSubDomainOverride"
-		fieldsSelectorSet["spec.network.dnsSubDomainOverride"] = networkSpec.DNSSubDomainOverride
-	} else if networkSpec.DNSUniqueIdentifier != "" {
-		fieldPath = "spec.network.dnsUniqueIdentifier"
-		fieldsSelectorSet["spec.network.dnsUniqueIdentifier"] = networkSpec.DNSUniqueIdentifier
-	} else {
-		return nil
+		clusterFQDNIndexerKey: services.BuildFQDN(cluster),
 	}
 
 	var existingClusters infrav1alpha2.LinodeClusterList
 	err := cl.List(ctx, &existingClusters, client.MatchingFieldsSelector{Selector: fields.SelectorFromSet(fieldsSelectorSet)})
 	if err != nil {
 		return &field.Error{
-			Field: fmt.Sprintf("failed to list existing LinodeClusters to validate spec.network.dnsRootDomain and %s uniqueness", fieldPath),
-			Type:  field.ErrorTypeInternal,
+			Field:  "spec.network",
+			Type:   field.ErrorTypeInternal,
+			Detail: "failed to list existing LinodeClusters to validate unique FQDN from dnsRootDomain and dnsUniqueIdentifier/dnsSubDomainOverride fields",
 		}
 	}
 
 	if len(existingClusters.Items) > 0 {
 		return &field.Error{
-			Field:  fieldPath,
+			Field:  "spec.network",
 			Type:   field.ErrorTypeInvalid,
-			Detail: fmt.Sprintf("A LinodeCluster with the same spec.network.dnsRootDomain and %s already exists", fieldPath),
+			Detail: "A LinodeCluster with the same dnsRootDomain and dnsUniqueIdentifier/dnsSubDOmainOverride combination already exists",
 		}
 	}
 
