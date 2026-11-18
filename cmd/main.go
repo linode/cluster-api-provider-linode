@@ -242,6 +242,7 @@ func setupManager(ctx context.Context, flags flagVars, linodeConfig, dnsConfig s
 		os.Exit(1)
 	}
 
+	//nolint:contextcheck // controller SetupWithManager does not require context.Context
 	setupControllers(mgr, flags, linodeConfig, dnsConfig)
 
 	// Setup webhooks if enabled (defaults to true)
