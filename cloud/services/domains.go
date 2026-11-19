@@ -91,6 +91,11 @@ func resetAkamaiRecord(ctx context.Context, cscope *scope.ClusterScope, recordRe
 			RecordType: recordResponse.RecordType,
 		})
 	}
+	// freshEntries only contains IPs that are still valid for the machine list.
+	// If all entries are still valid, no update is needed.
+	if len(freshEntries) == len(recordResponse.Target) {
+		return nil
+	}
 
 	recordResponse.Target = freshEntries
 	return cscope.AkamaiDomainsClient.UpdateRecord(ctx, dns.UpdateRecordRequest{

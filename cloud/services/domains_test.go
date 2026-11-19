@@ -52,6 +52,43 @@ var unhealthyStatus = &clusterv1.MachineStatus{
 	},
 }
 
+func TestResetAkamaiRecordSkipsUpdateWhenTargetsAreUnchanged(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockAkamClient := mock.NewMockAkamClient(ctrl)
+	mockAkamClient.EXPECT().UpdateRecord(gomock.Any(), gomock.Any()).Times(0)
+	clusterScope := &scope.ClusterScope{
+		AkamaiDomainsClient: mockAkamClient,
+	}
+	record := &dns.GetRecordResponse{
+		Name:       "test-machine",
+		RecordType: "A",
+		Target:     []string{"10.10.10.10"},
+	}
+
+	require.NoError(t, resetAkamaiRecord(
+		t.Context(),
+		clusterScope,
+		record,
+		[]string{"10.10.10.10"},
+		"akafn.com",
+	))
+
+	record = &dns.GetRecordResponse{
+		Name:       "test-machine",
+		RecordType: "AAAA",
+		Target:     []string{"fd00::"},
+	}
+	require.NoError(t, resetAkamaiRecord(
+		t.Context(),
+		clusterScope,
+		record,
+		[]string{"fd00::"},
+		"akafn.com",
+	))
+}
+
 func TestAddIPToEdgeDNS(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
