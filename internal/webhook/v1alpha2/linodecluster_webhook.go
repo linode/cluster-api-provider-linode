@@ -19,6 +19,7 @@ package v1alpha2
 import (
 	"context"
 	"slices"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -54,17 +55,18 @@ func SetupLinodeClusterWebhookWithManager(ctx context.Context, mgr ctrl.Manager)
 }
 
 // Indexes LinodeClusters with LoadBalancerType DNS to perform FQDN lookups for uniqueness checks.
+// DNS names are case-insensitive, so the extracted FQDN is case normalized.
 func extractFQDN(obj client.Object) []string {
 	cluster, ok := obj.(*infrav1alpha2.LinodeCluster)
 	if !ok {
 		return nil
 	}
 
-	if cluster.Spec.Network.DNSRootDomain == "" {
+	if cluster.Spec.Network.LoadBalancerType != "dns" || cluster.Spec.Network.DNSRootDomain == "" {
 		return nil
 	}
 
-	return []string{services.BuildFQDN(cluster)}
+	return []string{strings.ToLower(services.BuildFQDN(cluster))}
 }
 
 // +kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha2-linodecluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=linodeclusters,verbs=create,versions=v1alpha2,name=validation.linodecluster.infrastructure.cluster.x-k8s.io,admissionReviewVersions=v1
@@ -73,6 +75,25 @@ func extractFQDN(obj client.Object) []string {
 func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
 	linodeclusterlog.Info("validate create", "name", cluster.Name)
 
+	return r.validate(ctx, cluster)
+}
+
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+func (r *linodeClusterValidator) ValidateUpdate(ctx context.Context, _, cluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
+	linodeclusterlog.Info("validate update", "name", cluster.Name)
+
+	return r.validate(ctx, cluster)
+}
+
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+func (r *linodeClusterValidator) ValidateDelete(_ context.Context, cluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
+	linodeclusterlog.Info("validate delete", "name", cluster.Name)
+
+	// TODO(user): fill in your validation logic upon object deletion.
+	return nil, nil
+}
+
+func (r *linodeClusterValidator) validate(ctx context.Context, cluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
 	// Reject invalid names before building a client or making any Linode API calls.
 	if err := validateLabelLength(cluster.GetName(), field.NewPath("metadata").Child("name")); err != nil {
 		return nil, apierrors.NewInvalid(
@@ -98,22 +119,6 @@ func (r *linodeClusterValidator) ValidateCreate(ctx context.Context, cluster *in
 	return nil, apierrors.NewInvalid(
 		schema.GroupKind{Group: infrav1alpha2.GroupVersion.Group, Kind: "LinodeCluster"},
 		cluster.Name, errs)
-}
-
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeClusterValidator) ValidateUpdate(_ context.Context, _, newCluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
-	linodeclusterlog.Info("validate update", "name", newCluster.Name)
-
-	// TODO(user): fill in your validation logic upon object update.
-	return nil, nil
-}
-
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *linodeClusterValidator) ValidateDelete(_ context.Context, cluster *infrav1alpha2.LinodeCluster) (admission.Warnings, error) {
-	linodeclusterlog.Info("validate delete", "name", cluster.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
-	return nil, nil
 }
 
 func validateLinodeCluster(ctx context.Context, linodeclient clients.LinodeClient, k8sclient clients.K8sClient, cluster *infrav1alpha2.LinodeCluster, skipAPIValidation bool) field.ErrorList {
@@ -152,12 +157,12 @@ func validateLinodeCluster(ctx context.Context, linodeclient clients.LinodeClien
 		})
 	}
 
+	if err := enforceUniqueFQDN(ctx, k8sclient, cluster); err != nil {
+		errs = append(errs, err)
+	}
+
 	if !skipAPIValidation {
 		if err := validateRegion(ctx, linodeclient, cluster.Spec.Region, field.NewPath("spec").Child("region")); err != nil {
-			errs = append(errs, err)
-		}
-
-		if err := enforceUniqueFQDN(ctx, k8sclient, cluster); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -194,7 +199,7 @@ func enforceUniqueFQDN(ctx context.Context, cl client.Client, cluster *infrav1al
 		return &field.Error{
 			Field:  "spec.network",
 			Type:   field.ErrorTypeInvalid,
-			Detail: "A LinodeCluster with the same dnsRootDomain and dnsUniqueIdentifier/dnsSubDOmainOverride combination already exists",
+			Detail: "A LinodeCluster with the same dnsRootDomain and dnsUniqueIdentifier/dnsSubDomainOverride combination already exists",
 		}
 	}
 
