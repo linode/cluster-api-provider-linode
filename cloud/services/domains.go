@@ -113,7 +113,7 @@ func resetAkamaiRecord(ctx context.Context, cscope *scope.ClusterScope, recordRe
 func deleteStaleAkamaiEntries(ctx context.Context, cscope *scope.ClusterScope, dnsEntries []DNSOptions) error {
 	ipv4IPs, ipv6IPs := getDNSMachineIPs(dnsEntries)
 	rootDomain := cscope.LinodeCluster.Spec.Network.DNSRootDomain
-	fqdn := getSubDomain(cscope) + "." + rootDomain
+	fqdn := BuildFQDN(cscope.LinodeCluster)
 
 	// A record
 	aRecord, err := cscope.AkamaiDomainsClient.GetRecord(ctx, dns.GetRecordRequest{
@@ -187,7 +187,7 @@ func EnsureLinodeDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 		return err
 	}
 
-	filter, err := json.Marshal(map[string]interface{}{"name": getSubDomain(cscope)})
+	filter, err := json.Marshal(map[string]interface{}{"name": getSubDomain(cscope.LinodeCluster)})
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func EnsureAkamaiDNSEntries(ctx context.Context, cscope *scope.ClusterScope, ope
 	linodeClusterNetworkSpec := linodeCluster.Spec.Network
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
 	akaDNSClient := cscope.AkamaiDomainsClient
-	fqdn := getSubDomain(cscope) + "." + rootDomain
+	fqdn := BuildFQDN(cscope.LinodeCluster)
 
 	// Get the record for the root domain and fqdn
 	record, err := akaDNSClient.GetRecord(ctx, dns.GetRecordRequest{
@@ -431,7 +431,7 @@ func (d *DNSEntries) getDNSEntriesToEnsure(ctx context.Context, cscope *scope.Cl
 		dnsTTLSec = cscope.LinodeCluster.Spec.Network.DNSTTLSec
 	}
 
-	subDomain := getSubDomain(cscope)
+	subDomain := getSubDomain(cscope.LinodeCluster)
 
 	// sort the slice of linodemachines by CreationTimestamp in ascending order (oldest first).
 	sort.SliceStable(cscope.LinodeMachines.Items, func(i, j int) bool {
@@ -562,7 +562,7 @@ func IsAkamaiDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope) 
 	linodeClusterNetworkSpec := linodeCluster.Spec.Network
 	rootDomain := linodeClusterNetworkSpec.DNSRootDomain
 	akaDNSClient := cscope.AkamaiDomainsClient
-	fqdn := getSubDomain(cscope) + "." + rootDomain
+	fqdn := BuildFQDN(cscope.LinodeCluster)
 
 	recordBody, err := akaDNSClient.GetRecord(ctx, dns.GetRecordRequest{
 		Zone:       rootDomain,
@@ -576,15 +576,18 @@ func IsAkamaiDomainRecordOwner(ctx context.Context, cscope *scope.ClusterScope) 
 	return true, nil
 }
 
-func getSubDomain(cscope *scope.ClusterScope) (subDomain string) {
-	if cscope.LinodeCluster.Spec.Network.DNSSubDomainOverride != "" {
-		subDomain = cscope.LinodeCluster.Spec.Network.DNSSubDomainOverride
-	} else {
-		uniqueID := ""
-		if cscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier != "" {
-			uniqueID = "-" + cscope.LinodeCluster.Spec.Network.DNSUniqueIdentifier
-		}
-		subDomain = cscope.LinodeCluster.Name + uniqueID
+// BuildFQDN builds a FQDN from the required DNSRootDomain and optional network subfields.
+// It assumes DNSRootDomain is not empty.
+func BuildFQDN(lc *v1alpha2.LinodeCluster) string {
+	return getSubDomain(lc) + "." + lc.Spec.Network.DNSRootDomain
+}
+
+func getSubDomain(lc *v1alpha2.LinodeCluster) string {
+	subdomain := lc.Name
+	if lc.Spec.Network.DNSSubDomainOverride != "" {
+		subdomain = lc.Spec.Network.DNSSubDomainOverride
+	} else if lc.Spec.Network.DNSUniqueIdentifier != "" {
+		subdomain += "-" + lc.Spec.Network.DNSUniqueIdentifier
 	}
-	return subDomain
+	return subdomain
 }

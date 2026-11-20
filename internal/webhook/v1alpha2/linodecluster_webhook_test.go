@@ -19,6 +19,7 @@ package v1alpha2
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/linode/linodego/v2"
@@ -35,6 +36,73 @@ import (
 
 	. "github.com/linode/cluster-api-provider-linode/mock/mocktest"
 )
+
+func TestExtractFQDN(t *testing.T) {
+	t.Parallel()
+
+	t.Run("not a LinodeCluster", func(t *testing.T) {
+		t.Parallel()
+		require.Empty(t, extractFQDN(&corev1.ConfigMap{}))
+	})
+
+	t.Run("non-dns", func(t *testing.T) {
+		t.Parallel()
+		require.Empty(t, extractFQDN(&infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cluster",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Network: infrav1alpha2.NetworkSpec{
+					DNSRootDomain: "test.net",
+				},
+			},
+		}))
+	})
+
+	t.Run("no root domain", func(t *testing.T) {
+		t.Parallel()
+		require.Empty(t, extractFQDN(&infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cluster",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "dns",
+				},
+			},
+		}))
+	})
+
+	t.Run("happy path", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, []string{"cluster.test.net"}, extractFQDN(&infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cluster",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "dns",
+					DNSRootDomain:    "test.net",
+				},
+			},
+		}))
+	})
+
+	t.Run("case invariant", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, []string{"cluster.test.net"}, extractFQDN(&infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cLuStEr",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "dns",
+					DNSRootDomain:    "test.net",
+				},
+			},
+		}))
+	})
+}
 
 func TestValidateLinodeCluster(t *testing.T) {
 	t.Parallel()
@@ -58,7 +126,6 @@ func TestValidateLinodeCluster(t *testing.T) {
 				},
 			},
 		}
-		validator              = &linodeClusterValidator{}
 		expectedErrorSubString = "spec.region: Not found: \"example\""
 	)
 
@@ -69,7 +136,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &cluster, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -80,7 +147,7 @@ func TestValidateLinodeCluster(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, cluster.Spec, SkipAPIValidation)
+			errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &cluster, SkipAPIValidation)
 			for _, err := range errs {
 				assert.ErrorContains(t, err, expectedErrorSubString)
 			}
@@ -196,7 +263,7 @@ func TestValidateLinodeClusterUpdate(t *testing.T) {
 	mockK8sClient := mock.NewMockK8sClient(ctrl)
 
 	var (
-		oldCluster = infrav1alpha2.LinodeCluster{
+		cluster = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "example",
 				Namespace: "example",
@@ -208,31 +275,80 @@ func TestValidateLinodeClusterUpdate(t *testing.T) {
 				},
 			},
 		}
-		newCluster = infrav1alpha2.LinodeCluster{
+		clusterLongName = infrav1alpha2.LinodeCluster{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example",
+				Name:      longName,
 				Namespace: "example",
 			},
 			Spec: infrav1alpha2.LinodeClusterSpec{
 				Region: "example",
 				Network: infrav1alpha2.NetworkSpec{
-					LoadBalancerType: "dns",
+					LoadBalancerType: "NodeBalancer",
 				},
 			},
 		}
-
+		credentialsRefCluster = infrav1alpha2.LinodeCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "example",
+				Namespace: "example",
+			},
+			Spec: infrav1alpha2.LinodeClusterSpec{
+				CredentialsRef: &corev1.SecretReference{
+					Name: "cluster-credentials",
+				},
+				Region: "us-ord",
+				Network: infrav1alpha2.NetworkSpec{
+					LoadBalancerType: "NodeBalancer",
+				},
+			},
+		}
 		validator = &linodeClusterValidator{Client: mockK8sClient}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
 		OneOf(
 			Path(
-				Call("update", func(ctx context.Context, mck Mock) {
+				Call("invalid request", func(ctx context.Context, mck Mock) {
 
 				}),
-				Result("success", func(ctx context.Context, mck Mock) {
-					_, err := validator.ValidateUpdate(ctx, &oldCluster, &newCluster)
-					assert.NoError(t, err)
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &cluster)
+					assert.ErrorContains(t, err, "\"example\" is invalid: spec.region: Not found:")
+				}),
+			),
+			Path(
+				Call("name too long", func(ctx context.Context, mck Mock) {
+
+				}),
+				Result("error", func(ctx context.Context, mck Mock) {
+					_, err := validator.ValidateCreate(ctx, &clusterLongName)
+					assert.ErrorContains(t, err, labelLengthDetail)
+				}),
+			),
+		),
+		OneOf(
+			Path(
+				Call("verfied linodeClient", func(ctx context.Context, mck Mock) {
+					mockK8sClient.EXPECT().Get(ctx, gomock.Any(), gomock.Any()).
+						DoAndReturn(func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
+							cred := corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "cluster-credentials",
+									Namespace: "example",
+								},
+								Data: map[string][]byte{
+									"apiToken": []byte("token"),
+								},
+							}
+							*obj = cred
+
+							return nil
+						}).AnyTimes()
+				}),
+				Result("valid", func(ctx context.Context, mck Mock) {
+					str, err := getCredentialDataFromRef(ctx, mockK8sClient, *credentialsRefCluster.Spec.CredentialsRef, cluster.GetNamespace())
+					require.NoError(t, err)
+					assert.Equal(t, []byte("token"), str)
 				}),
 			),
 		),
@@ -308,32 +424,108 @@ func TestValidateDNSLinodeCluster(t *testing.T) {
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
 	)
 
-	NewSuite(t, mock.MockLinodeClient{}).Run(
+	NewSuite(t, mock.MockLinodeClient{}, mock.MockK8sClient{}).Run(
+		Call("get region", func(ctx context.Context, mck Mock) {
+			mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+		}),
 		OneOf(
 			Path(
-				Call("valid dns", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+				Call("list clusters", func(ctx context.Context, mck Mock) {
+					mck.K8sClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				}),
-				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validCluster.Spec, SkipAPIValidation)
+				Result("root domain set", func(ctx context.Context, mck Mock) {
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &validCluster, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
-		),
-		OneOf(
-			Path(Call("no root domain set", func(ctx context.Context, mck Mock) {
-				mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+			Path(Result("no root domain set", func(ctx context.Context, mck Mock) {
+				errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &inValidCluster, SkipAPIValidation)
+				for _, err := range errs {
+					require.Contains(t, err.Error(), "dnsRootDomain")
+				}
 			})),
 		),
-		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, inValidCluster.Spec, SkipAPIValidation)
-			for _, err := range errs {
-				require.Contains(t, err.Error(), "dnsRootDomain")
-			}
+	)
+}
+
+func TestValidateDNSLinodeClusterUniqueness(t *testing.T) {
+	t.Parallel()
+
+	objectMeta := metav1.ObjectMeta{
+		Name:      "existing",
+		Namespace: "existing",
+	}
+
+	NewSuite(t, mock.MockLinodeClient{}, mock.MockK8sClient{}).Run(
+		Call("list error", func(ctx context.Context, mck Mock) {
+			mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil)
+			mck.K8sClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("error"))
 		}),
+		Result("returned error", func(ctx context.Context, mck Mock) {
+			errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &infrav1alpha2.LinodeCluster{
+				ObjectMeta: objectMeta,
+				Spec: infrav1alpha2.LinodeClusterSpec{
+					Region: "us-ord",
+					Network: infrav1alpha2.NetworkSpec{
+						LoadBalancerType: "dns",
+						DNSRootDomain:    "test.net",
+					},
+				},
+			}, SkipAPIValidation)
+			require.Len(t, errs, 1)
+			require.Contains(t, errs[0].Detail, "failed to list")
+		}),
+		Call("calls", func(ctx context.Context, mck Mock) {
+			mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil)
+			mck.K8sClient.EXPECT().List(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list client.ObjectList, _ ...client.ListOption) error {
+				linodeClusterList, ok := list.(*infrav1alpha2.LinodeClusterList)
+				if !ok {
+					return fmt.Errorf("failed to convert list to LinodeClusterList")
+				}
+
+				linodeClusterList.Items = []infrav1alpha2.LinodeCluster{
+					{
+						ObjectMeta: objectMeta,
+					},
+				}
+
+				return nil
+			})
+		}),
+		OneOf(
+			Path(Result("dnsSubDomainOverride exists", func(ctx context.Context, mck Mock) {
+				errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &infrav1alpha2.LinodeCluster{
+					ObjectMeta: objectMeta,
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Region: "us-ord",
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:     "dns",
+							DNSRootDomain:        "test.net",
+							DNSSubDomainOverride: "subdomain",
+						},
+					},
+				}, SkipAPIValidation)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0].Detail, "already exists")
+			})),
+			Path(Result("dnsUniqueIdentifier exists", func(ctx context.Context, mck Mock) {
+				errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &infrav1alpha2.LinodeCluster{
+					ObjectMeta: objectMeta,
+					Spec: infrav1alpha2.LinodeClusterSpec{
+						Region: "us-ord",
+						Network: infrav1alpha2.NetworkSpec{
+							LoadBalancerType:    "dns",
+							DNSRootDomain:       "test.net",
+							DNSUniqueIdentifier: "abc123",
+						},
+					},
+				}, SkipAPIValidation)
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0].Detail, "already exists")
+			})),
+		),
 	)
 }
 
@@ -370,7 +562,6 @@ func TestValidateVlanAndVPC(t *testing.T) {
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -380,7 +571,7 @@ func TestValidateVlanAndVPC(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validCluster.Spec, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &validCluster, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -391,7 +582,7 @@ func TestValidateVlanAndVPC(t *testing.T) {
 			})),
 		),
 		Result("error", func(ctx context.Context, mck Mock) {
-			errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, inValidCluster.Spec, SkipAPIValidation)
+			errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, &inValidCluster, SkipAPIValidation)
 			for _, err := range errs {
 				require.Contains(t, err.Error(), "Cannot use VLANs and VPCs together")
 			}
@@ -442,7 +633,6 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -461,7 +651,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					}, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithVPCID.Spec, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, validClusterWithVPCID, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -472,7 +662,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithVPCRef.Spec, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, validClusterWithVPCRef, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -483,7 +673,7 @@ func TestValidateVPCIDAndVPCRef(t *testing.T) {
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, invalidCluster.Spec, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, invalidCluster, SkipAPIValidation)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both VPCID and VPCRef")
 				}),
@@ -539,7 +729,6 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 				},
 			},
 		}
-		validator = &linodeClusterValidator{}
 	)
 
 	NewSuite(t, mock.MockLinodeClient{}).Run(
@@ -549,7 +738,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithFirewallID.Spec, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, validClusterWithFirewallID, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -560,7 +749,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("success", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, validClusterWithFirewallRef.Spec, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, validClusterWithFirewallRef, SkipAPIValidation)
 					require.Empty(t, errs)
 				}),
 			),
@@ -571,7 +760,7 @@ func TestValidateNodeBalancerFirewallIDAndNodeBalancerFirewallRef(t *testing.T) 
 					mck.LinodeClient.EXPECT().GetRegion(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 				}),
 				Result("error", func(ctx context.Context, mck Mock) {
-					errs := validator.validateLinodeClusterSpec(ctx, mck.LinodeClient, invalidCluster.Spec, SkipAPIValidation)
+					errs := validateLinodeCluster(ctx, mck.LinodeClient, mck.K8sClient, invalidCluster, SkipAPIValidation)
 					require.NotEmpty(t, errs)
 					require.Contains(t, errs[0].Error(), "Cannot specify both NodeBalancerFirewallID and NodeBalancerFirewallRef")
 				}),

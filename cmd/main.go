@@ -108,9 +108,9 @@ func main() {
 	setupLog.Info(fmt.Sprintf("API URL: %s", os.Getenv("LINODE_URL")))
 
 	linodeClientConfig, dnsClientConfig := validateEnvironment()
-	mgr := setupManager(flags, linodeClientConfig, dnsClientConfig)
-
 	ctx := ctrl.SetupSignalHandler()
+	mgr := setupManager(ctx, flags, linodeClientConfig, dnsClientConfig)
+
 	run := func(ctx context.Context) error {
 		o11yShutdown := setupObservability(ctx)
 		defer o11yShutdown()
@@ -201,7 +201,7 @@ func validateEnvironment() (linodeConfig, dnsConfig scope.ClientConfig) {
 
 // setupManager initializes and returns a new manager instance with the provided configurations.
 // It sets up the REST configuration, metrics server options, and registers controllers and webhooks.
-func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) manager.Manager {
+func setupManager(ctx context.Context, flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) manager.Manager {
 	restConfig := ctrl.GetConfigOrDie()
 	restConfig.QPS = float32(flags.restConfigQPS)
 	restConfig.Burst = flags.restConfigBurst
@@ -242,6 +242,7 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 		os.Exit(1)
 	}
 
+	//nolint:contextcheck // controller SetupWithManager does not require context.Context
 	setupControllers(mgr, flags, linodeConfig, dnsConfig)
 
 	// Setup webhooks if enabled (defaults to true)
@@ -254,7 +255,7 @@ func setupManager(flags flagVars, linodeConfig, dnsConfig scope.ClientConfig) ma
 		}
 	}
 	if webhooksEnabled {
-		setupWebhooks(mgr)
+		setupWebhooks(ctx, mgr)
 	}
 
 	// +kubebuilder:scaffold:builder
@@ -378,9 +379,9 @@ func setupControllers(mgr manager.Manager, flags flagVars, linodeClientConfig, d
 
 // setupWebhooks initializes webhooks for the specified resources in the manager.
 // It sets up webhooks for various Linode resources to handle admission control and validation.
-func setupWebhooks(mgr manager.Manager) {
+func setupWebhooks(ctx context.Context, mgr manager.Manager) {
 	var err error
-	if err = webhookinfrastructurev1alpha2.SetupLinodeClusterWebhookWithManager(mgr); err != nil {
+	if err = webhookinfrastructurev1alpha2.SetupLinodeClusterWebhookWithManager(ctx, mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "LinodeCluster")
 		os.Exit(1)
 	}

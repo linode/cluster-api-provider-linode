@@ -116,7 +116,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupLinodeClusterWebhookWithManager(mgr)
+	err = SetupLinodeClusterWebhookWithManager(ctx, mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = SetupLinodeMachineWebhookWithManager(mgr)

@@ -2024,3 +2024,51 @@ func TestGetDNSEntriesToEnsurePending(t *testing.T) {
 	assert.NotContains(t, targets, "10.0.0.2")
 	assert.Contains(t, targets, "test-cluster")
 }
+
+func TestBuildFQDN(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name       string
+		rootDomain string
+		override   string
+		uniqueId   string
+		expected   string
+	}{
+		{
+			// BuildFQDN should never be called without a DNSRootDomain.
+			// This test case is just here for completeness.
+			name:     "empty",
+			expected: "cluster.",
+		},
+		{
+			name:       "domain only",
+			rootDomain: "test.net",
+			expected:   "cluster.test.net",
+		},
+		{
+			name:       "override",
+			rootDomain: "test.net",
+			override:   "subdoverride",
+			expected:   "subdoverride.test.net",
+		},
+		{
+			name:       "unique identifier",
+			rootDomain: "test.net",
+			uniqueId:   "123",
+			expected:   "cluster-123.test.net",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var lc infrav1alpha2.LinodeCluster
+			lc.Name = "cluster"
+			lc.Spec.Network.DNSRootDomain = tt.rootDomain
+			lc.Spec.Network.DNSSubDomainOverride = tt.override
+			lc.Spec.Network.DNSUniqueIdentifier = tt.uniqueId
+
+			require.Equal(t, tt.expected, BuildFQDN(&lc))
+		})
+	}
+}
