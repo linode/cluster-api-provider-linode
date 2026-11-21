@@ -89,6 +89,66 @@ func retryIfTransient(err error, logger logr.Logger) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
+func hasClassifiedCreateFailure(condition *metav1.Condition) bool {
+	// Failed PreflightCreated conditions use CreateError unless the error was classified.
+	return condition != nil && condition.Status == metav1.ConditionFalse && condition.Reason != util.CreateError
+}
+
+func setMachineReadyCondition(machine *infrav1alpha2.LinodeMachine, failureReason string, err error) {
+	preflight := machine.GetCondition(ConditionPreflightCreated)
+	if failureReason == util.CreateError && machine.Spec.ProviderID == nil && preflight != nil && hasClassifiedCreateFailure(preflight) {
+		machine.SetCondition(metav1.Condition{
+			Type:    clusterv1.ReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  preflight.Reason,
+			Message: preflight.Message,
+		})
+	} else if err != nil && linodego.ErrHasStatus(err, http.StatusBadRequest) {
+		machine.SetCondition(metav1.Condition{
+			Type:    clusterv1.ReadyCondition,
+			Status:  metav1.ConditionFalse,
+			Reason:  failureReason,
+			Message: err.Error(),
+		})
+	}
+}
+
+// setInstanceCreateErrorCondition reports whether this attempt wrote a classified failure.
+func setInstanceCreateErrorCondition(machine *infrav1alpha2.LinodeMachine, err error) bool {
+	var reason string
+	switch linodego.ClassifyInstanceCreateError(err) {
+	case linodego.InstanceCreateErrorInsufficientCapacity:
+		reason = InsufficientCapacity
+	case linodego.InstanceCreateErrorAccountLimitReached:
+		reason = AccountLimitReached
+	}
+	if reason != "" {
+		machine.SetCondition(metav1.Condition{
+			Type:    ConditionPreflightCreated,
+			Status:  metav1.ConditionFalse,
+			Reason:  reason,
+			Message: err.Error(),
+		})
+		return true
+	}
+
+	// Signal preservation is independent of which errors the retry helper accepts.
+	var apiErr *linodego.Error
+	unclassifiedClientError := errors.As(err, &apiErr) && apiErr != nil && apiErr.Code >= http.StatusBadRequest && apiErr.Code < http.StatusInternalServerError &&
+		apiErr.Code != http.StatusRequestTimeout && apiErr.Code != http.StatusTooManyRequests
+	if !unclassifiedClientError && hasClassifiedCreateFailure(machine.GetCondition(ConditionPreflightCreated)) {
+		return false
+	}
+
+	machine.SetCondition(metav1.Condition{
+		Type:    ConditionPreflightCreated,
+		Status:  metav1.ConditionFalse,
+		Reason:  util.CreateError,
+		Message: err.Error(),
+	})
+	return false
+}
+
 func fillCreateConfig(ctx context.Context, createConfig *linodego.InstanceCreateOptions, machineScope *scope.MachineScope) error {
 	// This will only be empty if no interfaces or linodeInterfaces were specified in the LinodeMachine spec.
 	// In that case we default to legacy interfaces.
