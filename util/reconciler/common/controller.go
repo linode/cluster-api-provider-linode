@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/linode/cluster-api-provider-linode/clients"
@@ -127,10 +128,12 @@ func (c *controller[S, O]) WithLoggerForTest(logger logr.Logger) *controller[S, 
 
 // SetupWithManager sets up the controller with the given manager and options.
 func (c *controller[S, O]) SetupWithManager(mgr ctrl.Manager, options ctrlcontroller.Options) error {
+	options.ReconciliationTimeout = reconciler.DefaultedLoopTimeout(c.rec.Timeout())
+
 	c.cl = wrappedruntimeclient.NewRuntimeClientWithTracing(mgr.GetClient(), wrappedruntimeclient.DefaultDecorator())
 
 	obj := c.rec.Object()
-	bldr := ctrl.NewControllerManagedBy(mgr).For(obj).WithOptions(options)
+	bldr := ctrl.NewControllerManagedBy(mgr).Named(c.rec.Name()).WithOptions(options)
 	c.rec.AddWatches(bldr, c.cl)
 
 	objList, err := objectListKind(c.cl.Scheme(), obj)
@@ -144,6 +147,17 @@ func (c *controller[S, O]) SetupWithManager(mgr ctrl.Manager, options ctrlcontro
 	}
 
 	return bldr.
+		Watches(
+			obj,
+			&handler.EnqueueRequestForObject{},
+			// Only reconcile on changes to spec, labels, or annotations.
+			// This assumes this controller is solely responsible for this resource type's status updates.
+			builder.WithPredicates(predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				predicate.LabelChangedPredicate{},
+				predicate.AnnotationChangedPredicate{},
+			)),
+		).
 		Watches(
 			&clusterv1.Cluster{},
 			handler.EnqueueRequestsFromMapFunc(mapper),
