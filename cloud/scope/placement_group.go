@@ -114,10 +114,6 @@ func NewPlacementGroupScope(ctx context.Context, linodeClientConfig ClientConfig
 		return nil, err
 	}
 
-	params.LinodePlacementGroup.Status.Ready = false
-	params.LinodePlacementGroup.Status.FailureReason = nil
-	params.LinodePlacementGroup.Status.FailureMessage = nil
-
 	return &PlacementGroupScope{
 		Client:               params.Client,
 		LinodeClient:         linodeClient,

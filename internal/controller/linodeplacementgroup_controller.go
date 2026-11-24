@@ -220,6 +220,7 @@ func (r *LinodePlacementGroupReconciler) deletePlacementGroup(ctx context.Contex
 func (r *LinodePlacementGroupReconciler) HandleFailureCondition(pgScope *scope.PlacementGroupScope, err error) {
 	r.Recorder.Eventf(pgScope.LinodePlacementGroup, nil, corev1.EventTypeWarning, string(pgScope.ErrorType), "Reconcile", err.Error())
 
+	pgScope.LinodePlacementGroup.Status.Ready = false
 	pgScope.LinodePlacementGroup.Status.FailureReason = &pgScope.ErrorType
 	pgScope.LinodePlacementGroup.Status.FailureMessage = new(err.Error())
 	pgScope.LinodePlacementGroup.SetCondition(metav1.Condition{

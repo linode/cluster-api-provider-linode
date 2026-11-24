@@ -66,10 +66,6 @@ func NewFirewallScope(ctx context.Context, linodeClientConfig ClientConfig, para
 		return nil, err
 	}
 
-	params.LinodeFirewall.Status.Ready = false
-	params.LinodeFirewall.Status.FailureReason = nil
-	params.LinodeFirewall.Status.FailureMessage = nil
-
 	return &FirewallScope{
 		Client:         params.Client,
 		LinodeClient:   linodeClient,

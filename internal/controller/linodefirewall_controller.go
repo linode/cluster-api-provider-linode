@@ -164,6 +164,7 @@ func (r *LinodeFirewallReconciler) Delete(ctx context.Context, fwScope *scope.Fi
 func (r *LinodeFirewallReconciler) HandleFailureCondition(fwScope *scope.FirewallScope, err error) {
 	r.Recorder.Eventf(fwScope.LinodeFirewall, nil, corev1.EventTypeWarning, string(fwScope.ErrorType), "Reconcile", err.Error())
 
+	fwScope.LinodeFirewall.Status.Ready = false
 	fwScope.LinodeFirewall.Status.FailureReason = &fwScope.ErrorType
 	fwScope.LinodeFirewall.Status.FailureMessage = new(err.Error())
 	fwScope.LinodeFirewall.SetCondition(metav1.Condition{

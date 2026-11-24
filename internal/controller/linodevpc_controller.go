@@ -283,6 +283,7 @@ func (r *LinodeVPCReconciler) deleteVPCResources(ctx context.Context, logger log
 func (r *LinodeVPCReconciler) HandleFailureCondition(vpcScope *scope.VPCScope, err error) {
 	r.Recorder.Eventf(vpcScope.LinodeVPC, nil, corev1.EventTypeWarning, string(vpcScope.ErrorType), "Reconcile", err.Error())
 
+	vpcScope.LinodeVPC.Status.Ready = false
 	vpcScope.LinodeVPC.Status.FailureReason = &vpcScope.ErrorType
 	vpcScope.LinodeVPC.Status.FailureMessage = new(err.Error())
 	vpcScope.LinodeVPC.SetCondition(metav1.Condition{

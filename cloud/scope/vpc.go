@@ -68,10 +68,6 @@ func NewVPCScope(ctx context.Context, linodeClientConfig ClientConfig, params VP
 		return nil, err
 	}
 
-	params.LinodeVPC.Status.Ready = false
-	params.LinodeVPC.Status.FailureReason = nil
-	params.LinodeVPC.Status.FailureMessage = nil
-
 	vpcScope := &VPCScope{
 		Client:       params.Client,
 		LinodeClient: linodeClient,
