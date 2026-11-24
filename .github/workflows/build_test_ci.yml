@@ -1,4 +1,4 @@
-name: Coverage and E2E
+name: E2E
 
 on:
   push:
@@ -56,60 +56,6 @@ jobs:
               - templates/flavors/kubeadm/dns-loadbalancing/*
               - e2e/capl-cluster-flavors/kubeadm-dns-lb-cluster/*
               - cloud/services/domains.go
-
-  go-test:
-    environment:
-      name: ${{ (github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository) && 'prod-external' || 'prod' }}
-      deployment: false
-    runs-on: ubuntu-latest
-    needs: changes
-    if: ${{ contains(fromJSON(needs.changes.outputs.paths), 'src') }}
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
-        with:
-          egress-policy: block
-          allowed-endpoints: >
-            pypi.org:443
-            files.pythonhosted.org:443
-            api.github.com:443
-            github.com:443
-            golang.org:443
-            go.dev:443
-            proxy.golang.org:443
-            sum.golang.org:443
-            *.githubusercontent.com:443
-            storage.googleapis.com:443
-            cli.codecov.io:443
-            api.codecov.io:443
-            ingest.codecov.io:443
-            dl.k8s.io:443
-            cdn.dl.k8s.io:443
-            mise.jdx.dev:443
-            mise-versions.jdx.dev:443
-            tuf-repo-cdn.sigstore.dev:443
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          # allowed because the job is gated on manual approval for fork PRs and splitting the workflow would be more complicated because Codecov needs to be able to comment on the PR itself for coverage reporting
-          allow-unsafe-pr-checkout: true
-
-      - name: Set up Mise
-        uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
-
-      - name: Test
-        run: mise run test
-
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6.0.2
-        with:
-          files: ./coverage.out
-          fail_ci_if_error: false
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: linode/cluster-api-provider-linode
 
   e2e-test:
     needs: changes
