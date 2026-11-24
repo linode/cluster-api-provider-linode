@@ -322,6 +322,9 @@ func (c *controller[S, O]) handleApply(ctx context.Context, recScope S, obj O, l
 	res, err := c.rec.Apply(ctx, recScope, logger)
 	if err != nil {
 		if util.IsRetryableError(err) && !reconciler.HasStaleCondition(obj.GetCondition(string(clusterv1.ReadyCondition)), c.rec.Timeout()) {
+			// Surface retryable errors by the Reconciler-implemented failure handler
+			// to allow recording events and updating resource status.
+			c.rec.HandleFailureCondition(recScope, err)
 			logger.Info("re-queuing reconciliation")
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(c.rec.RequeueAfter())}, nil
 		}
