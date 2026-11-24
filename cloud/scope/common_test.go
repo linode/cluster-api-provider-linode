@@ -348,9 +348,8 @@ func Test_removeCredentialsFinalizer(t *testing.T) {
 					Get: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 						cred := corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:       "example",
-								Namespace:  "test",
-								Finalizers: []string{"test.test/test.test"},
+								Name:      "example",
+								Namespace: "test",
 							},
 						}
 						*obj = cred
@@ -393,9 +392,8 @@ func Test_removeCredentialsFinalizer(t *testing.T) {
 					Get: func(ctx context.Context, key types.NamespacedName, obj *corev1.Secret, opts ...client.GetOption) error {
 						cred := corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
-								Name:       "example",
-								Namespace:  "test",
-								Finalizers: []string{"test.test/test.test"},
+								Name:      "example",
+								Namespace: "test",
 							},
 						}
 						*obj = cred

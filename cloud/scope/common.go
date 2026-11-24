@@ -194,10 +194,6 @@ func addCredentialsFinalizer(ctx context.Context, crClient clients.K8sClient, cr
 		return err
 	}
 
-	if controllerutil.ContainsFinalizer(secret, finalizer) {
-		return nil
-	}
-
 	controllerutil.AddFinalizer(secret, finalizer)
 	if err := crClient.Update(ctx, secret); err != nil {
 		return fmt.Errorf("add finalizer to credentials secret %s/%s: %w", secret.Namespace, secret.Name, err)
@@ -209,10 +205,6 @@ func removeCredentialsFinalizer(ctx context.Context, crClient clients.K8sClient,
 	secret, err := getCredentials(ctx, crClient, credentialsRef, defaultNamespace)
 	if err != nil {
 		return client.IgnoreNotFound(err)
-	}
-
-	if !controllerutil.ContainsFinalizer(secret, finalizer) {
-		return nil
 	}
 
 	controllerutil.RemoveFinalizer(secret, finalizer)
