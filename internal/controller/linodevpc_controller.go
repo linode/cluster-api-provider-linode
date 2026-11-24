@@ -281,7 +281,8 @@ func (r *LinodeVPCReconciler) deleteVPCResources(ctx context.Context, logger log
 }
 
 func (r *LinodeVPCReconciler) HandleFailureCondition(vpcScope *scope.VPCScope, err error) {
-	r.Recorder.Eventf(vpcScope.LinodeVPC, nil, corev1.EventTypeWarning, string(vpcScope.ErrorType), "Reconcile", err.Error())
+	// Render error into string template to retain formatting verbs and percent-encoded text
+	r.Recorder.Eventf(vpcScope.LinodeVPC, nil, corev1.EventTypeWarning, string(vpcScope.ErrorType), "Reconcile", "%s", err.Error())
 
 	vpcScope.LinodeVPC.Status.Ready = false
 	vpcScope.LinodeVPC.Status.FailureReason = &vpcScope.ErrorType

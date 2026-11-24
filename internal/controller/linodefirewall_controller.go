@@ -162,7 +162,8 @@ func (r *LinodeFirewallReconciler) Delete(ctx context.Context, fwScope *scope.Fi
 }
 
 func (r *LinodeFirewallReconciler) HandleFailureCondition(fwScope *scope.FirewallScope, err error) {
-	r.Recorder.Eventf(fwScope.LinodeFirewall, nil, corev1.EventTypeWarning, string(fwScope.ErrorType), "Reconcile", err.Error())
+	// Render error into string template to retain formatting verbs and percent-encoded text
+	r.Recorder.Eventf(fwScope.LinodeFirewall, nil, corev1.EventTypeWarning, string(fwScope.ErrorType), "Reconcile", "%s", err.Error())
 
 	fwScope.LinodeFirewall.Status.Ready = false
 	fwScope.LinodeFirewall.Status.FailureReason = &fwScope.ErrorType

@@ -218,7 +218,8 @@ func (r *LinodePlacementGroupReconciler) deletePlacementGroup(ctx context.Contex
 }
 
 func (r *LinodePlacementGroupReconciler) HandleFailureCondition(pgScope *scope.PlacementGroupScope, err error) {
-	r.Recorder.Eventf(pgScope.LinodePlacementGroup, nil, corev1.EventTypeWarning, string(pgScope.ErrorType), "Reconcile", err.Error())
+	// Render error into string template to retain formatting verbs and percent-encoded text
+	r.Recorder.Eventf(pgScope.LinodePlacementGroup, nil, corev1.EventTypeWarning, string(pgScope.ErrorType), "Reconcile", "%s", err.Error())
 
 	pgScope.LinodePlacementGroup.Status.Ready = false
 	pgScope.LinodePlacementGroup.Status.FailureReason = &pgScope.ErrorType
