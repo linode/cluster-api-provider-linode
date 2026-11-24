@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -178,7 +179,7 @@ func TestControllerReconcileApply(t *testing.T) {
 		require.Empty(t, rec.failureErrors)
 	})
 
-	t.Run("apply with error ErrStuckReconcile leaves ready unknown with Stuck reason", func(t *testing.T) {
+	t.Run("apply with error ErrStuckReconcile sets ready false with Stuck reason", func(t *testing.T) {
 		t.Parallel()
 		scope := &controllerTestScope{}
 		rec, controller := newControllerTest(t, newControllerTestObject(), scope)
@@ -190,22 +191,22 @@ func TestControllerReconcileApply(t *testing.T) {
 		require.NoError(t, err)
 
 		cond := rec.object.GetCondition(string(clusterv1.ReadyCondition))
-		require.Equal(t, metav1.ConditionUnknown, cond.Status)
+		require.Equal(t, metav1.ConditionFalse, cond.Status)
 		require.Equal(t, "Stuck", cond.Reason)
-		require.Empty(t, rec.failureErrors)
+		require.Equal(t, []error{rec.applyErr}, rec.failureErrors)
 	})
 
-	t.Run("transient apply error requeues", func(t *testing.T) {
+	t.Run("retryable apply error requeues", func(t *testing.T) {
 		t.Parallel()
 		scope := &controllerTestScope{}
 		rec, controller := newControllerTest(t, newControllerTestObject(), scope)
-		rec.applyErr = errors.New("temporary failure")
+		rec.applyErr = http.ErrHandlerTimeout
 
 		result, err := controller.Reconcile(context.Background(), rec.object)
 
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, result.RequeueAfter, rec.requeueAfter)
-		require.Empty(t, rec.failureErrors)
+		require.Equal(t, []error{http.ErrHandlerTimeout}, rec.failureErrors)
 	})
 
 	t.Run("stale apply failure is returned and reported", func(t *testing.T) {
