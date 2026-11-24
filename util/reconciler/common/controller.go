@@ -274,7 +274,7 @@ func (c *controller[S, O]) handleDelete(ctx context.Context, recScope S, obj O, 
 	if err != nil {
 		return res, err
 	}
-	if res.RequeueAfter > 0 {
+	if res.RequeueAfter > 0 || res.Requeue {
 		return res, nil
 	}
 
@@ -330,7 +330,7 @@ func (c *controller[S, O]) handleApply(ctx context.Context, recScope S, obj O, l
 		}
 		return res, err
 	}
-	if res.RequeueAfter > 0 {
+	if res.RequeueAfter > 0 || res.Requeue {
 		return res, nil
 	}
 
