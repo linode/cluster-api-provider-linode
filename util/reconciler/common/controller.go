@@ -215,6 +215,16 @@ func (c *controller[S, O]) Reconcile(ctx context.Context, obj O) (res ctrl.Resul
 		if err != nil {
 			c.rec.HandleFailureCondition(recScope, err)
 		}
+		// If Reconciler returns ErrStuckReconcile, do not requeue
+		if errors.Is(err, ErrStuckReconcile) {
+			obj.SetCondition(metav1.Condition{
+				Type:    string(clusterv1.ReadyCondition),
+				Status:  metav1.ConditionFalse,
+				Reason:  "Stuck",
+				Message: err.Error(),
+			})
+			err = nil
+		}
 		if patchErr := recScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
 			logger.Error(patchErr, "failed to patch")
 			err = errors.Join(err, patchErr)
@@ -262,15 +272,6 @@ func (c *controller[S, O]) handleDelete(ctx context.Context, recScope S, obj O, 
 
 	res, err := c.rec.Delete(ctx, recScope, logger)
 	if err != nil {
-		if errors.Is(err, ErrStuckReconcile) {
-			obj.SetCondition(metav1.Condition{
-				Type:    string(clusterv1.ReadyCondition),
-				Status:  metav1.ConditionFalse,
-				Reason:  "Stuck",
-				Message: err.Error(),
-			})
-			return ctrl.Result{}, nil
-		}
 		return res, err
 	}
 	if res.RequeueAfter > 0 {
@@ -320,15 +321,6 @@ func (c *controller[S, O]) handleApply(ctx context.Context, recScope S, obj O, l
 
 	res, err := c.rec.Apply(ctx, recScope, logger)
 	if err != nil {
-		if errors.Is(err, ErrStuckReconcile) {
-			obj.SetCondition(metav1.Condition{
-				Type:    string(clusterv1.ReadyCondition),
-				Status:  metav1.ConditionUnknown,
-				Reason:  ReadyConditionReasonStuck,
-				Message: err.Error(),
-			})
-			return ctrl.Result{}, nil
-		}
 		if !reconciler.HasStaleCondition(obj.GetCondition(string(clusterv1.ReadyCondition)), c.rec.Timeout()) {
 			logger.Info("re-queuing reconciliation")
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(c.rec.RequeueAfter())}, nil
