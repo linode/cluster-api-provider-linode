@@ -181,11 +181,11 @@ func (c *controller[S, O]) Reconcile(ctx context.Context, obj O) (res ctrl.Resul
 		return ctrl.Result{}, err
 	}
 
-	paused, err := c.checkForPause(ctx, obj, cluster)
+	isPaused, err := c.checkForPause(ctx, obj, cluster)
 	if err != nil {
 		return res, err
 	}
-	if paused {
+	if isPaused {
 		logger.Info("resource or linked cluster is paused, skipping reconciliation")
 		return res, nil
 	}
