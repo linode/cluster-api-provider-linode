@@ -173,39 +173,24 @@ func (c *controller[S, O]) SetupWithManager(mgr ctrl.Manager, options ctrlcontro
 // It handles cluster ownership, pause checks, scope creation, credential secret management,
 // and delegates to the Reconciler implementation for actual reconciliation logic.
 func (c *controller[S, O]) Reconcile(ctx context.Context, obj O) (res ctrl.Result, err error) {
-	var logger logr.Logger
-	if c.logrOverride != nil {
-		logger = *c.logrOverride
-	} else {
-		logger = ctrl.LoggerFrom(ctx)
-	}
-	logger = logger.WithName(c.rec.Name()).WithValues("name", obj.GetName(), "namespace", obj.GetNamespace())
+	logger := c.logger(ctx).WithName(c.rec.Name()).WithValues("name", obj.GetName(), "namespace", obj.GetNamespace())
 
-	var cluster *clusterv1.Cluster
-	if _, ok := obj.GetLabels()[clusterv1.ClusterNameLabel]; ok {
-		cluster, err = c.setClusterOwner(ctx, obj, logger)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+	cluster, err := c.setClusterOwner(ctx, obj)
+	if err != nil {
+		logger.Error(err, "failed to fetch cluster from metadata")
+		return ctrl.Result{}, err
 	}
 
-	// Check pause if not deleting or if cluster still exists.
-	if obj.GetDeletionTimestamp().IsZero() || cluster != nil {
-		isPaused, _, err := paused.EnsurePausedCondition(ctx, c.cl, cluster, obj)
-		if err != nil {
-			return res, err
-		}
-		if isPaused {
-			logger.Info("resource or linked cluster is paused, skipping reconciliation")
-			return res, nil
-		}
+	paused, err := c.checkForPause(ctx, obj, cluster)
+	if err != nil {
+		return res, err
+	}
+	if paused {
+		logger.Info("resource or linked cluster is paused, skipping reconciliation")
+		return res, nil
 	}
 
-	newScope := c.rec.NewScope
-	if c.newScope != nil {
-		newScope = c.newScope
-	}
-	recScope, err := newScope(ctx, c.cl, obj, cluster)
+	recScope, err := c.createScope(ctx, obj, cluster)
 	if err != nil {
 		return res, err
 	}
@@ -244,10 +229,20 @@ func (c *controller[S, O]) Reconcile(ctx context.Context, obj O) (res ctrl.Resul
 	return c.handleApply(ctx, recScope, obj, logger)
 }
 
-func (c *controller[S, O]) setClusterOwner(ctx context.Context, obj O, logger logr.Logger) (*clusterv1.Cluster, error) {
+func (c *controller[S, O]) logger(ctx context.Context) logr.Logger {
+	if c.logrOverride != nil {
+		return *c.logrOverride
+	}
+	return ctrl.LoggerFrom(ctx)
+}
+
+func (c *controller[S, O]) setClusterOwner(ctx context.Context, obj O) (*clusterv1.Cluster, error) {
+	if _, ok := obj.GetLabels()[clusterv1.ClusterNameLabel]; !ok {
+		return new(clusterv1.Cluster), nil
+	}
+
 	cluster, err := kutil.GetClusterFromMetadata(ctx, c.cl, metav1.ObjectMeta{Namespace: obj.GetNamespace(), Labels: obj.GetLabels()})
 	if client.IgnoreNotFound(err) != nil {
-		logger.Error(err, "failed to fetch cluster from metadata")
 		return nil, err
 	}
 
@@ -258,6 +253,28 @@ func (c *controller[S, O]) setClusterOwner(ctx context.Context, obj O, logger lo
 	}
 
 	return cluster, nil
+}
+
+func (c *controller[S, O]) checkForPause(ctx context.Context, obj O, cluster *clusterv1.Cluster) (bool, error) {
+	// Skip check if deleting or if cluster was not found
+	if !obj.GetDeletionTimestamp().IsZero() && cluster == nil {
+		return false, nil
+	}
+
+	isPaused, _, err := paused.EnsurePausedCondition(ctx, c.cl, cluster, obj)
+	if err != nil {
+		return false, err
+	}
+
+	return isPaused, nil
+}
+
+func (c *controller[S, O]) createScope(ctx context.Context, obj O, cluster *clusterv1.Cluster) (S, error) {
+	newScope := c.rec.NewScope
+	if c.newScope != nil {
+		newScope = c.newScope
+	}
+	return newScope(ctx, c.cl, obj, cluster)
 }
 
 func (c *controller[S, O]) handleDelete(ctx context.Context, recScope S, obj O, logger logr.Logger) (ctrl.Result, error) {
@@ -274,6 +291,7 @@ func (c *controller[S, O]) handleDelete(ctx context.Context, recScope S, obj O, 
 	if err != nil {
 		return res, err
 	}
+	//nolint:staticcheck // Support deprecated Requeue until it is removed
 	if res.RequeueAfter > 0 || res.Requeue {
 		return res, nil
 	}
@@ -330,6 +348,7 @@ func (c *controller[S, O]) handleApply(ctx context.Context, recScope S, obj O, l
 		}
 		return res, err
 	}
+	//nolint:staticcheck // Support deprecated Requeue until it is removed
 	if res.RequeueAfter > 0 || res.Requeue {
 		return res, nil
 	}
