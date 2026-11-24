@@ -321,7 +321,7 @@ func (c *controller[S, O]) handleApply(ctx context.Context, recScope S, obj O, l
 
 	res, err := c.rec.Apply(ctx, recScope, logger)
 	if err != nil {
-		if !reconciler.HasStaleCondition(obj.GetCondition(string(clusterv1.ReadyCondition)), c.rec.Timeout()) {
+		if util.IsRetryableError(err) && !reconciler.HasStaleCondition(obj.GetCondition(string(clusterv1.ReadyCondition)), c.rec.Timeout()) {
 			logger.Info("re-queuing reconciliation")
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(c.rec.RequeueAfter())}, nil
 		}
