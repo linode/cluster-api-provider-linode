@@ -37,6 +37,7 @@ const (
 type LinodeMachineSpec struct {
 	// providerID is the unique identifier as specified by the cloud provider.
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="oldSelf == null || self == oldSelf",message="Value is immutable"
 	ProviderID *string `json:"providerID,omitempty"`
 	// instanceID is the Linode instance ID for this machine.
 	// +optional
