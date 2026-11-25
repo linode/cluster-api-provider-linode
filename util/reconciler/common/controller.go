@@ -221,12 +221,6 @@ func (c *controller[S, O]) Reconcile(ctx context.Context, obj O) (res ctrl.Resul
 		}
 	}()
 
-	// Override the controller credentials with ones from the object's secret reference when supplied.
-	if err = recScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
-		logger.Error(err, "failed to update Linode client token from credential ref")
-		return res, err
-	}
-
 	if !obj.GetDeletionTimestamp().IsZero() {
 		return c.handleDelete(ctx, recScope, obj, logger)
 	}
@@ -286,6 +280,12 @@ func (c *controller[S, O]) createScope(ctx context.Context, obj O, cluster *clus
 func (c *controller[S, O]) handleDelete(ctx context.Context, recScope S, obj O, logger logr.Logger) (ctrl.Result, error) {
 	logger.Info("deleting")
 
+	// Override the controller credentials with ones from the object's secret reference when supplied.
+	if err := recScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+		logger.Error(err, "failed to update Linode client token from credential ref")
+		return ctrl.Result{}, err
+	}
+
 	obj.SetCondition(metav1.Condition{
 		Type:    string(clusterv1.ReadyCondition),
 		Status:  metav1.ConditionFalse,
@@ -319,6 +319,12 @@ func (c *controller[S, O]) handleDelete(ctx context.Context, recScope S, obj O, 
 
 func (c *controller[S, O]) handleApply(ctx context.Context, recScope S, obj O, logger logr.Logger) (ctrl.Result, error) {
 	logger.Info("applying")
+
+	// Override the controller credentials with ones from the object's secret reference when supplied.
+	if err := recScope.SetCredentialRefTokenForLinodeClients(ctx); err != nil {
+		logger.Error(err, "failed to update Linode client token from credential ref")
+		return ctrl.Result{}, err
+	}
 
 	if err := recScope.AddFinalizer(ctx); err != nil {
 		logger.Error(err, "failed to add finalizer")

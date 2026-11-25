@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/linode/linodego/v2"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -59,6 +60,18 @@ type ClientConfig struct {
 	RootCertificatePath string
 
 	Timeout time.Duration
+}
+
+func initScopeClients(config ClientConfig, object client.Object, k8sClient clients.K8sClient) (clients.LinodeClient, *patch.Helper, error) {
+	linodeClient, err := CreateLinodeClient(config, WithRetryCount(0))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create linode client: %w", err)
+	}
+	helper, err := patch.NewHelper(object, k8sClient)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to init patch helper: %w", err)
+	}
+	return linodeClient, helper, nil
 }
 
 func CreateLinodeClient(config ClientConfig, opts ...Option) (clients.LinodeClient, error) {
