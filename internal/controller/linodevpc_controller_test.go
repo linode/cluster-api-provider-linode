@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -92,22 +93,22 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 			Path(
 				Call("unable to create", func(ctx context.Context, mck Mock) {
 					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return([]linodego.VPC{}, nil)
-					mck.LinodeClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+					mck.LinodeClient.EXPECT().CreateVPC(ctx, gomock.Any()).Return(nil, http.ErrHandlerTimeout)
 				}),
 				OneOf(
-					Path(Result("create requeues", func(ctx context.Context, mck Mock) {
+					Path(Result("create requeues with a retryable error", func(ctx context.Context, mck Mock) {
 						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">=", rec.DefaultVPCControllerReconcileDelay))
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing reconciliation"))
 					})),
-					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+					Path(Result("timeout", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Events()).To(ContainSubstring("server error"))
+						Expect(mck.Events()).To(ContainSubstring(http.ErrHandlerTimeout.Error()))
 					})),
 				),
 			),
@@ -175,10 +176,10 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 			),
 			Path(
 				Call("unable to list VPC", func(ctx context.Context, mck Mock) {
-					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return(nil, errors.New("server error"))
+					mck.LinodeClient.EXPECT().ListVPCs(ctx, gomock.Any()).Return(nil, http.ErrHandlerTimeout)
 				}),
 				OneOf(
-					Path(Result("update requeues", func(ctx context.Context, mck Mock) {
+					Path(Result("update requeues with a retryable error", func(ctx context.Context, mck Mock) {
 						linodeVPC.SetCondition(metav1.Condition{
 							Type:    string(clusterv1.ReadyCondition),
 							Status:  metav1.ConditionFalse,
@@ -192,12 +193,12 @@ var _ = Describe("lifecycle", Ordered, Label("vpc", "lifecycle"), func() {
 						Expect(res.RequeueAfter).To(BeNumerically("<=", rec.DefaultVPCControllerReconcileDelay+time.Duration(float64(rec.DefaultVPCControllerReconcileDelay)*rec.RetryJitterFraction)))
 						Expect(mck.Logs()).To(ContainSubstring("re-queuing reconciliation"))
 					})),
-					Path(Result("timeout error", func(ctx context.Context, mck Mock) {
+					Path(Result("timeout", func(ctx context.Context, mck Mock) {
 						reconciler.ReconcileTimeout = time.Nanosecond
 						res, err := controller.Reconcile(ctx, &linodeVPC)
 						Expect(err).To(HaveOccurred())
 						Expect(res.RequeueAfter).To(Equal(time.Duration(0)))
-						Expect(mck.Events()).To(ContainSubstring("server error"))
+						Expect(mck.Events()).To(ContainSubstring(http.ErrHandlerTimeout.Error()))
 					})),
 				),
 			),
