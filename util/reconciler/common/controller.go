@@ -243,6 +243,7 @@ func (c *controller[S, O]) logger(ctx context.Context) logr.Logger {
 
 func (c *controller[S, O]) setClusterOwner(ctx context.Context, obj O) (*clusterv1.Cluster, error) {
 	if _, ok := obj.GetLabels()[clusterv1.ClusterNameLabel]; !ok {
+		//nolint:nilnil // a nil pointer here is a value signaling no cluster is referenced
 		return nil, nil
 	}
 
