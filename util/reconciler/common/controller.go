@@ -128,7 +128,7 @@ func (c *controller[S, O]) WithLoggerForTest(logger logr.Logger) *controller[S, 
 
 // SetupWithManager sets up the controller with the given manager and options.
 func (c *controller[S, O]) SetupWithManager(mgr ctrl.Manager, options ctrlcontroller.Options) error {
-	options.ReconciliationTimeout = reconciler.DefaultedLoopTimeout(c.rec.Timeout())
+	options.ReconciliationTimeout = c.timeout()
 
 	c.cl = wrappedruntimeclient.NewRuntimeClientWithTracing(mgr.GetClient(), wrappedruntimeclient.DefaultDecorator())
 
@@ -169,6 +169,10 @@ func (c *controller[S, O]) SetupWithManager(mgr ctrl.Manager, options ctrlcontro
 		))
 }
 
+func (c *controller[S, O]) timeout() time.Duration {
+	return reconciler.DefaultedLoopTimeout(c.rec.Timeout())
+}
+
 // Reconcile is the main reconciliation loop for the controller.
 // It handles cluster ownership, pause checks, scope creation, credential secret management,
 // and delegates to the Reconciler implementation for actual reconciliation logic.
@@ -205,9 +209,10 @@ func (c *controller[S, O]) Reconcile(ctx context.Context, obj O) (res ctrl.Resul
 			obj.SetCondition(metav1.Condition{
 				Type:    string(clusterv1.ReadyCondition),
 				Status:  metav1.ConditionFalse,
-				Reason:  "Stuck",
+				Reason:  ReadyConditionReasonStuck,
 				Message: err.Error(),
 			})
+			res = ctrl.Result{}
 			err = nil
 		}
 		if patchErr := recScope.Close(ctx); patchErr != nil && utilerrors.FilterOut(util.UnwrapError(patchErr), apierrors.IsNotFound) != nil {
@@ -238,7 +243,7 @@ func (c *controller[S, O]) logger(ctx context.Context) logr.Logger {
 
 func (c *controller[S, O]) setClusterOwner(ctx context.Context, obj O) (*clusterv1.Cluster, error) {
 	if _, ok := obj.GetLabels()[clusterv1.ClusterNameLabel]; !ok {
-		return new(clusterv1.Cluster), nil
+		return nil, nil
 	}
 
 	cluster, err := kutil.GetClusterFromMetadata(ctx, c.cl, metav1.ObjectMeta{Namespace: obj.GetNamespace(), Labels: obj.GetLabels()})
@@ -299,11 +304,10 @@ func (c *controller[S, O]) handleDelete(ctx context.Context, recScope S, obj O, 
 	err = recScope.RemoveCredentialsRefFinalizer(ctx)
 	if err != nil {
 		logger.Error(err, "failed to remove credentials ref finalizer")
-		if obj.GetDeletionTimestamp().Add(c.rec.Timeout()).After(time.Now()) {
+		if obj.GetDeletionTimestamp().Add(c.timeout()).After(time.Now()) {
 			logger.Info("re-queuing deletion")
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(c.rec.RequeueAfter())}, nil
 		}
-		// TODO: shouldn't this return nil? i.e. reconciling has timed out
 		return ctrl.Result{}, err
 	}
 
@@ -327,22 +331,29 @@ func (c *controller[S, O]) handleApply(ctx context.Context, recScope S, obj O, l
 
 	// Set the pending Ready condition while we are mid-reconcile.
 	// Check for an existing Ready condition so we don't overwrite its LastTransitionTime.
-	// LastTransitionTime is only preserved for an existing Unknown/Reconciling condition.
+	// LastTransitionTime is only preserved for an existing Unknown+Reconciling condition.
 	cond := obj.GetCondition(string(clusterv1.ReadyCondition))
 	if cond == nil || cond.Status != metav1.ConditionUnknown || cond.Reason != ReadyConditionReasonReconciling {
-		cond = &metav1.Condition{Type: string(clusterv1.ReadyCondition)}
+		cond = &metav1.Condition{
+			Type:    string(clusterv1.ReadyCondition),
+			Message: fmt.Sprintf("%s is being reconciled", c.rec.Name()),
+		}
 	}
 	cond.Status = metav1.ConditionUnknown
 	cond.Reason = ReadyConditionReasonReconciling
-	cond.Message = fmt.Sprintf("%s is being reconciled", c.rec.Name())
 	obj.SetCondition(*cond)
 
 	res, err := c.rec.Apply(ctx, recScope, logger)
 	if err != nil {
-		if util.IsRetryableError(err) && !reconciler.HasStaleCondition(obj.GetCondition(string(clusterv1.ReadyCondition)), c.rec.Timeout()) {
+		if util.IsRetryableError(err) && !reconciler.HasStaleCondition(obj.GetCondition(string(clusterv1.ReadyCondition)), c.timeout()) {
 			// Surface retryable errors by the Reconciler-implemented failure handler
 			// to allow recording events and updating resource status.
 			c.rec.HandleFailureCondition(recScope, err)
+			// But ensure we retain a Unknown+Reconciling condition to prevent LastTransitionTime from resetting.
+			cond := obj.GetCondition(string(clusterv1.ReadyCondition))
+			cond.Status = metav1.ConditionUnknown
+			cond.Reason = ReadyConditionReasonReconciling
+			obj.SetCondition(*cond)
 			logger.Info("re-queuing reconciliation")
 			return ctrl.Result{RequeueAfter: reconciler.WithJitter(c.rec.RequeueAfter())}, nil
 		}
