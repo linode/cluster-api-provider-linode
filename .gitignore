@@ -15,3 +15,5 @@ vendor/
 .tool-versions
 .opencode/
 .worktrees/
+mise.local.toml
+mise.*.local.toml
